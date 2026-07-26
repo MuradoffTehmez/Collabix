@@ -1,12 +1,41 @@
 // About / Privacy / Terms — çoxdilli statik məzmun (markdown).
-// ⚠ Şablondur, hüquqi məsləhət deyil. [MÖTƏRİZƏLİ] yerləri real məlumatla doldurun
-//   və prod-dan əvvəl hüquqşünas baxışından keçirin.
+//
+// ⚠ HÜQUQİ KİMLİK DATASI — AUDIT-TASK-2 / hüquqi risk #12.
+// Aşağıdaki dəyərlər Privacy Policy, Terms of Service, Security səhifəsində və
+// footer-də CANLI SAYTDA göstərilir və data controller identifikasiyası kimi
+// qanuni tələbi qarşılayır (GDPR Art. 13(1)(a) analoqu + AR "Fərdi məlumatlar
+// haqqında" Qanunu).
+//
+// Əvvəl burada `[ŞİRKƏT ADI / Collabix]` və `[Rəsmi ünvan — şəhər, küçə]`
+// placeholder-ləri var idi və aylarla canlı qaldı — yəni məxfilik siyasəti
+// data controller-i identifikasiya etmirdi.
+//
+// ⛔ PLACEHOLDER-Ə QAYTARMA. Dəyişmək üçün sahibin təsdiqi lazımdır.
+// ⛔ UYDURMA: şirkət adı, hüquqi forma, ünvan, VÖEN, email — heç biri
+//    "məntiqli görünən" dəyərlə doldurulmur. Data yoxdursa sahə çıxarılır.
+// Mənbə: sahib tərəfindən 2026-07-27-də təsdiqlənmiş kimlik cədvəli.
 export const SITE = {
-  company: '[ŞİRKƏT ADI / Collabix]',
-  address: '[Rəsmi ünvan — şəhər, küçə]',
-  email: 'info@collabix.app',
+  // Hüquqi ad (data controller) — brenddən AYRIDIR.
+  company: 'Tahmaz Muradov (Fərdi Sahibkar)',
+  // Ticarət nişanı / məhsul adı — UI-da brend kimi işlədilir.
+  brand: 'Collabix',
+  legalForm: 'Fərdi Sahibkar',
+  // Qeydiyyatsız fərdi sahibkar → yalnız şəhər/ölkə. Küçə/bina UYDURULMUR.
+  address: 'Naxçıvan, Azərbaycan',
+  jurisdiction: 'Azərbaycan Respublikası',
+  // ⚠ ƏSAS kanal QƏSDƏN gmail-dir: `collabix.az` 2026-07-27-də DNS-də
+  // QEYDİYYATDA DEYİL (NXDOMAIN, MX yoxdur) — yəni support@collabix.az
+  // məktub QƏBUL EDƏ BİLMİR. Data-subject sorğusu (silmə/ixrac/etiraz)
+  // çatmayan ünvan göstərmək placeholder-dən pisdir: placeholder açıq
+  // şəkildə natamamdır, işləməyən ünvan isə SAXTA TƏSDİQDİR.
+  email: 'muradofftehmez01@gmail.com',
+  // Domen aktivləşdikdən sonra əsas kanal buna keçir (mətndə elan olunur).
+  emailAlt: 'privacy@collabix.az',
+  // VÖEN QƏSDƏN YOXDUR — qeydiyyat hələ tamamlanmayıb (sahibin qeydi).
+  // Qeydiyyatdan sonra əlavə et; uydurma nömrə YAZMA.
   hours: 'B.e – Cümə, 10:00 – 18:00 (GMT+4)',
-  mapsURL: 'https://maps.google.com/?q=Baku',
+  // Ünvan Naxçıvandır — əvvəl bu link Bakıya işarə edirdi (uyğunsuzluq).
+  mapsURL: 'https://maps.google.com/?q=Nakhchivan,Azerbaijan',
   // Footer sosial dəsti (TASK-6 / Ana#12) — sıra burada verildiyi kimi render olunur.
   // `icon` = techlogos.data.js açarı (rəsmi SVG); `mark` = loqo mövcud olmayanda mətn-nişan.
   //
@@ -47,7 +76,7 @@ Collabix kiçik bir öyrənmə qrupunun "birlikdə öyrənək" ideyasından doğ
 
 ## Komanda
 
-[Komanda üzvləri — ad, rol, foto burada göstəriləcək. Admin panelindən və ya kodda doldurun.]
+Collabix hazırda **müstəqil, tək nəfərlik layihədir** — Tahmaz Muradov (fərdi sahibkar) tərəfindən qurulur və idarə olunur. Komanda böyüdükcə bu bölmə real adlarla yenilənəcək.
 
 ## Dəyərlərimiz
 
@@ -68,7 +97,7 @@ Collabix grew out of a small study group's "let's learn together" idea and is be
 
 ## Team
 
-[Team members — name, role, photo will be shown here.]
+Collabix is currently an **independent, one-person project**, built and maintained by Tahmaz Muradov (sole proprietor). This section will be updated with real names as the team grows.
 
 ## Values
 
@@ -89,7 +118,7 @@ Collabix вырос из идеи небольшой учебной группы
 
 ## Команда
 
-[Члены команды — имя, роль, фото.]
+Collabix — **независимый проект одного человека**: его создаёт и поддерживает Тахмаз Мурадов (индивидуальный предприниматель). Раздел будет обновлён реальными именами по мере роста команды.
 
 ## Ценности
 
@@ -101,7 +130,7 @@ Collabix вырос из идеи небольшой учебной группы
 
 ## 1. Kim məsuliyyət daşıyır?
 
-Bu platforma ${'[ŞİRKƏT ADI / Collabix]'} tərəfindən idarə olunur. Suallar üçün: **[email]**. Məlumatların texniki emalında Cloudflare, Inc. xidmətlərindən **prosessor** qismində istifadə olunur (Workers, D1 verilənlər bazası, R2 fayl anbarı, KV).
+Bu platforma **${SITE.company}** (${SITE.address}) tərəfindən idarə olunur. Data-subject sorğuları (silmə, ixrac, etiraz) üçün: **${SITE.email}** — rəsmi domen aktivləşdikdən sonra: ${SITE.emailAlt}. Məlumatların texniki emalında Cloudflare, Inc. xidmətlərindən **prosessor** qismində istifadə olunur (Workers, D1 verilənlər bazası, R2 fayl anbarı, KV).
 
 ## 2. Hansı məlumatları toplayırıq?
 
@@ -124,9 +153,9 @@ Hesab aktiv olduğu müddətdə saxlanılır. Hesab silindikdə profil, istifad�
 - **Giriş və düzəliş** — profil redaktoru vasitəsilə istənilən vaxt;
 - **Silinmə** — Parametrlər → Hesabı sil (tam təmizləmə ilə);
 - **Data ixracı** — öz məlumatlarınızı JSON formatında əldə etmək üçün bizə müraciət edin;
-- **Şikayət** — [email] və ya səlahiyyətli orqana müraciət.
+- **Şikayət** — ${SITE.email} və ya səlahiyyətli orqana müraciət.
 
-GDPR prinsipləri və Azərbaycan Respublikasının "Fərdi məlumatlar haqqında" Qanunu nəzərə alınır. Yurisdiksiya: **[ölkə/şəhər]**.
+GDPR prinsipləri və Azərbaycan Respublikasının "Fərdi məlumatlar haqqında" Qanunu nəzərə alınır. Yurisdiksiya: **${SITE.jurisdiction}**.
 
 ## 6. Uşaqlar
 
@@ -135,7 +164,7 @@ Platforma **yalnız 18+** istifadəçilər üçündür; qeydiyyatda yaş yoxlan�
 
 ## 1. Who is responsible?
 
-This platform is operated by ${'[COMPANY / Collabix]'}. Contact: **[email]**. Cloudflare, Inc. acts as a **processor** for technical data processing (Workers, D1 database, R2 file storage, KV).
+This platform is operated by **${SITE.company}** (${SITE.address}). For data-subject requests (deletion, export, objection): **${SITE.email}** — once the official domain is live: ${SITE.emailAlt}. Cloudflare, Inc. acts as a **processor** for technical data processing (Workers, D1 database, R2 file storage, KV).
 
 ## 2. What data we collect
 
@@ -155,7 +184,7 @@ Data is kept while your account is active. On account deletion, your profile, us
 
 ## 5. Your rights
 
-Access & correction (profile editor), deletion (Settings → Delete account), data export (contact us for a JSON export), complaint ([email] or your supervisory authority). GDPR principles and the Azerbaijani Law "On Personal Data" are respected. Jurisdiction: **[country/city]**.
+Access & correction (profile editor), deletion (Settings → Delete account), data export (contact us for a JSON export), complaint (${SITE.email} or your supervisory authority). GDPR principles and the Azerbaijani Law "On Personal Data" are respected. Jurisdiction: **${SITE.jurisdiction}**.
 
 ## 6. Children
 
@@ -164,7 +193,7 @@ The platform is **18+ only**; age is verified at registration.`,
 
 ## 1. Ответственный
 
-Платформой управляет ${'[КОМПАНИЯ / Collabix]'}. Контакт: **[email]**. Cloudflare, Inc. выступает **процессором** данных (Workers, база данных D1, хранилище R2, KV).
+Платформой управляет **${SITE.company}** (${SITE.address}). Запросы субъекта данных (удаление, экспорт, возражение): **${SITE.email}** — после активации официального домена: ${SITE.emailAlt}. Cloudflare, Inc. выступает **процессором** данных (Workers, база данных D1, хранилище R2, KV).
 
 ## 2. Какие данные мы собираем
 
@@ -184,7 +213,7 @@ The platform is **18+ only**; age is verified at registration.`,
 
 ## 5. Ваши права
 
-Доступ и исправление (редактор профиля), удаление (Настройки → Удалить аккаунт), экспорт данных (по запросу), жалоба ([email]). Учитываются принципы GDPR и закон АР «О персональных данных». Юрисдикция: **[страна/город]**.
+Доступ и исправление (редактор профиля), удаление (Настройки → Удалить аккаунт), экспорт данных (по запросу), жалоба (${SITE.email}). Учитываются принципы GDPR и закон АР «О персональных данных». Юрисдикция: **${SITE.jurisdiction}**.
 
 ## 6. Дети
 
@@ -196,7 +225,7 @@ The platform is **18+ only**; age is verified at registration.`,
 
 ## 1. Ümumi
 
-Bu şərtlər ${'[ŞİRKƏT ADI / Collabix]'} platformasından istifadəni tənzimləyir. Qeydiyyatdan keçməklə bu şərtləri qəbul edirsiniz.
+Bu şərtlər **${SITE.company}** tərəfindən idarə olunan **${SITE.brand}** platformasından istifadəni tənzimləyir. Qeydiyyatdan keçməklə bu şərtləri qəbul edirsiniz.
 
 ## 2. Yaş tələbi
 
@@ -222,12 +251,12 @@ Platforma "olduğu kimi" təqdim olunur; istifadəçi məzmununa görə müəlli
 
 Şərtlər yenilənə bilər; əhəmiyyətli dəyişikliklər platformada elan olunur. Davam edən istifadə yeni şərtlərin qəbulu sayılır.
 
-Yurisdiksiya: **[ölkə]** qanunvericiliyi. Əlaqə: **[email]**.`,
+Yurisdiksiya: **${SITE.jurisdiction}** qanunvericiliyi. Əlaqə: **${SITE.email}**.`,
     en: `*Last updated: 2026-07-19*
 
 ## 1. General
 
-These terms govern the use of ${'[COMPANY / Collabix]'}. By signing up you accept them.
+These terms govern the use of **${SITE.brand}**, operated by **${SITE.company}**. By signing up you accept them.
 
 ## 2. Age requirement
 
@@ -253,12 +282,12 @@ The platform is provided "as is"; authors are responsible for their content. No 
 
 Terms may be updated; significant changes are announced on the platform. Continued use constitutes acceptance.
 
-Jurisdiction: laws of **[country]**. Contact: **[email]**.`,
+Jurisdiction: laws of **${SITE.jurisdiction}**. Contact: **${SITE.email}**.`,
     ru: `*Обновлено: 2026-07-19*
 
 ## 1. Общее
 
-Настоящие условия регулируют использование ${'[КОМПАНИЯ / Collabix]'}. Регистрируясь, вы принимаете их.
+Настоящие условия регулируют использование **${SITE.brand}**, управляемого **${SITE.company}**. Регистрируясь, вы принимаете их.
 
 ## 2. Возраст
 
@@ -284,7 +313,7 @@ Jurisdiction: laws of **[country]**. Contact: **[email]**.`,
 
 Условия могут обновляться; значимые изменения анонсируются. Продолжение использования — согласие.
 
-Юрисдикция: законодательство **[страны]**. Контакт: **[email]**.`,
+Юрисдикция: законодательство **${SITE.jurisdiction}**. Контакт: **${SITE.email}**.`,
   },
 };
 
@@ -325,7 +354,7 @@ Bütün parollar **PBKDF2 (100.000 iterasiya)** ilə heşlənir və heç vaxt a�
 
 ### Zəiflik bildirişi
 
-Təhlükəsizlik zəifliyi tapdınızsa, **info@collabix.app** ünvanına bildirin. Cavab müddəti: 48 saat.
+Təhlükəsizlik zəifliyi tapdınızsa, **${SITE.email}** ünvanına bildirin. Cavab müddəti: 48 saat.
 
 ### Məsul AI bəyanatı
 
@@ -364,7 +393,7 @@ All passwords are hashed with **PBKDF2 (100,000 iterations)** and are never stor
 
 ### Vulnerability disclosure
 
-If you find a security vulnerability, report it to **info@collabix.app**. Response time: 48 hours.
+If you find a security vulnerability, report it to **${SITE.email}**. Response time: 48 hours.
 
 ### Responsible AI statement
 
@@ -402,7 +431,7 @@ Collabix серьёзно относится к защите данных пол
 
 ### Сообщение об уязвимости
 
-Нашли уязвимость? Сообщите на **info@collabix.app**. Время ответа: 48 часов.`,
+Нашли уязвимость? Сообщите на **${SITE.email}**. Время ответа: 48 часов.`,
   },
 
   cookies: {
