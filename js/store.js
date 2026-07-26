@@ -1,0 +1,666 @@
+// Data qatı — Cloudflare Workers REST API + ağıllı polling.
+// Export adları köhnə Firestore versiyası ilə eynidir — UI modulları dəyişmədən qalır.
+import { api, startPoll } from './api.js';
+import { emit } from './util.js';
+
+export const state = {
+  authUser: null,     // { uid } — sessiya sahibi
+  me: null,           // profil (server formatında)
+  isAdmin: false,
+  users: new Map(),   // uid -> user
+  myLikes: new Set(),
+  myBookmarks: new Set(),
+  myFollowing: new Set(),
+  myFollowers: new Set(),
+  myReposts: new Set(),  // birbaşa re-post etdiyim orijinal post-ların kök id-ləri (toggle vəziyyəti)
+};
+
+/* ================= users ================= */
+export function watchUsers(cb){
+  return startPoll({
+    fetcher: () => api('/users'),
+    interval: 15000,
+    events: ['refresh-users'],
+    onData: d => {
+      state.users.clear();
+      d.users.forEach(u => state.users.set(u.uid, u));
+      if(state.authUser && state.users.has(state.authUser.uid)){
+        state.me = { ...state.me, ...state.users.get(state.authUser.uid) };
+      }
+      cb(state.users);
+    },
+  });
+}
+
+export async function getUser(uid){
+  return state.users.get(uid) || null;
+}
+
+// İstifadəçi kataloqu (TASK-6 / İstifadəçilər#5): sıralama + filtr + keyset
+// pagination D1-də aparılır. Yuxarıdakı watchUsers() qlobal identifikasiya
+// keşidir (post müəllifi, DM, mention) və toxunulmur — bu, ondan ayrıca sorğudur.
+// Gələn sətrləri keşə də yazırıq ki, profil/DM keçidləri dərhal işləsin.
+export async function fetchUserDirectory({ q, skill, level, looking, extra, sort, cursor, limit } = {}){
+  const p = new URLSearchParams();
+  if(q) p.set('q', q);
+  if(skill) p.set('skill', skill);
+  if(level) p.set('level', level);
+  if(looking) p.set('looking', looking);
+  if(extra) p.set('extra', extra);
+  if(sort) p.set('sort', sort);
+  if(cursor) p.set('cursor', cursor);
+  if(limit) p.set('limit', String(limit));
+  const d = await api('/users/directory?' + p.toString());
+  d.users.forEach(u => { if(!state.users.has(u.uid)) state.users.set(u.uid, u); });
+  return d;
+}
+
+export async function updateMyProfile(fields){
+  const d = await api('/me', { method: 'PATCH', body: fields });
+  state.me = d.user;
+  if(state.users.has(d.user.uid)) state.users.set(d.user.uid, d.user);
+  emit('refresh-users');
+  // TASK-8 / Bənd 6 — profil 100% olduqda server +20 XP verir və bunu bir dəfə
+  // bildirir. `bus` hadisəsi ilə UI qatına ötürülür (store toast bilmir).
+  if(d.bonusGiven) emit('profile-bonus');
+  return d;
+}
+
+export async function updateMySettings(patch){
+  const d = await api('/me/settings', { method: 'PATCH', body: patch });
+  if(state.me) state.me.settings = d.settings;
+}
+
+// Gündəlik aktivlik server tərəfdə (login + post/mesaj) hesablanır.
+export async function touchActivity(){
+  await api('/presence', { method: 'POST' }).catch(() => {});
+}
+export async function bumpActivityDay(){ /* server tərəfdə avtomatik */ }
+
+/* ================= sosial vəziyyət (likes/bookmarks/follows) ================= */
+export function watchMySocial(cb){
+  return startPoll({
+    fetcher: () => api('/me/social'),
+    interval: 30000,
+    events: ['refresh-social'],
+    onData: d => {
+      state.myLikes = new Set(d.likes);
+      state.myBookmarks = new Set(d.bookmarks);
+      state.myFollowing = new Set(d.following);
+      state.myFollowers = new Set(d.followers);
+      // Repost toggle vəziyyəti serverdən gəlir. Əvvəl yalnız 60-postluq feed
+      // pəncərəsindən çıxarılırdı — pəncərədən kənarda qalan re-post-lar
+      // "edilməmiş" görünürdü (TASK-7 / Bənd 4).
+      if(Array.isArray(d.reposts)) state.myReposts = new Set(d.reposts);
+      cb(d);
+    },
+  });
+}
+
+/* ================= posts ================= */
+export function watchFeed(cb){
+  return startPoll({
+    fetcher: () => api('/feed'),
+    interval: 10000,
+    events: ['refresh-feed'],
+    onData: d => cb(d.posts),
+  });
+}
+
+export async function getPostById(postId){
+  const d = await api('/posts/' + postId);
+  return d.post;
+}
+
+// Block-based post: şəkil blokları əvvəl R2-yə yüklənir.
+export async function createPost({ blocks, tags, sharedPostId }){
+  const outBlocks = [];
+  const imageKeys = [];
+  for(const b of blocks){
+    if(b.type === 'image'){
+      const urls = [];
+      for(const im of b.images){
+        const up = await uploadFile(im.blob, 'post', 'post.jpg');
+        urls.push(up.url);
+        imageKeys.push(up.key);
+      }
+      if(urls.length) outBlocks.push({ type: 'image', urls, caption: b.caption || '' });
+    } else if(b.type === 'code'){
+      outBlocks.push({ type: 'code', language: b.language || '', content: b.content });
+    } else {
+      outBlocks.push({ type: 'text', content: b.content });
+    }
+  }
+  const d = await api('/posts', { method: 'POST', body: { blocks: outBlocks, tags, imageKeys, sharedPostId } });
+  emit('refresh-feed');
+  emit('refresh-users');
+  return d.post.id;
+}
+
+export async function updatePost(postId, fields){
+  await api('/posts/' + postId, { method: 'PATCH', body: fields });
+  emit('refresh-feed');
+}
+
+// Birbaşa re-post toggle. `rootPostId` = flatten sonrası kök orijinal.
+// Server də flatten edir; nəticəni (`reposted`) qaytarır.
+export async function toggleRepost(rootPostId){
+  const d = await api('/posts/' + rootPostId + '/repost', { method: 'POST' });
+  if(d.reposted) state.myReposts.add(rootPostId);
+  else state.myReposts.delete(rootPostId);
+  emit('refresh-feed');
+  return d.reposted;
+}
+
+// Feed yüklənəndə görünən post-lardan toggle vəziyyətini tamamla.
+// ƏLAVƏ edir, əvəz ETMİR: feed yalnız son 60 postu görür, ona görə burada
+// silmək pəncərədən kənarda qalan re-post-ları "edilməmiş" göstərərdi.
+// Səlahiyyətli mənbə `/me/social`-dır (watchMySocial), silmə isə toggle-dadır.
+export function deriveMyReposts(posts){
+  if(!state.authUser) return;
+  posts.forEach(p => {
+    if(p.authorUid === state.authUser.uid && p.postType === 'repost' && p.sharedPostId){
+      state.myReposts.add(p.sharedPostId);
+    }
+  });
+}
+
+// Həm post obyektini, həm də düz id-ni qəbul edir. (Əvvəl yalnız obyekt
+// gözlənilirdi, amma çağıran yerlərdən biri id ötürürdü → `undefined.id` →
+// `/api/posts/undefined`; Worker isə tapılmayan sətir üçün 200 qaytardığından
+// silmə səssizcə uğursuz olurdu — TASK-7 / Bənd 1.)
+export async function deletePost(post){
+  const id = typeof post === 'string' ? post : post?.id;
+  if(!id) throw new Error('deletePost: post id yoxdur');
+  await api('/posts/' + id, { method: 'DELETE' });
+  if (state.feed && state.feed.has(id)) {
+    state.feed.delete(id);
+    emit('feed-updated');
+  }
+  emit('refresh-feed');
+  emit('refresh-users');
+}
+
+/* ---------- likes / bookmarks ---------- */
+export function watchMyLikes(cb){
+  // watchMySocial ilə birlikdə işləyir — ayrıca poll açmır
+  const h = () => cb(state.myLikes);
+  window.addEventListener('cx-social', h);
+  return () => window.removeEventListener('cx-social', h);
+}
+
+// Optimistic toggle: lokal vəziyyət dərhal dəyişir, xətada geri qaytarılır.
+// `refresh-feed` QƏSDƏN emit edilmir — əks halda poll dərhal işə düşüb bütün
+// feed-i yenidən qururdu və çağıranın optimistic DOM yeniləməsi silinirdi
+// (TASK-7 / Bənd 2). Sayğaclar növbəti planlı poll-da səssizcə uzlaşır.
+export async function toggleLike(post){
+  const id = typeof post === 'string' ? post : post.id;
+  const had = state.myLikes.has(id);
+  if(had) state.myLikes.delete(id); else state.myLikes.add(id);
+  try{
+    await api(`/posts/${id}/like`, { method: had ? 'DELETE' : 'PUT' });
+  }catch(e){
+    if(had) state.myLikes.add(id); else state.myLikes.delete(id);
+    throw e;
+  }
+  return !had;
+}
+
+export function watchMyBookmarks(cb){
+  const h = () => cb(state.myBookmarks);
+  window.addEventListener('cx-social', h);
+  return () => window.removeEventListener('cx-social', h);
+}
+
+export async function toggleBookmark(postId){
+  const had = state.myBookmarks.has(postId);
+  if(had) state.myBookmarks.delete(postId); else state.myBookmarks.add(postId);
+  try{
+    await api('/bookmarks/' + postId, { method: had ? 'DELETE' : 'PUT' });
+  }catch(e){
+    if(had) state.myBookmarks.add(postId); else state.myBookmarks.delete(postId);
+    throw e;
+  }
+  emit('bookmarks-changed');   // yalnız Saxlanılanlar siyahısı üçün — poll işə salmır
+  return !had;
+}
+
+/* ---------- comments (LinkedIn üslubu: thread + reaksiya + sort + limit) ---------- */
+// opts: { sort:'new'|'top', limit:Number }. Poll cari limit-i gətirir — "daha çox"
+// düyməsi limit-i artırıb yeni poll qurur (feed.js). onData(d) — bütün cavabı verir:
+// { comments, replies:{parentId:[...]}, total, hasMore }.
+export function watchComments(postId, opts, cb){
+  const sort = (opts && opts.sort) || 'new';
+  const limit = (opts && opts.limit) || 20;
+  return startPoll({
+    fetcher: () => api(`/posts/${postId}/comments?sort=${sort}&limit=${limit}`),
+    interval: 4000,
+    events: ['refresh-comments-' + postId],
+    onData: d => cb(d),
+  });
+}
+// parentId verilsə cavabdır (server bir səviyyəyə flatten edir). Yaradılan rəyi qaytarır.
+export async function addComment(post, text, parentId){
+  const d = await api(`/posts/${post.id}/comments`, { method: 'POST', body: { text, parentId: parentId || undefined } });
+  emit('refresh-comments-' + post.id);
+  emit('refresh-feed');
+  emit('refresh-users');
+  return d;
+}
+export async function editComment(postId, commentId, text){
+  await api(`/posts/${postId}/comments/${commentId}`, { method: 'PATCH', body: { text } });
+  emit('refresh-comments-' + postId);
+}
+export async function deleteComment(postId, commentId){
+  await api(`/posts/${postId}/comments/${commentId}`, { method: 'DELETE' });
+  emit('refresh-comments-' + postId);
+  emit('refresh-feed');
+  emit('refresh-users');
+}
+// Optimistic rəy-bəyənmə: çağıran UI-ni dərhal yeniləyir, xətada geri qaytarır.
+// `refresh-comments` QƏSDƏN emit edilmir (poll optimistic dəyişikliyi silməsin).
+export async function toggleCommentLike(postId, commentId, currentlyLiked){
+  await api(`/posts/${postId}/comments/${commentId}/like`, { method: currentlyLiked ? 'DELETE' : 'PUT' });
+  return !currentlyLiked;
+}
+
+/* ================= otaqlar ================= */
+export function watchRooms(cb){
+  return startPoll({
+    fetcher: () => api('/rooms'),
+    interval: 30000,
+    events: ['refresh-rooms'],
+    onData: d => cb(d.rooms),
+  });
+}
+// Tək dəfəlik oxuma (Admin#9 modalı üçün — poll qurmağa ehtiyac yoxdur).
+export async function listRooms(){ return (await api('/rooms')).rooms; }
+
+export async function createRoom(name){
+  await api('/rooms', { method: 'POST', body: { name } });
+  emit('refresh-rooms');
+}
+export async function deleteRoom(roomId){
+  await api('/rooms/' + roomId, { method: 'DELETE' });
+  emit('refresh-rooms');
+}
+export function watchRoomMessages(roomId, cb){
+  return startPoll({
+    fetcher: () => api(`/rooms/${roomId}/messages`),
+    interval: 3000,
+    events: ['refresh-msgs-' + roomId],
+    onData: d => cb(d.messages),
+  });
+}
+export async function sendRoomMessage(roomId, payload){
+  const body = typeof payload === 'string' ? { type: 'text', text: payload } : payload;
+  await api(`/rooms/${roomId}/messages`, { method: 'POST', body });
+  emit('refresh-msgs-' + roomId);
+}
+export async function editRoomMessage(roomId, msgId, text){
+  await api(`/rooms/${roomId}/messages/${msgId}`, { method: 'PATCH', body: { text } });
+  emit('refresh-msgs-' + roomId);
+}
+export async function deleteRoomMessage(roomId, msgId){
+  await api(`/rooms/${roomId}/messages/${msgId}`, { method: 'DELETE' });
+  emit('refresh-msgs-' + roomId);
+}
+
+/* ================= DM ================= */
+export function pairIdFor(a, b){ return [a, b].sort().join('_'); }
+
+export function watchThreads(cb){
+  return startPoll({
+    fetcher: () => api('/dms'),
+    interval: 5000,
+    events: ['refresh-threads'],
+    onData: d => cb(d.threads),
+  });
+}
+export function watchDMMessages(pairId, cb){
+  return startPoll({
+    fetcher: () => api(`/dms/${pairId}/messages`),
+    interval: 3000,
+    events: ['refresh-dm-' + pairId],
+    onData: d => cb(d.messages),
+  });
+}
+export async function sendDM(toUid, payload){
+  const body = typeof payload === 'string' ? { type: 'text', text: payload } : payload;
+  await api('/dms/to/' + toUid, { method: 'POST', body });
+  emit('refresh-dm-' + pairIdFor(state.authUser.uid, toUid));
+  emit('refresh-threads');
+}
+export async function editDM(pairId, msgId, text){
+  await api(`/dms/${pairId}/messages/${msgId}`, { method: 'PATCH', body: { text } });
+  emit('refresh-dm-' + pairId);
+}
+export async function deleteDM(pairId, msgId){
+  await api(`/dms/${pairId}/messages/${msgId}`, { method: 'DELETE' });
+  emit('refresh-dm-' + pairId);
+}
+export async function markThreadRead(pairId){
+  await api(`/dms/${pairId}/read`, { method: 'POST' });
+}
+
+/* ================= follows ================= */
+export function watchMyFollowing(cb){
+  return watchMySocial(() => {
+    window.dispatchEvent(new Event('cx-social'));
+    cb(state.myFollowing);
+  });
+}
+export function watchMyFollowers(cb){
+  const h = () => cb(state.myFollowers);
+  window.addEventListener('cx-social', h);
+  return () => window.removeEventListener('cx-social', h);
+}
+
+export async function fetchFollowingOf(uid){
+  const d = await api(`/users/${uid}/follow-lists?kind=following`);
+  return d.uids;
+}
+export async function fetchFollowersOf(uid){
+  const d = await api(`/users/${uid}/follow-lists?kind=followers`);
+  return d.uids;
+}
+
+export async function toggleFollow(targetUid){
+  if(state.myFollowing.has(targetUid)){
+    state.myFollowing.delete(targetUid);
+    await api('/follows/' + targetUid, { method: 'DELETE' });
+    emit('refresh-social');
+    return false;
+  }
+  state.myFollowing.add(targetUid);
+  await api('/follows/' + targetUid, { method: 'PUT' });
+  emit('refresh-social');
+  return true;
+}
+export const isMutual = uid => state.myFollowing.has(uid) && state.myFollowers.has(uid);
+
+export function canMessage(target){
+  const pol = target?.settings?.privacy?.whoCanMessage || 'everyone';
+  if(pol === 'everyone' || state.isAdmin) return true;
+  const theyFollowMe = state.myFollowers.has(target.uid);
+  if(pol === 'following') return theyFollowMe;
+  if(pol === 'mutual') return theyFollowMe && state.myFollowing.has(target.uid);
+  return true;
+}
+
+/* ================= progress ================= */
+export async function bumpProgress(){ /* server tərəfdə avtomatik */ }
+export async function fetchProgressOf(uid){
+  const d = await api(`/users/${uid}/progress`);
+  return d.progress;
+}
+
+/* ================= tasks ================= */
+export function watchTasks(cb){
+  return startPoll({
+    fetcher: () => api('/tasks?scope=approved'),
+    interval: 20000,
+    events: ['refresh-tasks'],
+    onData: d => cb(d.tasks),
+  });
+}
+export function watchMyPendingTasks(cb){
+  return startPoll({
+    fetcher: () => api('/tasks?scope=mine'),
+    interval: 20000,
+    events: ['refresh-tasks'],
+    onData: d => cb(d.tasks),
+  });
+}
+export function watchPendingTasks(cb){
+  return startPoll({
+    fetcher: () => api('/tasks?scope=pending'),
+    interval: 15000,
+    events: ['refresh-tasks'],
+    onData: d => cb(d.tasks),
+  });
+}
+export async function createTask({ title, desc, category }){
+  await api('/tasks', { method: 'POST', body: { title, desc, category } });
+  emit('refresh-tasks');
+  emit('refresh-users');
+}
+export async function reviewTask(task, approve){
+  await api(`/tasks/${task.id}/review`, { method: 'POST', body: { approve } });
+  emit('refresh-tasks');
+}
+export async function deleteTask(taskId){
+  await api('/tasks/' + taskId, { method: 'DELETE' });
+  emit('refresh-tasks');
+  emit('refresh-users');
+}
+
+export async function submitSolution(task, { text, link }){
+  await api(`/tasks/${task.id}/submission`, { method: 'PUT', body: { text, link } });
+  emit('refresh-subs');
+}
+export function watchMySubmissions(cb){
+  return startPoll({
+    fetcher: () => api('/submissions?scope=mine'),
+    interval: 20000,
+    events: ['refresh-subs'],
+    onData: d => cb(d.submissions),
+  });
+}
+export function watchPendingSubmissions(cb){
+  return startPoll({
+    fetcher: () => api('/submissions?scope=pending'),
+    interval: 15000,
+    events: ['refresh-subs'],
+    onData: d => cb(d.submissions),
+  });
+}
+export async function reviewSubmission(sub, status){
+  await api(`/submissions/${sub.taskId}/${sub.uid}/review`, { method: 'POST', body: { status } });
+  emit('refresh-subs');
+}
+
+/* ================= reports ================= */
+export async function createReport(targetUid, targetUsername, reason){
+  await api('/reports', { method: 'POST', body: { targetUid, targetUsername, reason } });
+}
+export function watchOpenReports(cb){
+  return startPoll({
+    fetcher: () => api('/reports'),
+    interval: 20000,
+    events: ['refresh-reports'],
+    onData: d => cb(d.reports),
+  });
+}
+export async function resolveReport(reportId, status){
+  await api('/reports/' + reportId, { method: 'PATCH', body: { status } });
+  emit('refresh-reports');
+}
+
+/* ================= admin ================= */
+export async function checkIsAdmin(){ return state.isAdmin; }
+export async function setBlocked(uid, blocked){
+  await api('/admin/users/' + uid, { method: 'PATCH', body: { blocked } });
+  emit('refresh-users');
+}
+export async function adminUpdateUser(uid, fields){
+  await api('/admin/users/' + uid, { method: 'PATCH', body: fields });
+  emit('refresh-users');
+}
+export async function addAdminByUid(uid){
+  await api('/admin/admins/' + uid, { method: 'PUT' });
+  emit('refresh-admins');
+}
+export async function removeAdmin(uid){
+  await api('/admin/admins/' + uid, { method: 'DELETE' });
+  emit('refresh-admins');
+}
+export function watchAdmins(cb){
+  return startPoll({
+    fetcher: () => api('/admin/admins'),
+    interval: 30000,
+    events: ['refresh-admins'],
+    onData: d => cb(new Set(d.admins)),
+  });
+}
+export async function logAdmin(action, targetUid, detail = ''){
+  await api('/admin/log', { method: 'POST', body: { action, targetUid, detail } }).catch(() => {});
+}
+export function watchAdminLogs(cb, { level = '' } = {}){
+  return startPoll({
+    fetcher: () => api('/admin/logs' + (level ? '?level=' + encodeURIComponent(level) : '')),
+    interval: 20000,
+    events: ['refresh-admins', 'refresh-logs'],
+    onData: d => cb(d.logs, d.nextCursor),
+  });
+}
+
+/* ---------- TASK-6 / BÖLMƏ 3 — admin paneli ---------- */
+
+// Admin#6/#10 — jurnalın növbəti səhifəsi (keyset cursor).
+export async function fetchAdminLogs({ level, cursor, limit } = {}){
+  const p = new URLSearchParams();
+  if(level) p.set('level', level);
+  if(cursor) p.set('cursor', cursor);
+  if(limit) p.set('limit', String(limit));
+  return api('/admin/logs?' + p.toString());
+}
+
+// Admin#4/#10 — filtrlənən, səhifələnən istifadəçi siyahısı.
+export async function fetchAdminUsers({ q, filter, cursor, limit } = {}){
+  const p = new URLSearchParams();
+  if(q) p.set('q', q);
+  if(filter) p.set('filter', filter);
+  if(cursor) p.set('cursor', cursor);
+  if(limit) p.set('limit', String(limit));
+  return api('/admin/users?' + p.toString());
+}
+
+// Admin#5 — toplu blok/blokdan çıxarma (serverdə D1 batch()).
+export async function bulkSetBlocked(uids, blocked){
+  const d = await api('/admin/users/bulk', {
+    method: 'POST',
+    body: { action: blocked ? 'block' : 'unblock', uids },
+  });
+  emit('refresh-users');
+  emit('refresh-logs');
+  return d.affected;
+}
+
+// Admin#8 — sparkline zaman-seriyası.
+export async function fetchStatsDaily(days = 30){
+  return api('/admin/stats-daily?days=' + days);
+}
+
+// Admin#3 — taksonomiya sırasının toplu yenilənməsi.
+export async function reorderTaxonomy(typeKey, ids){
+  await api(`/taxonomies/${typeKey}/reorder`, { method: 'POST', body: { ids } });
+  emit('refresh-logs');
+}
+
+// Admin#11 — CSV ixracı. Fayl Worker-dən stream gəlir; brauzer endirməni özü aparır.
+export function exportCsvUrl(kind){ return `/api/admin/export/${kind}.csv`; }
+export async function adminTempPassword(uid, password){
+  await api(`/admin/users/${uid}/temp-password`, { method: 'POST', body: { password } });
+}
+
+/* ================= notifications ================= */
+export function watchNotifs(cb){
+  return startPoll({
+    fetcher: () => api('/notifications'),
+    interval: 8000,
+    events: ['refresh-notifs'],
+    onData: d => cb(d.notifications),
+  });
+}
+export async function markNotifRead(id){
+  await api(`/notifications/${id}/read`, { method: 'POST' });
+  emit('refresh-notifs');
+}
+export async function markAllNotifsRead(){
+  await api('/notifications/read-all', { method: 'POST' });
+  emit('refresh-notifs');
+}
+
+/* ================= public kolleksiyalar ================= */
+export async function fetchPublicFaqs(){ return (await api('/public/faqs')).faqs; }
+export async function fetchPublicTestimonials(){ return (await api('/public/testimonials')).testimonials; }
+export async function fetchPublicStats(){ return api('/public/stats'); }
+export async function subscribeNewsletter(email, lang){
+  await api('/public/newsletter', { method: 'POST', body: { email, lang } });
+}
+export async function sendContactMessage({ name, email, message }){
+  await api('/public/contact', { method: 'POST', body: { name, email, message } });
+}
+
+/* ---------- admin: public məzmun ---------- */
+export async function fetchAllFaqs(){ return (await api('/admin/faqs')).faqs; }
+export async function saveFaq(id, data){
+  await api('/admin/faqs', { method: 'POST', body: { id, ...data } });
+}
+export async function deleteFaq(id){
+  await api('/admin/faqs/' + id, { method: 'DELETE' });
+}
+export async function fetchAllTestimonials(){ return (await api('/admin/testimonials')).testimonials; }
+export async function saveTestimonial(id, data){
+  await api('/admin/testimonials', { method: 'POST', body: { id, ...data } });
+}
+export async function deleteTestimonial(id){
+  await api('/admin/testimonials/' + id, { method: 'DELETE' });
+}
+export function watchContactMessages(cb){
+  return startPoll({
+    fetcher: () => api('/admin/contacts'),
+    interval: 20000,
+    events: ['refresh-contacts'],
+    onData: d => cb(d.contacts),
+  });
+}
+export async function markContactRead(id){
+  await api(`/admin/contacts/${id}/read`, { method: 'POST' });
+  emit('refresh-contacts');
+}
+export async function seedPublicContent(faqs, testimonials){
+  let n = 0;
+  for(const f of faqs){ await saveFaq(f.id, f); n++; }
+  for(const t of testimonials){ await saveTestimonial(t.id, t); n++; }
+  return n;
+}
+
+/* ================= fayllar (R2) ================= */
+export const MSG_FILE_MAX = 2 * 1024 * 1024;
+
+async function uploadFile(blobOrFile, kind, fallbackName){
+  const form = new FormData();
+  const name = (blobOrFile && blobOrFile.name) || fallbackName || 'file';
+  form.append('file', blobOrFile, name);
+  return api('/upload?kind=' + kind, { method: 'POST', form });
+}
+
+export async function uploadAvatar(blob){
+  const d = await uploadFile(blob, 'avatar', 'avatar.jpg');
+  return d.url;
+}
+// TASK-11 — komanda fayl arxivi. `kind=team` server tərəfdə sənəd formatlarını
+// da qəbul edir (10 MB) və açarı `teams/{teamId}/{category}/...` kimi qurur.
+export const TEAM_FILE_MAX = 10 * 1024 * 1024;
+export async function uploadTeamFile(file, teamId, category = 'documents'){
+  if(file.size > TEAM_FILE_MAX) throw new Error('Fayl 10 MB-dan böyükdür');
+  const form = new FormData();
+  form.append('file', file, file.name || 'file');
+  return api(`/upload?kind=team&teamId=${encodeURIComponent(teamId)}&category=${encodeURIComponent(category)}`, {
+    method: 'POST', form,
+  });
+}
+
+export async function uploadMessageFile(file){
+  if(file.size > MSG_FILE_MAX) throw new Error('Fayl 2 MB-dan böyükdür');
+  const d = await uploadFile(file, 'msg', file.name);
+  return {
+    fileUrl: d.url, fileName: d.fileName, fileSize: d.fileSize, mimeType: d.mimeType,
+    type: d.mimeType.startsWith('image/') ? 'image' : 'file',
+  };
+}
+export async function deleteMyAvatar(){
+  await updateMyProfile({ photoURL: null }).catch(() => {});
+}

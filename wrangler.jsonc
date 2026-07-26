@@ -1,0 +1,159 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "collabix",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-07-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // Statik sayt (Vite build çıxışı). /assets/* (hashed, immutable JS/CSS) birbaşa
+  // edge-dən verilir — Worker-i işə salmır (sürət + pulsuz kvota qənaəti).
+  // Qalan HƏR ŞEY (HTML sənədi, /api/*, /files/*) Worker-dən keçir ki, security
+  // header-lər (CSP daxil) əsl HTML cavabına da tətbiq olunsun.
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/**", "!/assets/*"]
+  },
+
+  // D1 — əsas verilənlər bazası
+  // İlk dəfə: `wrangler d1 create collabix-db` → database_id-ni bura yaz.
+  // Lokal dev üçün placeholder kifayətdir (lokal SQLite işlədilir).
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "collabix-db",
+      "database_id": "eb30cafe-d189-42d3-aed5-320eafe5c188"
+    }
+  ],
+
+  // R2 — fayl anbarı (avatar, post şəkilləri, mesaj faylları)
+  "r2_buckets": [
+    { "binding": "FILES", "bucket_name": "collabix-files" }
+  ],
+
+  // KV — sessiyalar + rate-limit + kiçik keş
+  // İlk dəfə: `wrangler kv namespace create SESSIONS` → id-ni bura yaz.
+  "kv_namespaces": [
+    { "binding": "SESSIONS", "id": "c631f38c595440de8431bc93d00cb548" }
+  ],
+
+  "vars": {
+    "ENVIRONMENT": "production",
+
+    // Turnstile PUBLIC site key (TASK-8 / Bənd 7). Secret DEYİL — brauzerə
+    // onsuz da göndərilir, ona görə burada saxlanması təhlükəsizdir.
+    // Cütü olan gizli açar `wrangler secret put TURNSTILE_SECRET` ilə qoyulur.
+    // BOŞ QALDIQDA bot qoruması tamamilə söndürülür və sayt normal işləyir
+    // (bax docs/TASK-8-SETUP.md → "Turnstile").
+    "TURNSTILE_SITE_KEY": "0x4AAAAAAD6qIZOaina_as3U",
+
+    // Arxivləmə "isti pəncərəsi" (TASK-8 / Bənd 12): D1-də neçə günlük mesaj
+    // qalsın. Ondan köhnəsi gündəlik cron ilə R2-yə köçür və D1-dən silinir.
+    // Dəyəri artırmaq D1 həcmini artırır, azaltmaq köhnə mesajların oxunuşunu
+    // R2-yə (bir qədər yavaş) yönləndirir.
+    //
+    // ⚠️ MÜVƏQQƏTİ DƏYƏR (AUDIT-TASK-1 / C-3) — 2026-07-27.
+    // Arxiv OXU yolu qurulmayıb, ona görə D1-dən SİLMƏ faktiki olaraq
+    // dayandırılıb (3650 gün ≈ 10 il → cutoff heç bir mesaja çatmır).
+    // `worker/archive.ts:127` → `readArchive()` yazılıb, amma HEÇ YERDƏN
+    // çağırılmır: nə API endpoint-i, nə UI düyməsi var. Yəni R2-yə köçürülüb
+    // D1-dən silinən mesajı məhsul daxilində bərpa etmək MÜMKÜN DEYİL
+    // (GDPR ixracı da yalnız D1-dən oxuyur).
+    //
+    // AUDIT-TASK-8 (arxiv oxu endpoint-ləri + UI + ixraca daxil etmə)
+    // tamamlandıqdan sonra bu dəyər "90"-a QAYTARILMALIDIR.
+    // Qaytarılmadan buraxılış = `room_messages`/`dm_messages` cədvəllərinin
+    // sonsuz böyüməsi + D1 storage limitinə dəymə riski.
+    "ARCHIVE_HOT_DAYS": "3650"
+  },
+
+  "observability": {
+    "enabled": false,
+    "head_sampling_rate": 1,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "persist": true,
+      "invocation_logs": true
+    },
+    "traces": {
+      "enabled": true,
+      "persist": true,
+      "head_sampling_rate": 1
+    }
+  },
+
+  // Cloudflare Queues (TASK-8 / Bənd 18) — asinxron fan-out.
+  // Eyni Worker həm producer, həm consumer-dir (ayrıca Worker lazım deyil).
+  //
+  // İlk dəfə: `wrangler queues create collabix-tasks` və `... collabix-tasks-dlq`.
+  //
+  // `max_retries` + `dead_letter_queue`: təkrar-təkrar sınan mesaj sonsuz
+  // dövrə girməməlidir — 3 cəhddən sonra DLQ-ya düşür və orada araşdırılır.
+  // DLQ olmasaydı belə mesaj ya itərdi, ya da növbəni tıxayardı.
+  "queues": {
+    "producers": [
+      { "queue": "collabix-tasks", "binding": "TASKS" }
+    ],
+    "consumers": [
+      {
+        "queue": "collabix-tasks",
+        // Kiçik partiya + qısa gözləmə: bildiriş gecikməsi hiss olunmasın.
+        "max_batch_size": 10,
+        "max_batch_timeout": 5,
+        "max_retries": 3,
+        "dead_letter_queue": "collabix-tasks-dlq"
+      }
+    ]
+  },
+
+  // Cron Trigger (TASK-8 / Bənd 12) — gündəlik arxivləmə + təmizləmə.
+  // 03:17 UTC: "yuvarlaq" saatlar Cloudflare-də ən sıx cron pəncərəsidir,
+  // qeyri-adi dəqiqə seçmək növbədə gözləməni azaldır.
+  // İş: köhnə mesajları R2-yə köçür, vaxtı bitmiş sessiyaları və 90 gündən
+  // köhnə təhlükəsizlik hadisələrini sil (worker/archive.ts → runArchiveJob).
+  "triggers": {
+    "crons": ["17 3 * * *"]
+  },
+
+  // Realtime Durable Object-lar: hər otağa RoomDO (mesaj+typing), qlobal PresenceDO (online/offline).
+  "durable_objects": {
+    "bindings": [
+      { "name": "ROOM_DO", "class_name": "RoomDO" },
+      { "name": "PRESENCE_DO", "class_name": "PresenceDO" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["RoomDO"] },
+    { "tag": "v2", "new_sqlite_classes": ["PresenceDO"] }
+  ],
+  
+  "workflows": [
+    {
+      "name": "collabix-workflow",
+      "binding": "WORKFLOW",
+      "class_name": "CollabixWorkflow"
+    }
+  ],
+  
+  "ai": {
+    "binding": "AI"
+  },
+  
+  "vectorize": [
+    {
+      "binding": "VECTORIZE",
+      "index_name": "collabix-index"
+    }
+  ],
+  
+  "browser": {
+    "binding": "BROWSER"
+  }
+
+  // Secrets (repo-da SAXLANILMIR — CLI ilə):
+  //   wrangler secret put JWT_SECRET        ← uzun təsadüfi sətir (məs. `openssl rand -base64 48`)
+  //   wrangler secret put TURNSTILE_SECRET  ← Turnstile gizli açarı (opsional, Bənd 7)
+  // Lokal dev üçün: .dev.vars faylı (gitignore-dadır)
+}

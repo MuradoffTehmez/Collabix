@@ -1,0 +1,14 @@
+/* Cyberpunk Font Overrides */
+[data-theme="cyberpunk"] body,
+[data-theme="cyberpunk"] .card,
+[data-theme="cyberpunk"] .btn,
+[data-theme="cyberpunk"] input {
+  font-family: 'Orbitron', sans-serif !important;
+}
+
+[data-theme="cyberpunk"] h1,
+[data-theme="cyberpunk"] h2,
+[data-theme="cyberpunk"] h3,
+[data-theme="cyberpunk"] .logo {
+  font-family: 'Space Grotesk', sans-serif !important;
+}

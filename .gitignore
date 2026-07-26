@@ -1,0 +1,51 @@
+node_modules/
+dist/
+.wrangler/
+firebase-debug.log
+firestore-debug.log
+
+# ─── Cloudflare / yerli sirlər (AUDIT-TASK-2 / 2.0) ───
+# `.dev.vars` JWT_SECRET və TURNSTILE_SECRET daşıyır. `.env*` hazırda mövcud
+# deyil, amma qabaqcadan bağlanır — ilk commit-dən sonra təsadüfən yaradılsa
+# sükutla izlənməyə başlayardı.
+.dev.vars
+.dev.vars.*
+.env
+.env.*
+!.env.example
+
+# ─── Miqrasiya artefaktları (AUDIT-TASK-1-REPORT §5.4) ───
+# `import.sql` 53 istifadəçinin PBKDF2 pass_hash-ını, `update.sql` isə
+# real istifadəçi post məzmununu və R2 yollarını daşıyır. İkisi də
+# miqrasiya çıxışıdır — repo tarixçəsində yeri yoxdur.
+migration-cf/import.sql
+migration-cf/update.sql
+
+# Playwright (E2E)
+/test-results/
+/playwright-report/
+/blob-report/
+/.playwright/
+
+# E2E sessiya faylı (giriş cookie-si)
+/e2e/.auth/
+
+# ─── Sirlər: heç bir halda commit edilməməlidir (AUDIT-2026-07-26 / M-16) ───
+# ⚠ Git YALNIZ forward slash tanıyır. Backslash ilə yazılan qayda SÜKUTLA
+# işləmir — burada əvvəl `testsprite_tests\tmp\config.json` sətri var idi və
+# məhz buna görə API açarı faylı heç vaxt ignore edilməmişdi. Səhv yalnız
+# auditdə üzə çıxdı, çünki Git belə qaydaya xəta vermir.
+#
+# Eyni səbəbdən köhnə `migration/serviceAccountKey.json` qaydası da çıxarıldı:
+# o, yalnız KÖK `migration/` qovluğuna şamil olunurdu və faktiki yol olan
+# `legacy/firebase/migration/`-i tutmurdu. `**/` ilə hər dərinlik tutulur.
+**/serviceAccountKey.json
+**/.emulator-data/
+**/auth_export/
+**/*.pem
+**/*.key
+testsprite_tests/
+
+# ─── Köhnəlmiş / artefakt (AUDIT-2026-07-26 / struktur borcu #3) ───
+legacy/
+.claude/skills/run-collabix/shots/

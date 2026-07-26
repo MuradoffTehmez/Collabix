@@ -1,0 +1,276 @@
+// Otaqlar (ümumi + mövzu otaqları): real-time mesajlar, redaktə/silmə.
+import {
+  state, watchRooms, watchRoomMessages, sendRoomMessage, editRoomMessage, deleteRoomMessage, deleteRoom,
+} from './store.js';
+import { el, clear, fmtTime, emit } from './util.js';
+import { toast, confirmDialog, showModal, closeModal, emptyState } from './ui.js';
+import { openProfileModal } from './users.js';
+import { mentionify, attachMentionAutocomplete } from './mention.js';
+import { richContent, attachRichControls, renderGroupedMessages } from './richmsg.js';
+import { t } from './i18n.js';
+
+let rooms = [];
+let currentRoomId = 'general';
+let unsubRooms = null;
+let unsubMsgs = null;
+
+/* ---------- realtime (RoomDO / WebSocket) ---------- */
+// WS yalnız "siqnal" daşıyır: 'refresh' → dərhal refetch (məzmun D1-dən, polling
+// fallback qalır); 'typing' → göstərici. WS düşsə backoff ilə yenidən qoşulur.
+let roomWs = null;
+let roomWsFor = null;
+let lastTypingSent = 0;
+let typingHideTimer = null;
+const wsProto = () => (location.protocol === 'https:' ? 'wss:' : 'ws:');
+
+function closeRoomWs(){
+  const ws = roomWs;
+  roomWs = null;
+  if(ws){ try{ ws.onclose = null; ws.close(); }catch(e){} }
+}
+function connectRoomWs(roomId){
+  closeRoomWs();
+  roomWsFor = roomId;
+  let ws;
+  try{ ws = new WebSocket(`${wsProto()}//${location.host}/api/rooms/${roomId}/ws`); }
+  catch(e){ return; }   // WS mümkün deyilsə poll fallback işini görür
+  roomWs = ws;
+  ws.addEventListener('message', ev => {
+    if(roomWsFor !== roomId) return;
+    let d; try{ d = JSON.parse(ev.data); }catch(e){ return; }
+
+    if(d.t === 'msg'){
+      // TASK-8 / Bənd 13 — mesaj birbaşa DO-dan gəlir, D1 yazısını GÖZLƏMİR.
+      // `ack` gözləyən optimistik sətir varsa təsdiqlənir; yoxsa (başqasının
+      // mesajı) sadəcə refetch tetiklənir və D1-dən tam sətir gəlir.
+      if(d.cid) settle(d.cid, true);
+      emit('refresh-msgs-' + roomId);
+    }
+    else if(d.t === 'ack'){
+      // Təkrar göndərişin idempotent cavabı — mesaj serverdə artıq var.
+      settle(d.cid, true);
+    }
+    else if(d.t === 'error'){
+      // Server mesajı AÇIQ ŞƏKİLDƏ rədd etdi (limit / boş / D1 yazısı sınıb).
+      // `true` ilə bağlanır: REST-ə düşmək ya dublikat yaradar, ya da DO-nun
+      // rate-limit-ini yan keçərdi.
+      if(d.cid) settle(d.cid, true);
+      if(d.code === 'rate_limit') toast(t('chat.rate_limit'));
+      emit('refresh-msgs-' + roomId);
+    }
+    else if(d.t === 'refresh') emit('refresh-msgs-' + roomId);
+    else if(d.t === 'typing') showTyping(d.name);
+  });
+  ws.addEventListener('close', () => {
+    if(roomWs !== ws) return;                 // artıq başqa bağlantı aktivdir
+    roomWs = null;
+    setTimeout(() => { if(roomWsFor === roomId && !roomWs) connectRoomWs(roomId); }, 3000);
+  });
+  ws.addEventListener('error', () => { try{ ws.close(); }catch(e){} });
+}
+function getTypingEl(){
+  let n = document.getElementById('chatTyping');
+  if(!n){
+    const box = document.getElementById('chatMessages');
+    n = el('div', { id: 'chatTyping', class: 'typing-indicator' });
+    box.insertAdjacentElement('afterend', n);
+  }
+  return n;
+}
+function showTyping(name){
+  const n = getTypingEl();
+  n.textContent = (name || t('chat.someone')) + ' ' + t('chat.typing');
+  n.classList.add('show');
+  clearTimeout(typingHideTimer);
+  typingHideTimer = setTimeout(() => n.classList.remove('show'), 3500);
+}
+function maybeSendTyping(){
+  const nowMs = Date.now();
+  if(roomWs && roomWs.readyState === 1 && nowMs - lastTypingSent > 2000){
+    lastTypingSent = nowMs;
+    try{ roomWs.send(JSON.stringify({ t: 'typing' })); }catch(e){}
+  }
+}
+
+/* ---------- mesaj göndərmə: WS → DO (TASK-8 / Bənd 13) ----------
+   Köhnə axın: REST → Worker → D1 yazısı → RPC → DO → WS. İstifadəçi öz
+   mesajını görmək üçün D1 yazısını gözləyirdi.
+   Yeni axın: WS → DO → dərhal broadcast → arxada asinxron D1.
+
+   REST yolu SİLİNMİR: WS qapalıdırsa (qoşulur, düşüb, brauzer bloklayıb)
+   avtomatik ona düşürük — mesaj heç vaxt "yoxa çıxmır". */
+// cid → { resolve, timer }. `resolve(true)` = "server cavab verdi, REST-ə
+// düşmə"; `resolve(false)` = "heç bir cavab yoxdur, fallback et".
+const pending = new Map();
+const ACK_TIMEOUT = 4000;
+
+function settle(cid, handled){
+  const p = pending.get(cid);
+  if(!p) return;
+  clearTimeout(p.timer);
+  pending.delete(cid);
+  p.resolve(handled);
+}
+
+async function sendViaSocket(payload){
+  if(!roomWs || roomWs.readyState !== 1) return false;
+  const cid = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random())
+    .replace(/[^a-z0-9]/gi, '').slice(0, 32);
+  const body = typeof payload === 'string' ? { type: 'text', text: payload } : payload;
+  try{
+    roomWs.send(JSON.stringify({ t: 'send', cid, ...body }));
+  }catch(e){ return false; }
+
+  return new Promise(resolve => {
+    // Taymer YALNIZ "heç bir cavab gəlmədi" halını tutur: WS açıq görünür,
+    // amma paket itib. Onsuz mesaj səssizcə yox olardı.
+    const timer = setTimeout(() => {
+      pending.delete(cid);
+      resolve(false);
+    }, ACK_TIMEOUT);
+    pending.set(cid, { resolve, timer });
+  });
+}
+
+// Mobil master-detail: mesaj sahəsindən otaq siyahısına qayıt.
+function closeRoomDetail(){
+  document.querySelector('#page-chat .chat-wrap')?.classList.remove('detail-open');
+}
+
+function renderRoomList(){
+  const list = document.getElementById('roomList');
+  clear(list);
+  rooms.forEach(r => {
+    const item = el('div', { class: 'ch-item' + (r.id === currentRoomId ? ' active' : ''), onclick: () => selectRoom(r.id, true) },
+      el('div', { class: 'avatar' }, '#'),
+      el('div', { class: 'meta' }, el('b', {}, r.name)),
+    );
+    if(state.isAdmin && r.id !== 'general'){
+      item.append(el('button', { class: 'btn-mini block', style: 'padding:3px 7px; font-size:.62rem;', onclick: async e => {
+        e.stopPropagation();
+        if(await confirmDialog(t('dyn.room_del_conf').replace('"${r.name}"', `"${r.name}"`))){
+          try{ await deleteRoom(r.id); toast(t('dyn.room_del')); }catch(err){ toast(t('dyn.del_fail'), 'err'); }
+        }
+      } }, '🗑'));
+    }
+    list.append(item);
+  });
+}
+
+// Mesaj bubble-ı (ad/avatar/vaxt artıq QRUP başında — renderGroupedMessages).
+// Hover-də tam tarix `title` ilə; redaktə/sil alətləri əvvəlki kimi.
+function msgBubble(m){
+  const mine = m.authorUid === state.authUser.uid;
+  const node = el('div', { class: 'msg ' + (mine ? 'out' : 'in'), title: fmtTime(m.createdAt) },
+    richContent(m),
+    m.editedAt ? el('span', { class: 'edited-mark' }, ' ' + t('feed.edited')) : null,
+  );
+  if(mine || state.isAdmin){
+    const tools = el('div', { class: 'msg-tools' });
+    if(mine && (!m.type || m.type === 'text')) tools.append(el('button', { type: 'button', title: 'Redaktə et', onclick: () => openMsgEdit(m) }, '✎'));
+    tools.append(el('button', { type: 'button', title: 'Sil', onclick: async () => {
+      if(await confirmDialog(t('dyn.msg_del_conf'))){
+        try{ await deleteRoomMessage(currentRoomId, m.id); }catch(e){ toast(t('dyn.del_fail'), 'err'); }
+      }
+    } }, '🗑'));
+    node.append(tools);
+  }
+  return node;
+}
+
+function openMsgEdit(m){
+  const ta = el('textarea', { maxLength: 2000 });
+  ta.value = m.text;
+  showModal([
+    el('div', { class: 'section-title' }, t('dyn.edit_msg')),
+    ta,
+    el('button', { class: 'btn-small', onclick: async () => {
+      const v = ta.value.trim();
+      if(!v) return;
+      try{ await editRoomMessage(currentRoomId, m.id, v); closeModal(); toast(t('dyn.msg_upd')); }
+      catch(e){ toast(t('dyn.upd_fail'), 'err'); }
+    } }, t('dyn.save')),
+  ]);
+}
+
+// `openDetail`: yalnız istifadəçi KLİKindən true. Mount-dakı avtomatik seçim
+// false ötürür ki, mobildə chat açılanda əvvəlcə otaq SİYAHISI görünsün, birbaşa
+// mesaja tullanmasın (desktop-da fərq yoxdur — detail-open yalnız mobildə işləyir).
+function selectRoom(roomId, openDetail = false){
+  currentRoomId = roomId;
+  renderRoomList();
+  const room = rooms.find(r => r.id === roomId);
+  const head = document.getElementById('chatHead');
+  clear(head);
+  // TASK-8 mobil master-detail: geri düyməsi siyahıya qaytarır (yalnız mobildə
+  // görünür, CSS idarə edir). Otaq seçiləndə mesaj sahəsi tam en sürüşür.
+  head.append(
+    el('button', { class: 'chat-back', 'aria-label': t('chat.back'), onclick: closeRoomDetail }, '‹'),
+    '# ' + (room ? room.name : roomId),
+    el('span', { class: 'sub' }, ' — hamı üçün açıqdır'),
+  );
+  if(openDetail) document.querySelector('#page-chat .chat-wrap')?.classList.add('detail-open');
+  const box = document.getElementById('chatMessages');
+  clear(box);
+  const tp = document.getElementById('chatTyping');
+  if(tp) tp.classList.remove('show');           // otaq dəyişdi → köhnə typing gizlət
+  connectRoomWs(roomId);                          // realtime siqnal kanalı
+  if(unsubMsgs) unsubMsgs();
+  unsubMsgs = watchRoomMessages(roomId, msgs => {
+    const wasAtBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
+    clear(box);
+    if(!msgs.length){ box.append(emptyState('#', t('chat.empty_chat'))); return; }
+    renderGroupedMessages(box, msgs, {
+      uidOf: m => m.authorUid,
+      mineOf: m => m.authorUid === state.authUser.uid,
+      userOf: m => state.users.get(m.authorUid),
+      nameOf: m => m.authorName,
+      onName: uid => openProfileModal(uid),
+      bubbleOf: m => msgBubble(m),
+    });
+    if(wasAtBottom) box.scrollTop = box.scrollHeight;
+  });
+}
+
+// Vahid göndərmə yolu: əvvəlcə WS (sürətli), cavab gəlməzsə REST (etibarlı).
+async function deliver(payload){
+  if(await sendViaSocket(payload)) return;
+  // WS bağlıdır və ya cavab vermədi → REST. `sendViaSocket` yalnız HEÇ BİR
+  // cavab gəlmədikdə `false` qaytarır, ona görə burada dublikat riski yoxdur.
+  await sendRoomMessage(currentRoomId, payload);
+}
+
+async function send(){
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if(!text) return;
+  input.value = '';
+  try{ await deliver(text); }
+  catch(e){ toast(t('dyn.msg_send_fail'), 'err'); input.value = text; }
+}
+
+export function initChat(){
+  document.getElementById('chatSendBtn').addEventListener('click', send);
+  const input = document.getElementById('chatInput');
+  input.addEventListener('keydown', e => { if(e.key === 'Enter' && !e.defaultPrevented) send(); });
+  input.addEventListener('input', maybeSendTyping);     // "typing…" siqnalı (throttle 2s)
+  attachMentionAutocomplete(input);
+  attachRichControls(input.parentElement, payload => deliver(payload));
+}
+
+export function mountChat(){
+  closeRoomDetail();   // mobildə həmişə otaq SİYAHISI ilə başla
+  unsubRooms = watchRooms(list => {
+    rooms = list;
+    if(!rooms.find(r => r.id === currentRoomId)) currentRoomId = rooms[0] ? rooms[0].id : 'general';
+    renderRoomList();
+  });
+  selectRoom(currentRoomId);
+  return () => {
+    if(unsubRooms){ unsubRooms(); unsubRooms = null; }
+    if(unsubMsgs){ unsubMsgs(); unsubMsgs = null; }
+    roomWsFor = null;                 // reconnect döngəsini dayandır
+    closeRoomWs();
+    clearTimeout(typingHideTimer);
+  };
+}

@@ -1,0 +1,87 @@
+// Komanda icazə modeli — TASK-11.
+//
+// Bir yerdə saxlanılır ki, həm rol seed-i, həm middleware, həm də UI eyni
+// siyahını görsün. Əvvəllər icazə adları kodun içində səpələnmişdi və
+// `createTeam` yalnız "Owner" rolu yaradırdı — nəticədə dəvət qəbul edən
+// istifadəçi (ən aşağı prioritetli rol = yeganə rol = Owner) tam səlahiyyət
+// alırdı. Bax: docs/TASK-11-REPORT.md K1.
+
+export const TEAM_PERMISSIONS = [
+  'manage_team',      // ad/açıqlama/görünürlük, komandanı silmək
+  'manage_settings',  // parametrlər
+  'manage_roles',     // rol yaratmaq/dəyişmək/silmək
+  'manage_members',   // rol təyinatı, kənarlaşdırma
+  'manage_invites',   // dəvət yaratmaq/ləğv etmək
+  'manage_projects',  // layihə CRUD + qoşulma sorğuları
+  'manage_tasks',     // tapşırıq CRUD + status
+  'manage_files',     // fayl yükləmək/silmək
+  'manage_feed',      // elan/post silmək (öz postunu hər üzv silə bilir)
+  'manage_chat',      // otaq yaratmaq/silmək
+] as const;
+
+export type TeamPermission = (typeof TEAM_PERMISSIONS)[number];
+
+export interface RoleTemplate {
+  name: string;
+  permissions: string[];
+  priority: number;
+}
+
+/** PDR-dəki 10 standart rol. `priority` böyükdürsə səlahiyyət yüksəkdir. */
+export const STANDARD_ROLES: RoleTemplate[] = [
+  { name: 'Owner', permissions: ['*'], priority: 100 },
+  {
+    name: 'Admin',
+    // Owner-dən fərqi: komandanı silə/sahibliyi köçürə bilmir (`manage_team`).
+    permissions: [
+      'manage_settings', 'manage_roles', 'manage_members', 'manage_invites',
+      'manage_projects', 'manage_tasks', 'manage_files', 'manage_feed', 'manage_chat',
+    ],
+    priority: 90,
+  },
+  {
+    name: 'Manager',
+    permissions: ['manage_projects', 'manage_tasks', 'manage_invites', 'manage_files', 'manage_feed'],
+    priority: 70,
+  },
+  { name: 'Mentor', permissions: ['manage_tasks', 'manage_feed'], priority: 60 },
+  { name: 'Moderator', permissions: ['manage_feed', 'manage_chat'], priority: 55 },
+  { name: 'DevOps', permissions: ['manage_tasks', 'manage_files'], priority: 50 },
+  { name: 'Developer', permissions: ['manage_tasks', 'manage_files'], priority: 45 },
+  { name: 'Designer', permissions: ['manage_tasks', 'manage_files'], priority: 40 },
+  { name: 'QA', permissions: ['manage_tasks'], priority: 35 },
+  { name: 'Viewer', permissions: [], priority: 10 },
+];
+
+/**
+ * Dəvət qəbul edildikdə verilən rol. QƏSDƏN "Developer"-dir:
+ * — "Viewer" olsaydı yeni üzv heç nə edə bilməzdi (məhsul baxımından sınıq),
+ * — prioritetə görə seçim (köhnə davranış) Owner qaytarırdı (təhlükəsizlik buqu).
+ * Dəvət yaradarkən konkret rol göstərilə bilər (`team_invites.role_id`).
+ */
+export const DEFAULT_MEMBER_ROLE = 'Developer';
+
+/** Yalnız komanda sahibinin daşıya biləcəyi rol. */
+export const OWNER_ROLE = 'Owner';
+
+export function hasPermission(permissions: string[] | null | undefined, required: string): boolean {
+  if (!permissions) return false;
+  return permissions.includes('*') || permissions.includes(required);
+}
+
+export function parsePermissions(raw: unknown): string[] {
+  if (Array.isArray(raw)) return raw as string[];
+  try {
+    const v = JSON.parse(String(raw || '[]'));
+    return Array.isArray(v) ? v : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Naməlum/uydurma icazə adlarını atır — rol CRUD-un giriş validasiyası. */
+export function sanitizePermissions(input: unknown): string[] {
+  const list = Array.isArray(input) ? input.map(String) : [];
+  if (list.includes('*')) return ['*'];
+  return [...new Set(list.filter(p => (TEAM_PERMISSIONS as readonly string[]).includes(p)))];
+}

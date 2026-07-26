@@ -1,0 +1,530 @@
+// Collabix Worker: statik sayt (ASSETS) + REST API (D1/R2/KV) + security headers.
+import { Env, Ctx, err, fromJSON } from './util';
+import { resolveUser, rateLimit, RateBucket } from './auth';
+import { logSecurityEvent } from './security';
+import { runArchiveJob } from './archive';
+import { handleQueueBatch } from './queue';
+import { SystemEvent } from './events';
+import * as R from './routes';
+import { matchPublicRoute, buildMeta, rewriteHead, buildRobots, buildSitemap, buildLlms } from './seo';
+import { ogImageResponse, ogDefaultResponse } from './og';
+import { handleChat } from './services/ai';
+import { handleSearchSemantic } from './services/search';
+
+// Durable Object-lar (realtime) — binding class_name-ləri burdan export olunmalıdır.
+export { RoomDO } from './room-do';
+export { PresenceDO } from './presence-do';
+export { CollabixWorkflow } from './workflows/index';
+
+// TASK-11 team route-ları ayrıca modulda saxlanılır və LAZY yüklənir: bundle
+// yalnız `/api/teams/*` sorğusunda parse olunur, qalan endpointlərin soyuq
+// start vaxtına təsir etmir.
+type TeamRoutes = typeof import('./team-routes');
+const TR = async (_c: Ctx, fn: (m: TeamRoutes) => Promise<Response>) => fn(await import('./team-routes'));
+
+type Handler = (c: Ctx, ...params: string[]) => Promise<Response>;
+interface Route {
+  method: string;
+  pattern: RegExp;
+  handler: Handler;
+  auth?: boolean;      // giriş tələb olunur
+  admin?: boolean;     // admin tələb olunur
+  rl?: RateBucket;     // rate-limit qovğası (auth.ts-dəki RL cədvəli tək mənbədir)
+}
+
+const ROUTES: Route[] = [
+  // auth
+  { method: 'POST', pattern: /^\/api\/auth\/register$/, handler: R.register, rl: 'auth' },
+  { method: 'POST', pattern: /^\/api\/auth\/login$/, handler: R.login, rl: 'auth' },
+  { method: 'POST', pattern: /^\/api\/auth\/logout$/, handler: R.logout },
+  // Access token yeniləmə (TASK-8 / Bənd 15). `auth` YOXDUR: bura məhz access
+  // token bitəndə gəlinir — giriş tələb etsəydi funksiya öz-özünü bloklayardı.
+  // Kimlik refresh cookie-si ilə sübut olunur.
+  { method: 'POST', pattern: /^\/api\/auth\/refresh$/, handler: R.refresh, rl: 'refresh' },
+  { method: 'GET', pattern: /^\/api\/auth\/me$/, handler: R.me },
+  // 2FA / TOTP (Bənd 2). `mfa` girişin İKİNCİ addımıdır — `auth: true` YOXDUR,
+  // çünki sessiya hələ verilməyib; kimlik challenge token-i ilə sübut olunur.
+  { method: 'POST', pattern: /^\/api\/auth\/mfa$/, handler: R.mfaVerify, rl: 'auth' },
+  { method: 'GET', pattern: /^\/api\/me\/mfa$/, handler: R.mfaStatus, auth: true },
+  { method: 'POST', pattern: /^\/api\/me\/mfa\/setup$/, handler: R.mfaSetup, auth: true, rl: 'auth' },
+  { method: 'POST', pattern: /^\/api\/me\/mfa\/confirm$/, handler: R.mfaConfirm, auth: true, rl: 'auth' },
+  { method: 'POST', pattern: /^\/api\/me\/mfa\/backup-codes$/, handler: R.mfaRegenerateBackup, auth: true, rl: 'auth' },
+  { method: 'DELETE', pattern: /^\/api\/me\/mfa$/, handler: R.mfaDisable, auth: true, rl: 'auth' },
+  // Magic link (Bənd 4). `consume` brauzer naviqasiyasıdır (302), `request`
+  // isə XHR — ikisi də giriş tələb etmir, kimlik məhz burada qurulur.
+  { method: 'POST', pattern: /^\/api\/auth\/magic-link$/, handler: R.magicLinkRequest, rl: 'auth' },
+  { method: 'GET', pattern: /^\/api\/auth\/magic\/([\w-]+)$/, handler: R.magicLinkConsume, rl: 'auth' },
+  // OAuth 2.0 (Bənd 5). `start` və `callback` BRAUZER NAVİQASİYASIDIR (302),
+  // ona görə `auth: true` qoyulmur — kimlik `state` cookie-si ilə daşınır.
+  { method: 'GET', pattern: /^\/api\/auth\/oauth\/(github|google|linkedin)\/start$/, handler: R.oauthStart, rl: 'auth' },
+  { method: 'GET', pattern: /^\/api\/auth\/oauth\/(github|google|linkedin)\/callback$/, handler: R.oauthCallback },
+  { method: 'GET', pattern: /^\/api\/auth\/oauth\/pending$/, handler: R.oauthPending },
+  { method: 'GET', pattern: /^\/api\/me\/oauth$/, handler: R.listOAuthAccounts, auth: true },
+  { method: 'DELETE', pattern: /^\/api\/me\/oauth\/(github|google|linkedin)$/, handler: R.unlinkOAuth, auth: true },
+  // Aktiv sessiyalar / cihazlar (Bənd 3)
+  { method: 'GET', pattern: /^\/api\/auth\/sessions$/, handler: R.listSessions, auth: true },
+  { method: 'DELETE', pattern: /^\/api\/auth\/sessions\/others$/, handler: R.revokeOtherSessions, auth: true },
+  { method: 'DELETE', pattern: /^\/api\/auth\/sessions\/([\w-]+)$/, handler: R.revokeOneSession, auth: true },
+  { method: 'GET', pattern: /^\/api\/auth\/username-available$/, handler: R.usernameAvailable },
+  { method: 'POST', pattern: /^\/api\/auth\/change-password$/, handler: R.changePassword, auth: true, rl: 'auth' },
+  { method: 'POST', pattern: /^\/api\/auth\/change-username$/, handler: R.changeUsername, auth: true, rl: 'auth' },
+  { method: 'DELETE', pattern: /^\/api\/auth\/account$/, handler: R.deleteAccount, auth: true, rl: 'auth' },
+
+  // TASK-8 / FAZA 4 — axtarış, statistika, fəaliyyət, GDPR ixracı
+  { method: 'GET', pattern: /^\/api\/search$/, handler: R.globalSearch, auth: true },
+  { method: 'GET', pattern: /^\/api\/users\/([\w.]+)\/stats$/, handler: R.userStats, auth: true },
+  { method: 'GET', pattern: /^\/api\/users\/([\w.]+)\/activity$/, handler: R.activityFor, auth: true },
+  { method: 'GET', pattern: /^\/api\/me\/export$/, handler: R.exportMyData, auth: true },
+
+  // users / profil / sosial
+  { method: 'GET', pattern: /^\/api\/users$/, handler: R.listUsers, auth: true },
+  // İstifadəçilər səhifəsi üçün sıralanan/filtrlənən/səhifələnən kataloq (TASK-6).
+  { method: 'GET', pattern: /^\/api\/users\/directory$/, handler: R.usersDirectory, auth: true },
+  { method: 'PATCH', pattern: /^\/api\/me$/, handler: R.patchMe, auth: true, rl: 'write' },
+  { method: 'PATCH', pattern: /^\/api\/me\/settings$/, handler: R.patchSettings, auth: true, rl: 'write' },
+  { method: 'GET', pattern: /^\/api\/me\/social$/, handler: R.mySocial, auth: true },
+  { method: 'GET', pattern: /^\/api\/users\/([\w-]+)\/follow-lists$/, handler: R.followLists, auth: true },
+  { method: 'GET', pattern: /^\/api\/users\/([\w-]+)\/progress$/, handler: R.progressOf, auth: true },
+  { method: 'PUT', pattern: /^\/api\/follows\/([\w-]+)$/, handler: R.followPut, auth: true, rl: 'write' },
+  { method: 'DELETE', pattern: /^\/api\/follows\/([\w-]+)$/, handler: R.followDelete, auth: true },
+  { method: 'PUT', pattern: /^\/api\/bookmarks\/([\w-]+)$/, handler: R.bookmarkPut, auth: true, rl: 'write' },
+  { method: 'DELETE', pattern: /^\/api\/bookmarks\/([\w-]+)$/, handler: R.bookmarkDelete, auth: true },
+
+  // posts
+  { method: 'GET', pattern: /^\/api\/feed$/, handler: R.feed, auth: true },
+  { method: 'GET', pattern: /^\/api\/posts\/([\w-]+)$/, handler: R.getPost, auth: true },
+  { method: 'POST', pattern: /^\/api\/posts$/, handler: R.createPost, auth: true, rl: 'write' },
+  { method: 'PATCH', pattern: /^\/api\/posts\/([\w-]+)$/, handler: R.patchPost, auth: true, rl: 'write' },
+  { method: 'DELETE', pattern: /^\/api\/posts\/([\w-]+)$/, handler: R.deletePost, auth: true },
+  { method: 'POST', pattern: /^\/api\/posts\/([\w-]+)\/repost$/, handler: R.toggleRepost, auth: true, rl: 'write' },
+  { method: 'PUT', pattern: /^\/api\/posts\/([\w-]+)\/like$/, handler: R.likePut, auth: true, rl: 'write' },
+  { method: 'DELETE', pattern: /^\/api\/posts\/([\w-]+)\/like$/, handler: R.likeDelete, auth: true },
+  { method: 'GET', pattern: /^\/api\/posts\/([\w-]+)\/comments$/, handler: R.listComments, auth: true },
+  { method: 'POST', pattern: /^\/api\/posts\/([\w-]+)\/comments$/, handler: R.addComment, auth: true, rl: 'write' },
+  { method: 'PATCH', pattern: /^\/api\/posts\/([\w-]+)\/comments\/([\w-]+)$/, handler: R.editComment, auth: true, rl: 'write' },
+  { method: 'DELETE', pattern: /^\/api\/posts\/([\w-]+)\/comments\/([\w-]+)$/, handler: R.deleteComment, auth: true },
+  { method: 'PUT', pattern: /^\/api\/posts\/([\w-]+)\/comments\/([\w-]+)\/like$/, handler: R.commentLikePut, auth: true, rl: 'write' },
+  { method: 'DELETE', pattern: /^\/api\/posts\/([\w-]+)\/comments\/([\w-]+)\/like$/, handler: R.commentLikeDelete, auth: true },
+
+  // rooms
+  { method: 'GET', pattern: /^\/api\/rooms$/, handler: R.listRooms, auth: true },
+  { method: 'POST', pattern: /^\/api\/rooms$/, handler: R.createRoom, auth: true, admin: true },
+  { method: 'DELETE', pattern: /^\/api\/rooms\/([\w-]+)$/, handler: R.deleteRoom, auth: true, admin: true },
+  { method: 'GET', pattern: /^\/api\/rooms\/([\w-]+)\/messages$/, handler: R.roomMessages, auth: true },
+  { method: 'POST', pattern: /^\/api\/rooms\/([\w-]+)\/messages$/, handler: R.sendRoomMessage, auth: true, rl: 'write' },
+  { method: 'PATCH', pattern: /^\/api\/rooms\/([\w-]+)\/messages\/([\w-]+)$/, handler: R.editRoomMessage, auth: true },
+  { method: 'DELETE', pattern: /^\/api\/rooms\/([\w-]+)\/messages\/([\w-]+)$/, handler: R.deleteRoomMessage, auth: true },
+
+  // dms
+  { method: 'GET', pattern: /^\/api\/dms$/, handler: R.listThreads, auth: true },
+  { method: 'GET', pattern: /^\/api\/dms\/([\w_-]+)\/messages$/, handler: R.dmMessages, auth: true },
+  { method: 'POST', pattern: /^\/api\/dms\/to\/([\w-]+)$/, handler: R.sendDM, auth: true, rl: 'write' },
+  { method: 'PATCH', pattern: /^\/api\/dms\/([\w_-]+)\/messages\/([\w-]+)$/, handler: R.editDM, auth: true },
+  { method: 'DELETE', pattern: /^\/api\/dms\/([\w_-]+)\/messages\/([\w-]+)$/, handler: R.deleteDMMsg, auth: true },
+  { method: 'POST', pattern: /^\/api\/dms\/([\w_-]+)\/read$/, handler: R.markThreadRead, auth: true },
+
+  // presence + notifications
+  { method: 'POST', pattern: /^\/api\/presence$/, handler: R.heartbeat, auth: true },
+  { method: 'GET', pattern: /^\/api\/presence$/, handler: R.presenceMap, auth: true },
+  { method: 'GET', pattern: /^\/api\/notifications$/, handler: R.listNotifs, auth: true },
+  { method: 'POST', pattern: /^\/api\/notifications\/read-all$/, handler: R.readAllNotifs, auth: true },
+  { method: 'POST', pattern: /^\/api\/notifications\/([\w-]+)\/read$/, handler: R.readNotif, auth: true },
+
+  // tasks + submissions
+  { method: 'GET', pattern: /^\/api\/tasks$/, handler: R.listTasks, auth: true },
+  { method: 'POST', pattern: /^\/api\/tasks$/, handler: R.createTask, auth: true, rl: 'write' },
+  { method: 'POST', pattern: /^\/api\/tasks\/([\w-]+)\/review$/, handler: R.reviewTask, auth: true, admin: true },
+  { method: 'DELETE', pattern: /^\/api\/tasks\/([\w-]+)$/, handler: R.deleteTask, auth: true, admin: true },
+  { method: 'PUT', pattern: /^\/api\/tasks\/([\w-]+)\/submission$/, handler: R.submitSolution, auth: true, rl: 'write' },
+  { method: 'GET', pattern: /^\/api\/submissions$/, handler: R.listSubmissions, auth: true },
+  { method: 'POST', pattern: /^\/api\/submissions\/([\w-]+)\/([\w-]+)\/review$/, handler: R.reviewSubmission, auth: true, admin: true },
+
+  // reports
+  { method: 'POST', pattern: /^\/api\/reports$/, handler: R.createReport, auth: true, rl: 'write' },
+  { method: 'GET', pattern: /^\/api\/reports$/, handler: R.listReports, auth: true, admin: true },
+  { method: 'PATCH', pattern: /^\/api\/reports\/([\w-]+)$/, handler: R.resolveReport, auth: true, admin: true },
+
+  // taxonomy
+  { method: 'GET', pattern: /^\/api\/taxonomies$/, handler: R.listTaxonomies },
+  { method: 'POST', pattern: /^\/api\/taxonomies\/(prog|spoken)$/, handler: R.saveTaxItem, auth: true, admin: true },
+  { method: 'DELETE', pattern: /^\/api\/taxonomies\/(prog|spoken)\/([\w-]+)$/, handler: R.deactivateTaxItem, auth: true, admin: true },
+
+  // public
+  // Frontend boot-da çağırır (Turnstile site key) — giriş tələb etmir.
+  { method: 'GET', pattern: /^\/api\/config$/, handler: R.publicConfig },
+  { method: 'GET', pattern: /^\/api\/public\/faqs$/, handler: R.publicFaqs },
+  { method: 'GET', pattern: /^\/api\/public\/testimonials$/, handler: R.publicTestimonials },
+  { method: 'GET', pattern: /^\/api\/public\/stats$/, handler: R.publicStats },
+  { method: 'GET', pattern: /^\/api\/public\/posts\/([\w-]+)$/, handler: R.publicGetPost },
+  { method: 'GET', pattern: /^\/api\/public\/users\/([\w.]+)$/, handler: R.publicGetUser },
+  { method: 'POST', pattern: /^\/api\/public\/newsletter$/, handler: R.newsletterSubscribe, rl: 'form' },
+  { method: 'POST', pattern: /^\/api\/public\/contact$/, handler: R.contactSubmit, rl: 'form' },
+
+  // admin
+  { method: 'GET', pattern: /^\/api\/admin\/faqs$/, handler: R.adminListFaqs, auth: true, admin: true },
+  { method: 'POST', pattern: /^\/api\/admin\/faqs$/, handler: R.adminSaveFaq, auth: true, admin: true },
+  { method: 'DELETE', pattern: /^\/api\/admin\/faqs\/([\w-]+)$/, handler: R.adminDeleteFaq, auth: true, admin: true },
+  { method: 'GET', pattern: /^\/api\/admin\/testimonials$/, handler: R.adminListTestimonials, auth: true, admin: true },
+  { method: 'POST', pattern: /^\/api\/admin\/testimonials$/, handler: R.adminSaveTestimonial, auth: true, admin: true },
+  { method: 'DELETE', pattern: /^\/api\/admin\/testimonials\/([\w-]+)$/, handler: R.adminDeleteTestimonial, auth: true, admin: true },
+  { method: 'GET', pattern: /^\/api\/admin\/contacts$/, handler: R.adminContacts, auth: true, admin: true },
+  { method: 'POST', pattern: /^\/api\/admin\/contacts\/([\w-]+)\/read$/, handler: R.adminContactRead, auth: true, admin: true },
+  { method: 'PATCH', pattern: /^\/api\/admin\/users\/([\w-]+)$/, handler: R.adminPatchUser, auth: true, admin: true },
+  { method: 'POST', pattern: /^\/api\/admin\/users\/([\w-]+)\/temp-password$/, handler: R.adminTempPassword, auth: true, admin: true },
+  { method: 'GET', pattern: /^\/api\/admin\/admins$/, handler: R.adminListAdmins, auth: true, admin: true },
+  { method: 'PUT', pattern: /^\/api\/admin\/admins\/([\w-]+)$/, handler: R.adminAddAdmin, auth: true, admin: true },
+  { method: 'DELETE', pattern: /^\/api\/admin\/admins\/([\w-]+)$/, handler: R.adminRemoveAdmin, auth: true, admin: true },
+  { method: 'GET', pattern: /^\/api\/admin\/logs$/, handler: R.adminLogs, auth: true, admin: true },
+  // TASK-6 / BÖLMƏ 3
+  { method: 'GET', pattern: /^\/api\/admin\/users$/, handler: R.adminUsersList, auth: true, admin: true },
+  { method: 'POST', pattern: /^\/api\/admin\/users\/bulk$/, handler: R.adminBulkUsers, auth: true, admin: true },
+  { method: 'GET', pattern: /^\/api\/admin\/stats-daily$/, handler: R.adminStatsDaily, auth: true, admin: true },
+  { method: 'GET', pattern: /^\/api\/admin\/teams$/, handler: async (c) => TR(c, m => m.listAllTeams(c)), auth: true, admin: true },
+  { method: 'GET', pattern: /^\/api\/admin\/teams\/([\w-]+)$/, handler: async (c, id) => TR(c, m => m.adminTeamDetail(c, id)), auth: true, admin: true },
+  { method: 'POST', pattern: /^\/api\/admin\/teams\/([\w-]+)\/action$/, handler: async (c, id) => TR(c, m => m.adminTeamAction(c, id)), auth: true, admin: true },
+  { method: 'GET', pattern: /^\/api\/admin\/export\/(users|logs)\.csv$/, handler: R.adminExportCsv, auth: true, admin: true },
+  { method: 'POST', pattern: /^\/api\/taxonomies\/(prog|spoken)\/reorder$/, handler: R.reorderTaxonomy, auth: true, admin: true },
+  { method: 'POST', pattern: /^\/api\/admin\/log$/, handler: R.adminLogAction, auth: true, admin: true },
+  // TASK-8 / Bənd 1 — Threat Dashboard
+  { method: 'GET', pattern: /^\/api\/admin\/security\/events$/, handler: R.securityEvents, auth: true, admin: true },
+  { method: 'GET', pattern: /^\/api\/admin\/security\/summary$/, handler: R.securitySummary, auth: true, admin: true },
+
+  // TASK-8 / Yeni Xidmətlər (AI, Vectorize)
+  { method: 'POST', pattern: /^\/api\/ai\/chat$/, handler: handleChat, auth: true },
+  { method: 'GET', pattern: /^\/api\/search\/semantic$/, handler: handleSearchSemantic, auth: true },
+
+  // ================= TASK-11 / Teams =================
+  // TR() — hər team route-u üçün lazy import. Bütün endpointlər BİR dəfə
+  // yazılır: əvvəl bu blokun 23 sətri aşağıda təkrarlanmışdı və hansı
+  // tərifin işlədiyi görünmürdü.
+  { method: 'GET', pattern: /^\/api\/teams$/, handler: async (c) => TR(c, m => m.getTeams(c)), auth: true },
+  { method: 'POST', pattern: /^\/api\/teams$/, handler: async (c) => TR(c, m => m.createTeam(c)), auth: true, rl: 'write' },
+  { method: 'GET', pattern: /^\/api\/teams\/discover$/, handler: async (c) => TR(c, m => m.discoverTeams(c)), auth: true },
+  { method: 'GET', pattern: /^\/api\/teams\/([\w-]+)$/, handler: async (c, id) => TR(c, m => m.getTeam(c, id)), auth: true },
+  { method: 'PATCH', pattern: /^\/api\/teams\/([\w-]+)$/, handler: async (c, id) => TR(c, m => m.updateTeam(c, id)), auth: true, rl: 'write' },
+  { method: 'DELETE', pattern: /^\/api\/teams\/([\w-]+)$/, handler: async (c, id) => TR(c, m => m.deleteTeam(c, id)), auth: true, rl: 'write' },
+  { method: 'POST', pattern: /^\/api\/teams\/([\w-]+)\/join$/, handler: async (c, id) => TR(c, m => m.joinTeam(c, id)), auth: true, rl: 'write' },
+  { method: 'POST', pattern: /^\/api\/teams\/([\w-]+)\/leave$/, handler: async (c, id) => TR(c, m => m.leaveTeam(c, id)), auth: true, rl: 'write' },
+  { method: 'POST', pattern: /^\/api\/teams\/([\w-]+)\/transfer$/, handler: async (c, id) => TR(c, m => m.transferOwnership(c, id)), auth: true, rl: 'write' },
+  { method: 'GET', pattern: /^\/api\/teams\/([\w-]+)\/search$/, handler: async (c, id) => TR(c, m => m.searchTeamWorkspace(c, id)), auth: true },
+  { method: 'GET', pattern: /^\/api\/teams\/([\w-]+)\/ai\/summary$/, handler: async (c, id) => TR(c, m => m.getTeamAISummary(c, id)), auth: true },
+
+  // Members
+  { method: 'GET', pattern: /^\/api\/teams\/([\w-]+)\/members$/, handler: async (c, id) => TR(c, m => m.getTeamMembers(c, id)), auth: true },
+  { method: 'PATCH', pattern: /^\/api\/teams\/([\w-]+)\/members\/([\w-]+)$/, handler: async (c, id, uid) => TR(c, m => m.updateMemberRole(c, id, uid)), auth: true, rl: 'write' },
+  { method: 'DELETE', pattern: /^\/api\/teams\/([\w-]+)\/members\/([\w-]+)$/, handler: async (c, id, uid) => TR(c, m => m.removeTeamMember(c, id, uid)), auth: true, rl: 'write' },
+
+  // Roles
+  { method: 'GET', pattern: /^\/api\/teams\/([\w-]+)\/roles$/, handler: async (c, id) => TR(c, m => m.getTeamRoles(c, id)), auth: true },
+  { method: 'POST', pattern: /^\/api\/teams\/([\w-]+)\/roles$/, handler: async (c, id) => TR(c, m => m.createTeamRole(c, id)), auth: true, rl: 'write' },
+  { method: 'PATCH', pattern: /^\/api\/teams\/([\w-]+)\/roles\/([\w-]+)$/, handler: async (c, id, rid) => TR(c, m => m.updateTeamRole(c, id, rid)), auth: true, rl: 'write' },
+  { method: 'DELETE', pattern: /^\/api\/teams\/([\w-]+)\/roles\/([\w-]+)$/, handler: async (c, id, rid) => TR(c, m => m.deleteTeamRole(c, id, rid)), auth: true, rl: 'write' },
+
+  // Invites
+  { method: 'GET', pattern: /^\/api\/invites$/, handler: async (c) => TR(c, m => m.getMyInvites(c)), auth: true },
+  { method: 'POST', pattern: /^\/api\/invites\/([\w-]+)\/accept$/, handler: async (c, iid) => TR(c, m => m.acceptTeamInvite(c, iid)), auth: true, rl: 'write' },
+  { method: 'POST', pattern: /^\/api\/invites\/([\w-]+)\/decline$/, handler: async (c, iid) => TR(c, m => m.declineTeamInvite(c, iid)), auth: true, rl: 'write' },
+  { method: 'GET', pattern: /^\/api\/teams\/([\w-]+)\/invites$/, handler: async (c, id) => TR(c, m => m.getTeamInvites(c, id)), auth: true },
+  { method: 'POST', pattern: /^\/api\/teams\/([\w-]+)\/invites$/, handler: async (c, id) => TR(c, m => m.createTeamInvite(c, id)), auth: true, rl: 'write' },
+  { method: 'POST', pattern: /^\/api\/teams\/([\w-]+)\/invites\/([\w-]+)\/accept$/, handler: async (c, _t, i) => TR(c, m => m.acceptTeamInvite(c, i)), auth: true, rl: 'write' },
+  { method: 'DELETE', pattern: /^\/api\/teams\/([\w-]+)\/invites\/([\w-]+)$/, handler: async (c, t, i) => TR(c, m => m.deleteTeamInvite(c, t, i)), auth: true, rl: 'write' },
+
+  // Projects
+  { method: 'GET', pattern: /^\/api\/teams\/([\w-]+)\/projects$/, handler: async (c, id) => TR(c, m => m.getTeamProjects(c, id)), auth: true },
+  { method: 'POST', pattern: /^\/api\/teams\/([\w-]+)\/projects$/, handler: async (c, id) => TR(c, m => m.createTeamProject(c, id)), auth: true, rl: 'write' },
+  { method: 'PATCH', pattern: /^\/api\/teams\/([\w-]+)\/projects\/([\w-]+)$/, handler: async (c, t, p) => TR(c, m => m.updateTeamProject(c, t, p)), auth: true, rl: 'write' },
+  { method: 'DELETE', pattern: /^\/api\/teams\/([\w-]+)\/projects\/([\w-]+)$/, handler: async (c, t, p) => TR(c, m => m.deleteTeamProject(c, t, p)), auth: true, rl: 'write' },
+  { method: 'POST', pattern: /^\/api\/teams\/([\w-]+)\/projects\/([\w-]+)\/join$/, handler: async (c, t, p) => TR(c, m => m.joinTeamProject(c, t, p)), auth: true, rl: 'write' },
+  { method: 'GET', pattern: /^\/api\/teams\/([\w-]+)\/projects\/([\w-]+)\/requests$/, handler: async (c, t, p) => TR(c, m => m.getProjectRequests(c, t, p)), auth: true },
+  { method: 'POST', pattern: /^\/api\/teams\/([\w-]+)\/projects\/([\w-]+)\/requests\/([\w-]+)\/approve$/, handler: async (c, t, p, r) => TR(c, m => m.approveProjectRequest(c, t, p, r)), auth: true, rl: 'write' },
+  { method: 'POST', pattern: /^\/api\/teams\/([\w-]+)\/projects\/([\w-]+)\/requests\/([\w-]+)\/reject$/, handler: async (c, t, p, r) => TR(c, m => m.rejectProjectRequest(c, t, p, r)), auth: true, rl: 'write' },
+
+  // Tasks
+  { method: 'GET', pattern: /^\/api\/teams\/([\w-]+)\/tasks$/, handler: async (c, id) => TR(c, m => m.getTeamTasks(c, id)), auth: true },
+  { method: 'POST', pattern: /^\/api\/teams\/([\w-]+)\/tasks$/, handler: async (c, id) => TR(c, m => m.createTeamTask(c, id)), auth: true, rl: 'write' },
+  { method: 'PATCH', pattern: /^\/api\/teams\/([\w-]+)\/tasks\/([\w-]+)$/, handler: async (c, t, tk) => TR(c, m => m.updateTeamTask(c, t, tk)), auth: true, rl: 'write' },
+  { method: 'DELETE', pattern: /^\/api\/teams\/([\w-]+)\/tasks\/([\w-]+)$/, handler: async (c, t, tk) => TR(c, m => m.deleteTeamTask(c, t, tk)), auth: true, rl: 'write' },
+
+  // Files
+  { method: 'GET', pattern: /^\/api\/teams\/([\w-]+)\/files$/, handler: async (c, id) => TR(c, m => m.getTeamFiles(c, id)), auth: true },
+  { method: 'POST', pattern: /^\/api\/teams\/([\w-]+)\/files$/, handler: async (c, id) => TR(c, m => m.recordTeamFile(c, id)), auth: true, rl: 'write' },
+  { method: 'DELETE', pattern: /^\/api\/teams\/([\w-]+)\/files\/([\w-]+)$/, handler: async (c, t, f) => TR(c, m => m.deleteTeamFile(c, t, f)), auth: true, rl: 'write' },
+
+  // Feed (`/posts` köhnə aliaslardır — frontend `/feed` işlədir)
+  { method: 'GET', pattern: /^\/api\/teams\/([\w-]+)\/feed$/, handler: async (c, id) => TR(c, m => m.getTeamFeed(c, id)), auth: true },
+  { method: 'POST', pattern: /^\/api\/teams\/([\w-]+)\/(?:feed|posts)$/, handler: async (c, id) => TR(c, m => m.createTeamPost(c, id)), auth: true, rl: 'write' },
+  { method: 'DELETE', pattern: /^\/api\/teams\/([\w-]+)\/(?:feed|posts)\/([\w-]+)$/, handler: async (c, t, p) => TR(c, m => m.deleteTeamPost(c, t, p)), auth: true, rl: 'write' },
+
+  // Chat rooms
+  { method: 'GET', pattern: /^\/api\/teams\/([\w-]+)\/rooms$/, handler: async (c, id) => TR(c, m => m.getTeamRooms(c, id)), auth: true },
+  { method: 'POST', pattern: /^\/api\/teams\/([\w-]+)\/rooms$/, handler: async (c, id) => TR(c, m => m.createTeamRoom(c, id)), auth: true, rl: 'write' },
+  { method: 'DELETE', pattern: /^\/api\/teams\/([\w-]+)\/rooms\/([\w-]+)$/, handler: async (c, t, r) => TR(c, m => m.deleteTeamRoom(c, t, r)), auth: true, rl: 'write' },
+
+  // Activity / Stats
+  { method: 'GET', pattern: /^\/api\/teams\/([\w-]+)\/activity$/, handler: async (c, id) => TR(c, m => m.getTeamActivity(c, id)), auth: true },
+  { method: 'GET', pattern: /^\/api\/teams\/([\w-]+)\/stats$/, handler: async (c, id) => TR(c, m => m.getTeamStats(c, id)), auth: true },
+
+  // İstifadəçi axtarışı (dəvət modalı)
+  { method: 'GET', pattern: /^\/api\/users\/search$/, handler: async (c) => TR(c, m => m.searchUsers(c)), auth: true },
+  { method: 'GET', pattern: /^\/api\/users\/suggestions$/, handler: async (c) => TR(c, m => m.suggestUsers(c)), auth: true },
+
+
+
+  // upload
+  { method: 'POST', pattern: /^\/api\/upload$/, handler: R.upload, auth: true, rl: 'upload' },
+];
+
+/* ---------- security headers ---------- */
+// Turnstile widget-i öz skriptini və challenge iframe-ini challenges.cloudflare.com-dan
+// yükləyir. Bu mənbələr CSP-də HƏMİŞƏ icazəlidir (açar qurulmasa da) — siyahı
+// statikdir, `TURNSTILE_SITE_KEY`-dən asılı olsaydı hər cavabda şərtli CSP
+// qurmaq lazım gələrdi və edge keşi ilə uyğunsuzluq yaradardı.
+// Əlavə risk yoxdur: bu, Cloudflare-in öz domenidir və `frame-ancestors 'none'`
+// bizim səhifənin başqasına yerləşdirilməsini hər halda qadağan edir.
+const TURNSTILE_ORIGIN = 'https://challenges.cloudflare.com';
+const CSP = [
+  "default-src 'self'",
+  `script-src 'self' ${TURNSTILE_ORIGIN}`,
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src https://fonts.gstatic.com",
+  "img-src 'self' data: blob:",
+  "connect-src 'self'",
+  `frame-src ${TURNSTILE_ORIGIN}`,
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "upgrade-insecure-requests",
+].join('; ');
+
+function withSecurityHeaders(res: Response, isHtml: boolean): Response {
+  // ⚠ `new Response(body, res)` bir NEÇƏ Set-Cookie başlığını birləşdirə bilər.
+  // Access + refresh cütü İKİ ayrı başlıqdır və birləşsə brauzer heç birini
+  // qəbul etmir → istifadəçi giriş edə bilmir. Ona görə əvvəlcə ayrıca oxuyub,
+  // wrapper-dən sonra bir-bir geri yazırıq.
+  const cookies = typeof (res.headers as any).getSetCookie === 'function'
+    ? (res.headers as any).getSetCookie() as string[] : [];
+  const out = new Response(res.body, res);
+  if (cookies.length > 1) {
+    out.headers.delete('Set-Cookie');
+    for (const ck of cookies) out.headers.append('Set-Cookie', ck);
+  }
+  // Core security
+  out.headers.set('X-Content-Type-Options', 'nosniff');
+  out.headers.set('X-Frame-Options', 'DENY');
+  out.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  // HSTS with preload
+  out.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
+  // Cross-origin isolation
+  out.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
+  out.headers.set('Cross-Origin-Resource-Policy', 'same-origin');
+  // Enhanced Permissions-Policy
+  out.headers.set('Permissions-Policy',
+    'camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()');
+  // `X-XSS-Protection` QƏSDƏN qoyulmur (AUDIT-2026-07-26 / L-1). Chrome və Edge
+  // XSS Auditor-u tamamilə çıxarıb, Firefox heç vaxt tətbiq etməyib; köhnə
+  // mühitlərdə isə auditor-un özü yan-kanal informasiya sızması vektoru idi.
+  // Əsl müdafiə: yuxarıdaki `script-src 'self'` (unsafe-inline YOX) + client
+  // tərəfdə `el()` DOM builder-i və DOMPurify.
+  if (isHtml) {
+    out.headers.set('Content-Security-Policy', CSP);
+  }
+  return out;
+}
+
+/* ---------- static SEO files (D1-driven; seo.ts tək mənbə) ---------- */
+function serveStatic(body: string, contentType: string, cache = 'public, max-age=3600'): Response {
+  return new Response(body, {
+    headers: {
+      'Content-Type': contentType,
+      'Cache-Control': cache,
+    },
+  });
+}
+
+export default {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const url = new URL(request.url);
+    const path = url.pathname;
+
+    // CORS: yalnız same-origin istifadə olunur; cross-origin preflight-ları rədd et
+    if (request.method === 'OPTIONS' && path.startsWith('/api/')) {
+      return new Response(null, { status: 204, headers: { 'Allow': 'GET, POST, PUT, PATCH, DELETE' } });
+    }
+
+    // SEO: robots / sitemap / llms — D1-dən generasiya, tək mənbə (seo.ts)
+    if (request.method === 'GET') {
+      if (path === '/robots.txt') return serveStatic(buildRobots(), 'text/plain; charset=utf-8');
+      if (path === '/sitemap.xml') return serveStatic(await buildSitemap(env), 'application/xml; charset=utf-8');
+      if (path === '/llms.txt') return serveStatic(await buildLlms(env), 'text/plain; charset=utf-8');
+      // Dinamik OG şəkil (post/profil preview kartı) + generic default
+      if (path === '/og/default.png') return ogDefaultResponse(request, ctx);
+      const og = path.match(/^\/og\/(post|user)\/([\w.-]+)\.png$/);
+      if (og) return ogImageResponse(env, request, og[1] as 'post' | 'user', og[2], ctx);
+    }
+
+    // R2 faylları
+    if (path.startsWith('/files/') && request.method === 'GET') {
+      const auth = await resolveUser(env, request);
+      const c: Ctx = {
+        env, req: request, url, user: auth?.user || null, isAdmin: false,
+        sid: auth?.sid || null, legacy: !!auth?.legacy, ctx,
+      };
+      if (!c.user) return err('Giriş tələb olunur.', 401);
+      const res = await R.serveFile(c, decodeURIComponent(path.slice('/files/'.length)));
+      return withSecurityHeaders(res, false);
+    }
+
+    // WebSocket upgrade → RoomDO (realtime otaq). 101 cavabı security-header
+    // wrapper-dən KEÇMİR — `new Response(res.body, res)` webSocket property-ni itirər.
+    // Kimlik serverdə doğrulanıb DO-ya query ilə ötürülür (client spoof edə bilməz).
+    {
+      const wsMatch = path.match(/^\/api\/rooms\/([\w-]+)\/ws$/);
+      if (wsMatch && request.method === 'GET' && request.headers.get('Upgrade') === 'websocket') {
+        const auth = await resolveUser(env, request);
+        if (!auth?.user) return new Response('Giriş tələb olunur.', { status: 401 });
+        const roomId = wsMatch[1];
+
+        // TASK-11: otaq komandaya aiddirsə, WS də üzvlük tələb edir — REST
+        // qapısı (`guardTeamRoom`) tək başına kifayət etməzdi, çünki realtime
+        // axını birbaşa DO-dan gəlir.
+        const teamRoom = await env.DB
+          .prepare('SELECT team_id FROM team_chat_rooms WHERE id = ?').bind(roomId).first<any>();
+        if (teamRoom) {
+          const isAdmin = !!(await env.DB.prepare('SELECT 1 AS x FROM admins WHERE user_id = ?')
+            .bind(auth.user.id).first<any>());
+          const member = isAdmin || !!(await env.DB.prepare(
+            "SELECT 1 AS x FROM team_members WHERE team_id = ? AND user_id = ? AND status = 'active'",
+          ).bind(teamRoom.team_id, auth.user.id).first<any>());
+          if (!member) return new Response('İcazə yoxdur.', { status: 403 });
+        }
+
+        const stub = env.ROOM_DO.get(env.ROOM_DO.idFromName(roomId));
+        const doUrl = new URL(request.url);
+        doUrl.searchParams.set('uid', auth.user.id);
+        doUrl.searchParams.set('name', auth.user.name);
+        return stub.fetch(new Request(doUrl.toString(), request));
+      }
+      // Real-time presence (online/offline) — tək qlobal PresenceDO.
+      if (path === '/api/presence/ws' && request.method === 'GET' && request.headers.get('Upgrade') === 'websocket') {
+        const auth = await resolveUser(env, request);
+        if (!auth?.user) return new Response('Giriş tələb olunur.', { status: 401 });
+        const priv = fromJSON<any>(auth.user.settings as any, {})?.privacy || {};
+        const stub = env.PRESENCE_DO.get(env.PRESENCE_DO.idFromName('global'));
+        const doUrl = new URL(request.url);
+        doUrl.searchParams.set('uid', auth.user.id);
+        doUrl.searchParams.set('hidden', priv.showOnlineStatus === false ? '1' : '0');
+        return stub.fetch(new Request(doUrl.toString(), request));
+      }
+    }
+
+    // API
+    if (path.startsWith('/api/')) {
+      for (const route of ROUTES) {
+        if (route.method !== request.method) continue;
+        const m = path.match(route.pattern);
+        if (!m) continue;
+        try {
+          if (route.rl && !(await rateLimit(env, request, route.rl))) {
+            // Limit pozması təhlükə siqnalıdır (Bənd 1) — dashboard-da görünür.
+            // `ctx.waitUntil`: jurnal yazısı 429 cavabını GECİKDİRMƏMƏLİDİR.
+            ctx.waitUntil(logSecurityEvent(env, request, {
+              type: 'rate_limit', severity: 'warning', meta: { bucket: route.rl, path },
+            }));
+            return withSecurityHeaders(err('Çox sorğu — bir az sonra yenidən cəhd edin.', 429), false);
+          }
+          const auth = await resolveUser(env, request);
+          const c: Ctx = {
+            env, req: request, url,
+            user: auth?.user || null,
+            isAdmin: false,
+            sid: auth?.sid || null,
+            legacy: !!auth?.legacy,
+            ctx,
+          };
+          if (c.user) {
+            c.isAdmin = !!(await env.DB.prepare('SELECT 1 FROM admins WHERE user_id = ?').bind(c.user.id).first());
+          }
+          // `auth_required` kodu client üçün siqnaldır: "access token bitib ola
+          // bilər — bir dəfə refresh et və təkrar cəhd et". Kod olmasaydı client
+          // mesaj mətninə baxmalı olardı (tərcümə dəyişən kimi sınardı).
+          if (route.auth && !c.user) {
+            return withSecurityHeaders(err('Giriş tələb olunur.', 401, 'auth_required'), false);
+          }
+          if (route.admin && !c.isAdmin) return withSecurityHeaders(err('Yalnız admin.', 403), false);
+          const res = await route.handler(c, ...m.slice(1));
+          const out = withSecurityHeaders(res, false);
+          // API responses should not be indexed
+          out.headers.set('X-Robots-Tag', 'noindex, nofollow');
+          return out;
+        } catch (e: any) {
+          console.error('API error', path, e?.message || e);
+          return withSecurityHeaders(err('Server xətası.', 500), false);
+        }
+      }
+      return withSecurityHeaders(err('Tapılmadı.', 404), false);
+    }
+
+    // Public path-lar (real URL, hash deyil) → shell HTML-i çək, HTMLRewriter ilə
+    // per-route meta/JSON-LD inject et. Crawler/scraper JS icra etmədən düzgün meta görür.
+    if (request.method === 'GET') {
+      const route = matchPublicRoute(path);
+      if (route) {
+        const meta = await buildMeta(route, env);
+        const shell = await env.ASSETS.fetch(new Request(new URL('/', url), request));
+        const rewritten = rewriteHead(shell, meta, route);
+        const out = withSecurityHeaders(rewritten, true);
+        out.headers.set('Content-Type', 'text/html; charset=utf-8');
+        out.headers.set('Content-Language', meta.lang);
+        if (meta.status === 404) {
+          out.headers.set('X-Robots-Tag', 'noindex');
+          return new Response(out.body, { status: 404, headers: out.headers });
+        }
+        // HTML qabığı HƏMİŞƏ revalidate olsun (ETag ilə ucuz 304) — belədə hər deploy
+      // dərhal istifadəçilərə çatır. Əvvəl `stale-while-revalidate=86400` edge-də
+      // köhnə qabığı 24 saata qədər verirdi → deploy-dan sonra da köhnə client qalırdı
+      // (məs. repost düzəlişi istifadəçiyə çatmırdı). Hashed asset-lər immutable qalır.
+      out.headers.set('Cache-Control', 'no-cache');
+        return out;
+      }
+    }
+
+    // Statik sayt (Vite build) — SPA fallback assets konfiqindədir
+    const res = await env.ASSETS.fetch(request);
+    const isHtml = (res.headers.get('Content-Type') || '').includes('text/html');
+    const out = withSecurityHeaders(res, isHtml);
+    // Hashed asset-lər üçün uzun cache
+    if (path.startsWith('/assets/')) {
+      const o = new Response(out.body, out);
+      o.headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+      return o;
+    }
+    // HTML pages: short cache + ETag for freshness
+    if (isHtml) {
+      // HTML qabığı HƏMİŞƏ revalidate olsun (ETag ilə ucuz 304) — belədə hər deploy
+      // dərhal istifadəçilərə çatır. Əvvəl `stale-while-revalidate=86400` edge-də
+      // köhnə qabığı 24 saata qədər verirdi → deploy-dan sonra da köhnə client qalırdı
+      // (məs. repost düzəlişi istifadəçiyə çatmırdı). Hashed asset-lər immutable qalır.
+      out.headers.set('Cache-Control', 'no-cache');
+    }
+    return out;
+  },
+
+  // Cron Trigger (TASK-8 / Bənd 12). `wrangler.jsonc` → triggers.crons.
+  //
+  // ⚠ `waitUntil` MƏCBURİDİR: `scheduled` handler qaytardıqdan sonra runtime
+  // işi dayandıra bilər. Promise-i ona bağlamasaq arxivləmə yarımçıq kəsilər
+  // və R2-yə yazılıb D1-dən silinməmiş mesajlar dublikat yaradardı.
+  // Queue consumer (TASK-8 / Bənd 18). `wrangler.jsonc` → queues.consumers.
+  // Hər mesaj ayrıca ack/retry olunur — bax queue.ts-dəki izah.
+  async queue(batch: MessageBatch<SystemEvent>, env: Env): Promise<void> {
+    await handleQueueBatch(batch, env);
+  },
+
+  async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(runArchiveJob(env).catch(e => {
+      console.error('arxiv işi uğursuz', e?.message || e);
+    }));
+  },
+  // İkinci tip parametri növbə mesajının gövdəsidir — onsuz `queue`
+  // handler-i `unknown` gözləyir və tip uyğunsuzluğu verir.
+} satisfies ExportedHandler<Env, SystemEvent>;

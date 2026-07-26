@@ -1,0 +1,49 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node e2e.js)",
+      "Bash(sed 's/\\\\x1b\\\\[[0-9;]*m//g' \"/c/Users/TAHMAZ~1/AppData/Local/Temp/claude/c--Users-Tahmaz-Muradov-Desktop-Collabix/4bdf60d7-4264-496a-bac0-17af28584398/tasks/bzf3v5rol.output\" | grep -E \"Began execution|Finished execution|functions\\\\[.*\\\\]:|Error|error\" | tail -20)",
+      "Bash(node e2e2.js)",
+      "Bash(node e2e3.js)",
+      "Bash(node debug-admin.js)",
+      "Bash(curl -s -H \"Authorization: Bearer owner\" \"http://127.0.0.1:8080/v1/projects/demo-collabix/databases/\\(default\\)/documents/usernames/tahmazmuradov\")",
+      "Bash(curl -s -H \"Authorization: Bearer owner\" \"http://127.0.0.1:8080/v1/projects/demo-collabix/databases/\\(default\\)/documents/usernames\")",
+      "Bash(curl -s -H \"Authorization: Bearer owner\" \"http://127.0.0.1:9099/emulator/v1/projects/demo-collabix/accounts\")",
+      "Bash(npx --yes firebase-tools emulators:export .emulator-data --project demo-collabix --force)",
+      "Bash(sed 's/\\\\x1b\\\\[[0-9;]*m//g' \"/c/Users/TAHMAZ~1/AppData/Local/Temp/claude/c--Users-Tahmaz-Muradov-Desktop-Collabix/4bdf60d7-4264-496a-bac0-17af28584398/tasks/bzf3v5rol.output\" | tail -8)",
+      "Bash(rmdir .emulator-data)",
+      "Bash(rm -rf firebase-export-*)",
+      "Bash(rm -rf .emulator-data)",
+      "Bash(cp -r firebase-export-1784419769122KUOuT6 .emulator-data)",
+      "Bash(curl -s -H \"Authorization: Bearer owner\" \"http://127.0.0.1:8080/v1/projects/demo-collabix/databases/\\(default\\)/documents/admins/vbpVokAhLqJA9m0RpqMryroA4S8s\")",
+      "Bash(node e2e4.js)",
+      "Bash(node -e ' *)",
+      "Bash(node stack.js)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(sed -i 's|  if\\(window.hljs\\) try{ window.hljs.highlightElement\\(code\\); }catch\\(e\\){}|  highlightEl\\(code\\);|' js/feed.js)",
+      "Bash(sed -i 's|    if\\(window.hljs\\) try{ window.hljs.highlightElement\\(code\\); }catch\\(e\\){}|    highlightEl\\(code\\);|' js/richmsg.js)",
+      "Bash(sed -i 's|// Client tərəf yalnız UI-dır — əsl qoruma firestore.rules-dadır \\(admins/{uid}\\).|// Client tərəf yalnız UI-dır — əsl qoruma Worker API-nin admin yoxlamasındadır.|' js/admin.js)",
+      "Bash(sed -i '/cdnjs.cloudflare.com\\\\/ajax\\\\/libs\\\\/highlight.js\\\\/11.9.0\\\\/styles/d; /cdnjs.cloudflare.com\\\\/ajax\\\\/libs\\\\/highlight.js\\\\/11.9.0\\\\/highlight.min.js/d; /cdnjs.cloudflare.com\\\\/ajax\\\\/libs\\\\/marked/d; /cdnjs.cloudflare.com\\\\/ajax\\\\/libs\\\\/dompurify/d' index.html)",
+      "Bash(mv .firebase .firebaserc functions firebase-debug.log legacy/firebase/)",
+      "Bash(mv .emulator-data legacy/firebase/)",
+      "Bash(rm -rf functions)",
+      "Bash(mkdir -p migration-cf)",
+      "Bash(node firestore-to-d1.mjs)",
+      "Bash(node firestore-to-d1.mjs --execute)",
+      "Bash(grep -vE \"npm notice|wrangler 4|^─|^$|Logs were\")",
+      "Bash(awk -F: '{print $1}')",
+      "Bash(awk '$1>1')",
+      "Bash(awk '{n=gsub\\(/;/,\";\"\\); if\\(n>1\\) print NR\": \"n\" semicolons\"}' import.sql)",
+      "Bash(node --check emulator-to-d1.mjs)",
+      "Bash(node --check firestore-to-d1.mjs)",
+      "Bash(node \"/c/Users/TAHMAZ~1/AppData/Local/Temp/claude/c--Users-Tahmaz-Muradov-Desktop-Collabix/4bdf60d7-4264-496a-bac0-17af28584398/scratchpad/fixq.mjs\")",
+      "Bash(node \"/c/Users/TAHMAZ~1/AppData/Local/Temp/claude/c--Users-Tahmaz-Muradov-Desktop-Collabix/4bdf60d7-4264-496a-bac0-17af28584398/scratchpad/findbad.mjs\")",
+      "Bash(sed -i \"s/p.editedAt || null\\\\]/p.editedAt ?? 'NULL']/; s/m.editedAt || null\\\\]/m.editedAt ?? 'NULL']/g; s/t.approvedAt || null\\\\]/t.approvedAt ?? 'NULL']/\" emulator-to-d1.mjs)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"http://127.0.0.1:8787/api/public/stats\")",
+      "Bash(node e2e-cf.mjs)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\TAHMAZ~1\\AppData\\Local\\Temp\\claude\\c--Users-Tahmaz-Muradov-Desktop-Collabix\\4bdf60d7-4264-496a-bac0-17af28584398\\tasks"
+    ]
+  }
+}
