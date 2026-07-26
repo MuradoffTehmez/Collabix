@@ -9,13 +9,24 @@ export const SITE = {
   mapsURL: 'https://maps.google.com/?q=Baku',
   // Footer sosial dəsti (TASK-6 / Ana#12) — sıra burada verildiyi kimi render olunur.
   // `icon` = techlogos.data.js açarı (rəsmi SVG); `mark` = loqo mövcud olmayanda mətn-nişan.
-  // ⚠ URL-lər PLACEHOLDER-dir — real linklərlə əvəz et.
-  social: [
-    { id: 'discord',  label: 'Discord',  icon: 'discord', url: 'https://discord.gg/[collabix]' },
-    { id: 'github',   label: 'GitHub',   icon: 'github',  url: 'https://github.com/[collabix]' },
-    // LinkedIn simple-icons-da YOXDUR (trademark səbəbi ilə silinib) → mətn-nişan.
-    { id: 'linkedin', label: 'LinkedIn', mark: 'in',      url: 'https://linkedin.com/company/[collabix]' },
-  ],
+  //
+  // ⚠ QƏSDƏN BOŞDUR (AUDIT-TASK-2 / 2.3). Əvvəl burada üç SINTAKTİK OLARAQ
+  // ETİBARSIZ URL var idi: `https://discord.gg/[collabix]`,
+  // `https://github.com/[collabix]`, `https://linkedin.com/company/[collabix]`.
+  // Mötərizələr placeholder idi, yəni footer-dəki ikonlar klikləndikdə brauzer
+  // xətası / 404 verirdi — və bu, aylarla canlı saytda qaldı.
+  //
+  // 2026-07-27-də 9 namizəd profil maşınla yoxlandı, HEÇ BİRİ mövcud deyil:
+  //   x.com/collabixaz · github.com/collabixaz · youtube.com/@collabixaz → 404
+  //   linkedin.com/company/collabixaz                                    → "isn't available"
+  //   facebook / instagram / threads / tiktok                            → yalnız login divarı
+  //   t.me/collabixaz                → mövcud OLMAYAN adla bayt-bayt eyni cavab
+  //
+  // QAYDA: sınıq link "tezliklə" mesajından da pisdir. Profil REAL yaradılana
+  // qədər massiv boş qalır. Yaradıldıqdan sonra `{ id, label, icon|mark, url }`
+  // əlavə et — `e2e/legal.spec.ts` hər URL-i avtomatik yoxlayacaq və sınıqsa
+  // dəst qırmızı olacaq.
+  social: [],
 };
 
 export const LEGAL = {

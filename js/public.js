@@ -354,7 +354,13 @@ function renderFooterStatic(){
   // Linklər dərhal qurulur (klik edilə bilən), loqolar gələndə mətn-nişanı əvəz edir.
   const soc = document.getElementById('pfSocial');
   clear(soc);
-  const anchors = SITE.social.map(s => {
+  // ⚠ `SITE.social` BOŞ ola bilər (AUDIT-TASK-2 / 2.3 — mövcud olmayan
+  // profillər silindi). `[].map()` özü təhlükəsizdir, lakin boş konteyner
+  // footer-də mənasız boşluq yaradır → gizlədilir. `Array.isArray` qoruması
+  // sahə səhvən obyekt/undefined-a çevrilsə render-in çökməsini də bağlayır.
+  const socialList = Array.isArray(SITE.social) ? SITE.social : [];
+  soc.hidden = socialList.length === 0;
+  const anchors = socialList.map(s => {
     const a = el('a', {
       class: 'pf-soc-ic soc-' + s.id,
       href: s.url, target: '_blank', rel: 'noopener noreferrer',
@@ -363,8 +369,8 @@ function renderFooterStatic(){
     soc.append(a);
     return a;
   });
-  techMod().then(({ socialIcon }) => {
-    SITE.social.forEach((s, i) => {
+  if(socialList.length) techMod().then(({ socialIcon }) => {
+    socialList.forEach((s, i) => {
       if(!s.icon || !anchors[i].isConnected) return;
       clear(anchors[i]);
       anchors[i].append(socialIcon(s.icon, s.mark));
