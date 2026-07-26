@@ -49,3 +49,7 @@ testsprite_tests/
 # ─── Köhnəlmiş / artefakt (AUDIT-2026-07-26 / struktur borcu #3) ───
 legacy/
 .claude/skills/run-collabix/shots/
+
+
+.vscode
+.vs
