@@ -353,11 +353,11 @@ export default {
 
     // SEO: robots / sitemap / llms — D1-dən generasiya, tək mənbə (seo.ts)
     if (request.method === 'GET') {
-      if (path === '/robots.txt') return serveStatic(buildRobots(), 'text/plain; charset=utf-8');
+      if (path === '/robots.txt') return serveStatic(buildRobots(env), 'text/plain; charset=utf-8');
       if (path === '/sitemap.xml') return serveStatic(await buildSitemap(env), 'application/xml; charset=utf-8');
       if (path === '/llms.txt') return serveStatic(await buildLlms(env), 'text/plain; charset=utf-8');
       // Dinamik OG şəkil (post/profil preview kartı) + generic default
-      if (path === '/og/default.png') return ogDefaultResponse(request, ctx);
+      if (path === '/og/default.png') return ogDefaultResponse(env, request, ctx);
       const og = path.match(/^\/og\/(post|user)\/([\w.-]+)\.png$/);
       if (og) return ogImageResponse(env, request, og[1] as 'post' | 'user', og[2], ctx);
     }

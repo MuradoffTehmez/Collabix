@@ -3,7 +3,7 @@
 // Nəticə caches.default-də saxlanılır (edit → ?v=updated_at ilə cache bust).
 import { ImageResponse } from 'workers-og';
 import { Env, fromJSON, fileUrl } from './util';
-import { ORIGIN } from './seo';
+import { siteOrigin } from './seo';
 
 const W = 1200, H = 630;
 const esc = (s: string) => String(s || '').replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' } as any)[c]);
@@ -51,7 +51,7 @@ async function render(html: string): Promise<Response> {
 
 // Generic brend kartı — statik səhifələr (/, /about ...) və son-fallback üçün.
 // DB oxuması yoxdur, uzun cache. Heç vaxt 404 og:image olmasın deyə.
-export async function ogDefaultResponse(request: Request, ctx?: ExecutionContext): Promise<Response> {
+export async function ogDefaultResponse(env: Pick<Env, 'SITE_ORIGIN'>, request: Request, ctx?: ExecutionContext): Promise<Response> {
   const cache = (caches as any).default as Cache;
   try {
     const hit = await cache.match(request);
@@ -70,7 +70,7 @@ export async function ogDefaultResponse(request: Request, ctx?: ExecutionContext
     return out;
   } catch (e: any) {
     console.error('OG default error', e?.message || e);
-    return Response.redirect(ORIGIN + '/favicon.svg', 302);
+    return Response.redirect(siteOrigin(env) + '/favicon.svg', 302);
   }
 }
 
@@ -89,13 +89,13 @@ export async function ogImageResponse(env: Env, request: Request, kind: 'post' |
                u.blocked AS author_blocked, u.photo_url AS author_photo
         FROM posts p LEFT JOIN users u ON p.author_id = u.id WHERE p.id = ?
       `).bind(id).first<any>();
-      if (!row || row.author_blocked) return fallback();
+      if (!row || row.author_blocked) return fallback(env);
       version = String(row.edited_at || row.created_at || 0);
       const blocks = fromJSON<any[]>(row.blocks, []);
       const body = truncate(row.text || blocks.map(b => b.content || '').join(' '), 180) || 'Collabix paylaşımı';
       html = shell(`
         <div style="display:flex;align-items:center;gap:20px;">
-          ${avatarBox(row.author_name, row.author_photo ? ORIGIN + fileUrl(row.author_photo) : null)}
+          ${avatarBox(row.author_name, row.author_photo ? siteOrigin(env) + fileUrl(row.author_photo) : null)}
           <span style="font-size:40px;font-weight:700;">${esc(row.author_name)}</span>
         </div>
         <div style="display:flex;font-size:44px;line-height:1.3;font-weight:600;max-height:260px;overflow:hidden;">${esc(body)}</div>`);
@@ -103,11 +103,11 @@ export async function ogImageResponse(env: Env, request: Request, kind: 'post' |
       const row = await env.DB.prepare(
         'SELECT username, name, bio, photo_url, verified, xp, tasks_completed FROM users WHERE username = ? AND blocked = 0',
       ).bind(id).first<any>();
-      if (!row) return fallback();
+      if (!row) return fallback(env);
       version = String(row.xp || 0) + '-' + String(row.tasks_completed || 0);
       html = shell(`
         <div style="display:flex;align-items:center;gap:28px;">
-          ${avatarBox(row.name, row.photo_url ? ORIGIN + fileUrl(row.photo_url) : null)}
+          ${avatarBox(row.name, row.photo_url ? siteOrigin(env) + fileUrl(row.photo_url) : null)}
           <div style="display:flex;flex-direction:column;gap:8px;">
             <span style="font-size:52px;font-weight:800;">${esc(row.name)}${row.verified ? ' <span style="color:#5eeaea;">✓</span>' : ''}</span>
             <span style="font-size:32px;color:#8aa0bd;">@${esc(row.username)}</span>
@@ -130,11 +130,11 @@ export async function ogImageResponse(env: Env, request: Request, kind: 'post' |
     return out;
   } catch (e: any) {
     console.error('OG image error', e?.message || e);
-    return fallback();
+    return fallback(env);
   }
 }
 
 // Xəta/tapılmadı → generic brend kartına yönləndir (heç vaxt qırıq preview göstərmə).
-function fallback(): Response {
-  return Response.redirect(ORIGIN + '/og/default.png', 302);
+function fallback(env: Pick<Env, 'SITE_ORIGIN'>): Response {
+  return Response.redirect(siteOrigin(env) + '/og/default.png', 302);
 }

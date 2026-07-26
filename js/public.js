@@ -596,7 +596,7 @@ function updateDynamicMeta(page){
       bcSchema.textContent = JSON.stringify({
         '@context': 'https://schema.org', '@type': 'BreadcrumbList',
         'itemListElement': [
-          { '@type': 'ListItem', position: 1, name: t('nav.home'), item: 'https://collabix.muradofftehmez01.workers.dev/' },
+          { '@type': 'ListItem', position: 1, name: t('nav.home'), item: location.origin + '/' },
           { '@type': 'ListItem', position: 2, name: tf(meta.title).replace(' — Collabix', '') },
         ],
       });

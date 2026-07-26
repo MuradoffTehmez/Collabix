@@ -347,7 +347,7 @@ export function mountPubProfile(username){
     updateDynamicSEO({
       title: u.name + ' (@' + u.username + ')',
       description: u.bio || ('Collabix profile of ' + u.name),
-      url: 'https://collabix.muradofftehmez01.workers.dev/#u/' + u.username,
+      url: location.origin + '/#u/' + u.username,
       schema: {
         "@context": "https://schema.org",
         "@type": "ProfilePage",
@@ -357,7 +357,7 @@ export function mountPubProfile(username){
           "name": u.name,
           "alternateName": u.username,
           "description": u.bio || "",
-          "image": u.avatar ? "https://collabix.muradofftehmez01.workers.dev/files/" + u.avatar : "https://collabix.muradofftehmez01.workers.dev/favicon.svg"
+          "image": location.origin + (u.avatar ? "/files/" + u.avatar : "/favicon.svg")
         }
       }
     });

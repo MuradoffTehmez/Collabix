@@ -79,7 +79,12 @@ const iconLink = () => SVG(
   { w: '16', h: '16' }
 );
 
-const SITE = 'https://collabix.muradofftehmez01.workers.dev';
+// Paylaşma linklərinin bazası — `location.origin`-dən gəlir (AUDIT-TASK-2 / 2.5).
+// Əvvəl bura domen HARDCODED yazılmışdı və `worker/seo.ts`-dəki dəyərin
+// ikinci nüsxəsi idi: domen dəyişəndə biri yenilənib, digəri köhnə qalırdı.
+// Frontend öz origin-ini onsuz da bilir — server var-ına ehtiyac yoxdur və
+// bu, custom domen / staging / lokal dev-də avtomatik düzgün işləyir.
+const SITE = location.origin;
 
 // `onRepostChange(reposted, delta)` — repost toggle-ından sonra çağırılır ki,
 // çağıran kart sayğacı YERİNDƏ yeniləsin (feed remount olunmur).

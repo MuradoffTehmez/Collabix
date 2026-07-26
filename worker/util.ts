@@ -47,7 +47,20 @@ export interface Env {
   // deprecate olunanda deploy gözləmədən dəyişmək üçün (bax providers/ai).
   AI_CHAT_MODEL?: string;
   AI_EMBED_MODEL?: string;
-  // Dəvət emailindəki linkin bazası (yoxdursa collabix.site işlədilir).
+  // Saytın KANONİK origin-i — TƏK HƏQİQƏT MƏNBƏYİ (AUDIT-TASK-2 / borc #14).
+  //
+  // Əvvəl domen 4 AYRI yerdə hardcoded idi və hər biri FƏRQLİ dəyər saxlayırdı:
+  //   worker/seo.ts    → collabix.muradofftehmez01.workers.dev  (canonical/sitemap/OG)
+  //   js/feed.js       → collabix.muradofftehmez01.workers.dev  (paylaş linkləri)
+  //   worker/jobs/team → collabix.site                          (dəvət emaili — DNS-də YOXDUR!)
+  //   js/legal.js      → collabix.app                           (əlaqə emaili)
+  // Nəticə: dəvət emailləri ölü domenə keçid verirdi.
+  //
+  // ⚠ Bu dəyər canonical URL, sitemap, hreflang və OG şəkillərini təyin edir.
+  // Səhv qoyulsa SEO-ya birbaşa zərər verir. Dəyişmək üçün DNS + Cloudflare
+  // route + yönləndirmə planı lazımdır (bax docs/AUDIT-TASK-2-REPORT.md).
+  SITE_ORIGIN?: string;
+  // Dəvət emailindəki linkin bazası. Yoxdursa `SITE_ORIGIN`-ə düşür.
   APP_URL?: string;
 }
 

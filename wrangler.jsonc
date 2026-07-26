@@ -41,6 +41,27 @@
   "vars": {
     "ENVIRONMENT": "production",
 
+    // Saytın KANONİK origin-i — domenin TƏK HƏQİQƏT MƏNBƏYİ
+    // (AUDIT-TASK-2 / struktur borcu #14).
+    //
+    // Buradan oxunur: canonical URL, hreflang alternatları, sitemap.xml,
+    // robots.txt, llms.txt, JSON-LD (`url`/`logo`), OG şəkil URL-ləri və
+    // komanda dəvət emaillərindəki link.
+    //
+    // ⚠ DƏYƏR HAZIRDA FAKTİKİ CANLI DOMENDİR. Rəsmi domen (collabix.az)
+    // AUDIT-TASK-2 anında DNS-də QEYDİYYATDA DEYİL (NXDOMAIN) — ona keçid
+    // burada bir sətir dəyişməklə OLMAZ, əvvəlcə DNS + Cloudflare custom
+    // domain + köhnə URL-lərdən 301 yönləndirmə planı lazımdır. Əks halda
+    // bütün canonical/sitemap URL-ləri mövcud olmayan domenə işarə edər və
+    // indeksləmə çökər.
+    "SITE_ORIGIN": "https://collabix.muradofftehmez01.workers.dev",
+
+    // Dəvət emailindəki linkin bazası. Əvvəl bu var HEÇ TƏYİN OLUNMAMIŞDI və
+    // `worker/jobs/team.ts` `https://collabix.site` fallback-ına düşürdü —
+    // həmin domen DNS-də mövcud deyil, yəni göndərilən BÜTÜN komanda dəvət
+    // emailləri ölü linklə gedirdi (AUDIT-TASK-2-də aşkarlandı).
+    "APP_URL": "https://collabix.muradofftehmez01.workers.dev",
+
     // Turnstile PUBLIC site key (TASK-8 / Bənd 7). Secret DEYİL — brauzerə
     // onsuz da göndərilir, ona görə burada saxlanması təhlükəsizdir.
     // Cütü olan gizli açar `wrangler secret put TURNSTILE_SECRET` ilə qoyulur.

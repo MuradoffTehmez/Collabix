@@ -5,6 +5,7 @@ import { TeamService } from '../services/team/team.service';
 import { TeamInviteService } from '../services/team/invite.service';
 import { TEAM_XP } from '../services/team/xp';
 import { sendEmail, teamInviteMail, mailLang, emailEnabled } from '../email';
+import { siteOrigin } from '../seo';
 import { processTeamOnboardingWorkflow } from '../workflows/team_onboarding';
 
 /**
@@ -106,7 +107,11 @@ async function sendInviteEmail(env: Env, ev: any) {
   if (!row) return;
 
   // Dəvət linki "Dəvətlər" tabına düşür — istifadəçi orada qəbul/imtina edir.
-  const base = String(env.APP_URL || 'https://collabix.site').replace(/\/+$/, '');
+  // ⚠ Əvvəl fallback `https://collabix.site` idi və HƏMİN DOMEN DNS-də
+  // MÖVCUD DEYİL (NXDOMAIN) — `APP_URL` da təyin olunmadığı üçün göndərilən
+  // BÜTÜN komanda dəvət emailləri ölü linklə gedirdi (AUDIT-TASK-2 / 2.5).
+  // İndi domen tək mənbədən gəlir: APP_URL → SITE_ORIGIN → siteOrigin fallback.
+  const base = String(env.APP_URL || '').replace(/\/+$/, '') || siteOrigin(env);
   const url = `${base}/#teams?scope=invites`;
 
   const mail = teamInviteMail(
