@@ -150,16 +150,44 @@ test.describe('Ana səhifə', () => {
     await expect(page.locator('#wizProgress')).toHaveAttribute('aria-valuenow', '25');
   });
 
-  // Ana#12 — footer sosial ikonları (Discord/GitHub/LinkedIn).
-  test('Ana#12 sosial ikonlar', async ({ page }) => {
+  // Ana#12 — footer sosial ikonları `SITE.social`-dan KONFİQURATİVDİR.
+  //
+  // ⚠ TEST YENİDƏN YAZILDI (AUDIT-TASK-2 / 2.3). Əvvəl burada
+  // `toHaveCount(3)` və sabit `['Discord', 'GitHub', 'LinkedIn']` siyahısı
+  // var idi — yəni test PLACEHOLDER dəyərləri kilidləyirdi. Həmin üç URL
+  // `https://discord.gg/[collabix]` formasında SINTAKTİK OLARAQ ETİBARSIZ idi
+  // və auditdə etibar riski kimi qeyd olundu → massiv boşaldıldı.
+  //
+  // Ana#12-nin ƏSL tələbi "3 ikon olsun" deyil, "ikonlar `SITE.social`-dan
+  // konfiqurativ olsun" idi. Test artıq həmin İNVARİANTI yoxlayır:
+  // nə varsa təhlükəsiz render olunmalıdır, boş konfiqurasiya da etibarlıdır.
+  // Real profil əlavə ediləndə bu test onu avtomatik yoxlamağa başlayır.
+  // Sınıq link aşkarlaması ayrıca `e2e/legal.spec.ts`-dədir.
+  test('Ana#12 sosial ikonlar konfiqurativdir və təhlükəsiz render olunur', async ({ page }) => {
     await gotoHome(page);
-    const links = page.locator('#pfSocial a');
-    await expect(links).toHaveCount(3);
-    for (const name of ['Discord', 'GitHub', 'LinkedIn']) {
-      await expect(page.locator(`#pfSocial a[aria-label="${name}"]`)).toHaveAttribute('rel', /noopener/);
+    const soc = page.locator('#pfSocial');
+    const links = soc.locator('a');
+    const n = await links.count();
+
+    if (n === 0) {
+      // Boş konfiqurasiya: konteyner gizlədilməlidir (footer-də boş yer qalmasın).
+      await expect(soc).toBeHidden();
+      return;
     }
-    // Discord/GitHub rəsmi SVG ilə gəlir (lazy chunk yükləndikdən sonra)
-    await expect.poll(() => page.locator('#pfSocial svg').count()).toBeGreaterThanOrEqual(2);
+
+    await expect(soc).toBeVisible();
+    for (let i = 0; i < n; i++) {
+      const a = links.nth(i);
+      // Yeni tabda açılan xarici link `noopener` OLMADAN window.opener sızdırır.
+      await expect(a).toHaveAttribute('rel', /noopener/);
+      await expect(a).toHaveAttribute('target', '_blank');
+      // Ekran oxuyucu üçün ad (ikon-yalnız link mətnsizdir).
+      await expect(a).toHaveAttribute('aria-label', /.+/);
+      // URL placeholder mötərizəsi daşımamalıdır.
+      expect(await a.getAttribute('href') || '').not.toMatch(/[[\]]/);
+    }
+    // Hər link ya rəsmi SVG loqo, ya da mətn-nişan göstərməlidir (boş qalmasın).
+    await expect.poll(() => soc.locator('svg, .pf-soc-mark').count()).toBeGreaterThanOrEqual(n);
   });
 
   // Ana#13 — cookie banner: görünür, qərar saxlanılır, təkrar görünmür.
