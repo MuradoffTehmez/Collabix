@@ -92,7 +92,73 @@ Doğrulandı ki, onlar **dəyişiklikdən ƏVVƏLKİ** nüsxələrdir (kök: 33 
 
 ### 2.1 · Meyar 6 — E2E reqressiya təhlili
 
-*(bu bölmə tam dəst bitdikdən sonra dolduruldu — aşağıya bax)*
+**Tam dəst nəticəsi: 150 uğursuz / 115 keçdi (20,9 dəq).** Bu rəqəm
+**yanıldıcıdır** və aşağıda niyə olduğu sübutla göstərilir.
+
+#### A) Mənim dəyişikliyimin yaratdığı REAL reqressiya — 1 test, TAPILDI və DÜZƏLDİLDİ
+
+`home.spec.ts:154` "Ana#12 sosial ikonlar" `#pfSocial a` üçün **`toHaveCount(3)`**
+tələb edirdi. 2.3-də `SITE.social` boşaldıldığı üçün say 0 oldu →
+desktop + mobile = **2 uğursuz**.
+
+Bu, **mənim səhvim** idi: §2.3-də `SITE.social` istifadə yerlərini render
+kodunda yoxladım, lakin həmin sahəni kilidləyən **testi** yoxlamadım.
+Düzəliş: commit `c1f82c2` — test silinmədi, invariantla uyğunlaşdırıldı.
+**Nəticə: 41 keçdi / 2 uğursuz → 43 keçdi / 0 uğursuz.**
+
+#### B) Qalan ~148 uğursuzluq: dəstin ÖZ struktur qüsuru (mənim dəyişikliyim deyil)
+
+**Sübut 1 — izolə qaçışda EYNİ testlər keçir.** Tam dəstdə `users.spec.ts`-in
+13 mobile testi **hamısı** uğursuz idi. Təkbaşına işlədildikdə:
+**13/13 keçdi (47 s).** Kod dəyişmədi — yalnız icra konteksti dəyişdi.
+
+**Sübut 2 — uğursuzluqların paylanması.** Tutulan 42 uğursuzluğun **100%-i
+`[mobile]`**, `[desktop]` **sıfır**. Hər biri ~2,2 saniyədə sınır — yəni
+real assertion pozuntusu deyil, precondition çatmır.
+
+**Sübut 3 — mexanizm koddan oxunur.** `e2e/global-setup.ts` BİR DƏFƏ giriş edir
+və bütün spec-lər `test.use({ storageState: AUTH_FILE })` ilə **eyni** sessiyanı
+paylaşır. Access token TTL = **15 dəqiqə** (`worker/auth.ts` `ACCESS_TTL`),
+dəst isə **20,9 dəqiqə** işləyir. 15-ci dəqiqədən sonra:
+
+1. token bitir → client `/api/auth/refresh` çağırır
+2. refresh token hər istifadədə **ROTASİYA** olunur (`rotateSession`)
+3. `AUTH_FILE` diskdə **KÖHNƏ** token-i saxlayır, hər yeni kontekst onu yükləyir
+4. eyni köhnə token ikinci dəfə işlədilir → **`prev_refresh_hash` reuse
+   aşkarlaması** (`worker/auth.ts:143-153`)
+5. cavab: `revokeAllSessions(uid, 'reuse')` → istifadəçinin **BÜTÜN** sessiyaları ləğv
+6. bundan sonrakı hər auth tələb edən test dərhal sınır
+
+Sıra `desktop → mobile` olduğu üçün desktop 15 dəqiqəlik pəncərədə əsasən sağ
+qalır, mobile isə **ölü sessiya** ilə başlayır — uğursuzluqların 100%-inin
+mobile olması məhz bununla izah olunur.
+
+> Bu qüsur **əvvəlki sessiyada da sənədləşdirilmişdi** (layihə yaddaşı:
+> "refresh rotasiyası AUTH_FILE-ı zəhərləyir; izolə kontekst lazımdır").
+> AUDIT-TASK-2 onu nə yaratdı, nə də ağırlaşdırdı.
+
+#### C) Hökm
+
+| Sual | Cavab |
+|---|---|
+| AUDIT-2 reqressiya yaratdı? | ✅ **Bəli — 1 test**, tapıldı və düzəldildi (`c1f82c2`) |
+| Qalan uğursuzluqlar AUDIT-2-dəndir? | ❌ **Xeyr** — izolə qaçışda keçirlər |
+| Meyar 6 ölçülə bilirmi? | ⚠️ **XEYR** — dəstin nəticəsi determinist deyil, divar-saatı ilə deqradasiya edir |
+
+**Dəyişikliklərimin toxunduğu spec-lər izolə yoxlanıldı — hamısı yaşıl:**
+
+| Spec | Nəticə | Nəyi örtür |
+|---|---|---|
+| `legal.spec.ts` | **7/7** | placeholder, JSON-LD, footer linkləri (YENİ fayl) |
+| `home.spec.ts` + `_check.spec.ts` | **43/43** | SEO meta, footer, sosial ikonlar, 3 tema, 3 dil |
+| `users.spec.ts` (mobile) | **13/13** | `js/users.js` JSON-LD dəyişikliyi |
+| `security-api.spec.ts` (H-2) | **3/3** | AUDIT-TASK-1 qapısı hələ bağlıdır |
+
+**Tövsiyə (yeni task):** `storageState` paylaşımı əvəzinə hər faylda
+`freshDevice()` naxışı işlədilsin — `security-api.spec.ts`-də bu naxış artıq
+var və həmin fayl tam dəstdə də sağ qalır. Əks halda dəst heç vaxt etibarlı
+reqressiya siqnalı verməyəcək və CI (audit Sprint 1/#14) qurulan kimi daim
+qırmızı olacaq.
 
 ---
 
