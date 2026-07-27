@@ -416,21 +416,21 @@ Task 3-dəki ad əsaslı yoxlamalar **olduğu kimi qaldı**.
 
 ---
 
-## 13. Commit-lər
+## 12. Commit-lər
 
 | Hash | Bənd | Başlıq |
 |---|---|---|
-|  | 5.5, 5.6, 5.7 |  |
-|  | 5.4 |  |
-|  | 5.3, 5.8 |  |
-|  | 5.9.d |  |
-| *(bu commit)* | 5.9 |  |
+| `7be9d61` | 5.5, 5.6, 5.7 | `chore(db): miqrasiya nizamı — qaydalar, yoxlayıcı və deploy qapısı` |
+| `78c7862` | 5.4 | `refactor(e2e): test datası miqrasiyadan müstəqilləşdirildi` |
+| `6b7e6fb` | 5.3, 5.8 | `fix(db): demo seed istehsal bazasından təmizləndi, bootstrap bərpa olundu` |
+| `666a4e0` | 5.9.d | `test(db): AUDIT H-7 seed təmizliyi və bootstrap qoruması` |
+| `df5834d` | 5.9 | `docs(audit): AUDIT-TASK-5 icra hesabatı` |
 
 Push edilmədi — git remote qərarı hələ açıqdır.
 
 ---
 
-## 12. Geri qaytarma planı
+## 13. Geri qaytarma planı
 
 ⚠️ **Silinmiş sətirlər `git revert` ilə BƏRPA OLUNMUR.**
 
