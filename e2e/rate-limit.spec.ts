@@ -185,8 +185,17 @@ test.describe('AUDIT H-4 — rate limit davranışı @ratelimit', () => {
   });
 
   test.afterAll(async () => {
-    await clean?.ctx.close();
-    await victim?.ctx.close();
+    // Hesablar SİLİNİR: qalsalar istifadəçi kataloqunun ilk səhifəsini
+    // doldurub `users.spec.ts`-in seed əsaslı testlərini sındırırlar.
+    for (const u of [clean, victim]) {
+      if (!u) continue;
+      try {
+        await apiCall(u.page, '/api/auth/account', {
+          method: 'DELETE', body: JSON.stringify({ pass: TEST_PASS }),
+        });
+      } catch { /* silinmə alınmasa da kontekst bağlanmalıdır */ }
+      await u.ctx.close();
+    }
   });
 
   /* ─── 🔴 REQRESSİYA — ən vacib test (meyar 1) ─── */

@@ -4,7 +4,7 @@
 // AYRICA task-dır, ona görə bu faylın testləri paylaşılan `AUTH_FILE`-ı
 // limitə/vəziyyətə salmır — dəyişdirici testlər öz hesablarını yaradır
 // (`loginAs` naxışı, Task 3/4-dən).
-import { test, expect, type Page, type Browser } from '@playwright/test';
+import { test, expect, type Page, type Browser, type BrowserContext } from '@playwright/test';
 import { AUTH_FILE, TEST_PASS, E2E_TURNSTILE } from './seed';
 import { E2E_TEAM } from './fixtures';
 
@@ -60,6 +60,23 @@ async function freshUser(browser: Browser, label: string) {
   });
   expect(reg.status, `${username} qeydiyyatı`).toBe(200);
   return { ctx, page, username };
+}
+
+/**
+ * Hesabı SİLİR və kontekstі bağlayır.
+ *
+ * ⚠ MƏCBURİDİR: qalan test hesabları istifadəçi kataloqunun ilk səhifəsini
+ * doldurur və `users.spec.ts`-in seed əsaslı sıralama/filtr testlərini
+ * sındırır (bir dəfə faktiki olaraq sındırdı). Hesab öz sessiyası ilə
+ * silinir — admin hüququ tələb olunmur.
+ */
+async function disposeUser(u: { ctx: BrowserContext; page: Page }) {
+  try {
+    await apiCall(u.page, '/api/auth/account', {
+      method: 'DELETE', body: JSON.stringify({ pass: TEST_PASS }),
+    });
+  } catch { /* silinmə alınmasa da kontekst bağlanmalıdır */ }
+  await u.ctx.close();
 }
 
 /* ══════════════ FAZA B — validasiya paketi ══════════════ */
@@ -181,7 +198,7 @@ test.describe('AUDIT-6 — validasiya paketi @audit6', () => {
       });
       expect(res.status).toBe(400);
       expect(res.body?.code).toBe('not_a_member');
-    } finally { await outsider.ctx.close(); }
+    } finally { await disposeUser(outsider); }
   });
 
   test('L-4: mövcud olmayan istifadəçiyə şikayət → 404', async ({ page }) => {
@@ -256,7 +273,7 @@ test.describe('AUDIT-6 — auth sərtləşdirmə @audit6', () => {
       });
       expect(login.status, 'yeni iterasiyalı hesab giriş edə bilməlidir').toBe(200);
       await ctx2.close();
-    } finally { await u.ctx.close(); }
+    } finally { await disposeUser(u); }
   });
 
   test('C-2: köhnə hesab girişdən sonra yeni iterasiyaya köçür', async ({ browser }) => {
@@ -344,7 +361,7 @@ test.describe('AUDIT-6 — sxem və sağlamlıq @audit6', () => {
       const dia = await apiCall(page, '/api/users/directory?q=Təhməz');
       const foundDia = (dia.body.users || []).some((x: any) => x.username === u.username);
       expect(foundDia, '`Təhməz` sorğusu da işləməlidir').toBeTruthy();
-    } finally { await u.ctx.close(); }
+    } finally { await disposeUser(u); }
   });
 
   test('A-3: health endpoint məlumat sızdırmır', async ({ page }) => {
