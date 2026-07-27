@@ -309,6 +309,44 @@ test.describe('AUDIT-6 — sxem və sağlamlıq @audit6', () => {
     expect(res.body.checks.migrations_applied).toBeGreaterThan(0);
   });
 
+  test('D-1: UPDATE-dən sonra updated_at dolur', async ({ page }) => {
+    await openApp(page);
+    const team = await post(page, '/api/teams', { name: 'D1 Audit', visibility: 'Private' });
+    const proj = await post(page, `/api/teams/${team.body.id}/projects`, { name: 'D1 Layihə' });
+
+    const before = await apiCall(page, `/api/teams/${team.body.id}/projects`);
+    const p0 = before.body.projects.find((x: any) => x.id === proj.body.id);
+    expect(p0.updated_at, 'yaradılanda hələ redaktə olunmayıb').toBeFalsy();
+
+    await patch(page, `/api/teams/${team.body.id}/projects/${proj.body.id}`, { description: 'redaktə' });
+
+    const after = await apiCall(page, `/api/teams/${team.body.id}/projects`);
+    const p1 = after.body.projects.find((x: any) => x.id === proj.body.id);
+    expect(p1.updated_at, 'redaktədən sonra dolmalıdır').toBeTruthy();
+  });
+
+  test('D-3: `ə` normalizasiyası hər iki istiqamətdə işləyir', async ({ page, browser }) => {
+    // Diakritikli ad ilə hesab yarat, sonra hər iki yazılışla axtar.
+    const u = await freshUser(browser, 'norm');
+    try {
+      await apiCall(u.page, '/api/me', {
+        method: 'PATCH', body: JSON.stringify({ name: 'Təhməz Şəfəqli' }),
+      });
+      await openApp(page);
+
+      // Diakritiksiz sorğu → diakritikli adı tapmalıdır.
+      const plain = await apiCall(page, '/api/users/directory?q=Tehmez');
+      expect(plain.ok).toBeTruthy();
+      const foundPlain = (plain.body.users || []).some((x: any) => x.username === u.username);
+      expect(foundPlain, '`Tehmez` sorğusu `Təhməz` adını tapmalıdır').toBeTruthy();
+
+      // Diakritikli sorğu da işləməlidir (köhnə davranış pozulmasın).
+      const dia = await apiCall(page, '/api/users/directory?q=Təhməz');
+      const foundDia = (dia.body.users || []).some((x: any) => x.username === u.username);
+      expect(foundDia, '`Təhməz` sorğusu da işləməlidir').toBeTruthy();
+    } finally { await u.ctx.close(); }
+  });
+
   test('A-3: health endpoint məlumat sızdırmır', async ({ page }) => {
     await openApp(page);
     const res = await apiCall(page, '/api/health');

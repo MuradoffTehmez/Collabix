@@ -1,0 +1,34 @@
+-- 0024_analyze_stats.sql
+--
+-- AUDIT-TASK-6 §D-4 — sorğu planlayıcısının statistikası
+--
+-- ÖLÇMƏ (təxmin deyil). `feed()`-ə M-10 üçün `JOIN users … WHERE blocked = 0`
+-- əlavə edildikdən sonra `EXPLAIN QUERY PLAN` belə idi:
+--
+--   SEARCH u USING COVERING INDEX idx_users_dir_joined (blocked=?)
+--   SEARCH p USING INDEX idx_posts_author (author_id=?)
+--   USE TEMP B-TREE FOR ORDER BY          ← 60 sətir üçün YADDAŞDA sıralama
+--
+-- Planlayıcı sorğunu `users`-dən sürürdü və nəticəni əl ilə sıralayırdı.
+--
+-- 🔴 İLK EHTİMAL SƏHV ÇIXDI. Namizəd indeks
+-- `posts(created_at DESC, author_id)` sınandı və plan düzəldi — LAKİN indeks
+-- silindikdən sonra plan YENƏ DÜZGÜN qaldı:
+--
+--   SCAN p USING INDEX idx_posts_created
+--   SEARCH u USING INDEX sqlite_autoindex_users_1 (id=?)
+--
+-- Yəni problem ÇATIŞMAYAN İNDEKS DEYİL, çatışmayan STATİSTİKA idi. Mövcud
+-- `idx_posts_created` həmişə kifayət edirmiş; planlayıcı sadəcə cədvəl
+-- ölçülərini bilmirdi və səhv sürücü cədvəl seçirdi.
+--
+-- Ona görə bu miqrasiya İNDEKS ƏLAVƏ ETMİR — yalnız `ANALYZE` işlədir.
+-- Lazımsız indeks hər yazını yavaşladar və storage tutardı (§D-4 xəbərdarlığı).
+--
+-- ⚠ `ANALYZE` statistikanı BİR DƏFƏ hesablayır. Data profili köklü dəyişəndə
+-- (məs. `posts` minlərlə sətrə çatanda) təkrar işlədilməlidir — bu, gələcək
+-- əməliyyat işidir və `docs/DB-OPERATIONS-LOG.md`-ə yazılmalıdır.
+--
+-- İdempotent: `ANALYZE` təkrar icrada sadəcə statistikanı yenidən hesablayır.
+
+ANALYZE;

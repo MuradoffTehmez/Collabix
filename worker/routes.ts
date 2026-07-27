@@ -1,7 +1,7 @@
 // Bütün /api marşrutları. Dispatch cədvəli index.ts-dədir.
 import {
   Ctx, json, err, readJson, uuid, now, todayStr, b64uRandom,
-  normalizeUsername, validUsername, clampStr, toJSON, fromJSON,
+  normalizeUsername, validUsername, clampStr, toJSON, fromJSON, likePattern, searchNormalize,
   pairIdFor, extractMentions,
   mapUser, mapPost, mapMsg, mapTask, mapSubmission, fileUrl, withCookies,
 } from './util';
@@ -180,8 +180,9 @@ export async function register(c: Ctx) {
   await D(c).prepare(
     `INSERT INTO users (id, username, name, age, birth_date, gender, country, city, bio, contact_email,
       photo_url, prog_levels, lang_levels, goals, looking_for, instagram, github, linkedin, telegram, website,
-      streak, last_active_day, last_active_at, activity_days, joined_at, pass_hash, pass_salt, pass_iter)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?,?,?,?,?,?,?)`,
+      streak, last_active_day, last_active_at, activity_days, joined_at, pass_hash, pass_salt, pass_iter,
+      search_name)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?,?,?,?,?,?,?,?)`,
   ).bind(
     id, username, clampStr(b.name, 60) || username, age, clampStr(b.birthDate, 10),
     clampStr(b.gender, 10), clampStr(b.country, 40), clampStr(b.city, 40),
@@ -191,6 +192,8 @@ export async function register(c: Ctx) {
     clampStr(b.instagram, 40), clampStr(b.github, 40), clampStr(b.linkedin, 60),
     clampStr(b.telegram, 40), clampStr(b.website, 100),
     day, now(), JSON.stringify({ [day]: 1 }), now(), hash, salt, iterations,
+    // D-3: axtarış üçün normallaşdırılmış forma (`ə`→`e` və s.).
+    searchNormalize((clampStr(b.name, 60) || username) + ' ' + username),
   ).run();
 
   // Qeydiyyat anındakı ölkə coğrafi anomaliya müqayisəsinin başlanğıc nöqtəsidir.
@@ -532,9 +535,17 @@ export async function usersDirectory(c: Ctx) {
   // `_` olan adlar (bütün `e2e_*` hesablar) tapılmır (adminUsersList-dəki eyni buq).
   const q = (u.get('q') || '').trim().toLowerCase();
   if (q) {
-    where.push("(lower(name) LIKE ? ESCAPE '\\' OR lower(username) LIKE ? ESCAPE '\\')");
-    const like = '%' + q.replace(/[%_\\]/g, ch => '\\' + ch) + '%';
-    vals.push(like, like);
+    // D-3: `search_name` normallaşdırılmış sütundur — `Təhməz` sorğusu
+    // `Tehmez` yazılışını (və əksini) tapır. Sorğu tərəfi YAZI tərəfi ilə
+    // eyni funksiyadan keçir (`searchNormalize`), əks halda heç nə tapılmaz.
+    // ⚠ YALNIZ anonim `?` işlədilir. Nömrəli (`?1`) placeholder-lər bu sorğuda
+    // TƏHLÜKƏLİDİR: `where`/`vals` cütü dinamik yığılır və siyahının əvvəlində
+    // artıq `id != ?` parametri var — `?1` həmin istifadəçi id-sinə düşərdi,
+    // axtarış mətninə yox. (Məhz bu səhv D-3 testini sındırmışdı.)
+    where.push("(lower(name) LIKE ? ESCAPE '\\' OR lower(username) LIKE ? ESCAPE '\\'"
+      + " OR search_name LIKE ? ESCAPE '\\')");
+    const likeRaw = likePattern(q);
+    vals.push(likeRaw, likeRaw, likePattern(searchNormalize(q)));
   }
 
   // Skill/səviyyə/məqsəd JSON sütunlarındadır (prog_levels, lang_levels,
@@ -640,6 +651,12 @@ export async function patchMe(c: Ctx) {
   if ('age' in b) { sets.push('age = ?'); vals.push(parseInt(b.age, 10) || 18); }
   if ('streak' in b) { sets.push('streak = ?'); vals.push(parseInt(b.streak, 10) || 0); }
   if ('mustResetPassword' in b && b.mustResetPassword === false) sets.push('must_reset_password = 0');
+  // D-3: ad dəyişəndə axtarış sütunu da yenilənməlidir — əks halda profil
+  // redaktəsindən sonra istifadəçi öz yeni adı ilə tapılmazdı.
+  if ('name' in b) {
+    sets.push('search_name = ?');
+    vals.push(searchNormalize(clampStr(b.name, 60) + ' ' + c.user!.username));
+  }
   if (!sets.length) return badReq('Dəyişiklik yoxdur.');
   vals.push(c.user!.id);
   await D(c).prepare(`UPDATE users SET ${sets.join(', ')} WHERE id = ?`).bind(...vals).run();
@@ -1503,7 +1520,9 @@ export async function resolveReport(c: Ctx, id: string) {
   if (!(REPORT_STATUSES as readonly string[]).includes(status)) {
     return err('Naməlum şikayət statusu.', 400, 'invalid_status');
   }
-  await D(c).prepare('UPDATE reports SET status = ? WHERE id = ?').bind(status, id).run();
+  // D-1: audit sütunu — şikayətin nə vaxt həll olunduğu.
+  await D(c).prepare('UPDATE reports SET status = ?, updated_at = ? WHERE id = ?')
+    .bind(status, now(), id).run();
   return json({ ok: true });
 }
 

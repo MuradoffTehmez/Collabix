@@ -129,6 +129,37 @@ export const validUsername = (u: string) => /^[a-z0-9._]{3,20}$/.test(u);
 export const clampStr = (v: unknown, max: number) => String(v ?? '').slice(0, max);
 
 /**
+ * Axtarış üçün normalizasiya — AUDIT-TASK-6 §D-3 (audit sətir 625).
+ *
+ * PROBLEM: Azərbaycan dilli platformada `ə` normalizasiya olunmurdu, yəni
+ * `Təhməz` axtarışı `Tehmez` yazılışını TAPMIRDI və əksinə. İstifadəçilər
+ * adlarını hər iki cür yazır — nəticədə insanlar bir-birini tapa bilmirdi.
+ *
+ * ⚠ BU FUNKSİYA HƏM YAZI, HƏM SORĞU TƏRƏFİNDƏ İŞLƏDİLMƏLİDİR. Fərqli
+ * normalizasiya tətbiq etsək axtarış heç nə tapmaz — məhz buna görə tək
+ * köməkçi funksiyadır və hər iki yerdən çağırılır.
+ *
+ * ⚠ Sıra vacibdir: `ə → e` çevrilməsi `normalize('NFD')` diakritik
+ * təmizləməsindən ƏVVƏL gəlməlidir, çünki `ə` (U+0259) tərkib hissəli hərf
+ * DEYİL — NFD onu parçalamır və diakritik filtri ona toxunmur.
+ *
+ * ⚠ Baza tərəfindəki backfill (0027 miqrasiyası) EYNİ əvəzləmə cədvəlini
+ * `replace()` zənciri ilə təkrarlayır. Cədvəl dəyişsə hər ikisi yenilənməlidir.
+ */
+const SEARCH_FOLD: Record<string, string> = {
+  'ə': 'e', 'ı': 'i', 'ö': 'o', 'ü': 'u', 'ç': 'c', 'ş': 's', 'ğ': 'g',
+  'İ': 'i', 'Ə': 'e', 'I': 'i',
+};
+
+export function searchNormalize(v: unknown): string {
+  const lowered = String(v ?? '').trim().toLowerCase();
+  let out = '';
+  for (const ch of lowered) out += SEARCH_FOLD[ch] ?? ch;
+  // Qalan diakritikləri (é, ñ, ü-nün kompozit forması) təmizləyir.
+  return out.normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+/**
  * `LIKE` üçün təhlükəsiz naxış — AUDIT L-3.
  *
  * İstifadəçi girişindəki `%`, `_` və `\` simvolları escape olunur, əks halda:

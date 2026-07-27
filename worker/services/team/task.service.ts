@@ -102,7 +102,11 @@ export class TeamTaskService {
       return { task: before, statusChanged: false, justCompleted: false, reopened: false, teamXp: 0, assigneeId: before.assignee_id || null };
     }
 
-    values.push(taskId);
+    // D-1: audit sütunu. `teams.updated_at` ilə eyni naxış — hər
+    // uğurlu UPDATE-də yenilənir, əks halda sütun boş qalar və
+    // "nə vaxt dəyişdi" sualına cavab verməz.
+    sets.push('updated_at = ?');
+    values.push(now(), taskId);
     await this.env.DB.prepare(`UPDATE team_tasks SET ${sets.join(', ')} WHERE id = ?`).bind(...values).run();
 
     const after = await this.getTask(taskId);

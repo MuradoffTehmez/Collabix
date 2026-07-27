@@ -1,4 +1,4 @@
-import { Env, uuid } from '../../util';
+import { Env, uuid, now } from '../../util';
 import {
   STANDARD_ROLES, DEFAULT_MEMBER_ROLE, OWNER_ROLE,
   parsePermissions, sanitizePermissions,
@@ -60,7 +60,11 @@ export class TeamRoleService {
     }
     if (updates.priority !== undefined) { sets.push('priority = ?'); values.push(updates.priority); }
     if (!sets.length) return;
-    values.push(roleId);
+    // D-1: audit sütunu. `teams.updated_at` ilə eyni naxış — hər
+    // uğurlu UPDATE-də yenilənir, əks halda sütun boş qalar və
+    // "nə vaxt dəyişdi" sualına cavab verməz.
+    sets.push('updated_at = ?');
+    values.push(now(), roleId);
     await this.env.DB.prepare(`UPDATE team_roles SET ${sets.join(', ')} WHERE id = ?`).bind(...values).run();
   }
 
