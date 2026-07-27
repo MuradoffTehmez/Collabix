@@ -29,12 +29,25 @@ export class TeamRoleService {
     return r ? { ...r, permissions: parsePermissions(r.permissions) } : null;
   }
 
-  async createRole(teamId: string, name: string, permissions: string[], priority = 0) {
+  /**
+   * SİSTEM yolu — `STANDARD_ROLES` şablonlarını olduğu kimi yazır.
+   *
+   * AUDIT-TASK-3 / H-1: Owner şablonu `['*']` daşıyır və `sanitizePermissions`
+   * artıq wildcard-ı ATIR (istifadəçi girişi üçün qəsdən belədir). Seed bu
+   * funksiyadan keçsəydi Owner rolu BOŞ icazə ilə yaradılardı — yəni hər yeni
+   * komandanın sahibi öz komandasını idarə edə bilməzdi.
+   */
+  private async insertRole(teamId: string, name: string, permissions: string[], priority: number) {
     const id = uuid();
     await this.env.DB.prepare(
       'INSERT INTO team_roles (id, team_id, name, permissions, priority) VALUES (?, ?, ?, ?, ?)'
-    ).bind(id, teamId, name, JSON.stringify(sanitizePermissions(permissions)), priority).run();
+    ).bind(id, teamId, name, JSON.stringify(permissions), priority).run();
     return id;
+  }
+
+  /** İSTİFADƏÇİ yolu — giriş `sanitizePermissions`-dən keçir (H-1 ağ siyahısı). */
+  async createRole(teamId: string, name: string, permissions: string[], priority = 0) {
+    return this.insertRole(teamId, name, sanitizePermissions(permissions), priority);
   }
 
   async updateRole(roleId: string, updates: { name?: string; permissions?: string[]; priority?: number }) {
@@ -95,8 +108,9 @@ export class TeamRoleService {
     if (found) return String(found.id);
     const map = await this.ensureStandardRoles(teamId);
     if (map[name]) return map[name];
+    // Sistem şablonu → `insertRole` (sanitizasiyasız). Şablon yoxdursa boş dəst.
     const tpl = STANDARD_ROLES.find(r => r.name === name);
-    return this.createRole(teamId, name, tpl?.permissions ?? [], tpl?.priority ?? 0);
+    return this.insertRole(teamId, name, tpl?.permissions ?? [], tpl?.priority ?? 0);
   }
 
   /** Yeni üzv üçün təhlükəsiz default rol — HEÇ VAXT Owner deyil. */

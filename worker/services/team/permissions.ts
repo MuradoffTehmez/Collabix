@@ -64,9 +64,43 @@ export const DEFAULT_MEMBER_ROLE = 'Developer';
 /** Yalnız komanda sahibinin daşıya biləcəyi rol. */
 export const OWNER_ROLE = 'Owner';
 
+/**
+ * QİYMƏTLƏNDİRMƏ yolu — bazadakı dəyəri oxuyub qərar verir.
+ *
+ * ⚠ AUDIT-TASK-3 / §5.2: `'*'` dəstəyi BURADAN ÇIXARILA BİLMƏZ. Owner rolu həm
+ * `STANDARD_ROLES`-də, həm də E2E seed-ində `permissions = '["*"]'` kimi
+ * saxlanılır — wildcard qiymətləndirməsi silinsə HƏR komandanın Owner-i öz
+ * komandasından kilidlənər. Eskalasiya GİRİŞ yolunda bağlanır
+ * (`sanitizePermissions` + `team-routes.ts`-dəki altçoxluq/prioritet qaydaları).
+ */
 export function hasPermission(permissions: string[] | null | undefined, required: string): boolean {
   if (!permissions) return false;
   return permissions.includes('*') || permissions.includes(required);
+}
+
+/**
+ * `'*'` daşıyan dəsti tam kataloqa açır — müqayisə üçün.
+ *
+ * Altçoxluq qaydası (AUDIT-TASK-3 §3.2) çağıranın dəstini `Set` kimi
+ * müqayisə edir; Owner-in `['*']` dəsti açılmasa Owner HEÇ BİR rol yarada
+ * bilməzdi (funksional çökmə). Bax: qəbul meyarı 6.
+ */
+export function expandPermissions(permissions: string[] | null | undefined): string[] {
+  if (!permissions || !permissions.length) return [];
+  if (permissions.includes('*')) return [...TEAM_PERMISSIONS];
+  return permissions.filter(p => (TEAM_PERMISSIONS as readonly string[]).includes(p));
+}
+
+/**
+ * Çağıranın özündə OLMAYAN, lakin verməyə çalışdığı icazələr.
+ *
+ * AUDIT-2026-07-26 / H-1: `sanitizePermissions` düzəlişi tək başına kifayət
+ * deyil — `manage_roles` daşıyan Admin wildcard olmadan, açıq şəkildə
+ * `permissions: ['manage_team']` yazmaqla eyni nəticəyə çatırdı.
+ */
+export function findEscalatedPermissions(callerPermissions: string[], requested: string[]): string[] {
+  const owned = new Set(expandPermissions(callerPermissions));
+  return [...new Set(requested.filter(p => !owned.has(p)))];
 }
 
 export function parsePermissions(raw: unknown): string[] {
@@ -79,9 +113,23 @@ export function parsePermissions(raw: unknown): string[] {
   }
 }
 
-/** Naməlum/uydurma icazə adlarını atır — rol CRUD-un giriş validasiyası. */
+/**
+ * İSTİFADƏÇİ girişindən gələn icazə siyahısını təmizləyir — rol CRUD validasiyası.
+ *
+ * AUDIT-2026-07-26 / H-1: bu funksiya əvvəllər `'*'` qəbul edirdi
+ * (`if (list.includes('*')) return ['*']`). `manage_roles` daşıyan Admin
+ * `permissions: ['*']` ilə rol yaradıb özünü ora keçirməklə `manage_team`
+ * (Owner) səlahiyyətini ələ keçirə bilirdi — 3 sorğuluq zəncir.
+ *
+ * `TEAM_PERMISSIONS` yeganə ağ siyahıdır: `'*'` orada olmadığı üçün filtr onu
+ * özü atır — xüsusi `if` lazım deyil, yeni icazə əlavə olunanda avtomatik axır.
+ *
+ * ⚠ Bu funksiya YALNIZ istifadəçi girişi üçündür. Sistem seed-i (`STANDARD_ROLES`
+ * → `TeamRoleService.insertRole`) bu yoldan KEÇMİR — Owner-in `['*']` dəyəri
+ * olduğu kimi yazılır.
+ * ⚠ Bu, QİYMƏTLƏNDİRMƏ (`hasPermission`) yolu deyil — bax oradakı xəbərdarlıq.
+ */
 export function sanitizePermissions(input: unknown): string[] {
   const list = Array.isArray(input) ? input.map(String) : [];
-  if (list.includes('*')) return ['*'];
   return [...new Set(list.filter(p => (TEAM_PERMISSIONS as readonly string[]).includes(p)))];
 }
