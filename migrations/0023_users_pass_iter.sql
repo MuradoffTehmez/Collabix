@@ -1,0 +1,23 @@
+-- 0023_users_pass_iter.sql
+--
+-- AUDIT-2026-07-26 / M-2 → AUDIT-TASK-6 §C-2
+--
+-- PBKDF2 iterasiya sayı 100 000 idi; OWASP 2023 SHA-256 üçün **600 000**
+-- tövsiyə edir. Kütləvi yenidən heşləmə MÜMKÜN DEYİL — bazada açıq parol
+-- yoxdur, yalnız heş var. Ona görə köçürmə TƏDRİCİDİR: hər hesab öz iterasiya
+-- sayını daşıyır və növbəti uğurlu girişdə yenisinə keçir.
+--
+-- ⚠ Sxem siyahısındakı #19 ("Argon2id işlət") tətbiq EDİLMİR: Argon2id
+-- Cloudflare Workers runtime-ında mövcud deyil (Web Crypto onu dəstəkləmir,
+-- yeganə yol WASM-dır → soyuq start + 128 MB yaddaş limiti + paket ölçüsü).
+-- Auditin öz tövsiyəsi (M-2) runtime-a uyğun yolla eyni məqsədə çatır.
+--
+-- DEFAULT 100000 QƏSDƏNDİR: mövcud sətirlərin hamısı həmin iterasiya ilə
+-- yazılıb. Default 600000 olsaydı köhnə heşlər YANLIŞ iterasiya ilə
+-- yoxlanardı və BÜTÜN mövcud istifadəçilər kilidlənərdi.
+--
+-- İdempotent deyil (`ADD COLUMN` təkrar icrada xəta verir), lakin miqrasiya
+-- tarixçəsi onu bir dəfə tətbiq edir — `migrations/README.md` §4-ə uyğun
+-- olaraq təkrar icra ssenarisi yalnız əl ilə mümkündür.
+
+ALTER TABLE users ADD COLUMN pass_iter INTEGER NOT NULL DEFAULT 100000;

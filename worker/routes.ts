@@ -9,6 +9,7 @@ import {
   hashPassword, verifyPassword, createSession, rotateSession,
   revokeSession, revokeAllSessions, destroyAllSessions, destroyLegacySessions,
   sessionCookies, clearCookies, clearLegacyCookie, TokenPair,
+  upgradePasswordHash, PBKDF2_ITER_LEGACY,
 } from './auth';
 import { logAdmin, isAdminLogAction, invalidAdminAction } from './admin-log';
 import {
@@ -171,7 +172,7 @@ export async function register(c: Ctx) {
   // Parolsuz hesabda da `pass_hash` NOT NULL-dur. Boş qoymaq əvəzinə İSTİFADƏ
   // OLUNMAYAN təsadüfi parol heşlənir: belədə heç bir sətir "boş heş" ilə
   // qalmır və gələcəkdə heş müqayisəsi təsadüfən uğur qaytara bilmir.
-  const { hash, salt } = await hashPassword(
+  const { hash, salt, iterations } = await hashPassword(
     pending ? b64uRandom() : b.pass,
   );
   const id = uuid();
@@ -179,8 +180,8 @@ export async function register(c: Ctx) {
   await D(c).prepare(
     `INSERT INTO users (id, username, name, age, birth_date, gender, country, city, bio, contact_email,
       photo_url, prog_levels, lang_levels, goals, looking_for, instagram, github, linkedin, telegram, website,
-      streak, last_active_day, last_active_at, activity_days, joined_at, pass_hash, pass_salt)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?,?,?,?,?,?)`,
+      streak, last_active_day, last_active_at, activity_days, joined_at, pass_hash, pass_salt, pass_iter)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?,?,?,?,?,?,?)`,
   ).bind(
     id, username, clampStr(b.name, 60) || username, age, clampStr(b.birthDate, 10),
     clampStr(b.gender, 10), clampStr(b.country, 40), clampStr(b.city, 40),
@@ -189,7 +190,7 @@ export async function register(c: Ctx) {
     clampStr(b.goals, 300), toJSON(b.lookingFor, '[]'),
     clampStr(b.instagram, 40), clampStr(b.github, 40), clampStr(b.linkedin, 60),
     clampStr(b.telegram, 40), clampStr(b.website, 100),
-    day, now(), JSON.stringify({ [day]: 1 }), now(), hash, salt,
+    day, now(), JSON.stringify({ [day]: 1 }), now(), hash, salt, iterations,
   ).run();
 
   // Qeydiyyat anındakı ölkə coğrafi anomaliya müqayisəsinin başlanğıc nöqtəsidir.
@@ -239,7 +240,11 @@ export async function login(c: Ctx) {
   }
 
   const row = await D(c).prepare('SELECT * FROM users WHERE username = ?').bind(username).first<any>();
-  const ok = row ? await verifyPassword(String(b.pass || ''), row.pass_hash, row.pass_salt) : false;
+  // M-2: iterasiya SƏTİRDƏN gəlir. Köhnə hesab 100 000 ilə yazılıb;
+  // sabitlə (600 000) yoxlasaq düzgün parol da uyğunsuz heş verərdi.
+  const ok = row
+    ? await verifyPassword(String(b.pass || ''), row.pass_hash, row.pass_salt, Number(row.pass_iter) || PBKDF2_ITER_LEGACY)
+    : false;
   if (!row || !ok) {
     // Hadisə HƏM mövcud olmayan istifadəçi, HƏM yanlış parol üçün yazılır —
     // əks halda jurnalın özü "bu ad mövcuddur" siqnalı verərdi (user enumeration).
@@ -277,6 +282,15 @@ export async function login(c: Ctx) {
   }
 
   await logSecurityEvent(c.env, c.req, { type: 'login_ok', uid: row.id, username });
+
+  // M-2 TƏDRİCİ KÖÇÜRMƏ: açıq parol MƏHZ İNDİ əlimizdədir — başqa heç bir
+  // nöqtədə onu yenidən heşləmək mümkün deyil (bazada yalnız heş var).
+  // `waitUntil`: 600 000 iterasiya ~6× baha başa gəlir və cavabı
+  // GÖZLƏTMƏMƏLİDİR. Uğursuz olsa növbəti girişdə yenidən cəhd edilir.
+  c.ctx.waitUntil(
+    upgradePasswordHash(c.env, row.id, String(b.pass || ''), Number(row.pass_iter) || PBKDF2_ITER_LEGACY)
+      .catch(e => console.error('pass_iter köçürməsi alınmadı', e)),
+  );
 
   const pair = await createSession(c.env, c.req, row.id);
   const fresh = await D(c).prepare('SELECT * FROM users WHERE id = ?').bind(row.id).first();
@@ -406,14 +420,14 @@ export async function changePassword(c: Ctx) {
   // əməliyyat "şifrə TƏYİN ET"-dir; kimlik onsuz da canlı sessiya ilə sübutdur.
   const settingFirst = u.has_password === 0;
   if (!settingFirst) {
-    const ok = await verifyPassword(String(b.current || ''), u.pass_hash as any, u.pass_salt as any);
+    const ok = await verifyPassword(String(b.current || ''), u.pass_hash as any, u.pass_salt as any, Number(u.pass_iter) || PBKDF2_ITER_LEGACY);
     if (!ok) return err('Hazırkı şifrə yanlışdır.', 403, 'invalid_password');
   }
   if (typeof b.next !== 'string' || b.next.length < 6) return badReq('Yeni şifrə minimum 6 simvol.');
-  const { hash, salt } = await hashPassword(b.next);
+  const { hash, salt, iterations } = await hashPassword(b.next);
   await D(c).prepare(
-    'UPDATE users SET pass_hash = ?, pass_salt = ?, must_reset_password = 0, has_password = 1 WHERE id = ?',
-  ).bind(hash, salt, u.id).run();
+    'UPDATE users SET pass_hash = ?, pass_salt = ?, pass_iter = ?, must_reset_password = 0, has_password = 1 WHERE id = ?',
+  ).bind(hash, salt, iterations, u.id).run();
   // Parol dəyişməsi BÜTÜN digər cihazları çıxarır. Parolun dəyişməsinin əsas
   // səbəbi "kimsə hesabıma girib" şübhəsidir — köhnə sessiyalar canlı qalsaydı
   // parol dəyişmək təhlükəni aradan qaldırmazdı. Cari cihaz saxlanılır.
@@ -429,7 +443,7 @@ export async function changeUsername(c: Ctx) {
   const u = c.user!;
   // Parolsuz (OAuth) hesab — bax changePassword-dəki eyni izah.
   if (u.has_password !== 0) {
-    const ok = await verifyPassword(String(b.current || ''), u.pass_hash as any, u.pass_salt as any);
+    const ok = await verifyPassword(String(b.current || ''), u.pass_hash as any, u.pass_salt as any, Number(u.pass_iter) || PBKDF2_ITER_LEGACY);
     if (!ok) return err('Şifrə yanlışdır.', 403, 'invalid_password');
   }
   const next = normalizeUsername(b.next);
@@ -446,7 +460,7 @@ export async function deleteAccount(c: Ctx) {
   // Parolsuz (yalnız OAuth) hesabda yoxlanacaq parol yoxdur — canlı sessiya
   // özü kifayət edir. Parollu hesabda isə təkrar-autentifikasiya qalır.
   if (u.has_password !== 0) {
-    const ok = await verifyPassword(String(b.pass || ''), u.pass_hash as any, u.pass_salt as any);
+    const ok = await verifyPassword(String(b.pass || ''), u.pass_hash as any, u.pass_salt as any, Number(u.pass_iter) || PBKDF2_ITER_LEGACY);
     if (!ok) return err('Şifrə yanlışdır.', 403, 'invalid_password');
   }
   // R2 fayllarını təmizlə (avatar + post şəkilləri)
@@ -1721,9 +1735,9 @@ export async function adminPatchUser(c: Ctx, uid: string) {
 export async function adminTempPassword(c: Ctx, uid: string) {
   const b = await readJson(c.req);
   if (typeof b.password !== 'string' || b.password.length < 6) return badReq('Şifrə minimum 6 simvol.');
-  const { hash, salt } = await hashPassword(b.password);
-  await D(c).prepare('UPDATE users SET pass_hash = ?, pass_salt = ?, must_reset_password = 1 WHERE id = ?')
-    .bind(hash, salt, uid).run();
+  const { hash, salt, iterations } = await hashPassword(b.password);
+  await D(c).prepare('UPDATE users SET pass_hash = ?, pass_salt = ?, pass_iter = ?, must_reset_password = 1 WHERE id = ?')
+    .bind(hash, salt, iterations, uid).run();
   await destroyAllSessions(c.env, uid);
   await logAdmin(c, 'temp-password', uid);
   return json({ ok: true });

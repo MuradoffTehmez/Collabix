@@ -27,11 +27,54 @@ export function reqInfo(req: Request): ReqInfo {
   };
 }
 
+/**
+ * CSRF dərinlikdə müdafiə — AUDIT M-1 (AUDIT-TASK-6 §C-1).
+ *
+ * Əsas müdafiə `SameSite=Lax` (access) və `SameSite=Strict` (refresh)
+ * cookie-ləridir və o, öz işini görür. Bu, İKİNCİ qatdır: `Authorization:
+ * Bearer` yolunun mövcudluğu (auth.ts `resolveUser`) və gələcək cross-origin
+ * ehtiyacı tək-qatlı müdafiəni kövrək edir.
+ *
+ * ⚠ HAZIRDA YALNIZ LOG REJİMİNDƏ — sorğu BLOKLANMIR.
+ *
+ * Səbəb: yoxlama çox sərt olarsa mobil tətbiq, API client-lər və
+ * `Sec-Fetch-Site` göndərməyən köhnə brauzerlər kəsilər. Əvvəlcə real
+ * trafikdə pozma halları toplanır (`security_events` → `meta.csrf`), sonra
+ * bloklamaya keçilir. Keçid AUDIT-TASK-6 hesabatında açıq öhdəlikdir.
+ *
+ * Qərar məntiqi:
+ *   `Sec-Fetch-Site: same-origin | none`  → təhlükəsiz (müasir brauzer).
+ *   `Origin` bizim origin-lə üst-üstə düşür → təhlükəsiz.
+ *   Hər ikisi YOXDUR → brauzer deyil (curl, mobil app) → şübhəli SAYILMIR,
+ *     çünki belə client-lər cookie daşımır; onlar Bearer token yolundadır.
+ *   `Origin` VAR və FƏRQLİDİR → şübhəli.
+ */
+export function csrfSuspicion(req: Request, siteOrigin: string): string | null {
+  const method = req.method.toUpperCase();
+  if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') return null;
+
+  const fetchSite = req.headers.get('Sec-Fetch-Site');
+  if (fetchSite === 'same-origin' || fetchSite === 'none') return null;
+
+  const origin = req.headers.get('Origin');
+  if (!origin) return fetchSite ? `sec_fetch_site:${fetchSite}` : null;
+
+  try {
+    const allowed = new URL(siteOrigin || req.url).origin;
+    if (new URL(origin).origin === allowed) return null;
+  } catch {
+    return 'origin_parse_failed';
+  }
+  return `cross_origin:${origin.slice(0, 100)}`;
+}
+
 /* ================= security_events ================= */
 
 export type SecEventType =
   | 'login_failed' | 'login_ok' | 'geo_change' | 'rate_limit' | 'token_reuse'
-  | 'turnstile_failed' | 'session_revoked' | 'upload_rejected' | 'password_changed';
+  | 'turnstile_failed' | 'session_revoked' | 'upload_rejected' | 'password_changed'
+  // AUDIT M-1 — yalnız MÜŞAHİDƏ: sorğu bloklanmır, hal jurnala düşür.
+  | 'csrf_suspect';
 
 export type Severity = 'info' | 'warning' | 'critical';
 

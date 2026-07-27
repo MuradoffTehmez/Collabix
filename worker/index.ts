@@ -1,7 +1,7 @@
 // Collabix Worker: statik sayt (ASSETS) + REST API (D1/R2/KV) + security headers.
 import { Env, Ctx, err, fromJSON } from './util';
 import { resolveUser, rateLimit, peekUid, RL, RateBucket } from './auth';
-import { logSecurityEvent } from './security';
+import { logSecurityEvent, csrfSuspicion } from './security';
 import { runArchiveJob } from './archive';
 import { handleQueueBatch } from './queue';
 import { SystemEvent } from './events';
@@ -493,6 +493,17 @@ export default {
               res429.headers.set('Retry-After', String(verdict.retryAfter));
               return withSecurityHeaders(res429, false);
             }
+          }
+          // AUDIT M-1 — CSRF dərinlikdə müdafiə, HAZIRDA YALNIZ LOG REJİMİ.
+          // Sorğu BLOKLANMIR: yoxlama çox sərt olsa mobil/API client-lər
+          // kəsilərdi. Əvvəlcə real trafikdə pozma halları toplanır, sonra
+          // bloklamaya keçilir (hesabatda açıq öhdəlik).
+          const csrf = csrfSuspicion(request, env.SITE_ORIGIN || '');
+          if (csrf) {
+            ctx.waitUntil(logSecurityEvent(env, request, {
+              type: 'csrf_suspect', severity: 'warning',
+              meta: { reason: csrf, path, method: request.method, mode: 'log_only' },
+            }));
           }
           const auth = await resolveUser(env, request);
           const c: Ctx = {

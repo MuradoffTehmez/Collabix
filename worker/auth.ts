@@ -15,7 +15,26 @@
 import { Env, uuid, now } from './util';
 import { reqInfo, logSecurityEvent } from './security';
 
-const PBKDF2_ITER = 100_000;
+/**
+ * PBKDF2 iterasiya köçürməsi — AUDIT M-2 (AUDIT-TASK-6 §C-2).
+ *
+ * OWASP 2023: SHA-256 üçün 600 000. Köhnə hesablar 100 000 ilə yazılıb və
+ * kütləvi yenidən heşləmə MÜMKÜN DEYİL (bazada açıq parol yoxdur) → köçürmə
+ * girişdə TƏDRİCƏN baş verir:
+ *
+ *   1. `users.pass_iter` hər hesabın ÖZ iterasiyasını saxlayır (0023 miqrasiyası).
+ *   2. `verifyPassword` sətirdəki dəyərlə yoxlayır — sabitlə YOX.
+ *   3. Uğurlu girişdə `pass_iter < PBKDF2_ITER` olarsa parol yeni iterasiya
+ *      ilə yenidən heşlənir və sütun yenilənir.
+ *   4. Yeni qeydiyyat həmişə `PBKDF2_ITER` işlədir.
+ *
+ * ⚠ Köhnə hesablar köçürülənə qədər işləməyə DAVAM EDİR — bu, kütləvi
+ * kilidlənmənin qarşısını alan yeganə mexanizmdir.
+ */
+const PBKDF2_ITER = 600_000;
+
+/** Köçürməmiş hesabların iterasiyası — `pass_iter` sütununun default-u ilə eyni. */
+export const PBKDF2_ITER_LEGACY = 100_000;
 const ACCESS_TTL = 15 * 60;              // 15 dəqiqə (saniyə)
 const REFRESH_TTL = 60 * 60 * 24 * 30;   // 30 gün (saniyə)
 
@@ -33,25 +52,50 @@ const b64uDecode = (s: string) =>
   Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
 
 /* ---------- PBKDF2 ---------- */
-export async function hashPassword(password: string, saltHex?: string): Promise<{ hash: string; salt: string }> {
+export async function hashPassword(
+  password: string, saltHex?: string, iterations: number = PBKDF2_ITER,
+): Promise<{ hash: string; salt: string; iterations: number }> {
   const salt = saltHex ? hexToBytes(saltHex) : crypto.getRandomValues(new Uint8Array(16));
   if (!salt) throw new Error('etibarsız salt');
   const key = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']);
   const bits = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', hash: 'SHA-256', salt: salt as BufferSource, iterations: PBKDF2_ITER },
+    { name: 'PBKDF2', hash: 'SHA-256', salt: salt as BufferSource, iterations },
     key, 256,
   );
-  return { hash: bytesToHex(new Uint8Array(bits)), salt: bytesToHex(salt as Uint8Array) };
+  return { hash: bytesToHex(new Uint8Array(bits)), salt: bytesToHex(salt as Uint8Array), iterations };
 }
-export async function verifyPassword(password: string, hash: string, salt: string): Promise<boolean> {
+export async function verifyPassword(
+  password: string, hash: string, salt: string, iterations: number = PBKDF2_ITER_LEGACY,
+): Promise<boolean> {
   // AUDIT M-17 — FAIL-CLOSED. Əvvəl pozulmuş salt `hexToBytes`-da
   // `null.map()` → TypeError → **500** verirdi. Bu, oracle idi: hücumçu cavab
   // KODUNDAN hansı hesabların pozulmuş sətrə malik olduğunu öyrənə bilərdi
   // (500 = pozulmuş, 401 = sadəcə səhv parol).
   // İndi belə hal adi "parol yanlışdır" kimi görünür.
   if (!hash || !salt || !hexToBytes(salt)) return false;
-  const { hash: h } = await hashPassword(password, salt);
+  // M-2: iterasiya SƏTİRDƏN gəlir, sabitdən yox. Köhnə hesab 100 000 ilə
+  // yazılıbsa 600 000 ilə yoxlanmamalıdır — əks halda düzgün parol da
+  // uyğunsuz heş verər və istifadəçi kilidlənər.
+  const { hash: h } = await hashPassword(password, salt, iterations);
   return timingSafeEqual(h, hash);
+}
+
+/**
+ * Girişdən sonra parolu yeni iterasiya ilə yenidən heşləyir — M-2 köçürməsi.
+ *
+ * ⚠ Yalnız PAROL DOĞRULANDIQDAN sonra çağırılmalıdır (açıq parol yalnız
+ * həmin anda mövcud olur). `pass_iter` artıq güncəldirsə heç nə etmir.
+ *
+ * Çağıran tərəf bunu `ctx.waitUntil` ilə işlədir: yenidən heşləmə 600 000
+ * iterasiyadır və cavabı GÖZLƏTMƏMƏLİDİR.
+ */
+export async function upgradePasswordHash(
+  env: Env, uid: string, password: string, currentIter: number,
+): Promise<void> {
+  if (currentIter >= PBKDF2_ITER) return;
+  const { hash, salt, iterations } = await hashPassword(password);
+  await env.DB.prepare('UPDATE users SET pass_hash = ?, pass_salt = ?, pass_iter = ? WHERE id = ?')
+    .bind(hash, salt, iterations, uid).run();
 }
 const bytesToHex = (b: Uint8Array) => [...b].map(x => x.toString(16).padStart(2, '0')).join('');
 
