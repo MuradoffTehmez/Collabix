@@ -1,5 +1,7 @@
 import { Ctx, err } from '../util';
-import { hasPermission, parsePermissions } from '../services/team/permissions';
+import {
+  TEAM_PERMISSIONS, hasPermission, parsePermissions, expandPermissions,
+} from '../services/team/permissions';
 
 export interface TeamMembership {
   id: string;
@@ -8,6 +10,8 @@ export interface TeamMembership {
   role_id: string;
   status: string;
   role_name: string;
+  /** Rolun prioriteti — BÖYÜK rəqəm = güclü (bax `STANDARD_ROLES`). */
+  role_priority: number | null;
   permissions: string[];
 }
 
@@ -15,13 +19,59 @@ export interface TeamMembership {
 export async function getMembership(c: Ctx, teamId: string): Promise<TeamMembership | null> {
   if (!c.user) return null;
   const row = await c.env.DB.prepare(
-    `SELECT m.*, r.name AS role_name, r.permissions
+    `SELECT m.*, r.name AS role_name, r.permissions, r.priority AS role_priority
        FROM team_members m
        JOIN team_roles r ON m.role_id = r.id
       WHERE m.team_id = ? AND m.user_id = ? AND m.status = 'active'`
   ).bind(teamId, c.user.id).first<any>();
   if (!row) return null;
   return { ...row, permissions: parsePermissions(row.permissions) } as TeamMembership;
+}
+
+/**
+ * Çağıranın komanda daxilindəki EFFEKTİV səlahiyyəti — rol idarəetməsi üçün.
+ *
+ * AUDIT-2026-07-26 / H-1 (AUDIT-TASK-3 §3.2, §3.3). `requireTeamPermission`
+ * yalnız "bu icazə var/yox" sualına cavab verir; rol yaratmaq/dəyişmək üçün
+ * bundan artığı lazımdır: çağıran nəyi VERƏ bilər və hansı rollara TOXUNA bilər.
+ *
+ * `priority` = `Infinity` o deməkdir ki, çağıran rol iyerarxiyasından kənar
+ * tam səlahiyyətlidir (sayt admini və ya komanda sahibi).
+ *
+ * Fail-closed (§5.3): üzvlük tapılmasa və ya prioritet oxunmasa `null` qaytarır —
+ * çağıran tərəf bunu 403 kimi emal etməlidir, "yoxdur = sərbəstdir" kimi YOX.
+ */
+export interface TeamAuthority {
+  /** `'*'` genişləndirilmiş formada — Owner tam kataloqu alır. */
+  permissions: string[];
+  priority: number;
+  /** Rol sistemindən kənar tam səlahiyyət (sayt admini / komanda sahibi). */
+  unrestricted: boolean;
+}
+
+export async function getTeamAuthority(
+  c: Ctx,
+  team: { id: string; owner_id?: unknown },
+): Promise<TeamAuthority | null> {
+  if (!c.user) return null;
+
+  // Sayt administratoru komandaları moderasiya edir, komanda sahibi isə
+  // `transferOwnership`-dən asılı olmayan struktur sahibdir — hər ikisi rol
+  // iyerarxiyasının fövqündədir. (Demo `team_1`-də sahibin rolu "Admin"
+  // adlanır və prioriteti 10-dur — prioritetə güvənmək onu öz komandasından
+  // kilidləyərdi.)
+  if (c.isAdmin || (team.owner_id != null && String(team.owner_id) === c.user.id)) {
+    return { permissions: [...TEAM_PERMISSIONS], priority: Infinity, unrestricted: true };
+  }
+
+  const member = await getMembership(c, team.id);
+  if (!member) return null;
+
+  const raw = member.role_priority;
+  const priority = raw == null ? NaN : Number(raw);
+  if (!Number.isFinite(priority)) return null;   // pozulmuş rol sətri → rədd
+
+  return { permissions: expandPermissions(member.permissions), priority, unrestricted: false };
 }
 
 /** Konkret icazə tələb edir. Uğurda `null`, əks halda hazır error cavabı. */

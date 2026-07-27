@@ -12,8 +12,12 @@ import { TeamStatisticsService } from './services/team/statistics.service';
 import { TeamNotifyService } from './services/team/notify.service';
 import {
   requireTeamPermission, requireTeamMember, requireTeamRead, getMembership, canModerate,
+  getTeamAuthority, type TeamAuthority,
 } from './middleware/team-auth';
-import { TEAM_PERMISSIONS, STANDARD_ROLES, hasPermission } from './services/team/permissions';
+import {
+  TEAM_PERMISSIONS, STANDARD_ROLES, hasPermission,
+  sanitizePermissions, expandPermissions, findEscalatedPermissions,
+} from './services/team/permissions';
 import { TEAM_XP } from './services/team/xp';
 import { QueueService } from './services/queue';
 import { SystemEvent } from './events';
@@ -34,6 +38,61 @@ function emit(c: Ctx, event: SystemEvent) {
 }
 
 const actorName = (c: Ctx) => c.user?.name || c.user?.username || 'İstifadəçi';
+
+/* ---------- rol iyerarxiyası qoruyucuları — AUDIT-2026-07-26 / H-1 ---------- */
+//
+// `requireTeamPermission` yalnız "manage_roles var/yox" sualına baxırdı. Bu,
+// `manage_roles` daşıyan Admin-ə 3 sorğuluq eskalasiya zənciri açırdı:
+//   1) permissions:['*'] ilə rol yarat  2) özünü ora keçir  3) komandanı sil.
+// Aşağıdakı üç qoruyucu zəncirin hər halqasını AYRICA bağlayır — biri
+// silinsə də qalanları müstəqil müdafiə kimi qalır (defense in depth).
+
+/** Çağıranın effektiv səlahiyyəti; müəyyən edilə bilmirsə hazır 403 (fail-closed). */
+async function loadAuthority(
+  c: Ctx, team: { id: string; owner_id?: unknown },
+): Promise<{ authority: TeamAuthority } | { res: Response }> {
+  const authority = await getTeamAuthority(c, team);
+  if (!authority) {
+    return { res: err('Komandadakı səlahiyyətiniz müəyyən edilə bilmədi', 403, 'forbidden') };
+  }
+  return { authority };
+}
+
+/**
+ * Altçoxluq qaydası: verilən icazə dəsti çağıranın öz dəstindən kənara çıxa bilməz.
+ *
+ * `sanitizePermissions` wildcard-ı kəsdikdən sonra da Admin açıq şəkildə
+ * `['manage_team']` yaza bilərdi — bu, həmin AYRI hücumu bağlayır.
+ *
+ * ⚠ `requested` NORMALLAŞDIRILMIŞ gəlməlidir və mənbəyə görə fərqli normallaşdırma
+ * lazımdır: istifadəçi girişi üçün `sanitizePermissions` (orada `'*'` uydurma
+ * dəyərdir və atılır), BAZADAKI rol üçün isə `expandPermissions` (orada `'*'`
+ * ƏSL səlahiyyətdir və açılmalıdır). Səhv seçim köhnə wildcard rolun
+ * yoxlamadan yalançı keçməsinə səbəb olar.
+ */
+function denyEscalation(authority: TeamAuthority, requested: string[]): Response | null {
+  const escalated = findEscalatedPermissions(authority.permissions, requested);
+  if (!escalated.length) return null;
+  return err(`Özünüzdə olmayan səlahiyyəti verə bilməzsiniz: ${escalated.join(', ')}`,
+    403, 'forbidden');
+}
+
+/**
+ * Prioritet qaydası: çağıran özündən GÜCLÜ rola toxuna və belə rol yarada bilməz.
+ * (`STANDARD_ROLES`: böyük rəqəm = güclü — Owner 100, Admin 90, Viewer 10.)
+ *
+ * Ad əsaslı `'Owner'` qorumasından fərqli olaraq bu, rolun yenidən
+ * adlandırılması ilə yayınmağa imkan vermir. Sayt admini/komanda sahibi üçün
+ * `authority.priority === Infinity` → qayda heç vaxt onları bloklamır.
+ */
+function denyHigherPriority(
+  authority: TeamAuthority, priority: unknown, message: string,
+): Response | null {
+  const value = priority == null ? NaN : Number(priority);
+  if (!Number.isFinite(value)) return err('Rolun prioriteti oxunmadı', 403, 'forbidden');
+  if (value > authority.priority) return err(message, 403, 'forbidden');
+  return null;
+}
 
 /* ================= Teams ================= */
 
@@ -210,6 +269,25 @@ export async function updateMemberRole(c: Ctx, idOrSlug: string, userId: string)
   const b = await readJson(c.req);
   if (!b.roleId) return err('Role ID required', 400);
 
+  // H-1 / zəncirin 2-ci halqası: Admin özünü (və ya başqasını) güclü rola
+  // keçirməklə `manage_team` alırdı. Mövcud ad əsaslı qoruma ("Owner" adı)
+  // yeni yaradılmış "Ops" rolunu tutmurdu — prioritet + altçoxluq tutur.
+  const auth = await loadAuthority(c, r.team);
+  if ('res' in auth) return auth.res;
+
+  const target = await new TeamRoleService(c.env).getRole(String(b.roleId));
+  if (target && String(target.team_id) === String(r.team.id)) {
+    const denyRank = denyHigherPriority(auth.authority, target.priority,
+      'Özünüzdən yüksək prioritetli rolu təyin edə bilməzsiniz');
+    if (denyRank) return denyRank;
+    // Köhnə məlumat müdafiəsi: prioriteti aşağı, lakin güclü icazə daşıyan rol
+    // (məs. demo `role_1` — priority 10 + manage_team) təyinatla verilə bilməz.
+    // `expandPermissions` — çünki BAZADAKI `'*'` əsl səlahiyyətdir: sanitizasiya
+    // onu atsaydı, köhnə wildcard rol yoxlamadan boş dəst kimi keçərdi.
+    const denyGrant = denyEscalation(auth.authority, expandPermissions(target.permissions));
+    if (denyGrant) return denyGrant;
+  }
+
   try {
     await new TeamMemberService(c.env).updateMemberRole(r.team.id, userId, String(b.roleId));
   } catch (e: any) {
@@ -283,7 +361,21 @@ export async function createTeamRole(c: Ctx, idOrSlug: string) {
   const roleService = new TeamRoleService(c.env);
   if (await roleService.getRoleByName(r.team.id, name)) return err('Bu adda rol artıq var', 400);
 
-  const id = await roleService.createRole(r.team.id, name, b.permissions || [], Number(b.priority) || 0);
+  // H-1 / zəncirin 1-ci halqası. `'*'` artıq `sanitizePermissions`-də süzülür;
+  // burada AÇIQ eskalasiya (`['manage_team']`) və özündən güclü rol yaratmaq
+  // bağlanır.
+  const auth = await loadAuthority(c, r.team);
+  if ('res' in auth) return auth.res;
+
+  const priority = Number(b.priority) || 0;
+  const denyRank = denyHigherPriority(auth.authority, priority,
+    'Özünüzdən yüksək prioritetli rol yarada bilməzsiniz');
+  if (denyRank) return denyRank;
+
+  const denyGrant = denyEscalation(auth.authority, sanitizePermissions(b.permissions));
+  if (denyGrant) return denyGrant;
+
+  const id = await roleService.createRole(r.team.id, name, b.permissions || [], priority);
   return json({ id });
 }
 
@@ -297,9 +389,34 @@ export async function updateTeamRole(c: Ctx, idOrSlug: string, roleId: string) {
   const roleService = new TeamRoleService(c.env);
   const role = await roleService.getRole(roleId);
   if (!role || String(role.team_id) !== String(r.team.id)) return err('Rol tapılmadı', 404);
+
+  // ⚠ SIRA VACİBDİR: prioritet yoxlaması ad yoxlamasından ƏVVƏL gəlir.
+  // Admin üçün Owner rolu artıq bu mərhələdə 403 alır; sahib/sayt admini üçün
+  // isə (priority = Infinity) keçir və aşağıdakı köhnə 400 davranışı qorunur.
+  const auth = await loadAuthority(c, r.team);
+  if ('res' in auth) return auth.res;
+
+  // 3.3.b — Admin Owner rolunun icazələrini azalda/prioritetini endirə bilirdi.
+  // Altçoxluq qaydası bunu TUTMUR: burada icazə verilmir, ALINIR.
+  const denyTarget = denyHigherPriority(auth.authority, role.priority,
+    'Özünüzdən yüksək prioritetli rolu dəyişdirə bilməzsiniz');
+  if (denyTarget) return denyTarget;
+
   if (role.name === 'Owner') return err('Owner rolu dəyişdirilə bilməz', 400);
 
   const b = await readJson(c.req);
+
+  // 3.3.c — rolun prioritetini öz səviyyəsindən yuxarı qaldırmaq da eskalasiyadır.
+  if (b.priority !== undefined) {
+    const denyRank = denyHigherPriority(auth.authority, b.priority,
+      'Rolun prioritetini öz səviyyənizdən yuxarı qaldıra bilməzsiniz');
+    if (denyRank) return denyRank;
+  }
+  if (b.permissions !== undefined) {
+    const denyGrant = denyEscalation(auth.authority, sanitizePermissions(b.permissions));
+    if (denyGrant) return denyGrant;
+  }
+
   await roleService.updateRole(roleId, b);
   return json({ success: true });
 }
@@ -314,6 +431,17 @@ export async function deleteTeamRole(c: Ctx, idOrSlug: string, roleId: string) {
   const roleService = new TeamRoleService(c.env);
   const role = await roleService.getRole(roleId);
   if (!role || String(role.team_id) !== String(r.team.id)) return err('Rol tapılmadı', 404);
+
+  // 3.3.b — silmə də "yuxarı rola müdaxilə"dir: `deleteRole` həmin roldakı
+  // üzvləri default rola köçürür, yəni Owner-i praktiki olaraq devirmək olardı.
+  // Yoxlama ad yoxlamasından ƏVVƏL — bax `updateTeamRole`-dakı izah.
+  const auth = await loadAuthority(c, r.team);
+  if ('res' in auth) return auth.res;
+
+  const denyTarget = denyHigherPriority(auth.authority, role.priority,
+    'Özünüzdən yüksək prioritetli rolu silə bilməzsiniz');
+  if (denyTarget) return denyTarget;
+
   if (role.name === 'Owner') return err('Owner rolu silinə bilməz', 400);
 
   await roleService.deleteRole(r.team.id, roleId);
