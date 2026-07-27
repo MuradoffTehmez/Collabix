@@ -2,8 +2,16 @@
 // hər sorğu same-origin gedir, token client JS-də saxlanılmır.
 import { bus } from './util.js';
 
+// `code` və `retryAfter` AUDIT-TASK-4 / §4.6 ilə əlavə olundu: çağıran tərəf
+// (xüsusən polling dövrələri) mesaj MƏTNİNƏ baxmadan qərar verə bilsin.
+// Mətnə görə qərar vermək tərcümə dəyişən kimi sınardı.
 export class ApiError extends Error {
-  constructor(message, status){ super(message); this.status = status; }
+  constructor(message, status, code = '', retryAfter = 0){
+    super(message);
+    this.status = status;
+    this.code = code;
+    this.retryAfter = retryAfter;   // saniyə — yalnız 429-da mənalıdır
+  }
 }
 
 /* ---------- access token yeniləmə (TASK-8 / Bənd 15) ----------
@@ -63,7 +71,21 @@ export async function api(path, cfg = {}){
 
   if(!res.ok){
     if(res.status === 401) bus.dispatchEvent(new CustomEvent('api-unauthorized'));
-    throw new ApiError((data && data.error) || `Xəta (${res.status})`, res.status);
+
+    // 429 → `Retry-After` (saniyə) HTTP standartıdır; server onu hər limit
+    // cavabında göndərir. Başlıq oxunmasa 60 saniyə ehtiyat dəyəri götürülür ki,
+    // client sonsuz təkrar etməsin.
+    let retryAfter = 0;
+    if(res.status === 429){
+      retryAfter = Number(res.headers.get('Retry-After')) || 60;
+      // UI qatı bu hadisəni tutub istifadəçiyə anlaşılan mesaj göstərir —
+      // 429 səssiz uğursuzluğa çevrilməməlidir (AUDIT-TASK-4 §4.6/4).
+      bus.dispatchEvent(new CustomEvent('api-rate-limited', { detail: { retryAfter } }));
+    }
+    throw new ApiError(
+      (data && data.error) || `Xəta (${res.status})`,
+      res.status, (data && data.code) || '', retryAfter,
+    );
   }
   return data;
 }
@@ -73,16 +95,23 @@ export async function api(path, cfg = {}){
 export function startPoll({ fetcher, onData, interval, events = [] }){
   let stopped = false;
   let timer = null;
+  // 429 alındıqda dövrənin dayandığı an (ms). AUDIT-TASK-4 §4.6/4:
+  // 3 saniyəlik poll 429-dan sonra dayanmasa hər tick sayğacı yenidən doldurur
+  // və istifadəçi limitdən HEÇ VAXT çıxa bilmir — öz-özünü gücləndirən nasazlıq.
+  let pausedUntil = 0;
   const tick = async () => {
     if(stopped || document.hidden) return;
+    if(Date.now() < pausedUntil) return;
     let data;
     try{
       data = await fetcher();
     }catch(e){
       if(e && e.status === 401) stopped = true; // sessiya bitib — poll dayansın
+      else if(e && e.status === 429) pausedUntil = Date.now() + (e.retryAfter || 60) * 1000;
       else console.error('poll fetch xətası', e);
       return;
     }
+    pausedUntil = 0;   // uğurlu cavab → fasilə bitdi
     // onData (render) burada, try/catch-dən KƏNARDA çağırılır — fetch xətaları ilə
     // render xətalarını qarışdırmayaq, əks halda render bugları səssizcə udulur.
     if(!stopped) onData(data);

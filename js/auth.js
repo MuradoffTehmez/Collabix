@@ -5,6 +5,7 @@ import { state } from './store.js';
 import { bus } from './util.js';
 import { tokenFor, resetWidget } from './turnstile.js';
 import { promptMfaCode } from './mfa.js';
+import { toast } from './ui.js';
 
 let onLoginCb = null;
 let onLogoutCb = null;
@@ -29,6 +30,17 @@ export function watchAuthState(onLogin, onLogout){
       state.me = null; state.authUser = null; state.isAdmin = false;
       onLogoutCb && onLogoutCb();
     }
+  });
+
+  // Rate limit (429) — AUDIT-TASK-4 §4.6/4. Bildiriş olmasa istifadəçi üçün
+  // sayt sadəcə "işləmir" kimi görünür. Toast 20 saniyədə bir dəfədən çox
+  // göstərilmir: limit dolduqda onlarla paralel sorğu eyni anda 429 alır.
+  let lastRlToast = 0;
+  bus.addEventListener('api-rate-limited', ev => {
+    if(Date.now() - lastRlToast < 20_000) return;
+    lastRlToast = Date.now();
+    const sec = (ev.detail && ev.detail.retryAfter) || 60;
+    toast(`Çox sayda sorğu göndərildi. ${sec} saniyə sonra yenidən cəhd edin.`, 'err');
   });
   return () => {};
 }
