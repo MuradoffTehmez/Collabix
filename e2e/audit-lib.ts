@@ -207,5 +207,5 @@ export const AUDIT_PAGES: AuditPage[] = [
   { name: 'admin', url: '/#admin', auth: true },
   // TASK-11 — komanda iş sahəsi (siyahı + 10 tab-lı detal səhifəsi).
   { name: 'teams', url: '/#teams', auth: true },
-  { name: 'team', url: '/#team/alpha-team', auth: true },
+  { name: 'team', url: `/#team/${E2E_TEAM.slug}`, auth: true },
 ];

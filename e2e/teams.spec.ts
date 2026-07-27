@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { collectConsoleErrors, assertConsoleClean } from './helpers';
 import { AUTH_FILE } from './seed';
+import { E2E_TEAM, E2E_OWNER } from './fixtures';
 
 test.use({ storageState: AUTH_FILE });
 
@@ -18,8 +19,8 @@ test.describe('Teams səhifəsi - TASK-11 E2E', () => {
     const errors = collectConsoleErrors(page);
     await loginAndGoToTeams(page);
     
-    // Check if the Alpha Team card is visible (seeded in 0015_seed_teams.sql)
-    await expect(page.locator('.user-card').filter({ hasText: 'Alpha Team' })).toBeVisible();
+    // E2E komanda kartı görünür (e2e/seed.ts yaradır — miqrasiyadan ASILI DEYİL)
+    await expect(page.locator('.user-card').filter({ hasText: E2E_TEAM.name })).toBeVisible();
     
     assertConsoleClean(errors);
   });
@@ -28,11 +29,11 @@ test.describe('Teams səhifəsi - TASK-11 E2E', () => {
     const errors = collectConsoleErrors(page);
     await loginAndGoToTeams(page);
     
-    // Click on Alpha Team
-    await page.locator('.user-card').filter({ hasText: 'Alpha Team' }).click();
+    // E2E komandasına klik
+    await page.locator('.user-card').filter({ hasText: E2E_TEAM.name }).click();
 
     // Check URL
-    await expect(page).toHaveURL(/.*#team\/alpha-team/);
+    await expect(page).toHaveURL(new RegExp(`#team/${E2E_TEAM.slug}`));
     
     // Verify tabs are visible
     await expect(page.locator('#teamTabs button[data-tab="overview"]')).toBeVisible();
@@ -42,7 +43,7 @@ test.describe('Teams səhifəsi - TASK-11 E2E', () => {
     await page.locator('#teamTabs button[data-tab="members"]').click();
     
     // Check if Team Owner is listed in members
-    await expect(page.locator('.user-card').filter({ hasText: 'teamowner_123' }).or(page.locator('.user-card').filter({ hasText: 'Team Owner' }))).toBeVisible();
+    await expect(page.locator('.user-card').filter({ hasText: E2E_OWNER.username }).or(page.locator('.user-card').filter({ hasText: E2E_OWNER.name }))).toBeVisible();
 
     assertConsoleClean(errors);
   });
@@ -51,7 +52,7 @@ test.describe('Teams səhifəsi - TASK-11 E2E', () => {
     const errors = collectConsoleErrors(page);
     await loginAndGoToTeams(page);
     
-    await page.locator('.user-card').filter({ hasText: 'Alpha Team' }).click();
+    await page.locator('.user-card').filter({ hasText: E2E_TEAM.name }).click();
     
     const projectsTabBtn = page.locator('#teamTabs button[data-tab="projects"]');
     await projectsTabBtn.click();
@@ -78,7 +79,7 @@ test.describe('Teams səhifəsi - TASK-11 E2E', () => {
     const errors = collectConsoleErrors(page);
     await loginAndGoToTeams(page);
     
-    await page.locator('.user-card').filter({ hasText: 'Alpha Team' }).click();
+    await page.locator('.user-card').filter({ hasText: E2E_TEAM.name }).click();
     
     const tasksTabBtn = page.locator('#teamTabs button[data-tab="tasks"]');
     await tasksTabBtn.click();
@@ -104,7 +105,7 @@ test.describe('Teams səhifəsi - TASK-11 E2E', () => {
     const errors = collectConsoleErrors(page);
     await loginAndGoToTeams(page);
     
-    await page.locator('.user-card').filter({ hasText: 'Alpha Team' }).click();
+    await page.locator('.user-card').filter({ hasText: E2E_TEAM.name }).click();
     
     const chatTabBtn = page.locator('#teamTabs button[data-tab="chat"]');
     await chatTabBtn.click();
@@ -126,7 +127,7 @@ test.describe('Teams səhifəsi - TASK-11 E2E', () => {
     const errors = collectConsoleErrors(page);
     await loginAndGoToTeams(page);
     
-    await page.locator('.user-card').filter({ hasText: 'Alpha Team' }).click();
+    await page.locator('.user-card').filter({ hasText: E2E_TEAM.name }).click();
     
     const settingsTabBtn = page.locator('#teamTabs button[data-tab="settings"]');
     await settingsTabBtn.click();
@@ -134,16 +135,16 @@ test.describe('Teams səhifəsi - TASK-11 E2E', () => {
     const teamNameInput = page.locator('#teamNameInput');
     await expect(teamNameInput).toBeVisible();
     
-    await teamNameInput.fill('Alpha Team Updated');
+    await teamNameInput.fill(`${E2E_TEAM.name} Updated`);
     
     const saveBtn = page.locator('#teamContent .btn-primary').filter({ hasText: 'Yadda saxla' }).or(page.locator('#teamContent .btn-primary').filter({ hasText: 'Save' }));
     await saveBtn.click();
 
     // Verify the header updated
-    await expect(page.locator('#teamHeader').filter({ hasText: 'Alpha Team Updated' })).toBeVisible();
+    await expect(page.locator('#teamHeader').filter({ hasText: `${E2E_TEAM.name} Updated` })).toBeVisible();
 
     // Revert it back so we don't break other tests that depend on the original name
-    await teamNameInput.fill('Alpha Team');
+    await teamNameInput.fill(E2E_TEAM.name);
     await saveBtn.click();
 
     assertConsoleClean(errors);
@@ -154,7 +155,7 @@ test.describe('Teams səhifəsi - TASK-11 E2E', () => {
   test('Feed tabı paylaşım qəbul edir və göstərir', async ({ page }) => {
     const errors = collectConsoleErrors(page);
     await loginAndGoToTeams(page);
-    await page.locator('.user-card').filter({ hasText: 'Alpha Team' }).click();
+    await page.locator('.user-card').filter({ hasText: E2E_TEAM.name }).click();
 
     await page.locator('#teamTabs button[data-tab="feed"]').click();
     const input = page.locator('#feedInput');
@@ -171,7 +172,7 @@ test.describe('Teams səhifəsi - TASK-11 E2E', () => {
   test('Files tabı açılır, kateqoriya filtrləri görünür', async ({ page }) => {
     const errors = collectConsoleErrors(page);
     await loginAndGoToTeams(page);
-    await page.locator('.user-card').filter({ hasText: 'Alpha Team' }).click();
+    await page.locator('.user-card').filter({ hasText: E2E_TEAM.name }).click();
 
     await page.locator('#teamTabs button[data-tab="files"]').click();
     await expect(page.locator('#teamFileList')).toBeVisible();
@@ -182,7 +183,7 @@ test.describe('Teams səhifəsi - TASK-11 E2E', () => {
   test('Activity tabı hadisə tarixçəsini göstərir', async ({ page }) => {
     const errors = collectConsoleErrors(page);
     await loginAndGoToTeams(page);
-    await page.locator('.user-card').filter({ hasText: 'Alpha Team' }).click();
+    await page.locator('.user-card').filter({ hasText: E2E_TEAM.name }).click();
 
     await page.locator('#teamTabs button[data-tab="activity"]').click();
     await expect(page.locator('#teamActivityFull')).toBeVisible();
@@ -192,7 +193,7 @@ test.describe('Teams səhifəsi - TASK-11 E2E', () => {
   test('Statistics tabı metrikləri və reputasiyanı göstərir', async ({ page }) => {
     const errors = collectConsoleErrors(page);
     await loginAndGoToTeams(page);
-    await page.locator('.user-card').filter({ hasText: 'Alpha Team' }).click();
+    await page.locator('.user-card').filter({ hasText: E2E_TEAM.name }).click();
 
     await page.locator('#teamTabs button[data-tab="stats"]').click();
     await expect(page.locator('.team-stat-grid')).toBeVisible();

@@ -8,6 +8,7 @@
 // Sorğular səhifədaxili `fetch` ilə gedir (helpers.ts-dəki eyni izah).
 import { test, expect, type Page, type Browser, type BrowserContext } from '@playwright/test';
 import { AUTH_FILE, TEST_PASS, E2E_TURNSTILE } from './seed';
+import { E2E_TEAM, E2E_TEAM_PRIVATE, E2E_TEAM_PUBLIC } from './fixtures';
 
 test.use({ storageState: AUTH_FILE });
 
@@ -94,13 +95,13 @@ test.describe('TASK-11 RBAC — üzv olmayanın çıxışı bağlıdır', () => 
     const { ctx, page } = await outsiderPage(browser);
     try {
       for (const path of [
-        '/api/teams/beta-team',
-        '/api/teams/beta-team/feed',
-        '/api/teams/beta-team/files',
-        '/api/teams/beta-team/members',
-        '/api/teams/beta-team/activity',
-        '/api/teams/beta-team/stats',
-        '/api/teams/beta-team/rooms',
+        `/api/teams/${E2E_TEAM_PRIVATE.slug}`,
+        `/api/teams/${E2E_TEAM_PRIVATE.slug}/feed`,
+        `/api/teams/${E2E_TEAM_PRIVATE.slug}/files`,
+        `/api/teams/${E2E_TEAM_PRIVATE.slug}/members`,
+        `/api/teams/${E2E_TEAM_PRIVATE.slug}/activity`,
+        `/api/teams/${E2E_TEAM_PRIVATE.slug}/stats`,
+        `/api/teams/${E2E_TEAM_PRIVATE.slug}/rooms`,
       ]) {
         const res = await apiCall(page, path);
         expect(res.status, path).toBe(403);
@@ -113,10 +114,10 @@ test.describe('TASK-11 RBAC — üzv olmayanın çıxışı bağlıdır', () => 
     // belə komandaya aid olmayan şəxs oxuya/yaza bilməməlidir.
     const { ctx, page } = await outsiderPage(browser);
     try {
-      const read = await apiCall(page, '/api/rooms/tcr_1/messages');
+      const read = await apiCall(page, `/api/rooms/${E2E_TEAM.roomId}/messages`);
       expect(read.status).toBe(403);
 
-      const write = await post(page, '/api/rooms/tcr_1/messages', { type: 'text', text: 'icazəsiz' });
+      const write = await post(page, `/api/rooms/${E2E_TEAM.roomId}/messages`, { type: 'text', text: 'icazəsiz' });
       expect(write.status).toBe(403);
 
       // Qlobal otaq (komandaya aid deyil) toxunulmaz qalır.
@@ -128,10 +129,10 @@ test.describe('TASK-11 RBAC — üzv olmayanın çıxışı bağlıdır', () => 
   test('kənar istifadəçi post ata və layihə yarada bilmir', async ({ browser }) => {
     const { ctx, page } = await outsiderPage(browser);
     try {
-      const postRes = await post(page, '/api/teams/beta-team/feed', { content: 'icazəsiz post' });
+      const postRes = await post(page, `/api/teams/${E2E_TEAM_PRIVATE.slug}/feed`, { content: 'icazəsiz post' });
       expect(postRes.status).toBe(403);
 
-      const projRes = await post(page, '/api/teams/beta-team/projects', { name: 'icazəsiz layihə' });
+      const projRes = await post(page, `/api/teams/${E2E_TEAM_PRIVATE.slug}/projects`, { name: 'icazəsiz layihə' });
       expect(projRes.status).toBe(403);
     } finally { await ctx.close(); }
   });
@@ -139,11 +140,11 @@ test.describe('TASK-11 RBAC — üzv olmayanın çıxışı bağlıdır', () => 
   test('Public komanda kənar istifadəçiyə oxunur, amma üzv göstərilmir', async ({ browser }) => {
     const { ctx, page } = await outsiderPage(browser);
     try {
-      const res = await apiCall(page, '/api/teams/gamma-team');
+      const res = await apiCall(page, `/api/teams/${E2E_TEAM_PUBLIC.slug}`);
       expect(res.ok).toBeTruthy();
       expect(res.body.team.isMember).toBeFalsy();
       // Public komandanın belə FEED-i yalnız üzvlərə açıqdır (PDR tələbi).
-      const feed = await apiCall(page, '/api/teams/gamma-team/feed');
+      const feed = await apiCall(page, `/api/teams/${E2E_TEAM_PUBLIC.slug}/feed`);
       expect(feed.status).toBe(403);
     } finally { await ctx.close(); }
   });
@@ -151,16 +152,16 @@ test.describe('TASK-11 RBAC — üzv olmayanın çıxışı bağlıdır', () => 
   test('kənar istifadəçi Public komandaya qoşulub ayrıla bilir, rolu Owner deyil', async ({ browser }) => {
     const { ctx, page } = await outsiderPage(browser);
     try {
-      const join = await post(page, '/api/teams/gamma-team/join');
+      const join = await post(page, `/api/teams/${E2E_TEAM_PUBLIC.slug}/join`);
       expect(join.ok).toBeTruthy();
 
-      const detail = await apiCall(page, '/api/teams/gamma-team');
+      const detail = await apiCall(page, `/api/teams/${E2E_TEAM_PUBLIC.slug}`);
       expect(detail.body.team.isMember).toBeTruthy();
       // K1 doğrulaması: yeni üzv HEÇ VAXT Owner olmamalıdır.
       expect(detail.body.team.myRole).not.toBe('Owner');
       expect(detail.body.team.permissions).not.toContain('*');
 
-      const leave = await post(page, '/api/teams/gamma-team/leave');
+      const leave = await post(page, `/api/teams/${E2E_TEAM_PUBLIC.slug}/leave`);
       expect(leave.ok).toBeTruthy();
     } finally { await ctx.close(); }
   });
@@ -252,8 +253,8 @@ test.describe('TASK-11 rollar və dəvətlər', () => {
     const res = await apiCall(page, '/api/teams/discover');
     expect(res.ok).toBeTruthy();
     const slugs = res.body.teams.map((t: any) => t.slug);
-    expect(slugs).toContain('gamma-team');
-    expect(slugs).not.toContain('beta-team');   // Private
+    expect(slugs).toContain(E2E_TEAM_PUBLIC.slug);
+    expect(slugs).not.toContain(E2E_TEAM_PRIVATE.slug);   // Private
   });
 });
 
@@ -730,7 +731,7 @@ test.describe('TASK-11 admin paneli', () => {
 
     const list = await apiCall(page, '/api/admin/teams');
     expect(list.ok, 'e2e_main hesabı admin olmalıdır').toBeTruthy();
-    const alpha = list.body.teams.find((t: any) => t.slug === 'alpha-team');
+    const alpha = list.body.teams.find((t: any) => t.slug === E2E_TEAM.slug);
     expect(alpha).toBeTruthy();
     expect(alpha.members_count).toBeGreaterThan(0);
     expect(alpha.owner_name || alpha.username).toBeTruthy();

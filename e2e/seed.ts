@@ -2,6 +2,20 @@
 // İstifadəçilər REAL /api/auth/register endpoint-i ilə yaradılır: parol heşi
 // (PBKDF2) məntiqi burada TƏKRARLANMIR, əsl kod yolu işlədilir.
 //
+// ⚠ BU SEED MİQRASİYA TARİXÇƏSİNDƏN ASILI DEYİL — AUDIT-TASK-5 §5.4.
+//
+// Səbəb (AUDIT-TASK-3 §8/2): `d1_migrations` cədvəli miqrasiyanı "tətbiq
+// olunub" saydıqda wrangler onu bir daha İŞLƏTMİR — sətirlər bazadan yoxa
+// çıxsa belə. Nəticədə test datası sükutla itirdi və `global-setup` FK xətası
+// ilə sınırdı ("No migrations to apply" desə də `team_1` bazada yox idi).
+//
+// İndi bütün test datası — həm komanda obyektləri, həm `general` BOOTSTRAP
+// otağı — burada `INSERT OR IGNORE` ilə yaradılır. Seed idempotentdir:
+// istənilən vaxt təkrar işlədilə bilər (`npm run e2e:seed`).
+//
+// İdentifikatorlar `e2e/fixtures.ts`-dədir və hamısı `e2e_` prefiksi daşıyır —
+// istehsal ID-ləri ilə qarışmasın (H-7 səhvinin təkrarlanmaması üçün).
+//
 // ⚠ `auth` rate-limit-i 5 dəqiqədə 10 sorğudur (worker/auth.ts RL).
 // Ona görə:
 //   * artıq mövcud istifadəçilər üçün register ÇAĞIRILMIR (D1-dən yoxlanılır) —
@@ -12,6 +26,9 @@ import { execFileSync } from 'node:child_process';
 import { writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import {
+  E2E_OWNER, E2E_TEAM, E2E_TEAM_PRIVATE, E2E_TEAM_PUBLIC, GENERAL_ROOM_ID,
+} from './fixtures';
 
 export const TEST_PASS = 'Test12345!';
 
@@ -128,31 +145,84 @@ export async function seedTestUsers(base: string) {
     logRow(2, 'user-edit', 'warning'),
     logRow(3, 'admin-add', 'success'),
     logRow(4, 'export-users', 'info'),
-    `INSERT OR IGNORE INTO team_members (id, team_id, user_id, role_id, status, joined_at) ` +
-    `SELECT 'member_e2e_main', 'team_1', id, 'role_1', 'active', ${nowMs} FROM users WHERE username = '${PRIMARY}';`
   );
 
-  // TASK-11 RBAC testləri üçün: əsas hesabın ÜZV OLMADIĞI Private komanda.
-  // Onun feed/fayl/üzv siyahısı 403 verməlidir (docs/TASK-11-REPORT.md K3–K5).
+  /* ═══════════ 🟢 BOOTSTRAP data (AUDIT-TASK-5 §5.4/2) ═══════════
+   *
+   * `general` otağı `0002_seed.sql`-dədir, YƏNİ MİQRASİYA İLƏ GƏLİR. Buna
+   * baxmayaraq E2E seed-i onu ÖZÜ də təmin edir, çünki miqrasiya tarixçəsinə
+   * güvənmək olmur: `d1_migrations` cədvəli miqrasiyanı "tətbiq olunub"
+   * saydıqda wrangler onu bir daha işlətmir — sətir bazadan yoxa çıxsa belə.
+   * Faktiki hal: `general` otağı həm lokal, həm İSTEHSAL bazasında YOX idi
+   * (AUDIT-TASK-4 §8 → AUDIT-TASK-5 §1). Nəticədə `ws-flow` testləri
+   * "FOREIGN KEY constraint failed" ilə sınırdı.
+   */
   sql.push(
+    `INSERT OR IGNORE INTO rooms (id, name, created_by, created_at) ` +
+    `VALUES ('${GENERAL_ROOM_ID}', 'ümumi', 'system', 0);`,
+  );
+
+  /* ═══════════ E2E-nin ÖZ komanda datası (AUDIT-TASK-5 §5.4) ═══════════
+   *
+   * Əvvəl bu testlər miqrasiya ilə gələn demo sətirlərə (`team_1`, `role_1`,
+   * `tcr_1`, `teamowner_123`) istinad edirdi — həmin sətirlər İSTEHSAL
+   * bazasına da düşürdü (H-7). İndi bütün test datası burada yaradılır və
+   * `e2e_` prefiksi daşıyır.
+   *
+   * Hər ifadə `INSERT OR IGNORE`-dur → seed idempotentdir, istənilən vaxt
+   * təkrar işlədilə bilər.
+   */
+  const owner = E2E_OWNER, T = E2E_TEAM, P = E2E_TEAM_PRIVATE, G = E2E_TEAM_PUBLIC;
+
+  sql.push(
+    // Komanda sahibi. Parol heşi QƏSDƏN etibarsızdır — bu hesaba giriş
+    // mümkün olmamalıdır, o yalnız üzv siyahısında görünmək üçündür.
+    `INSERT OR IGNORE INTO users (id, username, name, xp, joined_at, pass_hash, pass_salt) ` +
+    `VALUES ('${owner.id}', '${owner.username}', '${owner.name}', 100, ${nowMs}, 'e2e-invalid', 'e2e-invalid');`,
+
+    // ── Əsas komanda (UI testləri) ──
     `INSERT OR IGNORE INTO teams (id, slug, name, description, visibility, owner_id, status, xp, created_at, updated_at) ` +
-    `SELECT 'team_2', 'beta-team', 'Beta Team', 'Private team for RBAC tests', 'Private', id, 'active', 0, ${nowMs}, ${nowMs} ` +
-    `FROM users WHERE username = 'e2e_zara';`,
+    `VALUES ('${T.id}', '${T.slug}', '${T.name}', 'E2E test komandası', 'Public', '${owner.id}', 'active', 0, ${nowMs}, ${nowMs});`,
+    // Prioriteti AŞAĞI (10), lakin `manage_team` daşıyan rol — AUDIT-TASK-3
+    // §8-də bağlanan "köhnə güclü rol" ssenarisinin canlı nümunəsidir.
     `INSERT OR IGNORE INTO team_roles (id, team_id, name, permissions, priority) ` +
-    `VALUES ('role_2_owner', 'team_2', 'Owner', '["*"]', 100);`,
+    `VALUES ('${T.roleId}', '${T.id}', 'Admin', ` +
+    `'["manage_projects","manage_tasks","manage_members","manage_team","manage_invites","manage_roles"]', 10);`,
     `INSERT OR IGNORE INTO team_members (id, team_id, user_id, role_id, status, joined_at) ` +
-    `SELECT 'member_team2_owner', 'team_2', id, 'role_2_owner', 'active', ${nowMs} ` +
-    `FROM users WHERE username = 'e2e_zara';`,
-    // Kəşfiyyat siyahısı testinə görünən Public komanda.
+    `VALUES ('e2e_member_owner', '${T.id}', '${owner.id}', '${T.roleId}', 'active', ${nowMs});`,
+    `INSERT OR IGNORE INTO team_members (id, team_id, user_id, role_id, status, joined_at) ` +
+    `SELECT 'e2e_member_main', '${T.id}', id, '${T.roleId}', 'active', ${nowMs} FROM users WHERE username = '${PRIMARY}';`,
+    `INSERT OR IGNORE INTO team_projects (id, team_id, name, description, created_by, created_at) ` +
+    `VALUES ('${T.projectId}', '${T.id}', 'Collabix V2', 'E2E nümunə layihəsi', '${owner.id}', ${nowMs});`,
+    `INSERT OR IGNORE INTO team_tasks (id, project_id, assignee_id, title, status, created_at) ` +
+    `VALUES ('${T.taskId}', '${T.projectId}', '${owner.id}', 'Design UI', 'To Do', ${nowMs});`,
+    // Komanda otağı: `rooms` sətri ÖNCƏ gəlməlidir — `team_chat_rooms` ona
+    // FK ilə bağlıdır (bax 0017_seed_chat_room_fk_fix.sql-in düzəltdiyi səhv).
+    `INSERT OR IGNORE INTO rooms (id, name, created_by, created_at) ` +
+    `VALUES ('${T.roomId}', 'General', 'system', ${nowMs});`,
+    `INSERT OR IGNORE INTO team_chat_rooms (id, team_id, name, type, created_at) ` +
+    `VALUES ('${T.roomId}', '${T.id}', 'General', 'General', ${nowMs});`,
+
+    // ── Private komanda: əsas hesab ÜZV DEYİL (K3–K5 403 testləri) ──
     `INSERT OR IGNORE INTO teams (id, slug, name, description, visibility, owner_id, status, xp, created_at, updated_at) ` +
-    `SELECT 'team_3', 'gamma-team', 'Gamma Team', 'Public team for discover tests', 'Public', id, 'active', 0, ${nowMs}, ${nowMs} ` +
+    `SELECT '${P.id}', '${P.slug}', '${P.name}', 'Private team for RBAC tests', 'Private', id, 'active', 0, ${nowMs}, ${nowMs} ` +
     `FROM users WHERE username = 'e2e_zara';`,
     `INSERT OR IGNORE INTO team_roles (id, team_id, name, permissions, priority) ` +
-    `VALUES ('role_3_owner', 'team_3', 'Owner', '["*"]', 100);`,
-    `INSERT OR IGNORE INTO team_roles (id, team_id, name, permissions, priority) ` +
-    `VALUES ('role_3_dev', 'team_3', 'Developer', '["manage_tasks","manage_files"]', 45);`,
+    `VALUES ('${P.ownerRoleId}', '${P.id}', 'Owner', '["*"]', 100);`,
     `INSERT OR IGNORE INTO team_members (id, team_id, user_id, role_id, status, joined_at) ` +
-    `SELECT 'member_team3_owner', 'team_3', id, 'role_3_owner', 'active', ${nowMs} ` +
+    `SELECT 'e2e_member_beta_owner', '${P.id}', id, '${P.ownerRoleId}', 'active', ${nowMs} ` +
+    `FROM users WHERE username = 'e2e_zara';`,
+
+    // ── Public komanda: kəşfiyyat siyahısı testi ──
+    `INSERT OR IGNORE INTO teams (id, slug, name, description, visibility, owner_id, status, xp, created_at, updated_at) ` +
+    `SELECT '${G.id}', '${G.slug}', '${G.name}', 'Public team for discover tests', 'Public', id, 'active', 0, ${nowMs}, ${nowMs} ` +
+    `FROM users WHERE username = 'e2e_zara';`,
+    `INSERT OR IGNORE INTO team_roles (id, team_id, name, permissions, priority) ` +
+    `VALUES ('${G.ownerRoleId}', '${G.id}', 'Owner', '["*"]', 100);`,
+    `INSERT OR IGNORE INTO team_roles (id, team_id, name, permissions, priority) ` +
+    `VALUES ('${G.devRoleId}', '${G.id}', 'Developer', '["manage_tasks","manage_files"]', 45);`,
+    `INSERT OR IGNORE INTO team_members (id, team_id, user_id, role_id, status, joined_at) ` +
+    `SELECT 'e2e_member_gamma_owner', '${G.id}', id, '${G.ownerRoleId}', 'active', ${nowMs} ` +
     `FROM users WHERE username = 'e2e_zara';`,
   );
 
