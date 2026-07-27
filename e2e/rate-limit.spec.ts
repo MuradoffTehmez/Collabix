@@ -112,18 +112,26 @@ async function apiCall(page: Page, path: string, init: RequestInit = {}) {
   }, [path, init] as const);
 }
 
-/** N ardıcıl sorğu göndərir və YALNIZ status kodlarını qaytarır (gövdə oxunmur). */
-async function burst(page: Page, path: string, count: number): Promise<number[]> {
-  return page.evaluate(async ([p, n]) => {
+/**
+ * N ardıcıl sorğu göndərir və YALNIZ status kodlarını qaytarır (gövdə oxunmur).
+ *
+ * ⚠ Dövr QƏSDƏN səhifə DAXİLİNDƏDİR: hər sorğunu ayrıca `page.evaluate` ilə
+ * göndərsək 100+ Playwright round-trip-i yaranır və tam dəst yükü altında test
+ * 30 saniyəlik timeout-a düşür (izolə qaçışda keçib dəstdə sınırdı).
+ */
+async function burst(page: Page, paths: string | string[], count: number): Promise<number[]> {
+  const list = Array.isArray(paths) ? paths : [paths];
+  return page.evaluate(async ([ps, n]) => {
     const out: number[] = [];
+    const arr = ps as string[];
     for (let i = 0; i < (n as number); i++) {
-      const r = await fetch(p as string);
+      const r = await fetch(arr[i % arr.length]);
       // Axın cavabları (məs. /me/export) gövdəsi oxunmasa asılı qalır.
       try { await r.body?.cancel(); } catch { /* gövdəsiz cavab */ }
       out.push(r.status);
     }
     return out;
-  }, [path, count] as const);
+  }, [list, count] as const);
 }
 
 /**
@@ -178,33 +186,31 @@ test.describe('AUDIT H-4 — rate limit davranışı @ratelimit', () => {
 
   /* ─── 🔴 REQRESSİYA — ən vacib test (meyar 1) ─── */
   test('normal istifadəçi axını 429 ALMIR', async () => {
-    const page = clean.page;
-    {
-      // Ən yüklü real profil ölçüldü: tək tab ≈ 44 sorğu/dəq (§4.0/Sual 6).
-      // Burada həmin sorğular BİR DƏFƏYƏ, fasiləsiz göndərilir — yəni real
-      // istifadədən qat-qat sıx. 429 çıxarsa limitlər çox aşağıdır.
-      const flow = [
-        '/api/auth/me', '/api/config', '/api/feed', '/api/users',
-        '/api/notifications', '/api/presence', '/api/rooms', '/api/dms',
-        '/api/tasks?scope=approved', '/api/teams', '/api/invites',
-      ];
-      const statuses: number[] = [];
-      for (let round = 0; round < 12; round++) {
-        for (const p of flow) statuses.push((await apiCall(page, p)).status);
-      }
+    // Ən yüklü real profil ölçüldü: tək tab ≈ 44 sorğu/dəq (§4.0/Sual 6).
+    // Burada həmin sorğular BİR DƏFƏYƏ, fasiləsiz göndərilir — yəni real
+    // istifadədən qat-qat sıx. 429 çıxarsa limitlər çox aşağıdır.
+    const flow = [
+      '/api/auth/me', '/api/config', '/api/feed', '/api/users',
+      '/api/notifications', '/api/presence', '/api/rooms', '/api/dms',
+      '/api/tasks?scope=approved', '/api/teams', '/api/invites',
+    ];
+    const statuses = await burst(clean.page, flow, 132);   // 12 dövr × 11 endpoint
 
-      expect(statuses.length).toBeGreaterThanOrEqual(120);
-      expect(statuses.filter(s => s === 429), 'normal axın 429 almamalıdır').toHaveLength(0);
-    }
+    expect(statuses).toHaveLength(132);
+    expect(statuses.filter(s => s === 429), 'normal axın 429 almamalıdır').toHaveLength(0);
   });
 
   test('presence heartbeat dövrəsi 429 almır', async () => {
     // 5 dəqiqəlik pəncərədə real dövrə 20 sorğudur; burada 40 göndərilir.
-    const statuses: number[] = [];
-    for (let i = 0; i < 20; i++) {
-      statuses.push((await apiCall(clean.page, '/api/presence', { method: 'POST' })).status);
-      statuses.push((await apiCall(clean.page, '/api/presence')).status);
-    }
+    const statuses = await clean.page.evaluate(async () => {
+      const out: number[] = [];
+      for (let i = 0; i < 20; i++) {
+        out.push((await fetch('/api/presence', { method: 'POST' })).status);
+        out.push((await fetch('/api/presence')).status);
+      }
+      return out;
+    });
+    expect(statuses).toHaveLength(40);
     expect(statuses.filter(s => s === 429)).toHaveLength(0);
   });
 
