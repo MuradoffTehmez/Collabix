@@ -480,6 +480,25 @@ export async function createTeamInvite(c: Ctx, idOrSlug: string) {
   }
 
   const inviteService = new TeamInviteService(c.env);
+
+  // H-1-in eyni qaydası dəvət yoluna da aiddir: dəvətə rol bağlamaq da
+  // SƏLAHİYYƏT VERMƏKDİR. `invite.service.ts` yalnız `name === 'Owner'`
+  // yoxlayır — özündən güclü, lakin başqa adlı rol (məs. köhnə seed rolu)
+  // dəvətlə ötürülə bilərdi. Altçoxluq + prioritet burada da tətbiq olunur.
+  if (b.roleId) {
+    const auth = await loadAuthority(c, team);
+    if ('res' in auth) return auth.res;
+
+    const target = await new TeamRoleService(c.env).getRole(String(b.roleId));
+    if (target && String(target.team_id) === String(team.id)) {
+      const denyRank = denyHigherPriority(auth.authority, target.priority,
+        'Özünüzdən yüksək prioritetli rola dəvət göndərə bilməzsiniz');
+      if (denyRank) return denyRank;
+      const denyGrant = denyEscalation(auth.authority, expandPermissions(target.permissions));
+      if (denyGrant) return denyGrant;
+    }
+  }
+
   const invite = await inviteService.createInvite(team.id, c.user!.id, email || undefined, targetUserId || undefined, b.roleId);
 
   // Daxili bildiriş — dərhal, email isə növbədən (queue) gedir.

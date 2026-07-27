@@ -532,6 +532,25 @@ test.describe.serial('AUDIT H-1 — komanda RBAC eskalasiyası', () => {
     } finally { await s.cleanup(); }
   });
 
+  test('Admin özündən güclü rola DƏVƏT göndərə bilməz', async () => {
+    const s = await stand();
+    try {
+      // Auditdə yoxdur: dəvətə rol bağlamaq da səlahiyyət verməkdir.
+      // `invite.service.ts` yalnız `name === 'Owner'` yoxlayırdı.
+      const res = await post(adminPage, `/api/teams/${s.teamId}/invites`, {
+        email: `h1-invite-${Date.now()}@example.com`, roleId: s.ownerRole.id,
+      });
+      expect(res.status).toBe(403);
+      expect(res.body.code).toBe('forbidden');
+
+      // Öz səviyyəsindəki rolla dəvət isə işləyir (reqressiya yoxdur).
+      const ok = await post(adminPage, `/api/teams/${s.teamId}/invites`, {
+        email: `h1-invite-ok-${Date.now()}@example.com`, roleId: s.adminRole.id,
+      });
+      expect(ok.ok, 'Admin öz səviyyəsində dəvət göndərə bilməlidir').toBeTruthy();
+    } finally { await s.cleanup(); }
+  });
+
   /* ─── 3.3.b: yuxarı rola müdaxilə ─── */
   test('Admin Owner rolunu REDAKTƏ edə bilməz', async () => {
     const s = await stand();
