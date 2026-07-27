@@ -14,12 +14,13 @@ firestore-debug.log
 .env.*
 !.env.example
 
-# ─── Miqrasiya artefaktları (AUDIT-TASK-1-REPORT §5.4) ───
-# `import.sql` 53 istifadəçinin PBKDF2 pass_hash-ını, `update.sql` isə
-# real istifadəçi post məzmununu və R2 yollarını daşıyır. İkisi də
-# miqrasiya çıxışıdır — repo tarixçəsində yeri yoxdur.
-migration-cf/import.sql
-migration-cf/update.sql
+# ─── Miqrasiya artefaktları (AUDIT-TASK-1-REPORT §5.4 → AUDIT-TASK-5 §5.7) ───
+# Firebase→D1 miqrasiya qovluğu (`migration-cf/`) 2026-07-27-də TAMAMİLƏ
+# SİLİNDİ: `import.sql` (53 istifadəçi + post/DM/mesaj), `update.sql`
+# (R2 yolları) və generator script-ləri. Miqrasiya artıq lazım deyil —
+# istehsalda yalnız sahibin öz hesabı saxlanılır (istifadəçi qərarı).
+# Naxış qalır ki, artefakt təsadüfən yenidən yaradılsa git-ə düşməsin.
+migration-cf/
 
 # Playwright (E2E)
 /test-results/

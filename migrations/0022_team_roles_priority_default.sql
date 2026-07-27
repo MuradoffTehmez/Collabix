@@ -1,0 +1,26 @@
+-- 0022_team_roles_priority_default.sql
+--
+-- AUDIT-TASK-3 §8/3 → AUDIT-TASK-5 §5.8 (qərar qapısı, istifadəçi təsdiqi ilə)
+--
+-- PROBLEM: `team_roles.priority` sütunu `INTEGER DEFAULT 0`-dır, lakin AÇIQ
+-- `NULL` yazıla bilər. AUDIT-TASK-3-də əlavə olunan prioritet qaydası
+-- fail-closed işləyir (`worker/team-routes.ts` → `denyHigherPriority`):
+--
+--     const value = priority == null ? NaN : Number(priority);
+--     if (!Number.isFinite(value)) return err('Rolun prioriteti oxunmadı', 403, 'forbidden');
+--
+-- Yəni prioriteti NULL olan rol sahibinə rol idarəetməsi "səbəbsiz 403" kimi
+-- görünür. Fail-closed davranış QƏSDƏNDİR (AUDIT-TASK-3 §5.3) və dəyişmir —
+-- burada yalnız pozulmuş DATA normallaşdırılır.
+--
+-- ⚠ QƏSDƏN EDİLMƏYƏN — `is_system` sütunu (AUDIT-TASK-3 §4):
+-- Ad əsaslı `name = 'Owner'` qoruması kövrəkdir, lakin AUDIT-TASK-3-dəki
+-- prioritet qaydası əsas müdafiəni onsuz da verir və rolun yenidən
+-- adlandırılması ilə yayınmağa imkan vermir. `is_system` üçün SQLite-da
+-- mövcud sütunu `NOT NULL` etmək cədvəlin yenidən qurulmasını tələb edir
+-- (CREATE new → INSERT SELECT → DROP → RENAME) — bu, əldə ediləcək faydaya
+-- görə həddindən artıq riskdir. İstifadəçi qərarı: yalnız priority düzəlişi.
+--
+-- İdempotent: `UPDATE ... WHERE priority IS NULL` — təkrar icrada 0 sətir dəyişir.
+
+UPDATE team_roles SET priority = 0 WHERE priority IS NULL;

@@ -4,6 +4,7 @@
 // Bütün ölçmə funksiyaları BROWSER kontekstində icra olunur (page.evaluate) —
 // çünki `getBoundingClientRect`, `scrollWidth` və s. yalnız real DOM-da mövcuddur.
 import type { Page } from '@playwright/test';
+import { E2E_TEAM } from './fixtures';
 
 export interface Violation {
   category: 'overflow-x' | 'element-overflow' | 'touch-target' | 'text-clip';
