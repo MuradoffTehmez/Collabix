@@ -7,14 +7,15 @@
   "scripts": {
     "build": "vite build",
     "dev": "npm run build && wrangler dev --persist-to .wrangler/state",
+    "check:migrations": "node scripts/check-migrations.mjs",
+    "predeploy": "node scripts/check-migrations.mjs --remote",
     "deploy": "npm run build && wrangler deploy",
     "types": "wrangler types",
     "typecheck": "tsc --noEmit",
     "db:migrate:local": "wrangler d1 migrations apply collabix-db --local --persist-to .wrangler/state",
     "db:migrate:remote": "wrangler d1 migrations apply collabix-db --remote",
-    "db:import:local": "wrangler d1 execute collabix-db --local --persist-to .wrangler/state --file migration-cf/import.sql",
-    "db:import:remote": "wrangler d1 execute collabix-db --remote --file migration-cf/import.sql",
     "e2e": "playwright test --grep-invert \"responsive audit hesabatı\"",
+    "e2e:seed": "node e2e/seed-cli.ts",
     "e2e:ui": "playwright test --ui",
     "audit:responsive": "playwright test responsive-report --project=desktop"
   },
