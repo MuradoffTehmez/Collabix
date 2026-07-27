@@ -102,7 +102,8 @@ export async function openFollowList(uid, kind){
   const isSelf = uid === state.authUser.uid;
   const owner = state.users.get(uid);
   // Məxfilik: başqasının izlədikləri yalnız icazə ilə
-  if(!isSelf && owner?.settings?.privacy?.showFollowing === false && !state.isAdmin){
+  // M-9: kənar istifadəçi üçün mənbə `publicSettings`-dir.
+  if(!isSelf && (owner?.publicSettings ?? owner?.settings)?.privacy?.showFollowing === false && !state.isAdmin){
     toast(t('soc.hidden'), 'err');
     return;
   }

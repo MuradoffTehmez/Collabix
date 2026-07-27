@@ -35,6 +35,7 @@ const b64uDecode = (s: string) =>
 /* ---------- PBKDF2 ---------- */
 export async function hashPassword(password: string, saltHex?: string): Promise<{ hash: string; salt: string }> {
   const salt = saltHex ? hexToBytes(saltHex) : crypto.getRandomValues(new Uint8Array(16));
+  if (!salt) throw new Error('etibarsız salt');
   const key = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']);
   const bits = await crypto.subtle.deriveBits(
     { name: 'PBKDF2', hash: 'SHA-256', salt: salt as BufferSource, iterations: PBKDF2_ITER },
@@ -43,11 +44,24 @@ export async function hashPassword(password: string, saltHex?: string): Promise<
   return { hash: bytesToHex(new Uint8Array(bits)), salt: bytesToHex(salt as Uint8Array) };
 }
 export async function verifyPassword(password: string, hash: string, salt: string): Promise<boolean> {
+  // AUDIT M-17 — FAIL-CLOSED. Əvvəl pozulmuş salt `hexToBytes`-da
+  // `null.map()` → TypeError → **500** verirdi. Bu, oracle idi: hücumçu cavab
+  // KODUNDAN hansı hesabların pozulmuş sətrə malik olduğunu öyrənə bilərdi
+  // (500 = pozulmuş, 401 = sadəcə səhv parol).
+  // İndi belə hal adi "parol yanlışdır" kimi görünür.
+  if (!hash || !salt || !hexToBytes(salt)) return false;
   const { hash: h } = await hashPassword(password, salt);
   return timingSafeEqual(h, hash);
 }
 const bytesToHex = (b: Uint8Array) => [...b].map(x => x.toString(16).padStart(2, '0')).join('');
-const hexToBytes = (h: string) => Uint8Array.from(h.match(/.{2}/g)!.map(x => parseInt(x, 16)));
+
+/** Hex sətri baytlara çevirir. Format pozulubsa `null` — istisna ATMIR (M-17). */
+function hexToBytes(h: string): Uint8Array | null {
+  const m = (h || '').match(/.{2}/g);
+  if (!m || m.length * 2 !== (h || '').length) return null;
+  const bytes = m.map(x => parseInt(x, 16));
+  return bytes.some(Number.isNaN) ? null : Uint8Array.from(bytes);
+}
 function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   let out = 0;

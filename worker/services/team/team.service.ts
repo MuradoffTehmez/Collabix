@@ -1,6 +1,32 @@
-import { Env, uuid, now } from '../../util';
+import { Env, uuid, now, clampStr, likePattern } from '../../util';
 import { TeamRoleService } from './role.service';
 import { OWNER_ROLE } from './permissions';
+
+/**
+ * Komanda mətn sahələrinin tavanları — AUDIT M-6.
+ * `createTeam` və `updateTeam` HƏR İKİSİ bunları işlədir; ayrı-ayrı sabit
+ * yazmaq məhz həmin uyğunsuzluğa gətirib çıxarmışdı.
+ */
+const TEAM_NAME_MAX = 80;
+const TEAM_DESCRIPTION_MAX = 2000;
+
+/**
+ * Komanda avatarı/banneri üçün format yoxlaması — AUDIT M-7.
+ *
+ * YALNIZ öz R2 yolumuz (`/files/...`) qəbul olunur. Səbəb:
+ *   * `javascript:` / `data:` sxemləri UI-da XSS vektoruna çevrilə bilər;
+ *   * xarici domen həm istifadəçi IP-sini üçüncü tərəfə sızdırır, həm də
+ *     "hotlink" ilə bizim səhifəmizdə ixtiyari məzmun göstərməyə imkan verir.
+ *
+ * ⚠ Burada YALNIZ FORMAT yoxlanılır — faylın SAHİBLİYİ yox. Yəni istifadəçi
+ * başqasının `/files/` açarını göstərə bilər; həmin boşluq `serveFile`
+ * avtorizasiyasındadır və **Task 7**-nin əhatəsidir (audit C-1).
+ */
+function sanitizeTeamImage(value: unknown): string {
+  const v = clampStr(value, 500).trim();
+  if (!v) return '';
+  return v.startsWith('/files/') ? v : '';
+}
 
 /** PDR: Team Reputation səviyyələri. */
 export const REPUTATION_TIERS = [
@@ -39,13 +65,20 @@ export class TeamService {
 
   async createTeam(ownerId: string, name: string, description?: string, visibility = 'Private'): Promise<string> {
     const id = uuid();
-    const base = String(name).toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'team';
+    // AUDIT M-6 — `createTeam` clamp ETMİRDİ, `updateTeam` isə edirdi:
+    // istifadəçi məhdudiyyətsiz ad/açıqlama ilə komanda yaradıb, sonra
+    // redaktə edəndə mətn qəfildən kəsilirdi. Dəyərlər `updateTeam`-lə
+    // EYNİDİR (80 / 2000) — tək mənbə olmasa uyğunsuzluq təkrarlanar.
+    const safeName = clampStr(name, TEAM_NAME_MAX);
+    const safeDescription = clampStr(description ?? '', TEAM_DESCRIPTION_MAX);
+
+    const base = safeName.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'team';
     const slug = `${base}-${Math.random().toString(36).substring(2, 8)}`;
 
     await this.env.DB.prepare(
       `INSERT INTO teams (id, slug, name, description, visibility, owner_id, status, xp, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, 'active', 0, ?, ?)`
-    ).bind(id, slug, name, description || '', normalizeVisibility(visibility), ownerId, now(), now()).run();
+    ).bind(id, slug, safeName, safeDescription, normalizeVisibility(visibility), ownerId, now(), now()).run();
 
     // PDR-dəki 10 standart rolun hamısı yaradılır. Əvvəl yalnız "Owner" var idi
     // və nəticədə dəvət qəbul edən istifadəçi Owner olurdu (K1).
@@ -94,7 +127,9 @@ export class TeamService {
 
   /** Kəşfiyyat siyahısı: yalnız Public komandalar (+ axtarış). */
   async discoverTeams(userId: string, query?: string) {
-    const q = `%${String(query || '').trim()}%`;
+    // L-3: `%`/`_` escape olunur (bax `likePattern` şərhi) — SQL tərəfində
+    // `ESCAPE '\'` bəyanı ilə birlikdə işləyir.
+    const q = likePattern(String(query || '').trim());
     const useQuery = String(query || '').trim().length > 0;
     const { results } = await this.env.DB.prepare(
       `SELECT t.*,
@@ -103,7 +138,7 @@ export class TeamService {
          FROM teams t
         WHERE t.status = 'active'
           AND t.visibility = 'Public'
-          AND (? = 0 OR t.name LIKE ? OR t.description LIKE ?)
+          AND (? = 0 OR t.name LIKE ? ESCAPE '\\' OR t.description LIKE ? ESCAPE '\\')
         ORDER BY t.xp DESC, t.updated_at DESC
         LIMIT 50`
     ).bind(userId, useQuery ? 1 : 0, q, q).all<any>();
@@ -137,11 +172,14 @@ export class TeamService {
   ) {
     const sets: string[] = [];
     const values: any[] = [];
-    if (updates.name !== undefined) { sets.push('name = ?'); values.push(String(updates.name).slice(0, 80)); }
-    if (updates.description !== undefined) { sets.push('description = ?'); values.push(String(updates.description).slice(0, 2000)); }
+    if (updates.name !== undefined) { sets.push('name = ?'); values.push(clampStr(updates.name, TEAM_NAME_MAX)); }
+    if (updates.description !== undefined) { sets.push('description = ?'); values.push(clampStr(updates.description, TEAM_DESCRIPTION_MAX)); }
     if (updates.visibility !== undefined) { sets.push('visibility = ?'); values.push(normalizeVisibility(updates.visibility)); }
-    if (updates.avatar !== undefined) { sets.push('avatar = ?'); values.push(updates.avatar); }
-    if (updates.banner !== undefined) { sets.push('banner = ?'); values.push(updates.banner); }
+    // AUDIT M-7 — `avatar`/`banner` HEÇ BİR yoxlamadan yazılırdı: istənilən
+    // sətir (`javascript:`, `data:`, xarici domen) baza sətrinə düşür və
+    // sonra UI-da `src`/`background-image` kimi işlədilirdi.
+    if (updates.avatar !== undefined) { sets.push('avatar = ?'); values.push(sanitizeTeamImage(updates.avatar)); }
+    if (updates.banner !== undefined) { sets.push('banner = ?'); values.push(sanitizeTeamImage(updates.banner)); }
     if (!sets.length) return;
 
     sets.push('updated_at = ?');

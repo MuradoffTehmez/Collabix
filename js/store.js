@@ -380,7 +380,9 @@ export async function toggleFollow(targetUid){
 export const isMutual = uid => state.myFollowing.has(uid) && state.myFollowers.has(uid);
 
 export function canMessage(target){
-  const pol = target?.settings?.privacy?.whoCanMessage || 'everyone';
+  // M-9: başqasının TAM `settings`-i artıq yayımlanmır — yalnız ağ siyahı
+  // (`publicSettings`). Öz profilimizdə hər ikisi mövcuddur.
+  const pol = (target?.publicSettings ?? target?.settings)?.privacy?.whoCanMessage || 'everyone';
   if(pol === 'everyone' || state.isAdmin) return true;
   const theyFollowMe = state.myFollowers.has(target.uid);
   if(pol === 'following') return theyFollowMe;

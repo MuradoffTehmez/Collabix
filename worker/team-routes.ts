@@ -1,4 +1,4 @@
-import { Ctx, err, json, readJson, fileUrl, uuid, now } from './util';
+import { Ctx, err, json, readJson, fileUrl, uuid, now, likePattern } from './util';
 import { TeamService, reputationFor, normalizeVisibility } from './services/team/team.service';
 import { TeamMemberService } from './services/team/member.service';
 import { TeamProjectService } from './services/team/project.service';
@@ -19,6 +19,7 @@ import {
   sanitizePermissions, expandPermissions, findEscalatedPermissions,
 } from './services/team/permissions';
 import { TEAM_XP } from './services/team/xp';
+import { logAdmin } from './admin-log';
 import { QueueService } from './services/queue';
 import { SystemEvent } from './events';
 
@@ -38,6 +39,23 @@ function emit(c: Ctx, event: SystemEvent) {
 }
 
 const actorName = (c: Ctx) => c.user?.name || c.user?.username || 'İstifadəçi';
+
+/**
+ * Tapşırıq təyinatının üzvlük yoxlaması — AUDIT M-15.
+ *
+ * `assigneeId` verilməyibsə (təyinatsız tapşırıq) yoxlama aparılmır.
+ * Verilibsə, həmin şəxs komandanın AKTİV üzvü olmalıdır.
+ */
+async function denyNonMemberAssignee(
+  c: Ctx, teamId: string, assigneeId: unknown,
+): Promise<Response | null> {
+  if (!assigneeId) return null;
+  const row = await c.env.DB.prepare(
+    "SELECT 1 FROM team_members WHERE team_id = ? AND user_id = ? AND status = 'active'",
+  ).bind(teamId, String(assigneeId)).first();
+  if (row) return null;
+  return err('Tapşırıq yalnız komanda üzvünə təyin edilə bilər', 400, 'not_a_member');
+}
 
 /* ---------- rol iyerarxiyası qoruyucuları — AUDIT-2026-07-26 / H-1 ---------- */
 //
@@ -759,6 +777,13 @@ export async function createTeamTask(c: Ctx, idOrSlug: string) {
   const project = await new TeamProjectService(c.env).getProject(String(b.projectId));
   if (!project || String(project.team_id) !== String(r.team.id)) return err('Layihə tapılmadı', 404);
 
+  // AUDIT M-15 — `assigneeId` üzvlük yoxlaması OLMADAN qəbul olunurdu: komanda
+  // idarəçisi PLATFORMANIN İSTƏNİLƏN istifadəçisinə tapşırıq təyin edib ona
+  // bildiriş göndərə bilirdi (bildiriş spam vektoru + yad komandanın işi
+  // istifadəçinin siyahısında görünürdü).
+  const denyAssignee = await denyNonMemberAssignee(c, r.team.id, b.assigneeId);
+  if (denyAssignee) return denyAssignee;
+
   const id = await new TeamTaskService(c.env).createTask(
     String(b.projectId), title, b.description, b.assigneeId, b.priority, b.estimatedHours, b.deadline,
   );
@@ -791,6 +816,13 @@ export async function updateTeamTask(c: Ctx, idOrSlug: string, taskId: string) {
     ? await requireTeamMember(c, r.team.id)
     : await requireTeamPermission(c, r.team.id, 'manage_tasks');
   if (denied) return denied;
+
+  // M-15 — yaratma yolu ilə eyni qayda: təyinat REDAKTƏ ilə də dəyişdirilə
+  // bilir, yəni yoxlama yalnız `createTeamTask`-da olsaydı boşluq qalardı.
+  if (b.assigneeId !== undefined && b.assigneeId !== null) {
+    const denyAssignee = await denyNonMemberAssignee(c, r.team.id, b.assigneeId);
+    if (denyAssignee) return denyAssignee;
+  }
 
   const res = await taskService.updateTask(taskId, b);
   if (!res) return err('Tapşırıq tapılmadı', 404);
@@ -1035,10 +1067,22 @@ export async function getTeamActivity(c: Ctx, idOrSlug: string) {
   const denied = await requireTeamRead(c, r.team);
   if (denied) return denied;
 
-  const limit = Number(c.url.searchParams.get('limit') || 50);
-  const before = c.url.searchParams.get('before');
+  // AUDIT L-6 — `before=abc` → `Number('abc')` = NaN → SQL-ə NaN gedir və
+  // müqayisə HEÇ VAXT doğru olmur: siyahı səbəbsiz boş qayıdır. `limit`
+  // onsuz da clamp olunurdu; eyni naxış `before`-a da tətbiq edilir.
+  // ⚠ `searchParams.get()` PARAMETR YOXDURSA `null` qaytarır və `Number(null)`
+  // sıfırdır — sıfır isə `Number.isFinite`-dan KEÇİR. Yəni birbaşa
+  // `Number(...)` yazsaq parametrsiz sorğuda limit 1-ə düşərdi (siyahı bir
+  // sətirlə qayıdardı). Ona görə əvvəlcə sətrin özü yoxlanılır.
+  const limitParam = c.url.searchParams.get('limit');
+  const rawLimit = limitParam === null || limitParam === '' ? NaN : Number(limitParam);
+  const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(rawLimit, 1), 200) : 50;
+
+  const beforeParam = c.url.searchParams.get('before');
+  const rawBefore = beforeParam === null || beforeParam === '' ? NaN : Number(beforeParam);
+  const before = Number.isFinite(rawBefore) && rawBefore > 0 ? rawBefore : null;
   const activities = await new TeamActivityService(c.env)
-    .getActivities(r.team.id, limit, before ? Number(before) : null);
+    .getActivities(r.team.id, limit, before);
   return json({ activities });
 }
 
@@ -1058,10 +1102,12 @@ export async function getTeamStats(c: Ctx, idOrSlug: string) {
 export async function searchUsers(c: Ctx) {
   const q = (c.url.searchParams.get('q') || '').trim();
   if (q.length < 2) return json({ users: [] });
-  const like = `%${q}%`;
+  // L-3: `%`/`_` escape olunur — əks halda `%` bütün cədvəli qaytarır və
+  // `_` "istənilən simvol" kimi oxunub yalançı nəticə verir.
+  const like = likePattern(q);
   const rows = await c.env.DB.prepare(
     `SELECT id, username, name, photo_url, xp FROM users
-      WHERE blocked = 0 AND (name LIKE ? OR username LIKE ?)
+      WHERE blocked = 0 AND (name LIKE ? ESCAPE '\\' OR username LIKE ? ESCAPE '\\')
       ORDER BY xp DESC LIMIT 10`
   ).bind(like, like).all<any>();
   return json({ users: rows.results });
@@ -1098,7 +1144,7 @@ export async function searchTeamWorkspace(c: Ctx, idOrSlug: string) {
 
   const q = (c.url.searchParams.get('q') || '').trim();
   if (q.length < 2) return json({ members: [], projects: [], tasks: [], files: [], posts: [] });
-  const like = `%${q}%`;
+  const like = likePattern(q);   // L-3
   const D = c.env.DB;
 
   const res = await D.batch([
@@ -1106,25 +1152,25 @@ export async function searchTeamWorkspace(c: Ctx, idOrSlug: string) {
       `SELECT u.id, u.username, u.name, r.name AS role_name
          FROM team_members m JOIN users u ON m.user_id = u.id
          JOIN team_roles r ON m.role_id = r.id
-        WHERE m.team_id = ? AND (u.name LIKE ? OR u.username LIKE ?) LIMIT 10`
+        WHERE m.team_id = ? AND (u.name LIKE ? ESCAPE '\\' OR u.username LIKE ? ESCAPE '\\') LIMIT 10`
     ).bind(r.team.id, like, like),
     D.prepare(
       `SELECT id, name, description, status, visibility FROM team_projects
-        WHERE team_id = ? AND status != 'deleted' AND (name LIKE ? OR description LIKE ?) LIMIT 10`
+        WHERE team_id = ? AND status != 'deleted' AND (name LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\') LIMIT 10`
     ).bind(r.team.id, like, like),
     D.prepare(
       `SELECT t.id, t.title, t.status, t.priority, p.name AS project_name
          FROM team_tasks t JOIN team_projects p ON t.project_id = p.id
-        WHERE p.team_id = ? AND t.status != 'Deleted' AND (t.title LIKE ? OR t.description LIKE ?) LIMIT 10`
+        WHERE p.team_id = ? AND t.status != 'Deleted' AND (t.title LIKE ? ESCAPE '\\' OR t.description LIKE ? ESCAPE '\\') LIMIT 10`
     ).bind(r.team.id, like, like),
     D.prepare(
       `SELECT id, path, type, size, category FROM team_files
-        WHERE team_id = ? AND path LIKE ? LIMIT 10`
+        WHERE team_id = ? AND path LIKE ? ESCAPE '\\' LIMIT 10`
     ).bind(r.team.id, like),
     D.prepare(
       `SELECT p.id, p.content, p.created_at, u.username FROM team_posts p
          JOIN users u ON p.author_id = u.id
-        WHERE p.team_id = ? AND p.content LIKE ? LIMIT 10`
+        WHERE p.team_id = ? AND p.content LIKE ? ESCAPE '\\' LIMIT 10`
     ).bind(r.team.id, like),
   ]);
 
@@ -1166,7 +1212,8 @@ export async function adminTeamAction(c: Ctx, teamId: string) {
   const team = await c.env.DB.prepare('SELECT * FROM teams WHERE id = ?').bind(teamId).first<any>();
   if (!team) return err('Team not found', 404);
 
-  switch (String(b.action)) {
+  const action = String(b.action);
+  switch (action) {
     case 'delete':
       await teamService.deleteTeam(teamId);
       break;
@@ -1177,8 +1224,15 @@ export async function adminTeamAction(c: Ctx, teamId: string) {
       await teamService.updateTeam(teamId, { visibility: b.visibility });
       break;
     default:
-      return err('Naməlum əməliyyat', 400);
+      return err('Naməlum əməliyyat', 400, 'invalid_action');
   }
+
+  // AUDIT M-11 — bu yol audit jurnalına HEÇ NƏ yazmırdı: sayt admini komandanı
+  // silə, bərpa edə və görünürlüyünü dəyişə bilirdi və əməliyyat İZSİZ qalırdı.
+  // ⚠ Yalnız AUDİT YAZISI əlavə olunur — avtorizasiya məntiqinə toxunulmur
+  // (AUDIT-TASK-3 §8/5 bu yolun ayrı olduğunu qeyd etmişdi).
+  await logAdmin(c, 'team-' + action, teamId,
+    action === 'visibility' ? String(b.visibility ?? '') : String(team.name ?? ''));
   return json({ success: true });
 }
 

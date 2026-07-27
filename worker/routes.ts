@@ -10,6 +10,7 @@ import {
   revokeSession, revokeAllSessions, destroyAllSessions, destroyLegacySessions,
   sessionCookies, clearCookies, clearLegacyCookie, TokenPair,
 } from './auth';
+import { logAdmin, isAdminLogAction, invalidAdminAction } from './admin-log';
 import {
   reqInfo, logSecurityEvent, recentFailures, checkGeoChange, verifyTurnstile,
   sniffType, imageDimensions,
@@ -65,16 +66,21 @@ async function notifyMentions(c: Ctx, text: string, label: string, postId: strin
 //     yeni endpoint-ə keçəndən sonra bu sətir silinə bilər.
 async function bumpActivity(c: Ctx) {
   const day = todayStr();
-  const days = fromJSON<Record<string, number>>(c.user!.activity_days as any, {});
-  days[day] = (days[day] || 0) + 1;
-  await D(c).batch([
-    D(c).prepare(
-      `INSERT INTO user_activity (uid, date, count) VALUES (?,?,1)
-       ON CONFLICT(uid, date) DO UPDATE SET count = count + 1`,
-    ).bind(c.user!.id, day),
-    D(c).prepare('UPDATE users SET activity_days = ? WHERE id = ?')
-      .bind(JSON.stringify(days), c.user!.id),
-  ]);
+  // AUDIT M-8 — köhnə `users.activity_days` JSON blob-una yazı DAYANDIRILDI.
+  //
+  // Problem: blob read-modify-write idi (bütün tarixçəni oxu → dəyiş → geri
+  // yaz). İki paralel sorğu eyni köhnə blob-u oxuyub bir-birinin artımını
+  // itirirdi (lost update). `user_activity` isə artımlı UPSERT-dir — yarış
+  // yoxdur və yazı həcmi sabitdir.
+  //
+  // ⚠ Oxu yolu ƏVVƏLCƏ köçürülüb (Task 3 §5.2 "giriş yolu ≠ qiymətləndirmə
+  // yolu" tələsi): `activityFor` artıq `user_activity` cədvəlindən oxuyur və
+  // sətri olmayan istifadəçi üçün blob-u BİR DƏFƏ köçürür (tənbəl miqrasiya).
+  // Blob sütunu SİLİNMİR — həmin tənbəl miqrasiya hələ ona güvənir.
+  await D(c).prepare(
+    `INSERT INTO user_activity (uid, date, count) VALUES (?,?,1)
+     ON CONFLICT(uid, date) DO UPDATE SET count = count + 1`,
+  ).bind(c.user!.id, day).run();
 }
 
 async function bumpProgress(c: Ctx, uid: string, field: string, col: 'posts' | 'tasks', amount = 1) {
@@ -84,28 +90,23 @@ async function bumpProgress(c: Ctx, uid: string, field: string, col: 'posts' | '
   ).bind(uid, field, amount, amount).run();
 }
 
-// Admin jurnalı səviyyəsi (Admin#6). Açıq verilmirsə əməliyyat adından çıxarılır —
-// belədə köhnə çağırış yerləri dəyişmədən düzgün rəng alır.
-export type LogLevel = 'info' | 'success' | 'warning' | 'error';
-function deriveLevel(action: string): LogLevel {
-  const a = action.toLowerCase();
-  // ⚠ Sıra vacibdir: "geri alma" formaları ƏVVƏL yoxlanır.
-  // Əks halda "unblock" içindəki "block", "unverify" içindəki "verify" tutulur
-  // və əməliyyat öz əksi kimi işarələnir.
-  if (/(unblock|unverify|restore)/.test(a)) return a.includes('unverify') ? 'warning' : 'success';
-  if (/(remove|delete|block|reject|ban)/.test(a)) return 'error';
-  if (/(temp-password|edit|deactivate)/.test(a)) return 'warning';
-  if (/(add|create|approve|verify)/.test(a)) return 'success';
-  return 'info';
-}
-
-async function logAdmin(c: Ctx, action: string, targetId: string, detail = '', level?: LogLevel) {
-  await D(c).prepare(
-    'INSERT INTO admin_logs (id, action, target_id, by_id, by_name, detail, created_at, level) VALUES (?,?,?,?,?,?,?,?)',
-  ).bind(uuid(), action, targetId, c.user!.id, c.user!.username, detail, now(), level || deriveLevel(action)).run();
-}
+// Admin jurnalı `worker/admin-log.ts`-ə köçürüldü (AUDIT-TASK-6 §B-3):
+// `team-routes.ts` də ona ehtiyac duyur (M-11), lakin oradan `routes.ts`-i
+// import etmək komanda route-larının lazy yüklənməsini pozardı.
+export type { LogLevel } from './admin-log';
 
 const badReq = (m: string) => err(m, 400);
+
+/**
+ * Post `blocks` JSON-unun ümumi tavanı — AUDIT M-5.
+ *
+ * 64 KB seçimi ölçmə ilədir, təxminlə deyil: bazadakı ƏN BÖYÜK mövcud post
+ * 58 bayt idi (uzaq bazada ümumiyyətlə post yox idi), yəni tavan real
+ * istifadədən üç böyüklük dərəcəsi yuxarıdadır və heç bir mövcud postu
+ * kəsmir. Məqsəd storage DoS-un qarşısını almaqdır, məzmunu məhdudlaşdırmaq
+ * deyil.
+ */
+const POST_BLOCKS_MAX_BYTES = 64 * 1024;
 
 // Realtime: otaq mesajı dəyişəndə (yeni / redaktə / sil) həmin otağın DO-suna
 // "yenilə" siqnalı göndərilir → bağlı client-lər dərhal refetch edir. Fan-out
@@ -736,6 +737,13 @@ export async function progressOf(c: Ctx, uid: string) {
 }
 
 /* ================= POSTS ================= */
+/**
+ * AUDIT M-10 — bloklanmış istifadəçinin postları feed-də QALIRDI, halbuki
+ * `publicGetPost` onları 404 ilə gizlədirdi. Daxili ziddiyyət: eyni post
+ * birbaşa linkdə "yoxdur", feed-də isə görünürdü.
+ * `JOIN users … WHERE blocked = 0` hər iki yolu eyniləşdirir.
+ * (İndeks: `idx_users_blocked` — bax D-4.)
+ */
 export async function feed(c: Ctx) {
   const query = `
     SELECT p.*,
@@ -743,7 +751,9 @@ export async function feed(c: Ctx) {
            s.blocks AS s_blocks, s.image_keys AS s_image_keys,
            s.text AS s_text, s.tags AS s_tags, s.created_at AS s_created_at
     FROM posts p
+    JOIN users u ON p.author_id = u.id
     LEFT JOIN posts s ON p.shared_post_id = s.id
+    WHERE u.blocked = 0
     ORDER BY p.created_at DESC LIMIT 60
   `;
   const rows = await D(c).prepare(query).all<any>();
@@ -767,7 +777,23 @@ export async function getPost(c: Ctx, id: string) {
 
 export async function createPost(c: Ctx) {
   const b = await readJson(c.req);
-  const blocks = Array.isArray(b.blocks) ? b.blocks.slice(0, 20) : [];
+  // AUDIT M-5 — `blocks` JSON-u ölçü limiti OLMADAN saxlanılırdı: blok sayı
+  // 20-yə kəsilirdi, lakin BİR blokun məzmunu istənilən uzunluqda ola bilərdi
+  // → D1 sətrinin şişməsi, storage DoS.
+  //
+  // İki qatlı tavan: hər blok üçün 5000 simvol, sonra ÜMUMİ JSON üçün 64 KB.
+  // Ümumi tavan blok sayına deyil, `JSON.stringify(...).length`-ə baxır —
+  // 20 × 5000 = 100 KB hələ də D1 sətri üçün çoxdur.
+  const blocks = Array.isArray(b.blocks)
+    ? b.blocks.slice(0, 20).map((blk: any) => (
+      blk && typeof blk === 'object' && typeof blk.content === 'string'
+        ? { ...blk, content: clampStr(blk.content, 5000) }
+        : blk
+    ))
+    : [];
+  if (JSON.stringify(blocks).length > POST_BLOCKS_MAX_BYTES) {
+    return err('Post həddindən artıq böyükdür.', 400, 'payload_too_large');
+  }
   let sharedPostId = b.sharedPostId ? clampStr(b.sharedPostId, 50) : null;
   if (sharedPostId) {
     // İçiçə re-postların qarşısını al: hədəf özü də re-post-dursa, ən orijinal posta düzəlt (flatten-to-root).
@@ -951,10 +977,14 @@ const mapComment = (r: any, myLikes: Set<string>) => ({
 export async function listComments(c: Ctx, postId: string) {
   const sort = c.url.searchParams.get('sort') === 'top' ? 'top' : 'new';
   const limit = Math.min(Math.max(parseInt(c.url.searchParams.get('limit') || '20', 10) || 20, 5), 200);
-  const order = sort === 'top' ? 'like_count DESC, created_at DESC' : 'created_at DESC';
+  // JOIN əlavə olunduğu üçün sütunlar açıq prefiksli olmalıdır (M-10).
+  const order = sort === 'top' ? 'cm.like_count DESC, cm.created_at DESC' : 'cm.created_at DESC';
   // Üst səviyyə rəylər (limit+1 → daha çoxu var?).
+  // M-10: bloklanmış müəllifin rəyləri gizlədilir (feed ilə eyni qayda).
   const topRows = await D(c).prepare(
-    `SELECT * FROM comments WHERE post_id = ? AND parent_comment_id IS NULL ORDER BY ${order} LIMIT ?`,
+    `SELECT cm.* FROM comments cm JOIN users u ON cm.author_id = u.id
+      WHERE cm.post_id = ? AND cm.parent_comment_id IS NULL AND u.blocked = 0
+      ORDER BY ${order} LIMIT ?`,
   ).bind(postId, limit + 1).all<any>();
   const hasMore = topRows.results.length > limit;
   const top = topRows.results.slice(0, limit);
@@ -964,7 +994,9 @@ export async function listComments(c: Ctx, postId: string) {
   if (topIds.length) {
     const ph = topIds.map(() => '?').join(',');
     const rr = await D(c).prepare(
-      `SELECT * FROM comments WHERE parent_comment_id IN (${ph}) ORDER BY created_at ASC`,
+      `SELECT cm.* FROM comments cm JOIN users u ON cm.author_id = u.id
+        WHERE cm.parent_comment_id IN (${ph}) AND u.blocked = 0
+        ORDER BY cm.created_at ASC`,
     ).bind(...topIds).all<any>();
     replyRows = rr.results;
   }
@@ -1422,9 +1454,15 @@ export async function createReport(c: Ctx) {
   const b = await readJson(c.req);
   const reason = clampStr(b.reason, 1000).trim();
   if (!reason) return badReq('Səbəb boşdur.');
+  // AUDIT L-4 — hədəfin MÖVCUDLUĞU yoxlanmırdı: uydurma uid ilə şikayət
+  // yaradıla bilirdi və admin paneli heç vaxt açıla bilməyən sətirlərlə
+  // dolurdu. Ad da bazadan götürülür — client-in göndərdiyi ada güvənmirik.
+  const target = await D(c).prepare('SELECT id, username FROM users WHERE id = ?')
+    .bind(clampStr(b.targetUid, 40)).first<any>();
+  if (!target) return err('Şikayət edilən istifadəçi tapılmadı.', 404);
   await D(c).prepare(
     'INSERT INTO reports (id, reporter_id, reporter_name, target_id, target_username, reason, created_at) VALUES (?,?,?,?,?,?,?)',
-  ).bind(uuid(), c.user!.id, c.user!.username, clampStr(b.targetUid, 40), clampStr(b.targetUsername, 20), reason, now()).run();
+  ).bind(uuid(), c.user!.id, c.user!.username, target.id, target.username, reason, now()).run();
   return json({ ok: true });
 }
 export async function listReports(c: Ctx) {
@@ -1437,10 +1475,21 @@ export async function listReports(c: Ctx) {
     })),
   });
 }
+/**
+ * AUDIT L-5 — `status` İXTİYARİ 20 simvolluq sətir ola bilirdi. `listReports`
+ * yalnız `status = 'open'` sətirlərini göstərir, yəni uydurma status
+ * (məs. "opened") şikayəti həm açıq siyahıdan, həm həll olunmuşlardan
+ * çıxarırdı — sətir sükutla itirdi. Ağ siyahı bunu bağlayır.
+ */
+const REPORT_STATUSES = ['open', 'resolved', 'dismissed'] as const;
+
 export async function resolveReport(c: Ctx, id: string) {
   const b = await readJson(c.req);
-  await D(c).prepare('UPDATE reports SET status = ? WHERE id = ?')
-    .bind(clampStr(b.status, 20) || 'dismissed', id).run();
+  const status = String(b.status ?? 'dismissed');
+  if (!(REPORT_STATUSES as readonly string[]).includes(status)) {
+    return err('Naməlum şikayət statusu.', 400, 'invalid_status');
+  }
+  await D(c).prepare('UPDATE reports SET status = ? WHERE id = ?').bind(status, id).run();
   return json({ ok: true });
 }
 
@@ -1699,6 +1748,22 @@ export async function adminAddAdmin(c: Ctx, uid: string) {
   return json({ ok: true });
 }
 export async function adminRemoveAdmin(c: Ctx, uid: string) {
+  // 🔴 AUDIT M-14 — ən kritik bənd: əvvəl İSTƏNİLƏN admini, o cümlədən
+  // SONUNCUNU və ÖZÜNÜ silmək mümkün idi. Bütün adminlər silinsə panelə
+  // çıxış BƏRPA OLUNMAZ şəkildə bağlanır ("özünü admin et" endpoint-i yoxdur
+  // və olmamalıdır — yeganə yol birbaşa D1 müdaxiləsidir).
+  //
+  // İki AYRI müdafiə (biri digərini əvəz etmir):
+  //   1) sonuncu admin — panel sahibsiz qalmasın;
+  //   2) özünü silmə — səhvən öz-özünü çıxarma (ən çox rast gəlinən hal).
+  if (uid === c.user!.id) {
+    return err('Öz admin hüququnuzu silə bilməzsiniz.', 409, 'self_admin_removal');
+  }
+  const row = await D(c).prepare('SELECT COUNT(*) AS n FROM admins').first<any>();
+  if (Number(row?.n || 0) <= 1) {
+    return err('Sonuncu admini silmək olmaz.', 409, 'last_admin');
+  }
+
   await D(c).prepare('DELETE FROM admins WHERE user_id = ?').bind(uid).run();
   await logAdmin(c, 'admin-remove', uid);
   return json({ ok: true });
@@ -1924,7 +1989,11 @@ export async function reorderTaxonomy(c: Ctx, type: string) {
 
 export async function adminLogAction(c: Ctx) {
   const b = await readJson(c.req);
-  await logAdmin(c, clampStr(b.action, 60), clampStr(b.targetUid, 40), clampStr(b.detail, 120));
+  // AUDIT M-13 — əvvəl İXTİYARİ `action` sətri jurnala düşürdü: admin öz izini
+  // saxtalaşdıra bilirdi (log forging). Jurnal audit üçündürsə, məzmununu
+  // client təyin edə bilməz. Ağ siyahı `admin-log.ts`-dədir (tək mənbə).
+  if (!isAdminLogAction(b.action)) return invalidAdminAction();
+  await logAdmin(c, b.action, clampStr(b.targetUid, 40), clampStr(b.detail, 120));
   return json({ ok: true });
 }
 
@@ -2577,7 +2646,16 @@ export async function unlinkOAuth(c: Ctx, provider: string) {
   }
   await D(c).prepare('DELETE FROM oauth_accounts WHERE uid = ? AND provider = ?')
     .bind(c.user!.id, provider).run();
-  await logAdmin(c, 'oauth-unlink', c.user!.id, provider, 'warning');
+  // AUDIT M-12 — bu, İSTİFADƏÇİ əməliyyatıdır, admin əməliyyatı deyil.
+  // `admin_logs`-a yazılması admin jurnalını çirkləndirirdi: panel "admin
+  // nə etdi" sualına cavab verməli ikən istifadəçi hərəkətləri ilə dolurdu.
+  // Doğru yer `security_events`-dir — giriş üsulunun dəyişməsi təhlükəsizlik
+  // hadisəsidir və `sessions` ilə eyni panelə düşür.
+  c.ctx.waitUntil(logSecurityEvent(c.env, c.req, {
+    type: 'session_revoked', severity: 'warning',
+    uid: c.user!.id, username: c.user!.username,
+    meta: { action: 'oauth_unlink', provider },
+  }));
   return json({ ok: true });
 }
 

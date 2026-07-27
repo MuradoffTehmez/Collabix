@@ -127,7 +127,9 @@ export function setPresenceSource(fn){ presenceGetter = fn; }
 export function isOnline(user){
   if(!user) return false;
   // Məxfilik: istifadəçi onlayn statusunu gizlədibsə heç kimə göstərmə.
-  if(user.settings && user.settings.privacy && user.settings.privacy.showOnlineStatus === false) return false;
+  // M-9: `publicSettings` kənar istifadəçilər üçün, `settings` isə özü üçün.
+  const pv = (user.publicSettings || user.settings || {}).privacy || {};
+  if(pv.showOnlineStatus === false) return false;
   if(presenceGetter){
     const p = presenceGetter(user.uid);
     if(p) return tsToMillis(p.lastSeen) > Date.now() - 60 * 1000;

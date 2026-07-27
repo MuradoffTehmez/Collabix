@@ -127,6 +127,24 @@ export const normalizeUsername = (raw: string) =>
 export const validUsername = (u: string) => /^[a-z0-9._]{3,20}$/.test(u);
 
 export const clampStr = (v: unknown, max: number) => String(v ?? '').slice(0, max);
+
+/**
+ * `LIKE` üçün təhlükəsiz naxış — AUDIT L-3.
+ *
+ * İstifadəçi girişindəki `%`, `_` və `\` simvolları escape olunur, əks halda:
+ *   * `%` — istifadəçi bütün cədvəli qaytaran sorğu yaza bilir (DoS);
+ *   * `_` — "istənilən bir simvol" deməkdir, yəni `e2e_main` axtarışı
+ *     `e2eXmain` kimi sətirləri də tutur (yalançı nəticə).
+ *
+ * ⚠ SQL tərəfində `ESCAPE '\'` bəyanı MƏCBURİDİR:
+ *     LIKE ? ESCAPE '\'
+ * Bəyan edilməsə SQLite `\`-i adi simvol sayır və `\_` "\ + istənilən simvol"
+ * kimi oxunur — yəni `_` daşıyan bütün adlar (məs. `e2e_*` hesablar) tapılmır.
+ * Bu, `usersDirectory` və `adminUsersList`-də artıq düzəldilmiş buqdur;
+ * funksiya həmin məntiqi TƏK MƏNBƏYƏ toplayır.
+ */
+export const likePattern = (q: unknown) =>
+  '%' + String(q ?? '').replace(/[%_\\]/g, ch => '\\' + ch) + '%';
 export const toJSON = (v: unknown, fallback: string) => {
   try { return JSON.stringify(v ?? JSON.parse(fallback)); } catch { return fallback; }
 };
@@ -157,13 +175,36 @@ export function mapUser(r: any, self = false): any {
     lastActiveDay: r.last_active_day, lastActiveAt: r.last_active_at,
     activityDays: fromJSON(r.activity_days, {}),
     joinedAt: r.joined_at, blocked: !!r.blocked, verified: !!r.verified,
-    role: r.role, settings: fromJSON(r.settings, {}),
+    role: r.role,
     activeProjectId: r.active_project_id || null,
     showProjectOnProfile: r.show_project_on_profile !== 0,
+  };
+
+  // AUDIT M-9 — `settings` obyekti ƏVVƏL HƏR İSTİFADƏÇİ üçün tam yayımlanırdı:
+  // bildiriş tərcihləri, `profileBonusGiven` bayrağı və gələcəkdə ora yazılan
+  // hər şey kənar şəxsə görünürdü.
+  //
+  // İndi ayrım açıqdır:
+  //   `settings`       — YALNIZ özünə (aşağıdakı `self` bloku).
+  //   `publicSettings` — başqalarına görünən AĞ SİYAHI. Bunlar məhz ona görə
+  //                      publikdir ki, UI qarşı tərəfin qərarını bilməlidir:
+  //                      "ona DM yaza bilərəmmi", "izlədiklərini göstərimmi",
+  //                      "onlayn statusunu göstərimmi".
+  // Ağ siyahı üsulu qəsdəndir: `settings`-ə yeni sahə əlavə olunanda o,
+  // AVTOMATİK gizli qalır — sızma yalnız AÇIQ şəkildə əlavə etməklə mümkündür.
+  const allSettings = fromJSON<any>(r.settings, {});
+  const privacy = allSettings?.privacy || {};
+  u.publicSettings = {
+    privacy: {
+      whoCanMessage: privacy.whoCanMessage ?? 'everyone',
+      showFollowing: privacy.showFollowing !== false,
+      showOnlineStatus: privacy.showOnlineStatus !== false,
+    },
   };
   u.prog = Object.keys(u.progLevels);
   u.langs = Object.keys(u.langLevels);
   if (self) {
+    u.settings = allSettings;   // tam obyekt YALNIZ sahibinə (M-9)
     u.contactEmail = r.contact_email;
     u.mustResetPassword = !!r.must_reset_password;
     // OAuth ilə yaradılmış hesabda parol yoxdur → UI "şifrəni dəyiş" əvəzinə
