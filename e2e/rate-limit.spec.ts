@@ -165,7 +165,12 @@ async function freshUser(browser: Browser, label: string) {
 test.describe('AUDIT H-4 — rate limit davranışı @ratelimit', () => {
   // Serial: testlər eyni iki hesabı ardıcıl istifadə edir — `victim` qəsdən
   // limitə salınır və sonrakı testlər həmin vəziyyətdən istifadə edir.
-  test.describe.configure({ mode: 'serial' });
+  //
+  // Timeout QƏSDƏN böyükdür: bu testlər limiti sınamaq üçün YÜZLƏRLƏ sorğu
+  // göndərir (132 axın sorğusu, 110 `heavy` sorğusu). Default 30 saniyə izolə
+  // qaçışda kifayət edir, TAM DƏSTDƏ isə server yükü altında çatmır və test
+  // 429 səbəbindən DEYİL, vaxt bitdiyinə görə sınır.
+  test.describe.configure({ mode: 'serial', timeout: 120_000 });
 
   // Cəmi İKİ qeydiyyat: `auth` səbəti IP üzrədir (§4.5) və bütün E2E trafiki
   // 127.0.0.1-dən gəlir — hər test üçün yeni hesab açsaydıq dəstin qalan
