@@ -289,34 +289,192 @@ export async function resolveUser(env: Env, req: Request): Promise<Resolved | nu
 }
 
 /* ---------- rate limit (KV, sadə pəncərə) ---------- */
-const RL: Record<string, { limit: number; windowSec: number }> = {
-  auth:    { limit: 10, windowSec: 300 },
-  refresh: { limit: 60, windowSec: 300 },   // 15 dəq access TTL → normal istifadədə saatda ~4
-  write:   { limit: 60, windowSec: 60 },
-  upload:  { limit: 30, windowSec: 3600 },
-  form:    { limit: 5, windowSec: 3600 },
-};
+
+/**
+ * Rate limit səbətləri — AUDIT-TASK-4 / H-4.
+ *
+ * `critical: true` = TƏHLÜKƏSİZLİK kontroludur, atomiklik TƏLƏB EDİR.
+ *   ⚠ Hazırkı KV limiter atomik DEYİL (AUDIT-2026-07-26 / H-3): oxu ilə yazı
+ *   arasında yarış var, paralel sorğularda sayğac sızır. Yəni bu səbətlər real
+ *   dünyada elan edilən limitdən ZƏİFDİR və TƏK müdafiə kimi işlədilməməlidir.
+ *   AUDIT-TASK-9 atomik limiterə keçir; ora qədər `security.ts`-dəki
+ *   `recentFailures` və Turnstile əlavə qat kimi qalır.
+ *
+ * `critical: false` = XƏRC qoruyucusudur (maliyyə DoS, kvota). Təxmini sayma
+ *   kifayətdir: 20 əvəzinə 25 AI çağırışı keçsə təsir kiçikdir.
+ *
+ * `key` — açar kimliyi (AUDIT-TASK-4 §4.5):
+ *   'auto' — autentifikasiya olunubsa `uid`, olunmayıbsa IP. Korporativ NAT və
+ *            ya mobil operator arxasındakı 50 istifadəçi eyni IP-dən gəlir;
+ *            yalnız IP ilə açarlasaq default `read` səbəti onları kütləvi 429-a
+ *            salardı.
+ *   'ip'    — HƏMİŞƏ IP. Login/qeydiyyat üçün məcburidir: orada uid hələ məlum
+ *            deyil və hücumçu onsuz da fərqli istifadəçi adları sınayır.
+ */
+export interface RateBucketCfg {
+  limit: number;
+  windowSec: number;
+  critical: boolean;
+  key: 'auto' | 'ip';
+}
+
+export const RL = {
+  /* ═══ TƏHLÜKƏSİZLİK kontrolları (atomiklik tələb edir — H-3 / Task 9) ═══ */
+
+  // Brute-force qapısı. Aşağı limit qəsdəndir; qanuni istifadəçi 5 dəqiqədə
+  // 10 dəfə giriş etmir.
+  auth:     { limit: 10,   windowSec: 300,  critical: true,  key: 'ip'   },
+  // 15 dəq access TTL → normal istifadədə saatda ~4 refresh. 60/5dəq bir neçə
+  // tab + bir neçə cihaz üçün geniş ehtiyatdır.
+  refresh:  { limit: 60,   windowSec: 300,  critical: true,  key: 'ip'   },
+  // Fayl yükləmə: R2 yazısı + antivirus/validasiya xərci.
+  upload:   { limit: 30,   windowSec: 3600, critical: true,  key: 'auto' },
+
+  /* ═══ XƏRC qoruyucuları (təxmini sayma kifayətdir) ═══ */
+
+  // Anonim publik formalar (newsletter, contact) — spam qapısı.
+  form:     { limit: 5,    windowSec: 3600, critical: false, key: 'ip'   },
+  // Mutasiyalar. D1 yazısı = kvota. 60/dəq insan sürətindən onlarla dəfə
+  // yuxarıdır (ən sıx UI axını — mesaj yazmaq — dəqiqədə ~10-15 sorğudur).
+  write:    { limit: 60,   windowSec: 60,   critical: false, key: 'auto' },
+  // DEFAULT səbət (bax `DEFAULT_RL`, worker/index.ts).
+  //
+  // 600/dəq necə seçildi (AUDIT-TASK-4 §4.0/Sual 6 ölçmələri):
+  //   ən yüklü TƏK tab (mesajlar səhifəsi, DM açıq) ≈ 44 sorğu/dəq
+  //     = DM mesajları 3s (20) + söhbətlər 5s (12) + bildirişlər 8s (7,5)
+  //       + presence GET/POST 30s (4)
+  //   admin paneli tabı ≈ 37 sorğu/dəq (9 paralel poll)
+  //   4 tab paralel ≈ 180 sorğu/dəq + səhifə açılışı partlayışları
+  // Auditin təklifi 300 idi — real profilə cəmi 1,7× ehtiyat verirdi, yəni
+  // 6-7 tab açan istifadəçi 429 alardı. 600 hücumçunu (saniyədə 10+ sorğu
+  // davamlı) hələ də kəsir, istifadəçini isə kəsmir.
+  read:     { limit: 600,  windowSec: 60,   critical: false, key: 'auto' },
+  // Presence heartbeat (POST 30s) + izləmə (GET 30s) = 5 dəqiqədə 20 sorğu.
+  // Auditin təklifi 60/300s idi — cəmi 3 tab açan istifadəçini kəsirdi.
+  // 150 → ~7 tab ehtiyatı. Polling→WS keçidi Task 10-dur; ora qədər səxavətli.
+  presence: { limit: 150,  windowSec: 300,  critical: false, key: 'auto' },
+  // 🔴 Workers AI çağırışı = REAL PUL. Ən sıx səbət qəsdən budur.
+  ai:       { limit: 20,   windowSec: 3600, critical: false, key: 'auto' },
+  // Embedding + Vectorize sorğusu. AI-dan ucuzdur, `read`-dən bahalıdır.
+  search:   { limit: 60,   windowSec: 3600, critical: false, key: 'auto' },
+  // Admin paneli 9 paralel poll işlədir və toplu əməliyyatlar edir.
+  // ❌ Admin YOLU BYPASS EDİLMİR: hesab ələ keçirilsə limitsiz admin yolu
+  // hücumçuya sərbəst vasitə verərdi — sadəcə səxavətli limit verilir.
+  admin:    { limit: 300,  windowSec: 60,   critical: false, key: 'auto' },
+  // Tam cədvəl skanı / ixrac: `COUNT(*)` × 4, CSV ixracı, GDPR export.
+  // Bunlar səhifə açılışında çağırılmır — istifadəçi düyməyə basır.
+  heavy:    { limit: 20,   windowSec: 3600, critical: false, key: 'auto' },
+  // R2 statik asset axını (`/files/*`). Bir feed səhifəsi 20+ obyekt çəkir;
+  // `read` səbətinə salınsaydı normal gəzinti bir neçə səhifədən sonra kəsilərdi.
+  asset:    { limit: 1200, windowSec: 60,   critical: false, key: 'auto' },
+} satisfies Record<string, RateBucketCfg>;
+
 export type RateBucket = keyof typeof RL;
 
-// Limitlər IP başınadır. E2E dəstində isə BÜTÜN virtual "cihazlar" eyni
-// 127.0.0.1-dən gəlir (bir neçə hesab, paralel kontekstlər, uğursuz giriş
-// ssenariləri) — bu, real istifadəçi profili deyil və dəst öz-özünü bloklayır.
-//
-// ⚠ Çarpan YALNIZ qeyri-production mühitdə tətbiq olunur. `ENVIRONMENT`
-// 'production' olduqda bu funksiya HƏMİŞƏ 1 qaytarır — yəni səhvən və ya
-// qəsdən qoyulmuş konfiq canlı mühitdəki limitləri ZƏİFLƏDƏ BİLMİR.
-// Test mühiti bunu `wrangler dev --var ENVIRONMENT:test` ilə seçir
-// (bax playwright.config.ts).
-const rlFactor = (env: Env) => (env.ENVIRONMENT === 'production' ? 1 : 20);
+/**
+ * Rate limit açarı üçün UCUZ kimlik: yalnız JWT imzasını yoxlayır, D1-ə GETMİR.
+ *
+ * `resolveUser`-dən ƏVVƏL çağırılır ki, limiterin mövcud sırası qorunsun
+ * (anonim hücum baza sorğusuna çatmadan kəsilir), amma açar yenə də `uid` üzrə
+ * olsun. HMAC yoxlaması I/O tələb etmir — əlavə gecikmə mikrosaniyələrlədir.
+ */
+export async function peekUid(env: Env, req: Request): Promise<string | null> {
+  const at = readCookie(req, AT_COOKIE)
+    || (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '') || null;
+  if (!at) return null;
+  try {
+    const p = await verifyJWT(env, at);
+    return p?.sub ? String(p.sub) : null;
+  } catch {
+    return null;   // bozuk token → anonim kimi davran, IP üzrə açarlanır
+  }
+}
 
-export async function rateLimit(env: Env, req: Request, bucket: RateBucket): Promise<boolean> {
+/**
+ * IPv6-nı `/64` prefiksi üzrə qruplaşdırır.
+ *
+ * Bir istifadəçiyə /64 daxilində milyonlarla ünvan düşür — tam ünvan üzrə
+ * açarlamaq limiti mənasızlaşdırır (hücumçu hər sorğuda ünvan dəyişir).
+ * IPv4 olduğu kimi qalır.
+ */
+export function normalizeIp(ip: string): string {
+  const raw = (ip || '').trim().toLowerCase();
+  if (!raw) return 'unknown';
+  if (!raw.includes(':')) return raw;
+
+  const [head, tail = ''] = raw.split('::');
+  const h = head ? head.split(':').filter(Boolean) : [];
+  const t = tail ? tail.split(':').filter(Boolean) : [];
+  const fill = raw.includes('::')
+    ? Array(Math.max(0, 8 - h.length - t.length)).fill('0')
+    : [];
+  return [...h, ...fill, ...t].slice(0, 4).join(':') + '::/64';
+}
+
+/**
+ * Test mühitində limitləri boşaldan çarpan.
+ *
+ * ⚠ Çarpan YALNIZ qeyri-production mühitdə tətbiq olunur. `ENVIRONMENT`
+ * 'production' olduqda HƏMİŞƏ 1 qaytarılır — yəni səhvən və ya qəsdən
+ * qoyulmuş konfiq canlı mühitdəki limitləri ZƏİFLƏDƏ BİLMİR.
+ * Test mühiti bunu `wrangler dev --var ENVIRONMENT:test` ilə seçir
+ * (bax playwright.config.ts).
+ *
+ * Çarpan açar sinfinə görə fərqlidir (AUDIT-TASK-4 §4.5-dən sonra):
+ *
+ *   IP üzrə (20×) — E2E dəstində BÜTÜN virtual "cihazlar" eyni 127.0.0.1-dən
+ *     gəlir: onlarla hesab, paralel kontekstlər, uğursuz giriş ssenariləri.
+ *     Bu, real istifadəçi profili deyil və dəst öz-özünü bloklayardı.
+ *
+ *   uid üzrə (5×) — burada hesablar artıq QARIŞMIR (hər test istifadəçisinin
+ *     öz sayğacı var), ona görə 20× həddindən artıqdır və rate limit
+ *     testlərini praktiki olaraq mümkünsüz edirdi. 5× yenə də ehtiyat saxlayır:
+ *     bir test hesabı bir neçə spec-də ardıcıl işlədilir və bu da real insan
+ *     profili deyil.
+ */
+const rlFactor = (env: Env, cfg: RateBucketCfg) =>
+  env.ENVIRONMENT === 'production' ? 1 : (cfg.key === 'ip' ? 20 : 5);
+
+export interface RateLimitResult {
+  ok: boolean;
+  /** `Retry-After` başlığı üçün — cari pəncərənin bitməsinə qalan saniyə. */
+  retryAfter: number;
+}
+
+export async function rateLimit(
+  env: Env, req: Request, bucket: RateBucket, uid?: string | null,
+): Promise<RateLimitResult> {
   const cfg = RL[bucket];
-  const limit = cfg.limit * rlFactor(env);
-  const ip = req.headers.get('CF-Connecting-IP') || '127.0.0.1';
-  const win = Math.floor(now() / 1000 / cfg.windowSec);
-  const key = `rl:${bucket}:${ip}:${win}`;
-  const cur = parseInt((await env.SESSIONS.get(key)) || '0', 10);
-  if (cur >= limit) return false;
-  await env.SESSIONS.put(key, String(cur + 1), { expirationTtl: cfg.windowSec + 60 });
-  return true;
+  const limit = cfg.limit * rlFactor(env, cfg);
+  const nowSec = Math.floor(now() / 1000);
+  const win = Math.floor(nowSec / cfg.windowSec);
+  // Sabit pəncərə: sayğac pəncərə sonunda sıfırlanır, ona görə "nə vaxt təkrar
+  // cəhd et" sualının dəqiq cavabı pəncərənin bitməsinə qalan vaxtdır.
+  const retryAfter = cfg.windowSec - (nowSec % cfg.windowSec);
+
+  const identity = cfg.key === 'auto' && uid
+    ? `u:${uid}`
+    : `i:${normalizeIp(req.headers.get('CF-Connecting-IP') || '')}`;
+  const key = `rl:${bucket}:${identity}:${win}`;
+
+  try {
+    const cur = parseInt((await env.SESSIONS.get(key)) || '0', 10);
+    if (cur >= limit) return { ok: false, retryAfter };
+
+    // ⚠ MƏLUM VƏ QƏBUL EDİLMİŞ İTKİ (AUDIT-TASK-4 §5.2):
+    // (1) oxu→yaz atomik deyil — paralel sorğular eyni `cur` dəyərini görür;
+    // (2) KV eyni açara saniyədə ~1 yazı qəbul edir — aktiv istifadəçidə
+    //     artımların bir hissəsi sükutla itir.
+    // Yəni faktiki limit elan ediləndən bir qədər YUXARIDIR. Xərc qoruyucusu
+    // üçün bu məqbuldur. "Limiter işləmir" kimi səhv diaqnoz qoyulmasın deyə
+    // burada açıq yazılıb — atomik həll AUDIT-TASK-9-dadır.
+    await env.SESSIONS.put(key, String(cur + 1), { expirationTtl: cfg.windowSec + 60 });
+    return { ok: true, retryAfter };
+  } catch (e) {
+    // §5.3 — KV nasazlığında davranış səbətin sinfindən asılıdır:
+    //   xərc qoruyucusu → FAIL-OPEN (KV nasazlığı bütün saytı çökdürməməlidir),
+    //   təhlükəsizlik   → FAIL-CLOSED (limiter işləmirsə brute-force açıqdır).
+    console.error('rateLimit KV xətası', bucket, (e as any)?.message || e);
+    return { ok: !cfg.critical, retryAfter };
+  }
 }
