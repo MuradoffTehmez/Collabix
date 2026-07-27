@@ -23,7 +23,7 @@ test.describe('Realtime presence (PresenceDO)', () => {
     await bootApp(page);
 
     const res = await page.evaluate(async () => {
-      const me = await (await fetch('/api/auth/me')).json();
+      const me = await (await fetch('/api/auth/me')).json() as any;
       const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
       const ws = new WebSocket(`${proto}//${location.host}/api/presence/ws`);
       const first = await new Promise<string>((resolve, reject) => {

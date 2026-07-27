@@ -11,7 +11,7 @@
     "predeploy": "node scripts/check-migrations.mjs --remote",
     "deploy": "npm run build && wrangler deploy",
     "types": "wrangler types",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.e2e.json --noEmit",
     "db:migrate:local": "wrangler d1 migrations apply collabix-db --local --persist-to .wrangler/state",
     "db:migrate:remote": "wrangler d1 migrations apply collabix-db --remote",
     "e2e": "playwright test --grep-invert \"responsive audit hesabatı\"",

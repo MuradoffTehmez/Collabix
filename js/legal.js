@@ -155,6 +155,8 @@ Hesab aktiv olduğu müddətdə saxlanılır. Hesab silindikdə profil, istifad�
 - **Data ixracı** — öz məlumatlarınızı JSON formatında əldə etmək üçün bizə müraciət edin;
 - **Şikayət** — ${SITE.email} və ya səlahiyyətli orqana müraciət.
 
+Texniki qeyd: sui-istifadənin qarşısını almaq üçün data ixracı sorğusu saatda məhdud sayda emal olunur; limit aşıldıqda bir müddət sonra yenidən cəhd edə bilərsiniz.
+
 GDPR prinsipləri və Azərbaycan Respublikasının "Fərdi məlumatlar haqqında" Qanunu nəzərə alınır. Yurisdiksiya: **${SITE.jurisdiction}**.
 
 ## 6. Uşaqlar
@@ -184,7 +186,7 @@ Data is kept while your account is active. On account deletion, your profile, us
 
 ## 5. Your rights
 
-Access & correction (profile editor), deletion (Settings → Delete account), data export (contact us for a JSON export), complaint (${SITE.email} or your supervisory authority). GDPR principles and the Azerbaijani Law "On Personal Data" are respected. Jurisdiction: **${SITE.jurisdiction}**.
+Access & correction (profile editor), deletion (Settings → Delete account), data export (contact us for a JSON export), complaint (${SITE.email} or your supervisory authority). Technical note: to prevent abuse, data-export requests are processed a limited number of times per hour; if the limit is reached, please retry later. GDPR principles and the Azerbaijani Law "On Personal Data" are respected. Jurisdiction: **${SITE.jurisdiction}**.
 
 ## 6. Children
 
@@ -213,7 +215,7 @@ The platform is **18+ only**; age is verified at registration.`,
 
 ## 5. Ваши права
 
-Доступ и исправление (редактор профиля), удаление (Настройки → Удалить аккаунт), экспорт данных (по запросу), жалоба (${SITE.email}). Учитываются принципы GDPR и закон АР «О персональных данных». Юрисдикция: **${SITE.jurisdiction}**.
+Доступ и исправление (редактор профиля), удаление (Настройки → Удалить аккаунт), экспорт данных (по запросу), жалоба (${SITE.email}). Техническое примечание: во избежание злоупотреблений запросы на экспорт данных обрабатываются ограниченное число раз в час; при достижении лимита повторите попытку позже. Учитываются принципы GDPR и закон АР «О персональных данных». Юрисдикция: **${SITE.jurisdiction}**.
 
 ## 6. Дети
 

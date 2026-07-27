@@ -342,7 +342,7 @@ test.describe('Admin paneli', () => {
         const probe = document.createElement('button');
         probe.className = 'view-toggle-probe';
         probe.style.cssText = 'background: var(--coral); color: var(--on-accent);';
-        document.body.append(probe);
+        document.body.appendChild(probe);
         const cs = getComputedStyle(probe);
         const [l1, l2] = [lum(cs.color), lum(cs.backgroundColor)].sort((a, b) => b - a);
         probe.remove();

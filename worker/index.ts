@@ -177,6 +177,9 @@ const ROUTES: Route[] = [
   // public
   // Frontend boot-da çağırır (Turnstile site key) — giriş tələb etmir.
   { method: 'GET', pattern: /^\/api\/config$/, handler: R.publicConfig, rl: 'read' },
+  // Sağlamlıq yoxlaması (AUDIT-TASK-6 §A-3) — bootstrap datasının itməsini
+  // aşkarlayır. Autentifikasiyasızdır, ona görə heç bir detal sızdırmır.
+  { method: 'GET', pattern: /^\/api\/health$/, handler: R.health, rl: 'read' },
   { method: 'GET', pattern: /^\/api\/public\/faqs$/, handler: R.publicFaqs, rl: 'read' },
   { method: 'GET', pattern: /^\/api\/public\/testimonials$/, handler: R.publicTestimonials, rl: 'read' },
   { method: 'GET', pattern: /^\/api\/public\/stats$/, handler: R.publicStats, rl: 'read' },

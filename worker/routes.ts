@@ -2597,6 +2597,41 @@ export async function publicConfig(c: Ctx) {
   });
 }
 
+/**
+ * Sağlamlıq yoxlaması — AUDIT-TASK-5 §10/2 → AUDIT-TASK-6 §A-3.
+ *
+ * NİYƏ VAR: `0021_restore_bootstrap_rooms.sql` itmiş `general` otağını bərpa
+ * etdi, lakin heç nə TƏKRARIN qarşısını almır. `e2e/seed-hygiene.spec.ts`
+ * bunu yalnız LOKAL mühitdə tutur — istehsalda tutmur. Otaq silinsə
+ * `room_messages.room_id` FK-sı pozulur və qlobal çat sükutla çökür.
+ *
+ * ⚠ MƏLUMAT SIZDIRMIR: sətir sayı, istifadəçi adı, versiya, xəta mətni
+ * qaytarılmır — yalnız 'ok' / 'fail' / 'missing'. Endpoint autentifikasiyasız
+ * olduğu üçün bu, məcburi şərtdir.
+ */
+export async function health(c: Ctx) {
+  let db: 'ok' | 'fail' = 'ok';
+  let bootstrapGeneralRoom: 'ok' | 'missing' = 'missing';
+  let migrationsApplied = 0;
+
+  try {
+    const row = await D(c).prepare(
+      `SELECT (SELECT COUNT(*) FROM rooms WHERE id = 'general') AS room,
+              (SELECT COUNT(*) FROM d1_migrations)              AS migs`,
+    ).first<any>();
+    bootstrapGeneralRoom = Number(row?.room || 0) > 0 ? 'ok' : 'missing';
+    migrationsApplied = Number(row?.migs || 0);
+  } catch {
+    // Səbəb QAYTARILMIR — xəta mətni sxem detalı sızdıra bilər.
+    db = 'fail';
+  }
+
+  const checks = { db, bootstrap_general_room: bootstrapGeneralRoom, migrations_applied: migrationsApplied };
+  const ok = db === 'ok' && bootstrapGeneralRoom === 'ok';
+  // 503: monitorinq alətləri status kodundan da oxuya bilsin.
+  return json({ ok, checks }, ok ? 200 : 503);
+}
+
 /* ================= TƏHLÜKƏ MONİTORİNQİ (Bənd 1) ================= */
 
 const SEC_TYPES = ['login_failed', 'login_ok', 'geo_change', 'rate_limit', 'token_reuse',

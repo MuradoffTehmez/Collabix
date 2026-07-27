@@ -154,7 +154,7 @@ test.describe('Queues fan-out (Bənd 18)', () => {
     expect(login).toBe(200);
 
     const meUid = await page.evaluate(() =>
-      fetch('/api/auth/me').then(r => r.json()).then(d => d.user.uid));
+      fetch('/api/auth/me').then(r => r.json() as any).then(d => d.user.uid));
     await p2.evaluate(u => fetch('/api/follows/' + u, { method: 'PUT' }).then(r => r.status), meUid);
 
     // PRIMARY post yazır → növbə izləyiciyə bildiriş göndərməlidir.
@@ -164,14 +164,14 @@ test.describe('Queues fan-out (Bənd 18)', () => {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ blocks: [{ type: 'text', content: m }], tags: [] }),
       });
-      return { status: r.status, body: await r.json() };
+      return { status: r.status, body: await r.json() as any };
     }, marker);
     expect(created.status).toBe(200);
 
     // Fan-out ASİNXRONDUR — bildirişin gəlməsini gözləyirik. Məhz bu gözləmə
     // sübut edir ki, iş sorğu yolundan çıxarılıb.
     await expect.poll(async () => {
-      const d = await p2.evaluate(() => fetch('/api/notifications').then(r => r.json()));
+      const d = await p2.evaluate(() => fetch('/api/notifications').then(r => r.json())) as any;
       return (d.notifications || []).some((n: any) => n.type === 'post');
     }, { timeout: 25_000, message: 'izləyiciyə "yeni paylaşım" bildirişi çatmalıdır' }).toBe(true);
 

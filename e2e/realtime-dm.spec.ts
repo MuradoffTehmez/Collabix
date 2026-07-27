@@ -59,7 +59,7 @@ test.describe('Realtime DM + bildiriş fan-out', () => {
       // Soket qalxsın deyə qısa gözləmə, sonra primary DM göndərir.
       await page.waitForTimeout(1500);
       const sent = await page.evaluate(async (uname) => {
-        const list = await (await fetch('/api/users')).json();
+        const list = await (await fetch('/api/users')).json() as any;
         const target = list.users.find((u: any) => u.username === uname);
         if (!target) return { ok: false, why: 'alıcı tapılmadı' };
         const r = await fetch('/api/dms/to/' + target.uid, {
@@ -102,7 +102,7 @@ test.describe('Realtime DM + bildiriş fan-out', () => {
       const out: string[] = [];
       ws.onmessage = ev => out.push(String(ev.data));
 
-      const list = await (await fetch('/api/users')).json();
+      const list = await (await fetch('/api/users')).json() as any;
       const target = list.users.find((u: any) => u.username === uname);
       await fetch('/api/dms/to/' + target.uid, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },

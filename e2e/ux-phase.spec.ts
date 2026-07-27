@@ -106,7 +106,7 @@ test.describe('Admin Geri al (Bənd 17)', () => {
     // ⚠ MƏCBURİ SIFIRLAMA: əvvəlki uğursuz işə salma qurbanı bloklu qoya bilər.
     // `beforeEach` bunu təmizləmir, ona görə hər test təmiz vəziyyətdən başlasın.
     await page.evaluate(async u => {
-      const d = await fetch('/api/admin/users?q=' + u).then(r => r.json());
+      const d = await fetch('/api/admin/users?q=' + u).then(r => r.json()) as any;
       const row = (d.users || []).find((x: any) => x.username === u);
       if (row && row.blocked) await fetch('/api/admin/users/' + row.uid, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
@@ -128,7 +128,7 @@ test.describe('Admin Geri al (Bənd 17)', () => {
 
   async function victimBlocked(page: Page): Promise<boolean> {
     return page.evaluate(async u => {
-      const d = await fetch('/api/admin/users?q=' + u).then(r => r.json()).catch(() => ({ users: [] }));
+      const d = await fetch('/api/admin/users?q=' + u).then(r => r.json()).catch(() => ({ users: [] })) as any;
       const row = (d.users || []).find((x: any) => x.username === u);
       return !!(row && row.blocked);
     }, VICTIM);
@@ -174,7 +174,7 @@ test.describe('Admin Geri al (Bənd 17)', () => {
     // Təmizlik BİRBAŞA API ilə: UI-dakı ikinci axtarış dövrü flaky-dir və
     // testin əsl invariantına (commit baş verdi) aidiyyatı yoxdur.
     await page.evaluate(async u => {
-      const d = await fetch('/api/admin/users?q=' + u).then(r => r.json());
+      const d = await fetch('/api/admin/users?q=' + u).then(r => r.json()) as any;
       const row = (d.users || []).find((x: any) => x.username === u);
       if (row) await fetch('/api/admin/users/' + row.uid, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },

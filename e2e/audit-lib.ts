@@ -16,7 +16,11 @@ export interface Violation {
 // Nəticə səhifə daxilində hesablanır və seriallaşdırıla bilən massiv qaytarır.
 export async function collectViolations(page: Page): Promise<Violation[]> {
   return page.evaluate(() => {
-    const out: Array<{ category: string; detail: string; selector: string }> = [];
+    // `Violation['category']` — sətir yerinə BİRLƏŞMƏ tipi. Əvvəl `string` idi
+    // və `collectViolations`-ın `Promise<Violation[]>` qaytarma tipinə uyğun
+    // gəlmirdi; səhv görünmürdü, çünki `tsc` e2e/ qovluğunu yoxlamırdı
+    // (AUDIT-TASK-5 §10/1 → AUDIT-TASK-6 §A-1).
+    const out: Array<{ category: Violation['category']; detail: string; selector: string }> = [];
     const vw = window.innerWidth;
 
     // Elementə oxunaqlı seçici yaratmaq (hesabatda günahkarı tapmaq üçün).

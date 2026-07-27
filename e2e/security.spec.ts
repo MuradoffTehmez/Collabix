@@ -89,7 +89,7 @@ test.describe('Bot qoruması UI (Bənd 7)', () => {
     });
     await page.goto('/', { waitUntil: 'networkidle' });
 
-    const cfg = await page.evaluate(() => fetch('/api/config').then(r => r.json()));
+    const cfg = await page.evaluate(() => fetch('/api/config').then(r => r.json())) as any;
     expect(cfg.turnstileSiteKey, 'test mühitində site key qurulmalıdır').toBeTruthy();
 
     // Auth ekranı açılana qədər xarici skript YÜKLƏNMƏMƏLİDİR — ziyarətçilərin
@@ -115,7 +115,7 @@ test.describe('Bot qoruması UI (Bənd 7)', () => {
     // yəni widget olsa da olmasa da giriş işləməlidir. Paylaşılan sessiya ilə
     // yoxlanılır, əlavə giriş sorğusu YOXDUR (auth rate-limit-inə toxunmuruq).
     await openApp(page, '#home');
-    const me = await page.evaluate(() => fetch('/api/auth/me').then(r => r.json()));
+    const me = await page.evaluate(() => fetch('/api/auth/me').then(r => r.json())) as any;
     expect(me.user).toBeTruthy();
   });
 });
