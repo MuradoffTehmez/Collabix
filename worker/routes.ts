@@ -247,9 +247,9 @@ export async function login(c: Ctx) {
       severity: fails >= 5 ? 'critical' : 'warning',
       meta: { attempt: fails + 1, reason: row ? 'bad_password' : 'no_user' },
     });
-    return err('İstifadəçi adı və ya şifrə yanlışdır.', 401);
+    return err('İstifadəçi adı və ya şifrə yanlışdır.', 401, 'invalid_credentials');
   }
-  if (row.blocked) return err('Hesabınız admin tərəfindən bloklanıb.', 403);
+  if (row.blocked) return err('Hesabınız admin tərəfindən bloklanıb.', 403, 'account_blocked');
 
   // seriya (streak) yeniləməsi
   const day = todayStr();
@@ -406,7 +406,7 @@ export async function changePassword(c: Ctx) {
   const settingFirst = u.has_password === 0;
   if (!settingFirst) {
     const ok = await verifyPassword(String(b.current || ''), u.pass_hash as any, u.pass_salt as any);
-    if (!ok) return err('Hazırkı şifrə yanlışdır.', 403);
+    if (!ok) return err('Hazırkı şifrə yanlışdır.', 403, 'invalid_password');
   }
   if (typeof b.next !== 'string' || b.next.length < 6) return badReq('Yeni şifrə minimum 6 simvol.');
   const { hash, salt } = await hashPassword(b.next);
@@ -429,7 +429,7 @@ export async function changeUsername(c: Ctx) {
   // Parolsuz (OAuth) hesab — bax changePassword-dəki eyni izah.
   if (u.has_password !== 0) {
     const ok = await verifyPassword(String(b.current || ''), u.pass_hash as any, u.pass_salt as any);
-    if (!ok) return err('Şifrə yanlışdır.', 403);
+    if (!ok) return err('Şifrə yanlışdır.', 403, 'invalid_password');
   }
   const next = normalizeUsername(b.next);
   if (!validUsername(next)) return badReq('Ad düzgün deyil.');
@@ -446,7 +446,7 @@ export async function deleteAccount(c: Ctx) {
   // özü kifayət edir. Parollu hesabda isə təkrar-autentifikasiya qalır.
   if (u.has_password !== 0) {
     const ok = await verifyPassword(String(b.pass || ''), u.pass_hash as any, u.pass_salt as any);
-    if (!ok) return err('Şifrə yanlışdır.', 403);
+    if (!ok) return err('Şifrə yanlışdır.', 403, 'invalid_password');
   }
   // R2 fayllarını təmizlə (avatar + post şəkilləri)
   const posts = await D(c).prepare('SELECT image_keys FROM posts WHERE author_id = ?').bind(u.id).all<any>();
@@ -707,7 +707,7 @@ export async function followLists(c: Ctx, uid: string) {
   if (uid !== c.user!.id && !c.isAdmin && kind === 'following') {
     const target = await D(c).prepare('SELECT settings FROM users WHERE id = ?').bind(uid).first<any>();
     const priv = fromJSON<any>(target?.settings, {})?.privacy || {};
-    if (priv.showFollowing === false) return err('Bu siyahı gizlidir.', 403);
+    if (priv.showFollowing === false) return err('Bu siyahı gizlidir.', 403, 'forbidden');
   }
   const q = kind === 'followers'
     ? 'SELECT follower_id AS u FROM follows WHERE target_id = ?'
@@ -833,7 +833,7 @@ export async function createPost(c: Ctx) {
 export async function patchPost(c: Ctx, id: string) {
   const row = await D(c).prepare('SELECT * FROM posts WHERE id = ?').bind(id).first<any>();
   if (!row) return err('Post tapılmadı.', 404);
-  if (row.author_id !== c.user!.id && !c.isAdmin) return err('İcazə yoxdur.', 403);
+  if (row.author_id !== c.user!.id && !c.isAdmin) return err('İcazə yoxdur.', 403, 'forbidden');
   const b = await readJson(c.req);
   const blocks = Array.isArray(b.blocks) ? b.blocks.slice(0, 20) : fromJSON(row.blocks, []);
   const firstText = (blocks.find((x: any) => x.type === 'text') || {}).content || b.text || '';
@@ -849,7 +849,7 @@ export async function deletePost(c: Ctx, id: string) {
   // deyirdi, UI "silindi" toast-ı göstərirdi, post isə yerində qalırdı
   // (TASK-7 / Bənd 1). İdempotentlik müştəri tərəfdə saxlanılır: 404 = "artıq yoxdur".
   if (!row) return err('Post tapılmadı.', 404);
-  if (row.author_id !== c.user!.id && !c.isAdmin) return err('İcazə yoxdur.', 403);
+  if (row.author_id !== c.user!.id && !c.isAdmin) return err('İcazə yoxdur.', 403, 'forbidden');
   const keys = fromJSON<string[]>(row.image_keys, []);
   await Promise.all(keys.slice(0, 30).map(k => c.env.FILES.delete(k).catch(() => {})));
   // Cascade (Cloud-Function trigger ekvivalenti), atomik batch. D1-də
@@ -1023,7 +1023,7 @@ export async function editComment(c: Ctx, postId: string, cid: string) {
   if (!text) return badReq('Şərh boş ola bilməz.');
   const row = await D(c).prepare('SELECT author_id FROM comments WHERE id = ? AND post_id = ?').bind(cid, postId).first<any>();
   if (!row) return err('Şərh tapılmadı.', 404);
-  if (row.author_id !== c.user!.id) return err('İcazə yoxdur.', 403);   // redaktə yalnız müəllif
+  if (row.author_id !== c.user!.id) return err('İcazə yoxdur.', 403, 'forbidden');   // redaktə yalnız müəllif
   await D(c).prepare('UPDATE comments SET text = ?, edited_at = ? WHERE id = ?').bind(text, now(), cid).run();
   return json({ ok: true });
 }
@@ -1032,7 +1032,7 @@ export async function deleteComment(c: Ctx, postId: string, cid: string) {
   if (!row) return json({ ok: true });
   const post = await D(c).prepare('SELECT author_id FROM posts WHERE id = ?').bind(postId).first<any>();
   const allowed = row.author_id === c.user!.id || c.isAdmin || post?.author_id === c.user!.id;
-  if (!allowed) return err('İcazə yoxdur.', 403);
+  if (!allowed) return err('İcazə yoxdur.', 403, 'forbidden');
   // Cascade sil: rəy + bütün cavabları (dərinlik 1 olduğu üçün birbaşa uşaqlar tamdır) + reaksiyalar.
   const kids = await D(c).prepare('SELECT id FROM comments WHERE parent_comment_id = ?').bind(cid).all<any>();
   const ids = [cid, ...kids.results.map(r => r.id as string)];
@@ -1107,7 +1107,7 @@ export async function guardTeamRoom(c: Ctx, roomId: string): Promise<Response | 
   const member = await D(c).prepare(
     "SELECT 1 AS x FROM team_members WHERE team_id = ? AND user_id = ? AND status = 'active'",
   ).bind(room.team_id, c.user!.id).first<any>();
-  return member ? null : err('Bu otaq komandaya aiddir — üzv deyilsiniz.', 403);
+  return member ? null : err('Bu otaq komandaya aiddir — üzv deyilsiniz.', 403, 'forbidden');
 }
 
 export async function roomMessages(c: Ctx, roomId: string) {
@@ -1137,7 +1137,7 @@ export async function editRoomMessage(c: Ctx, roomId: string, mid: string) {
   const b = await readJson(c.req);
   const row = await D(c).prepare('SELECT author_id FROM room_messages WHERE id = ?').bind(mid).first<any>();
   if (!row) return err('Tapılmadı.', 404);
-  if (row.author_id !== c.user!.id) return err('İcazə yoxdur.', 403);
+  if (row.author_id !== c.user!.id) return err('İcazə yoxdur.', 403, 'forbidden');
   await D(c).prepare('UPDATE room_messages SET text = ?, edited_at = ? WHERE id = ?')
     .bind(clampStr(b.text, 8000), now(), mid).run();
   await roomBroadcast(c, roomId, { t: 'refresh' });
@@ -1146,7 +1146,7 @@ export async function editRoomMessage(c: Ctx, roomId: string, mid: string) {
 export async function deleteRoomMessage(c: Ctx, roomId: string, mid: string) {
   const row = await D(c).prepare('SELECT author_id, file_key FROM room_messages WHERE id = ?').bind(mid).first<any>();
   if (!row) return json({ ok: true });
-  if (row.author_id !== c.user!.id && !c.isAdmin) return err('İcazə yoxdur.', 403);
+  if (row.author_id !== c.user!.id && !c.isAdmin) return err('İcazə yoxdur.', 403, 'forbidden');
   if (row.file_key) await c.env.FILES.delete(row.file_key).catch(() => {});
   await D(c).prepare('DELETE FROM room_messages WHERE id = ?').bind(mid).run();
   await roomBroadcast(c, roomId, { t: 'refresh' });
@@ -1172,7 +1172,7 @@ export async function listThreads(c: Ctx) {
 }
 
 export async function dmMessages(c: Ctx, pairId: string) {
-  if (!pairId.split('_').includes(c.user!.id)) return err('İcazə yoxdur.', 403);
+  if (!pairId.split('_').includes(c.user!.id)) return err('İcazə yoxdur.', 403, 'forbidden');
   const rows = await D(c).prepare(
     'SELECT * FROM (SELECT * FROM dm_messages WHERE pair_id = ? ORDER BY created_at DESC LIMIT 150) ORDER BY created_at ASC',
   ).bind(pairId).all<any>();
@@ -1190,11 +1190,11 @@ export async function sendDM(c: Ctx, toUid: string) {
   if (pol !== 'everyone' && !c.isAdmin) {
     const theyFollowMe = await D(c).prepare('SELECT 1 FROM follows WHERE follower_id = ? AND target_id = ?')
       .bind(toUid, me.id).first();
-    if (!theyFollowMe) return err('Bu istifadəçi yalnız izlədiyi şəxslərdən mesaj qəbul edir.', 403);
+    if (!theyFollowMe) return err('Bu istifadəçi yalnız izlədiyi şəxslərdən mesaj qəbul edir.', 403, 'forbidden');
     if (pol === 'mutual') {
       const iFollow = await D(c).prepare('SELECT 1 FROM follows WHERE follower_id = ? AND target_id = ?')
         .bind(me.id, toUid).first();
-      if (!iFollow) return err('Bu istifadəçi yalnız qarşılıqlı izləyənlərdən mesaj qəbul edir.', 403);
+      if (!iFollow) return err('Bu istifadəçi yalnız qarşılıqlı izləyənlərdən mesaj qəbul edir.', 403, 'forbidden');
     }
   }
 
@@ -1232,7 +1232,7 @@ export async function editDM(c: Ctx, _pairId: string, mid: string) {
   // pair_id sətirdən oxunur (marşrut parametri client-dəndir — ona güvənmirik).
   const row = await D(c).prepare('SELECT from_id, pair_id FROM dm_messages WHERE id = ?').bind(mid).first<any>();
   if (!row) return err('Tapılmadı.', 404);
-  if (row.from_id !== c.user!.id) return err('İcazə yoxdur.', 403);
+  if (row.from_id !== c.user!.id) return err('İcazə yoxdur.', 403, 'forbidden');
   await D(c).prepare('UPDATE dm_messages SET text = ?, edited_at = ? WHERE id = ?')
     .bind(clampStr(b.text, 8000), now(), mid).run();
   await dmPush(c, row.pair_id);
@@ -1241,7 +1241,7 @@ export async function editDM(c: Ctx, _pairId: string, mid: string) {
 export async function deleteDMMsg(c: Ctx, _pairId: string, mid: string) {
   const row = await D(c).prepare('SELECT from_id, file_key, pair_id FROM dm_messages WHERE id = ?').bind(mid).first<any>();
   if (!row) return json({ ok: true });
-  if (row.from_id !== c.user!.id) return err('İcazə yoxdur.', 403);
+  if (row.from_id !== c.user!.id) return err('İcazə yoxdur.', 403, 'forbidden');
   if (row.file_key) await c.env.FILES.delete(row.file_key).catch(() => {});
   await D(c).prepare('DELETE FROM dm_messages WHERE id = ?').bind(mid).run();
   await dmPush(c, row.pair_id);
@@ -1249,7 +1249,7 @@ export async function deleteDMMsg(c: Ctx, _pairId: string, mid: string) {
 }
 export async function markThreadRead(c: Ctx, pairId: string) {
   const [a] = pairId.split('_');
-  if (!pairId.split('_').includes(c.user!.id)) return err('İcazə yoxdur.', 403);
+  if (!pairId.split('_').includes(c.user!.id)) return err('İcazə yoxdur.', 403, 'forbidden');
   const col = c.user!.id === a ? 'read_a' : 'read_b';
   await D(c).prepare(`UPDATE dm_threads SET ${col} = ? WHERE pair_id = ?`).bind(now(), pairId).run();
   return json({ ok: true });
@@ -1300,7 +1300,7 @@ export async function readAllNotifs(c: Ctx) {
 export async function listTasks(c: Ctx) {
   const scope = c.url.searchParams.get('scope') || 'approved';
   if (scope === 'pending') {
-    if (!c.isAdmin) return err('İcazə yoxdur.', 403);
+    if (!c.isAdmin) return err('İcazə yoxdur.', 403, 'forbidden');
     const rows = await D(c).prepare("SELECT * FROM tasks WHERE status = 'pending' ORDER BY created_at DESC").all<any>();
     return json({ tasks: rows.results.map(mapTask) });
   }
@@ -1393,7 +1393,7 @@ export async function submitSolution(c: Ctx, taskId: string) {
 export async function listSubmissions(c: Ctx) {
   const scope = c.url.searchParams.get('scope') || 'mine';
   if (scope === 'pending') {
-    if (!c.isAdmin) return err('İcazə yoxdur.', 403);
+    if (!c.isAdmin) return err('İcazə yoxdur.', 403, 'forbidden');
     const rows = await D(c).prepare("SELECT * FROM submissions WHERE status = 'pending' ORDER BY submitted_at ASC").all<any>();
     return json({ submissions: rows.results.map(mapSubmission) });
   }
@@ -2266,7 +2266,7 @@ export async function mfaVerify(c: Ctx) {
 
   await c.env.SESSIONS.delete(key);   // birdəfəlik
   const row = await D(c).prepare('SELECT * FROM users WHERE id = ?').bind(uid).first<any>();
-  if (!row || row.blocked) return err('Hesabınız bloklanıb.', 403);
+  if (!row || row.blocked) return err('Hesabınız bloklanıb.', 403, 'account_blocked');
 
   await logSecurityEvent(c.env, c.req, { type: 'login_ok', uid, username: row.username, meta: { flow: 'mfa' } });
   const pair = await createSession(c.env, c.req, uid);

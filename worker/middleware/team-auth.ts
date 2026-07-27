@@ -76,14 +76,14 @@ export async function getTeamAuthority(
 
 /** Konkret icazə tələb edir. Uğurda `null`, əks halda hazır error cavabı. */
 export async function requireTeamPermission(c: Ctx, teamId: string, requiredPermission: string) {
-  if (!c.user) return err('Unauthorized', 401);
+  if (!c.user) return err('Unauthorized', 401, 'auth_required');
 
   // Sayt administratoru bütün komandalarda idarəetmə hüququna malikdir
   // (admin paneli komandaları moderasiya edə bilməlidir).
   if (c.isAdmin) return null;
 
   const member = await getMembership(c, teamId);
-  if (!member) return err('You are not a member of this team', 403);
+  if (!member) return err('You are not a member of this team', 403, 'forbidden');
 
   if (!hasPermission(member.permissions, requiredPermission)) {
     return err('Missing required team permission: ' + requiredPermission, 403);
@@ -96,10 +96,10 @@ export async function requireTeamPermission(c: Ctx, teamId: string, requiredPerm
  * (məs. öz postunu paylaşmaq, öz postunu silmək).
  */
 export async function requireTeamMember(c: Ctx, teamId: string) {
-  if (!c.user) return err('Unauthorized', 401);
+  if (!c.user) return err('Unauthorized', 401, 'auth_required');
   if (c.isAdmin) return null;
   const member = await getMembership(c, teamId);
-  if (!member) return err('You are not a member of this team', 403);
+  if (!member) return err('You are not a member of this team', 403, 'forbidden');
   return null;
 }
 
@@ -111,11 +111,11 @@ export async function requireTeamMember(c: Ctx, teamId: string) {
  * heç bir yoxlama olmadan verilirdi — bax docs/TASK-11-REPORT.md K3–K5.
  */
 export async function requireTeamRead(c: Ctx, team: { id: string; visibility?: string }) {
-  if (!c.user) return err('Unauthorized', 401);
+  if (!c.user) return err('Unauthorized', 401, 'auth_required');
   if (c.isAdmin) return null;
   if (String(team.visibility || '').toLowerCase() === 'public') return null;
   const member = await getMembership(c, team.id);
-  if (!member) return err('This team is private', 403);
+  if (!member) return err('This team is private', 403, 'forbidden');
   return null;
 }
 

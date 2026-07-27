@@ -144,7 +144,7 @@ export async function getTeam(c: Ctx, idOrSlug: string) {
 
   // Private komandanın detalları yalnız üzvlərə (və sayt admininə).
   if (!isMember && !c.isAdmin && normalizeVisibility(team.visibility) !== 'Public') {
-    return err('This team is private', 403);
+    return err('This team is private', 403, 'forbidden');
   }
 
   const rep = reputationFor(Number(team.xp || 0));
@@ -201,7 +201,7 @@ export async function joinTeam(c: Ctx, idOrSlug: string) {
   const { team } = r;
 
   if (normalizeVisibility(team.visibility) !== 'Public') {
-    return err('Bu komandaya yalnız dəvətlə qoşulmaq olar', 403);
+    return err('Bu komandaya yalnız dəvətlə qoşulmaq olar', 403, 'forbidden');
   }
   try {
     const roleId = await new TeamMemberService(c.env).joinTeam(team.id, c.user!.id);
@@ -229,7 +229,7 @@ export async function transferOwnership(c: Ctx, idOrSlug: string) {
   if ('res' in r) return r.res;
 
   if (String(r.team.owner_id) !== c.user!.id && !c.isAdmin) {
-    return err('Yalnız komanda sahibi sahibliyi köçürə bilər', 403);
+    return err('Yalnız komanda sahibi sahibliyi köçürə bilər', 403, 'forbidden');
   }
   const b = await readJson(c.req);
   if (!b.userId) return err('userId tələb olunur', 400);
@@ -675,7 +675,7 @@ export async function joinTeamProject(c: Ctx, idOrSlug: string, projectId: strin
   const projectService = new TeamProjectService(c.env);
   const project = await projectService.getProject(projectId);
   if (!project || String(project.team_id) !== String(r.team.id)) return err('Layihə tapılmadı', 404);
-  if (normalizeVisibility(project.visibility) !== 'Public') return err('Layihə açıq deyil', 403);
+  if (normalizeVisibility(project.visibility) !== 'Public') return err('Layihə açıq deyil', 403, 'forbidden');
 
   try {
     const reqId = await projectService.applyToProject(project.id, c.user!.id);
@@ -890,7 +890,7 @@ export async function deleteTeamPost(c: Ctx, idOrSlug: string, postId: string) {
 
   // Əvvəl heç bir yoxlama yox idi — istənilən istifadəçi istənilən postu silirdi.
   const allowed = await canModerate(c, r.team.id, String(post.author_id), 'manage_feed');
-  if (!allowed) return err('Bu postu silmək üçün icazəniz yoxdur', 403);
+  if (!allowed) return err('Bu postu silmək üçün icazəniz yoxdur', 403, 'forbidden');
 
   await feedService.deletePost(r.team.id, postId);
   return json({ success: true });
@@ -960,7 +960,7 @@ export async function deleteTeamFile(c: Ctx, idOrSlug: string, fileId: string) {
   if (!file || String(file.team_id) !== String(r.team.id)) return err('Fayl tapılmadı', 404);
 
   const allowed = await canModerate(c, r.team.id, String(file.uploaded_by), 'manage_files');
-  if (!allowed) return err('Bu faylı silmək üçün icazəniz yoxdur', 403);
+  if (!allowed) return err('Bu faylı silmək üçün icazəniz yoxdur', 403, 'forbidden');
 
   await fileService.deleteFile(r.team.id, fileId);
   return json({ success: true });
