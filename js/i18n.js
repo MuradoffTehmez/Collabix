@@ -392,6 +392,15 @@ const D = {
   'chat.back': { az: 'Siyahıya qayıt', en: 'Back to list', ru: 'Назад к списку' },
   'chat.rate_limit': { az: 'Çox sürətli yazırsan — bir az yavaşla.', en: 'You’re sending too fast — slow down a little.', ru: 'Слишком быстро — немного помедленнее.' },
 
+  /* ---------- Arxiv tarixçəsi (AUDIT-TASK-8 / §8.4) ---------- */
+  // ⚠ Üç dil PARALEL saxlanılır: Task 2-də bir dildə qalan mətn placeholder
+  // kimi canlıya çıxmışdı. Yeni açar əlavə edən hər kəs üçünü də doldurmalıdır.
+  'hist.load_older': { az: 'Daha köhnə mesajlar', en: 'Load older messages', ru: 'Загрузить старые сообщения' },
+  'hist.loading': { az: 'Yüklənir…', en: 'Loading…', ru: 'Загрузка…' },
+  'hist.start': { az: 'Söhbətin başlanğıcı', en: 'Beginning of the conversation', ru: 'Начало беседы' },
+  'hist.error': { az: 'Köhnə mesajlar yüklənmədi. Yenidən cəhd edin.', en: 'Could not load older messages. Try again.', ru: 'Не удалось загрузить старые сообщения. Попробуйте снова.' },
+  'hist.rate_limit': { az: 'Arxiv oxu limiti aşıldı — bir qədər sonra yenidən cəhd edin.', en: 'Archive read limit reached — try again later.', ru: 'Достигнут лимит чтения архива — попробуйте позже.' },
+
   /* ---------- FAZA 4: axtarış / ixrac (TASK-8 / Bənd 10, 11) ---------- */
   'pal.posts': { az: 'Paylaşımlar', en: 'Posts', ru: 'Посты' },
   'pal.comments': { az: 'Rəylər', en: 'Comments', ru: 'Комментарии' },

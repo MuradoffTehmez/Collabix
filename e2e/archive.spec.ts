@@ -93,6 +93,44 @@ test.describe('D1 → R2 arxivləmə (Bənd 12)', () => {
     expect(Number(afterCount[0].n)).toBe(Number(beforeCount[0].n));
   });
 
+  // 🔴 REQRESSİYA — AUDIT-TASK-8 §8.8-də aşkarlanan GİZLİ qüsur.
+  //
+  // Silmə ifadəsi əvvəl mesaj başına bir `?` bağlayırdı (`WHERE id IN (?,?,…)`)
+  // və `BATCH` 2000-dir. D1 bir ifadədəki dəyişən sayını məhdudlaşdırır, yəni
+  // 100-dən çox mesajı olan scope-da sorğu `too many SQL variables` atır və
+  // BÜTÜN arxiv işi çökürdü. `ARCHIVE_HOT_DAYS=3650` səbəbindən bu kod yolu
+  // Task 1-dən bəri heç vaxt işə düşməmişdi — ona görə qüsur gizli qalmışdı.
+  //
+  // ⚠ Nasazlıq SÜKUTLU idi: R2 yazısı silmədən ƏVVƏL bitir, yəni hər gecə
+  // yetim obyekt yaranar, katalog yazılmaz, D1 isə sonsuz böyüyərdi.
+  test('100-dən ÇOX mesajı olan otaq da arxivlənir (SQL dəyişən limiti)', async ({ page }) => {
+    const BIG = 'e2e-arxiv-boyuk-otaq';
+    const rows: string[] = [
+      `INSERT OR IGNORE INTO rooms (id, name, created_by, created_at) VALUES ('${BIG}', 'Böyük arxiv', 'system', ${OLD_TS});`,
+      `DELETE FROM room_messages WHERE room_id = '${BIG}';`,
+      `DELETE FROM message_archives WHERE scope_id = '${BIG}';`,
+    ];
+    const N = 150;   // D1 dəyişən limitindən (100) xeyli çox
+    for (let i = 0; i < N; i++) {
+      rows.push(
+        `INSERT INTO room_messages (id, room_id, author_id, author_name, type, text, created_at) ` +
+        `VALUES ('big-${i}', '${BIG}', 'u1', 'Test', 'text', 'mesaj ${i}', ${OLD_TS + i * 1000});`);
+    }
+    d1(rows.join('\n'));
+
+    const res = await page.request.get('/__scheduled');
+    expect(res.status()).toBe(200);
+
+    await expect.poll(() => {
+      const m = queryJson(`SELECT msg_count FROM message_archives WHERE scope_id = '${BIG}';`);
+      return Number(m[0]?.msg_count ?? -1);
+    }, { timeout: 25_000, message: '150 mesajın hamısı arxivlənməlidir' }).toBe(N);
+
+    // D1-dən TAM silinməlidir — yarımçıq silmə dublikat mənbəyidir.
+    const left = queryJson(`SELECT COUNT(*) AS n FROM room_messages WHERE room_id = '${BIG}';`);
+    expect(Number(left[0].n), 'arxivlənən mesajlar D1-də qalmamalıdır').toBe(0);
+  });
+
   test('vaxtı bitmiş sessiyalar təmizlənir', async ({ page }) => {
     // 30 gün əvvəl bitmiş sessiya — saxlama həddi (7 gün) keçib.
     const uid = queryJson("SELECT id FROM users WHERE username = 'e2e_main';")[0]?.id;

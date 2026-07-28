@@ -1,0 +1,80 @@
+[desktop] › e2e\admin.spec.ts:115:3 › Admin paneli › #5 bulk blok/blokdan çıxarma işləyir
+[desktop] › e2e\admin.spec.ts:140:3 › Admin paneli › #5 admin özünü seçə bilmir
+[desktop] › e2e\admin.spec.ts:150:3 › Admin paneli › #6 jurnal terminal görünüşündə və səviyyəyə görə rənglidir
+[desktop] › e2e\admin.spec.ts:180:3 › Admin paneli › #6 səviyyə filtri serverdə işləyir
+[desktop] › e2e\admin.spec.ts:196:3 › Admin paneli › #6 jurnal kopyalanır
+[desktop] › e2e\admin.spec.ts:20:3 › Admin paneli › yüklənir, sıfır konsol xətası
+[desktop] › e2e\admin.spec.ts:207:3 › Admin paneli › #7 yüklənmə zamanı skeleton göstərilir
+[desktop] › e2e\admin.spec.ts:316:5 › Admin paneli › dark temasında admin toolbar oxunaqlıdır
+[desktop] › e2e\admin.spec.ts:316:5 › Admin paneli › light temasında admin toolbar oxunaqlıdır
+[desktop] › e2e\admin.spec.ts:316:5 › Admin paneli › matrix temasında admin toolbar oxunaqlıdır
+[desktop] › e2e\admin.spec.ts:71:3 › Admin paneli › #3 taksonomiya ↑/↓ ilə sıralanır və serverdə saxlanılır
+[desktop] › e2e\admin.spec.ts:98:3 › Admin paneli › #4 istifadəçi filtri serverə gedir
+[desktop] › e2e\admin-level.spec.ts:66:3 › Admin XP/Level redaktəsi (Bənd 6) › admin user-edit modalında XP sahəsi + Lv önizləmə var
+[desktop] › e2e\responsive-audit.spec.ts:43:5 › Responsive audit (TASK-9) › admin — bütün ölçülərdə responsive
+[desktop] › e2e\responsive-audit.spec.ts:43:5 › Responsive audit (TASK-9) › teams — bütün ölçülərdə responsive
+[desktop] › e2e\security.spec.ts:53:3 › Təhlükə paneli UI (Bənd 1) › admin panelində render olunur, konsol təmizdir
+[desktop] › e2e\ux-phase.spec.ts:137:3 › Admin Geri al (Bənd 17) › "Geri al" mutasiyanı serverə göndərmir
+[desktop] › e2e\ux-phase.spec.ts:157:3 › Admin Geri al (Bənd 17) › geri alınmasa mutasiya commit olunur
+[mobile] › e2e\admin.spec.ts:115:3 › Admin paneli › #5 bulk blok/blokdan çıxarma işləyir
+[mobile] › e2e\admin.spec.ts:140:3 › Admin paneli › #5 admin özünü seçə bilmir
+[mobile] › e2e\admin.spec.ts:150:3 › Admin paneli › #6 jurnal terminal görünüşündə və səviyyəyə görə rənglidir
+[mobile] › e2e\admin.spec.ts:180:3 › Admin paneli › #6 səviyyə filtri serverdə işləyir
+[mobile] › e2e\admin.spec.ts:196:3 › Admin paneli › #6 jurnal kopyalanır
+[mobile] › e2e\admin.spec.ts:20:3 › Admin paneli › yüklənir, sıfır konsol xətası
+[mobile] › e2e\admin.spec.ts:207:3 › Admin paneli › #7 yüklənmə zamanı skeleton göstərilir
+[mobile] › e2e\admin.spec.ts:225:3 › Admin paneli › #8 xülasə kartlarında sparkline var
+[mobile] › e2e\admin.spec.ts:240:3 › Admin paneli › #10 istifadəçi siyahısı serverdən səhifələnir
+[mobile] › e2e\admin.spec.ts:257:3 › Admin paneli › #10 jurnal serverdən səhifələnir
+[mobile] › e2e\admin.spec.ts:272:3 › Admin paneli › #11 CSV ixracı düzgün başlıq və məzmunla gəlir
+[mobile] › e2e\admin.spec.ts:294:3 › Admin paneli › #11 jurnal CSV-si də işləyir
+[mobile] › e2e\admin.spec.ts:302:3 › Admin paneli › #11 CSV formula injection-dan qorunur
+[mobile] › e2e\admin.spec.ts:316:5 › Admin paneli › dark temasında admin toolbar oxunaqlıdır
+[mobile] › e2e\admin.spec.ts:316:5 › Admin paneli › light temasında admin toolbar oxunaqlıdır
+[mobile] › e2e\admin.spec.ts:316:5 › Admin paneli › matrix temasında admin toolbar oxunaqlıdır
+[mobile] › e2e\admin.spec.ts:71:3 › Admin paneli › #3 taksonomiya ↑/↓ ilə sıralanır və serverdə saxlanılır
+[mobile] › e2e\admin.spec.ts:98:3 › Admin paneli › #4 istifadəçi filtri serverə gedir
+[mobile] › e2e\admin-level.spec.ts:66:3 › Admin XP/Level redaktəsi (Bənd 6) › admin user-edit modalında XP sahəsi + Lv önizləmə var
+[mobile] › e2e\comments.spec.ts:102:3 › Rəylər (Bənd 8) › post detalında rəy thread UI mount olur
+[mobile] › e2e\comments.spec.ts:34:3 › Rəylər (Bənd 8) › thread + flatten + reaksiya + sort + redaktə + cascade sil
+[mobile] › e2e\messages.spec.ts:33:3 › Mesaj avatar+vaxt (Bənd 9) › otaq mesajı avatar + ad + vaxt ilə qrupda render olur
+[mobile] › e2e\presence.spec.ts:21:3 › Realtime presence (PresenceDO) › WS qoşulur və snapshot öz uid-ini daxil edir
+[mobile] › e2e\presence.spec.ts:44:3 › Realtime presence (PresenceDO) › eyni uid-in ikinci tabı "on"/"off" dublikatı yaratmır
+[mobile] › e2e\realtime.spec.ts:20:3 › Realtime otaq (RoomDO) › WS qoşulur, otağa mesaj → refresh broadcast gəlir
+[mobile] › e2e\realtime.spec.ts:49:3 › Realtime otaq (RoomDO) › typing broadcast göndərəni istisna edib başqalarına çatır
+[mobile] › e2e\realtime-dm.spec.ts:25:3 › Realtime DM + bildiriş fan-out › DM göndərişi alıcının soketinə dm + notif siqnalı çatdırır
+[mobile] › e2e\realtime-dm.spec.ts:90:3 › Realtime DM + bildiriş fan-out › göndərənin öz tabları da dm siqnalı alır (çox-tab sinxronu)
+[mobile] › e2e\security.spec.ts:113:3 › Bot qoruması UI (Bənd 7) › Turnstile aktivkən adi giriş axını pozulmur
+[mobile] › e2e\security.spec.ts:24:3 › Sessiya siyahısı UI (Bənd 3) › Parametrlərdə cihazlar render olunur, konsol təmizdir
+[mobile] › e2e\security.spec.ts:41:3 › Sessiya siyahısı UI (Bənd 3) › sessiya sətri üfüqi daşma yaratmır
+[mobile] › e2e\security.spec.ts:53:3 › Təhlükə paneli UI (Bənd 1) › admin panelində render olunur, konsol təmizdir
+[mobile] › e2e\teams.spec.ts:104:3 › Teams səhifəsi - TASK-11 E2E › komanda çatı işləyir (Chat Tab)
+[mobile] › e2e\teams.spec.ts:126:3 › Teams səhifəsi - TASK-11 E2E › komanda məlumatlarını yeniləmək mümkündür (Settings Tab)
+[mobile] › e2e\teams.spec.ts:155:3 › Teams səhifəsi - TASK-11 E2E › Feed tabı paylaşım qəbul edir və göstərir
+[mobile] › e2e\teams.spec.ts:172:3 › Teams səhifəsi - TASK-11 E2E › Files tabı açılır, kateqoriya filtrləri görünür
+[mobile] › e2e\teams.spec.ts:18:3 › Teams səhifəsi - TASK-11 E2E › yüklənir, sıfır konsol xətası və seed məlumatı göstərir
+[mobile] › e2e\teams.spec.ts:183:3 › Teams səhifəsi - TASK-11 E2E › Activity tabı hadisə tarixçəsini göstərir
+[mobile] › e2e\teams.spec.ts:193:3 › Teams səhifəsi - TASK-11 E2E › Statistics tabı metrikləri və reputasiyanı göstərir
+[mobile] › e2e\teams.spec.ts:204:3 › Teams səhifəsi - TASK-11 E2E › Dəvətlər tabı açılır və boş vəziyyəti göstərir
+[mobile] › e2e\teams.spec.ts:213:3 › Teams səhifəsi - TASK-11 E2E › Kəşf et tabı açıq komandaları göstərir
+[mobile] › e2e\teams.spec.ts:28:3 › Teams səhifəsi - TASK-11 E2E › komanda detallarına kliklədikdə düzgün açılır və tablar işləyir
+[mobile] › e2e\teams.spec.ts:51:3 › Teams səhifəsi - TASK-11 E2E › yeni layihə yaratmaq mümkündür (Projects Tab)
+[mobile] › e2e\teams.spec.ts:78:3 › Teams səhifəsi - TASK-11 E2E › yeni tapşırıq yaratmaq mümkündür (Tasks Tab)
+[mobile] › e2e\users.spec.ts:107:3 › İstifadəçilər səhifəsi › #4 Ctrl+K palitrası klaviatura ilə işləyir
+[mobile] › e2e\users.spec.ts:130:3 › İstifadəçilər səhifəsi › #4 Esc palitranı bağlayır və fokusu qaytarır
+[mobile] › e2e\users.spec.ts:141:3 › İstifadəçilər səhifəsi › #5 XP sıralaması azalan qaydadadır
+[mobile] › e2e\users.spec.ts:149:3 › İstifadəçilər səhifəsi › #5 əlifba sıralaması
+[mobile] › e2e\users.spec.ts:158:3 › İstifadəçilər səhifəsi › #5 son aktiv sıralaması
+[mobile] › e2e\users.spec.ts:166:3 › İstifadəçilər səhifəsi › #5 sıralama serverdən gəlir (D1 ORDER BY)
+[mobile] › e2e\users.spec.ts:174:3 › İstifadəçilər səhifəsi › #6 initial avatar rəngləri fərqli və kontrastlıdır
+[mobile] › e2e\users.spec.ts:200:3 › İstifadəçilər səhifəsi › skill filtri serverə ötürülür
+[mobile] › e2e\users.spec.ts:208:3 › İstifadəçilər səhifəsi › nəticə yoxdursa boş vəziyyət göstərilir
+[mobile] › e2e\users.spec.ts:33:3 › İstifadəçilər səhifəsi › yüklənir, sıfır konsol xətası
+[mobile] › e2e\users.spec.ts:42:3 › İstifadəçilər səhifəsi › #1 onlayn indikatoru presence ilə uzlaşır
+[mobile] › e2e\users.spec.ts:57:3 › İstifadəçilər səhifəsi › #2 kartlar bərabər hündürlükdə, "+N" popover açılır
+[mobile] › e2e\users.spec.ts:91:3 › İstifadəçilər səhifəsi › #3 grid/list keçidi yadda qalır
+[mobile] › e2e\ux-phase.spec.ts:21:3 › Markdown redaktoru (Bənd 16) › composer text blokunda toolbar var, konsol təmiz
+[mobile] › e2e\ux-phase.spec.ts:30:3 › Markdown redaktoru (Bənd 16) › toolbar seçili mətni markdown ilə əhatələyir
+[mobile] › e2e\ux-phase.spec.ts:40:3 › Markdown redaktoru (Bənd 16) › canlı önbaxış markdown-u render edir
+[mobile] › e2e\ux-phase.spec.ts:51:3 › Markdown redaktoru (Bənd 16) › önbaxış XSS-i icra etmir (DOMPurify)
+[mobile] › e2e\ux-phase.spec.ts:67:3 › Profil tamlığı (Bənd 6) › tamlıq indikatoru render olunur və faiz göstərir

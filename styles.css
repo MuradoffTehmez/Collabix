@@ -3161,6 +3161,37 @@ select.code-lang-sel.show {
   cursor: pointer;
 }
 
+/* "Daha köhnə mesajlar" zolağı — AUDIT-TASK-8 §8.4.
+   Mesaj qutusunun BAŞINDA durur; düymə, spinner, "başlanğıc" və xəta
+   vəziyyətlərinin hamısı eyni yerdə göstərilir ki, layout sıçramasın. */
+.hist-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 10px;
+  font-size: .82rem;
+  color: var(--muted);
+  text-align: center;
+}
+.hist-bar.done { opacity: .7; font-style: italic; }
+.hist-bar.err { color: var(--danger, #e5484d); }
+.hist-btn {
+  /* Toxunma hədəfi ≥ 44×44 — TASK-9 responsive auditinin (`e2e/audit-lib.ts`)
+     `touch-target` qaydası. Müstəqil düymədir, istisnaya düşmür. */
+  min-height: 44px;
+  min-width: 44px;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: .82rem;
+  cursor: pointer;
+}
+.hist-btn:hover { background: var(--surface-3, var(--surface-2)); }
+
 .chat-input {
   display: flex;
   gap: 8px;

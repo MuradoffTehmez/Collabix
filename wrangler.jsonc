@@ -69,24 +69,24 @@
     // (bax docs/TASK-8-SETUP.md → "Turnstile").
     "TURNSTILE_SITE_KEY": "0x4AAAAAAD6qIZOaina_as3U",
 
-    // Arxivləmə "isti pəncərəsi" (TASK-8 / Bənd 12): D1-də neçə günlük mesaj
-    // qalsın. Ondan köhnəsi gündəlik cron ilə R2-yə köçür və D1-dən silinir.
-    // Dəyəri artırmaq D1 həcmini artırır, azaltmaq köhnə mesajların oxunuşunu
-    // R2-yə (bir qədər yavaş) yönləndirir.
+    // Arxivləmə "isti pəncərəsi": 90 gündən köhnə otaq/DM mesajları gündəlik
+    // cron ilə R2-yə köçürülür və D1-dən silinir.
     //
-    // ⚠️ MÜVƏQQƏTİ DƏYƏR (AUDIT-TASK-1 / C-3) — 2026-07-27.
-    // Arxiv OXU yolu qurulmayıb, ona görə D1-dən SİLMƏ faktiki olaraq
-    // dayandırılıb (3650 gün ≈ 10 il → cutoff heç bir mesaja çatmır).
-    // `worker/archive.ts:127` → `readArchive()` yazılıb, amma HEÇ YERDƏN
-    // çağırılmır: nə API endpoint-i, nə UI düyməsi var. Yəni R2-yə köçürülüb
-    // D1-dən silinən mesajı məhsul daxilində bərpa etmək MÜMKÜN DEYİL
-    // (GDPR ixracı da yalnız D1-dən oxuyur).
+    // OXU YOLU (AUDIT-TASK-8 / C-3): mesajlar İTMİR —
+    //   GET /api/rooms/:id/messages?before=<ts>
+    //   GET /api/dms/:pair/messages?before=<ts>
+    // D1 bitəndə server ARXİVƏ keçir (`worker/archive.ts` → `readArchive`),
+    // UI-da "Daha köhnə mesajlar" düyməsi bunu çağırır, GDPR ixracı da
+    // arxivlənmiş mesajları əhatə edir.
     //
-    // AUDIT-TASK-8 (arxiv oxu endpoint-ləri + UI + ixraca daxil etmə)
-    // tamamlandıqdan sonra bu dəyər "90"-a QAYTARILMALIDIR.
-    // Qaytarılmadan buraxılış = `room_messages`/`dm_messages` cədvəllərinin
-    // sonsuz böyüməsi + D1 storage limitinə dəymə riski.
-    "ARCHIVE_HOT_DAYS": "3650"
+    // ⚠️ TASK 7 SƏRHƏDİ: arxiv SERVER TƏRƏFDƏ oxunur; `/files/archive/…`
+    // `canReadKey`-də admin ilə bağlı qalır və AÇILMAMALIDIR.
+    //
+    // ⚠️ Dəyəri ARTIRMAQ D1 storage xərcini artırır; AZALTMAQ isə istifadəçi
+    // üçün "daha köhnə" yükləmələrini bahalaşdırır (hər səhifə R2 sorğusu +
+    // gzip açılması — ölçmə: tipik 4,4 ms, ən pis 54,6 ms CPU, bax
+    // AUDIT-TASK-8-REPORT.md §2).
+    "ARCHIVE_HOT_DAYS": "90"
   },
 
   "observability": {

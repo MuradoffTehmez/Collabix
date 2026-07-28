@@ -425,6 +425,15 @@ export const RL = {
   // R2 statik asset axını (`/files/*`). Bir feed səhifəsi 20+ obyekt çəkir;
   // `read` səbətinə salınsaydı normal gəzinti bir neçə səhifədən sonra kəsilərdi.
   asset:    { limit: 1200, windowSec: 60,   critical: false, key: 'auto' },
+  // Arxivdən oxu (AUDIT-TASK-8 §8.1). `read` səbətindən AYRIDIR, çünki xərci
+  // tamam başqadır: hər sorğu R2-dən obyekt çəkib gzip açır (ölçüldü: tipik
+  // 4,4 ms, ən pis 54,6 ms CPU + R2 sorğu haqqı), halbuki `read` sadəcə D1-ə
+  // dəyir. ⚠ Bu səbət YALNIZ arxiv yolu FAKTİKİ olaraq işə düşəndə sayılır —
+  // adi mesaj oxusu (`before` yoxdur və ya D1 kifayət edir) ona toxunmur, əks
+  // halda normal söhbət polling-i istifadəçini kəsərdi.
+  // 120/saat: 120 mesajlıq səhifə ilə saatda ~14 400 mesaj geri getmək olar —
+  // real vərəqləmə üçün bol, avtomatlaşdırılmış kütləvi çəkmə üçün dar.
+  archive:  { limit: 120,  windowSec: 3600, critical: false, key: 'auto' },
 } satisfies Record<string, RateBucketCfg>;
 
 export type RateBucket = keyof typeof RL;

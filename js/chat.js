@@ -1,7 +1,9 @@
 // Otaqlar (ümumi + mövzu otaqları): real-time mesajlar, redaktə/silmə.
 import {
   state, watchRooms, watchRoomMessages, sendRoomMessage, editRoomMessage, deleteRoomMessage, deleteRoom,
+  fetchOlderRoomMessages,
 } from './store.js';
+import { createHistory, historyBar, loadOlder } from './history.js';
 import { el, clear, fmtTime, emit } from './util.js';
 import { toast, confirmDialog, showModal, closeModal, emptyState } from './ui.js';
 import { openProfileModal } from './users.js';
@@ -216,11 +218,20 @@ function selectRoom(roomId, openDetail = false){
   if(tp) tp.classList.remove('show');           // otaq dəyişdi → köhnə typing gizlət
   connectRoomWs(roomId);                          // realtime siqnal kanalı
   if(unsubMsgs) unsubMsgs();
-  unsubMsgs = watchRoomMessages(roomId, msgs => {
-    const wasAtBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
+
+  // AUDIT-TASK-8 §8.4 — arxiv tarixçəsi. `hist` HƏR otaq seçimində sıfırlanır:
+  // əvvəlki otağın köhnə mesajları yenisinə sızmamalıdır.
+  const hist = createHistory();
+  let liveMsgs = [];
+
+  const paint = () => {
     clear(box);
-    if(!msgs.length){ box.append(emptyState('#', t('chat.empty_chat'))); return; }
-    renderGroupedMessages(box, msgs, {
+    // Zolaq HƏMİŞƏ qutunun başındadır: "daha köhnə" düyməsi, spinner,
+    // "söhbətin başlanğıcı" və ya xəta — dördü də eyni yerdə.
+    box.append(historyBar(hist, doLoad));
+    const all = [...hist.older, ...liveMsgs];
+    if(!all.length){ box.append(emptyState('#', t('chat.empty_chat'))); return; }
+    renderGroupedMessages(box, all, {
       uidOf: m => m.authorUid,
       mineOf: m => m.authorUid === state.authUser.uid,
       userOf: m => state.users.get(m.authorUid),
@@ -228,6 +239,20 @@ function selectRoom(roomId, openDetail = false){
       onName: uid => openProfileModal(uid),
       bubbleOf: m => msgBubble(m),
     });
+  };
+  const doLoad = () => loadOlder(hist, box, ts => fetchOlderRoomMessages(roomId, ts), paint);
+
+  unsubMsgs = watchRoomMessages(roomId, (msgs, meta) => {
+    const wasAtBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
+    liveMsgs = msgs;
+    // Kursor mənbəyi: canlı səhifənin ƏN KÖHNƏ mesajı (siyahı ASC gəlir).
+    hist.liveOldestTs = msgs.length ? msgs[0].createdAt : null;
+    // Server ilk səhifədə "daha köhnəsi yoxdur" deyirsə düyməni gizlət —
+    // istifadəçi mövcud olmayan tarixçəni axtarmasın.
+    if(!hist.older.length && meta && meta.hasMore === false) hist.hasMore = false;
+    paint();
+    // Avtomatik dibə sürüşmə YALNIZ istifadəçi onsuz da dibdə idisə —
+    // köhnə mesaj oxuyarkən yeni mesaj gəlsə yeri itirməsin.
     if(wasAtBottom) box.scrollTop = box.scrollHeight;
   });
 }

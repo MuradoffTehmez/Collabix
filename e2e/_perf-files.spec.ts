@@ -18,7 +18,7 @@ test.use({ storageState: AUTH_FILE });
 const PNG_B64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 
-async function uploadPng(page: Page, query: string, name: string) {
+async function uploadPng(page: Page, query: string, name: string): Promise<{ status: number; body: any }> {
   return page.evaluate(async ([q, b64, fname]) => {
     const bin = atob(b64 as string);
     const bytes = new Uint8Array(bin.length);

@@ -1,8 +1,9 @@
 // Şəxsi mesajlar: thread siyahısı, real-time mesajlar, redaktə/silmə, unread badge.
 import {
   state, watchThreads, watchDMMessages, sendDM, editDM, deleteDM,
-  markThreadRead, pairIdFor,
+  markThreadRead, pairIdFor, fetchOlderDMMessages,
 } from './store.js';
+import { createHistory, historyBar, loadOlder } from './history.js';
 import { el, clear, avatarNode, nameWithBadge, fmtTime, tsToMillis, isOnline, lastSeenText, bus, emit } from './util.js';
 import { toast, confirmDialog, showModal, closeModal, emptyState } from './ui.js';
 import { openProfileModal } from './users.js';
@@ -128,11 +129,18 @@ function selectPeer(uid, openDetail = false){  // openDetail: yalnız klikdən (
   const box = document.getElementById('dmMessages');
   clear(box);
   if(unsubMsgs) unsubMsgs();
-  unsubMsgs = watchDMMessages(pairId, msgs => {
-    const wasAtBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
+
+  // AUDIT-TASK-8 §8.4 — arxiv tarixçəsi (chat.js ilə EYNİ modul, `js/history.js`).
+  // Hər söhbət seçimində sıfırlanır ki, əvvəlki söhbətin mesajları sızmasın.
+  const hist = createHistory();
+  let liveMsgs = [];
+
+  const paint = () => {
     clear(box);
-    if(!msgs.length){ box.append(emptyState('✉', t('chat.empty_dm_msgs'))); }
-    else renderGroupedMessages(box, msgs, {
+    box.append(historyBar(hist, doLoad));
+    const all = [...hist.older, ...liveMsgs];
+    if(!all.length){ box.append(emptyState('✉', t('chat.empty_dm_msgs'))); return; }
+    renderGroupedMessages(box, all, {
       uidOf: m => m.fromUid,
       mineOf: m => m.fromUid === state.authUser.uid,
       userOf: m => state.users.get(m.fromUid),
@@ -140,6 +148,15 @@ function selectPeer(uid, openDetail = false){  // openDetail: yalnız klikdən (
       onName: uid => openProfileModal(uid),
       bubbleOf: m => msgBubble(m, pairId),
     });
+  };
+  const doLoad = () => loadOlder(hist, box, ts => fetchOlderDMMessages(pairId, ts), paint);
+
+  unsubMsgs = watchDMMessages(pairId, (msgs, meta) => {
+    const wasAtBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
+    liveMsgs = msgs;
+    hist.liveOldestTs = msgs.length ? msgs[0].createdAt : null;
+    if(!hist.older.length && meta && meta.hasMore === false) hist.hasMore = false;
+    paint();
     if(wasAtBottom) box.scrollTop = box.scrollHeight;
     markThreadRead(pairId).catch(() => {});
   });

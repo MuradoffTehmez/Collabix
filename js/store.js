@@ -284,13 +284,23 @@ export async function deleteRoom(roomId){
   await api('/rooms/' + roomId, { method: 'DELETE' });
   emit('refresh-rooms');
 }
+// `cb(messages, meta)` — `meta.hasMore` arxivdə/D1-də daha köhnə mesajın olub
+// olmadığını bildirir (AUDIT-TASK-8 §8.1). Köhnə çağırış forması pozulmur:
+// ikinci arqument əlavədir, ona baxmayan çağıranlar əvvəlki kimi işləyir.
 export function watchRoomMessages(roomId, cb){
   return startPoll({
     fetcher: () => api(`/rooms/${roomId}/messages`),
     interval: 3000,
     events: ['refresh-msgs-' + roomId],
-    onData: d => cb(d.messages),
+    onData: d => cb(d.messages, d),
   });
+}
+
+// Bir səhifə KÖHNƏ otaq mesajı — D1 bitəndə server arxivə keçir (§8.1).
+// `beforeTs` yoxdursa server ən son səhifəni qaytarır.
+export function fetchOlderRoomMessages(roomId, beforeTs){
+  const q = beforeTs ? `?before=${encodeURIComponent(beforeTs)}` : '';
+  return api(`/rooms/${roomId}/messages${q}`);
 }
 export async function sendRoomMessage(roomId, payload){
   const body = typeof payload === 'string' ? { type: 'text', text: payload } : payload;
@@ -322,8 +332,14 @@ export function watchDMMessages(pairId, cb){
     fetcher: () => api(`/dms/${pairId}/messages`),
     interval: 3000,
     events: ['refresh-dm-' + pairId],
-    onData: d => cb(d.messages),
+    onData: d => cb(d.messages, d),
   });
+}
+
+// Bir səhifə KÖHNƏ DM mesajı — otaq variantı ilə eyni müqavilə (§8.2).
+export function fetchOlderDMMessages(pairId, beforeTs){
+  const q = beforeTs ? `?before=${encodeURIComponent(beforeTs)}` : '';
+  return api(`/dms/${pairId}/messages${q}`);
 }
 export async function sendDM(toUid, payload){
   const body = typeof payload === 'string' ? { type: 'text', text: payload } : payload;

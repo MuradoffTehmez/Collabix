@@ -126,7 +126,7 @@ Collabix — **независимый проект одного человека
   },
 
   privacy: {
-    az: `*Son yenilənmə: 2026-07-19*
+    az: `*Son yenilənmə: 2026-07-28*
 
 ## 1. Kim məsuliyyət daşıyır?
 
@@ -148,11 +148,15 @@ Xidmətin göstərilməsi (profil, feed, mesajlaşma), təhlükəsizlik və mode
 
 Hesab aktiv olduğu müddətdə saxlanılır. Hesab silindikdə profil, istifadəçi adı, bildirişlər və avatar avtomatik silinir; icma məzmunu (postlar/şərhlər) siz silməyincə qala bilər.
 
+**Mesaj arxivi.** Otaq və şəxsi mesajlar **90 gündən** sonra əsas bazadan sıxılmış arxiv anbarına köçürülür. Bu, **silinmə deyil**: arxivlənmiş mesajlar sizin üçün əlçatan qalır — söhbətdə «Daha köhnə mesajlar» düyməsi ilə oxunur və data ixracınıza daxil edilir.
+
+**Hesab silindikdə arxiv.** Silinmə anından etibarən mesajlarınız arxiv oxunuşunda **dərhal gizlədilir** və heç kimə göstərilmir; arxiv fayllarından **fiziki silinmə** isə gündəlik təmizlik işi ilə, adətən 24 saat ərzində tamamlanır.
+
 ## 5. Hüquqlarınız
 
 - **Giriş və düzəliş** — profil redaktoru vasitəsilə istənilən vaxt;
 - **Silinmə** — Parametrlər → Hesabı sil (tam təmizləmə ilə);
-- **Data ixracı** — öz məlumatlarınızı JSON formatında əldə etmək üçün bizə müraciət edin;
+- **Data ixracı** — Parametrlər bölməsindən **özünüz** endirirsiniz (JSON və ya CSV); ixraca profil, postlar, şərhlər, mesajlar (arxivlənmişlər daxil), komanda üzvlükləri və əlaqə müraciətləriniz daxildir;
 - **Şikayət** — ${SITE.email} və ya səlahiyyətli orqana müraciət.
 
 Texniki qeyd: sui-istifadənin qarşısını almaq üçün data ixracı sorğusu saatda məhdud sayda emal olunur; limit aşıldıqda bir müddət sonra yenidən cəhd edə bilərsiniz.
@@ -162,7 +166,7 @@ GDPR prinsipləri və Azərbaycan Respublikasının "Fərdi məlumatlar haqqınd
 ## 6. Uşaqlar
 
 Platforma **yalnız 18+** istifadəçilər üçündür; qeydiyyatda yaş yoxlanılır.`,
-    en: `*Last updated: 2026-07-19*
+    en: `*Last updated: 2026-07-28*
 
 ## 1. Who is responsible?
 
@@ -184,14 +188,18 @@ To provide the service (profile, feed, messaging), for safety and moderation, co
 
 Data is kept while your account is active. On account deletion, your profile, username, notifications and avatar are removed automatically; community content may remain until you delete it.
 
+**Message archive.** Room and direct messages are moved to compressed archive storage after **90 days**. This is **not deletion**: archived messages remain available to you — they load in the conversation via “Load older messages” and are included in your data export.
+
+**Archive on account deletion.** From the moment of deletion your messages are **immediately hidden** from archive reads and shown to no one; **physical removal** from the archive files is completed by the daily maintenance job, normally within 24 hours.
+
 ## 5. Your rights
 
-Access & correction (profile editor), deletion (Settings → Delete account), data export (contact us for a JSON export), complaint (${SITE.email} or your supervisory authority). Technical note: to prevent abuse, data-export requests are processed a limited number of times per hour; if the limit is reached, please retry later. GDPR principles and the Azerbaijani Law "On Personal Data" are respected. Jurisdiction: **${SITE.jurisdiction}**.
+Access & correction (profile editor), deletion (Settings → Delete account), data export — you download it **yourself** from Settings (JSON or CSV), covering your profile, posts, comments, messages (including archived ones), team memberships and contact requests — complaint (${SITE.email} or your supervisory authority). Technical note: to prevent abuse, data-export requests are processed a limited number of times per hour; if the limit is reached, please retry later. GDPR principles and the Azerbaijani Law "On Personal Data" are respected. Jurisdiction: **${SITE.jurisdiction}**.
 
 ## 6. Children
 
 The platform is **18+ only**; age is verified at registration.`,
-    ru: `*Обновлено: 2026-07-19*
+    ru: `*Обновлено: 2026-07-28*
 
 ## 1. Ответственный
 
@@ -213,9 +221,13 @@ The platform is **18+ only**; age is verified at registration.`,
 
 Пока аккаунт активен. При удалении аккаунта профиль, имя пользователя, уведомления и аватар удаляются автоматически.
 
+**Архив сообщений.** Сообщения в комнатах и личные сообщения переносятся в сжатое архивное хранилище через **90 дней**. Это **не удаление**: архивные сообщения остаются доступны вам — они загружаются в беседе кнопкой «Загрузить старые сообщения» и включаются в экспорт данных.
+
+**Архив при удалении аккаунта.** С момента удаления ваши сообщения **сразу скрываются** при чтении архива и никому не показываются; **физическое удаление** из архивных файлов выполняет ежедневная служебная задача, как правило в течение 24 часов.
+
 ## 5. Ваши права
 
-Доступ и исправление (редактор профиля), удаление (Настройки → Удалить аккаунт), экспорт данных (по запросу), жалоба (${SITE.email}). Техническое примечание: во избежание злоупотреблений запросы на экспорт данных обрабатываются ограниченное число раз в час; при достижении лимита повторите попытку позже. Учитываются принципы GDPR и закон АР «О персональных данных». Юрисдикция: **${SITE.jurisdiction}**.
+Доступ и исправление (редактор профиля), удаление (Настройки → Удалить аккаунт), экспорт данных — вы скачиваете его **самостоятельно** в Настройках (JSON или CSV); в него входят профиль, посты, комментарии, сообщения (включая архивные), участие в командах и ваши обращения — жалоба (${SITE.email}). Техническое примечание: во избежание злоупотреблений запросы на экспорт данных обрабатываются ограниченное число раз в час; при достижении лимита повторите попытку позже. Учитываются принципы GDPR и закон АР «О персональных данных». Юрисдикция: **${SITE.jurisdiction}**.
 
 ## 6. Дети
 

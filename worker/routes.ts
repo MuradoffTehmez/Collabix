@@ -21,11 +21,12 @@ import {
   STATE_COOKIE, authorizeUrl, exchangeCode, fetchProfile, resolveAccount,
   createPending, readPending, consumePending, suggestUsername,
 } from './oauth';
-import { readCookie } from './auth';
+import { readCookie, rateLimit } from './auth';
 import { emailEnabled, sendEmail, magicLinkMail, mailLang } from './email';
 import { QueueService } from './services/queue';
 import { sanitizeMsg } from './msg';
 import { canReadKey, lazyAdminCheck, shouldLogDenial, CACHE_HEADER } from './files-auth';
+import { readArchive, deletedUidSet, markUidDeleted, exportArchivedMessages } from './archive';
 import {
   generateSecret, otpauthUri, verifyTotp, generateBackupCodes,
   hashBackupCode, mfaEnabled,
@@ -497,6 +498,14 @@ export async function deleteAccount(c: Ctx) {
     D(c).prepare('UPDATE security_events SET uid = NULL, username = \'\' WHERE uid = ?').bind(u.id),
     D(c).prepare('DELETE FROM users WHERE id = ?').bind(u.id),
   ]);
+  // AUDIT-TASK-8 §8.6 — GDPR Art. 17 (unudulmaq hüququ) arxiv üçün.
+  //
+  // ⚠ Yuxarıdakı batch `room_messages`/`dm_messages` sətirlərinə TOXUNMUR
+  // (mövcud davranış: söhbətin qarşı tərəfi öz tarixçəsini itirməsin), və
+  // arxivlənmiş mesajlar onsuz da R2-də gzip içindədir. Tombstone hər iki halı
+  // örtür: arxiv oxu yolu bu uid-in mesajlarını DƏRHAL filtrləyir, gecə cron-u
+  // isə dump-ları yenidən yazıb onları FİZİKİ silir (archive.ts).
+  await markUidDeleted(c.env, u.id);
   await destroyAllSessions(c.env, u.id);
   return withCookies(json({ ok: true }), clearCookies());
 }
@@ -1258,14 +1267,177 @@ export async function guardTeamRoom(c: Ctx, roomId: string): Promise<Response | 
   return member ? null : err('Bu otaq komandaya aiddir — üzv deyilsiniz.', 403, 'forbidden');
 }
 
+/* ---------- D1 + arxiv birləşdirilmiş mesaj oxusu (AUDIT-TASK-8 §8.1/§8.2) ---------- */
+
+const MSG_PAGE_DEFAULT = 120;
+const MSG_PAGE_MAX = 200;
+
+const pageSize = (c: Ctx, dflt = MSG_PAGE_DEFAULT) => {
+  const n = parseInt(c.url.searchParams.get('limit') || '', 10);
+  return Number.isFinite(n) && n > 0 ? Math.min(n, MSG_PAGE_MAX) : dflt;
+};
+/** `?before=<ms>` — keyset paginasiya kursoru. Yoxdursa "ən son səhifə". */
+const beforeCursor = (c: Ctx): number | null => {
+  const raw = c.url.searchParams.get('before');
+  if (!raw) return null;
+  const n = parseInt(raw, 10);
+  return Number.isFinite(n) && n > 0 ? n : null;
+};
+
+/**
+ * Mesaj səhifəsini D1-dən, çatmazsa arxivdən oxuyur — AUDIT C-3.
+ *
+ * ⚠ NİYƏ BU FUNKSİYA VAR: `readArchive()` Task 8-ə qədər yazılmışdı, lakin
+ * HEÇ YERDƏN ÇAĞIRILMIRDI. Yəni `ARCHIVE_HOT_DAYS` geri qaytarılan kimi
+ * istifadəçilər 90 gündən köhnə tarixçəni İTİRMİŞ görəcəkdilər — data R2-də
+ * qalır, məhsul vasitəsilə isə bərpa edilə bilmirdi.
+ *
+ * ⚠ TASK 7 SƏRHƏDİ: arxiv SERVER TƏRƏFDƏ oxunur və R2 açarı cavaba DÜŞMÜR.
+ * `/files/archive/…` `canReadKey`-də admin ilə bağlı qalır (files-auth.ts).
+ *
+ * ⚠ AVTORİZASİYA ÇAĞIRAN TƏRƏFDƏDİR və arxivə müraciətdən ƏVVƏL edilmiş olmalıdır.
+ *
+ * Axın: D1 (n+1) → az gəlibsə arxiv (qalan+1) → birləşdir → dedupe → sırala → kəs.
+ */
+async function readMessagePage(
+  c: Ctx,
+  opts: {
+    kind: 'room' | 'dm';
+    scopeId: string;
+    limit: number;
+    before: number | null;
+    /** D1 sorğusu — `before` tətbiq olunmuş halda. */
+    sql: string;
+    binds: unknown[];
+    map: (r: any) => any;
+  },
+): Promise<{ messages: any[]; hasMore: boolean; source: string; failed: boolean } | Response> {
+  const { kind, scopeId, limit, before } = opts;
+  // Bir artıq çəkirik: "daha köhnəsi varmı?" sualına ƏLAVƏ sorğu olmadan cavab.
+  const probe = limit + 1;
+
+  const live = await D(c).prepare(opts.sql).bind(...opts.binds, probe).all<any>();
+  const liveRows = live.results;
+
+  let archived: any[] = [];
+  let failed = false;
+  let usedArchive = false;
+
+  // Arxiv kursoru: D1-in ƏN KÖHNƏ sətrindən geri. D1 boşdursa `before`
+  // (yoxdursa "indi") götürülür.
+  const oldestLive = liveRows.length ? Number(liveRows[liveRows.length - 1].created_at) : null;
+  const cursor = oldestLive ?? before ?? Date.now();
+
+  // D1 səhifəni doldura bilmədisə arxivdə davamı ola bilər.
+  let archiveHasMore = false;
+  if (liveRows.length < probe) {
+    // ⚠ ƏVVƏLCƏ UCUZ YOXLAMA: bu scope üçün ümumiyyətlə arxiv varmı?
+    // İndeksli D1 sorğusudur (`idx_archives_scope`) — nə R2-yə dəyir,
+    // nə də rate limit yeyir.
+    archiveHasMore = !!(await D(c).prepare(
+      'SELECT 1 AS x FROM message_archives WHERE kind = ? AND scope_id = ? AND from_ts < ? LIMIT 1',
+    ).bind(kind, scopeId, cursor).first<any>());
+  }
+
+  // 🔴 ARXİVƏ YALNIZ AÇIQ `before` İLƏ GEDİLİR.
+  //
+  // Əvvəlki versiya `liveRows.length < probe` şərti ilə kifayətlənirdi və bu,
+  // ciddi qüsur idi: az mesajlı otaqda (D1-də `limit`-dən az sətir) HƏR 3
+  // saniyəlik poll arxiv yoluna girirdi. Nəticə — hər poll bir R2 sorğusu +
+  // gzip açılması, üstəlik `archive` səbəti (120/saat) 6 dəqiqəyə dolur və
+  // istifadəçi ADİ söhbətdə 429 alırdı.
+  //
+  // İndi: ən son səhifə (`before` yoxdur) TAM ucuzdur — yalnız D1. Arxivin
+  // mövcudluğu `hasMore` ilə bildirilir, client "Daha köhnə mesajlar"a
+  // basanda `before` göndərir və məhz onda arxiv oxunur.
+  if (archiveHasMore && before !== null) {
+    // Arxiv oxusu bahalıdır (R2 sorğusu + gzip) → ayrıca səbət. Adi mesaj
+    // oxusu (bu budağa girməyən) `read` səbətində qalır və toxunulmur.
+    const rl = await rateLimit(c.env, c.req, 'archive', c.user!.id);
+    if (!rl.ok) {
+      const res = err('Arxivdən oxu limiti aşıldı.', 429, 'rate_limited');
+      res.headers.set('Retry-After', String(rl.retryAfter));
+      return res;
+    }
+    usedArchive = true;
+    const need = probe - liveRows.length;
+    const res = await readArchive(c.env, kind, scopeId, cursor, need, {
+      // §8.6 — silinmiş hesabın mesajları oxu yolunda görünmür (GDPR Art. 17).
+      excludeUids: await deletedUidSet(c.env),
+    });
+    archived = res.messages;
+    failed = res.failed;
+  }
+
+  // ⚠ DEDUPE MƏCBURİDİR: cron R2-yə yazıb D1 silməsi yarımçıq qalarsa eyni
+  // mesaj hər iki mənbədə olur (`archive.ts` qəsdən əvvəl R2-yə yazır — əks
+  // sıra data itkisi riski yaradardı). Dublikat UI-da ikiqat mesaj göstərərdi.
+  const seen = new Set<string>();
+  const merged: any[] = [];
+  for (const r of [...liveRows, ...archived]) {
+    const id = String(r.id);
+    if (seen.has(id)) continue;
+    seen.add(id);
+    merged.push(r);
+  }
+  merged.sort((a, b) => Number(b.created_at) - Number(a.created_at));
+
+  // `hasMore`: ya əlimizdə artıq sətir var, ya da arxivdə davamı var.
+  // İkinci şərt ən son səhifə üçün vacibdir — orada arxivə getmirik, lakin
+  // "Daha köhnə mesajlar" düyməsi göstərilməlidir.
+  let hasMore = merged.length > limit || (archiveHasMore && !usedArchive);
+  const page = merged.slice(0, limit);
+
+  // ⚠ KƏNAR HAL: `readArchive` bir sorğuda ən çoxu 3 obyekt açır (yaddaş
+  // qorunması). Həmin 3 obyekt səhifəni doldura bilməsə, DAHA KÖHNƏ 4-cü
+  // obyekt hələ də mövcud ola bilər — bu halda `hasMore: false` demək
+  // tarixçəni səhvən kəsərdi. Ucuz, indeksli yoxlama ilə təsdiqləyirik.
+  if (usedArchive && !hasMore && page.length) {
+    const oldest = Number(page[page.length - 1].created_at);
+    hasMore = !!(await D(c).prepare(
+      'SELECT 1 AS x FROM message_archives WHERE kind = ? AND scope_id = ? AND from_ts < ? LIMIT 1',
+    ).bind(kind, scopeId, oldest).first<any>());
+  }
+
+  // Boşluq diaqnostikası: arxivə getdik, lakin heç nə tapmadıq və D1 də
+  // dolmadı → ya həqiqətən söhbətin başlanğıcıdır, ya da cron D1-dən silib
+  // R2-yə yazmayıb. İkincisi data itkisidir və SÜKUTLA keçməməlidir (§8.1).
+  if (usedArchive && !failed && !archived.length && liveRows.length < limit) {
+    console.log('arxiv boşluğu?', JSON.stringify({
+      kind, scope: scopeId, live: liveRows.length, limit,
+    }));
+  }
+
+  return {
+    // Client ASC gözləyir (mövcud davranış) — sıra dəyişdirilmir.
+    messages: page.slice().reverse().map(opts.map),
+    hasMore,
+    // ⚠ YALNIZ diaqnostika/telemetriya üçün. Client məntiqi buna GÜVƏNMƏSİN —
+    // sərhəd səhifəsi hər iki mənbədən gəlir və dəyər 'mixed' olur.
+    source: !usedArchive ? 'live' : (liveRows.length ? 'mixed' : 'archive'),
+    failed,
+  };
+}
+
 export async function roomMessages(c: Ctx, roomId: string) {
   const denied = await guardTeamRoom(c, roomId);
   if (denied) return denied;
 
-  const rows = await D(c).prepare(
-    'SELECT * FROM (SELECT * FROM room_messages WHERE room_id = ? ORDER BY created_at DESC LIMIT 120) ORDER BY created_at ASC',
-  ).bind(roomId).all<any>();
-  return json({ messages: rows.results.map(r => mapMsg(r)) });
+  const limit = pageSize(c);
+  const before = beforeCursor(c);
+  const res = await readMessagePage(c, {
+    kind: 'room', scopeId: roomId, limit, before,
+    sql: before
+      ? 'SELECT * FROM room_messages WHERE room_id = ? AND created_at < ? ORDER BY created_at DESC LIMIT ?'
+      : 'SELECT * FROM room_messages WHERE room_id = ? ORDER BY created_at DESC LIMIT ?',
+    binds: before ? [roomId, before] : [roomId],
+    map: r => mapMsg(r),
+  });
+  if (res instanceof Response) return res;
+  // §5.3 — R2 xətası "boş"dan AYRILIR: boş qaytarsaydıq UI "söhbətin
+  // başlanğıcı" göstərər və istifadəçi datanın itdiyini düşünərdi.
+  if (res.failed) return err('Arxiv oxunmadı, yenidən cəhd edin.', 502, 'archive_unavailable');
+  return json({ messages: res.messages, hasMore: res.hasMore, source: res.source });
 }
 export async function sendRoomMessage(c: Ctx, roomId: string) {
   const denied = await guardTeamRoom(c, roomId);
@@ -1320,11 +1492,25 @@ export async function listThreads(c: Ctx) {
 }
 
 export async function dmMessages(c: Ctx, pairId: string) {
+  // ⚠ AVTORİZASİYA ARXİVDƏN ƏVVƏL. `pairId` `pairIdFor()` ilə normallaşdırılmış
+  // `min_max` cütlüyüdür; iştirakçı olmayan onu təxmin etsə belə keçə bilməz.
   if (!pairId.split('_').includes(c.user!.id)) return err('İcazə yoxdur.', 403, 'forbidden');
-  const rows = await D(c).prepare(
-    'SELECT * FROM (SELECT * FROM dm_messages WHERE pair_id = ? ORDER BY created_at DESC LIMIT 150) ORDER BY created_at ASC',
-  ).bind(pairId).all<any>();
-  return json({ messages: rows.results.map(r => mapMsg(r, true)) });
+
+  const limit = pageSize(c, 150);
+  const before = beforeCursor(c);
+  const res = await readMessagePage(c, {
+    kind: 'dm', scopeId: pairId, limit, before,
+    sql: before
+      ? 'SELECT * FROM dm_messages WHERE pair_id = ? AND created_at < ? ORDER BY created_at DESC LIMIT ?'
+      : 'SELECT * FROM dm_messages WHERE pair_id = ? ORDER BY created_at DESC LIMIT ?',
+    binds: before ? [pairId, before] : [pairId],
+    // Bloklanmış istifadəçi siyasəti: mövcud `dmMessages` davranışı TƏKRARLANIR
+    // (DM iki nəfərlik söhbətdir və filtr yox idi) — yenisi icad edilmir.
+    map: r => mapMsg(r, true),
+  });
+  if (res instanceof Response) return res;
+  if (res.failed) return err('Arxiv oxunmadı, yenidən cəhd edin.', 502, 'archive_unavailable');
+  return json({ messages: res.messages, hasMore: res.hasMore, source: res.source });
 }
 
 export async function sendDM(c: Ctx, toUid: string) {
@@ -2143,6 +2329,54 @@ const EXPORT_SECTIONS: Array<{ name: string; sql: string; binds: (uid: string) =
   { name: 'sessions', sql: 'SELECT id, ua, ip, city, country, created_at, last_seen, revoked FROM sessions WHERE uid = ?', binds: u => [u] },
   { name: 'oauth_accounts', sql: 'SELECT provider, login, email, linked_at FROM oauth_accounts WHERE uid = ?', binds: u => [u] },
   { name: 'reports_filed', sql: 'SELECT * FROM reports WHERE reporter_id = ?', binds: u => [u] },
+
+  // ── AUDIT-TASK-8 §8.5 — hüquqi risk #13: ixrac natamam idi ──
+  //
+  // ⚠ HƏR SORĞU YALNIZ İSTİFADƏÇİNİN ÖZ SƏTİRLƏRİNİ QAYTARIR. Komanda
+  // cədvəlləri başqa üzvlərin datasını da daşıyır (`team_posts` bütün
+  // komandanın feed-idir) — filtrsiz ixrac GDPR sənədini data sızmasına
+  // çevirərdi: istifadəçi öz faylında başqalarının yazılarını alardı.
+  //
+  // `contact_messages`-də `uid` sütunu YOXDUR (yalnız `email`), ona görə
+  // uyğunluq istifadəçinin qeydiyyat VƏ əlaqə e-poçtu üzrə qurulur.
+  // Alt-sorğu işlədilir ki, bölmə imzası (`binds: uid`) dəyişməsin.
+  {
+    name: 'contact_messages',
+    sql: `SELECT * FROM contact_messages
+           WHERE lower(email) IN (SELECT lower(email) FROM users WHERE id = ?1)
+              OR lower(email) IN (SELECT lower(contact_email) FROM users WHERE id = ?1)
+           ORDER BY created_at`,
+    binds: u => [u],
+  },
+  {
+    name: 'team_memberships',
+    sql: `SELECT m.id, m.team_id, t.name AS team_name, m.role_id, r.name AS role_name,
+                 m.status, m.joined_at
+            FROM team_members m
+            LEFT JOIN teams t ON t.id = m.team_id
+            LEFT JOIN team_roles r ON r.id = m.role_id
+           WHERE m.user_id = ? ORDER BY m.joined_at`,
+    binds: u => [u],
+  },
+  {
+    // Yalnız İSTİFADƏÇİYƏ TƏYİN EDİLMİŞ tapşırıqlar — `team_tasks`-də
+    // `created_by` sütunu yoxdur, müəlliflik saxlanılmır.
+    name: 'team_tasks_assigned',
+    sql: `SELECT * FROM team_tasks WHERE assignee_id = ? ORDER BY created_at`,
+    binds: u => [u],
+  },
+  {
+    name: 'team_posts',
+    sql: 'SELECT * FROM team_posts WHERE author_id = ? ORDER BY created_at',
+    binds: u => [u],
+  },
+  {
+    // Fayl METADATASI — məzmun DEYİL. Fayl baytları R2-dədir və ixraca
+    // qoyulsaydı fayl həcmi ixracı praktiki olaraq yararsız edərdi.
+    name: 'team_files',
+    sql: 'SELECT * FROM team_files WHERE uploaded_by = ? ORDER BY created_at',
+    binds: u => [u],
+  },
 ];
 
 // Parol heşi və TOTP sirri ixracdan ÇIXARILIR: onlar istifadəçinin "şəxsi
@@ -2190,16 +2424,40 @@ export async function exportMyData(c: Ctx) {
             await write(csvRow(cols.map(k => clean[k])));
           }
         }
+        // AUDIT-TASK-8 §8.5 — arxivlənmiş mesajlar (mənbə: R2, D1 deyil).
+        // ⚠ `csvRow` EYNİ funksiyadır → formula-injection qoruması bu bölməyə
+        // də tətbiq olunur (ikinci nüsxə yazsaydıq qoruma burada olmazdı).
+        const arch = await exportArchivedMessages(c.env, uid);
+        await write(`\r\n### archived_messages\r\n`);
+        if (arch.truncated) {
+          await write(csvRow(['QEYD', 'Arxivin bir hissəsi açıla bilmədi və ya limit aşıldı — ixrac NATAMAMDIR']));
+        }
+        if (!arch.messages.length) { await write('(boş)\r\n'); }
+        else {
+          const acols = Object.keys(scrub(arch.messages[0]));
+          await write(csvRow(acols));
+          for (const m of arch.messages) {
+            const clean = scrub(m);
+            await write(csvRow(acols.map(k => clean[k])));
+          }
+        }
       } else {
         await write(`{\n  "exportedAt": ${JSON.stringify(new Date().toISOString())},\n`);
         await write(`  "username": ${JSON.stringify(c.user!.username)},\n`);
-        for (let i = 0; i < EXPORT_SECTIONS.length; i++) {
-          const sec = EXPORT_SECTIONS[i];
+        for (const sec of EXPORT_SECTIONS) {
           const rows = await c.env.DB.prepare(sec.sql).bind(...sec.binds(uid)).all<any>();
           const data = rows.results.map(scrub);
-          const comma = i < EXPORT_SECTIONS.length - 1 ? ',' : '';
-          await write(`  ${JSON.stringify(sec.name)}: ${JSON.stringify(data)}${comma}\n`);
+          // Arxiv bölməsi sonuncudur → hər D1 bölməsindən sonra vergül qoyulur.
+          await write(`  ${JSON.stringify(sec.name)}: ${JSON.stringify(data)},\n`);
         }
+        // AUDIT-TASK-8 §8.5 — arxivlənmiş mesajlar (mənbə: R2).
+        const arch = await exportArchivedMessages(c.env, uid);
+        await write(`  "archived_messages": ${JSON.stringify(arch.messages.map(scrub))},\n`);
+        // ⚠ Natamamlıq SÜKUTLA keçilmir: GDPR ixracında "bu qədərdir" ilə
+        // "bu qədərini verə bildik" fərqi hüquqi əhəmiyyət daşıyır.
+        await write(`  "archived_messages_meta": ${JSON.stringify({
+          truncated: arch.truncated, objectsScanned: arch.objectsScanned,
+        })}\n`);
         await write('}\n');
       }
     } catch (e: any) {
