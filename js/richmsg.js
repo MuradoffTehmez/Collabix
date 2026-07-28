@@ -1,6 +1,6 @@
 // Zəngin mesajlar (otaq + DM üçün ortaq): şəkil / fayl / kod göndərmə və render.
 import { uploadMessageFile, MSG_FILE_MAX } from './store.js';
-import { el, isSafeImageURL, highlightEl, avatarNode, nameWithBadge, fmtTime } from './util.js';
+import { el, isSafeFileURL, highlightEl, avatarNode, nameWithBadge, fmtTime } from './util.js';
 import { toast, showModal, closeModal } from './ui.js';
 import { t, fmtRelTime } from './i18n.js';
 import { highlightOptions } from './taxonomy.js';
@@ -12,12 +12,14 @@ const fmtSize = b => b > 1024 * 1024 ? (b / 1048576).toFixed(1) + ' MB' : Math.m
 // Mesajın məzmun node-u — type-a görə (text/image/file/code).
 export function richContent(m){
   const frag = document.createDocumentFragment();
-  if(m.type === 'image' && isSafeImageURL(m.fileUrl)){
+  // Əlavə konteksti → `isSafeFileURL` (`msgfiles/` daxil). Serverdə `canReadKey`
+  // açarı yalnız sahibinə və söhbət iştirakçılarına verir (AUDIT C-1).
+  if(m.type === 'image' && isSafeFileURL(m.fileUrl)){
     const img = document.createElement('img');
     img.className = 'msg-img'; img.src = m.fileUrl; img.alt = m.fileName || '';
     img.addEventListener('click', () => openImageModal(m.fileUrl));
     frag.append(img);
-  } else if(m.type === 'file' && m.fileUrl){
+  } else if(m.type === 'file' && isSafeFileURL(m.fileUrl)){
     frag.append(el('a', { class: 'msg-file', href: m.fileUrl, target: '_blank', rel: 'noopener noreferrer' },
       '📎 ', el('span', {}, m.fileName || 'fayl'),
       el('span', { class: 'mf-size' }, m.fileSize ? fmtSize(m.fileSize) : '')));

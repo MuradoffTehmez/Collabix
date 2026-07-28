@@ -47,8 +47,33 @@ export function validUsername(u){ return /^[a-z0-9._]{3,20}$/.test(u); }
 
 // Şəkil URL-ləri yalnız öz R2 proxy-mizdən (/files/*) qəbul olunur —
 // data: URL-lər və ixtiyari domenlər rədd edilir.
+//
+// ⚠ AUDIT C-1 / TASK-7 §7.7 — ƏVVƏL yalnız `/files/` prefiksi tələb olunurdu və
+// bu, istismar zəncirinin 3-cü addımı idi: hücumçu posta
+// `/files/teams/<yad-komanda>/documents/<açar>` yerləşdirir, feed onu render
+// edir, qlobal feed-i açan HƏR KƏSİN brauzeri məxfi sənədi çəkirdi.
+//
+// İndi kontekstə görə İKİ funksiya var. Bu, dərinlikdə müdafiədir — əsl qapı
+// serverdədir (`worker/files-auth.ts` → canReadKey + createPost yoxlaması);
+// buradakı süzgəc həm də sınıq şəkil sorğularının qarşısını alır.
+const PUBLIC_IMAGE_PREFIXES = ['/files/posts/', '/files/avatars/'];
+const ATTACHMENT_PREFIX = '/files/msgfiles/';
+
+// Feed / post / avatar konteksti: YALNIZ publik prefikslər.
+// Bura məxfi prefiks düşməməlidir — feed qlobaldır.
 export function isSafeImageURL(url){
-  return typeof url === 'string' && url.startsWith('/files/');
+  return typeof url === 'string'
+    && !url.includes('..')
+    && PUBLIC_IMAGE_PREFIXES.some(p => url.startsWith(p));
+}
+
+// Söhbət əlavəsi konteksti (DM / otaq): publik prefikslərə ƏLAVƏ olaraq
+// `msgfiles/`. Onu `isSafeImageURL`-ə qatsaydıq feed yenidən açılardı; ayrı
+// saxlamasaydıq isə DM şəkil önizləmələri sınardı (§5.2/tələ 2).
+// Serverdə `canReadKey` bu açarı yalnız sahibinə və söhbət iştirakçılarına verir.
+export function isSafeFileURL(url){
+  return isSafeImageURL(url)
+    || (typeof url === 'string' && !url.includes('..') && url.startsWith(ATTACHMENT_PREFIX));
 }
 
 // highlight.js lazy yüklənir (böyük kitabxana — yalnız kod görünəndə).

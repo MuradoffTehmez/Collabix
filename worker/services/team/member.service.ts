@@ -1,6 +1,7 @@
 import { Env, uuid, now } from '../../util';
 import { parsePermissions, OWNER_ROLE } from './permissions';
 import { TeamRoleService } from './role.service';
+import { invalidateTeamMembership } from '../../files-auth';
 
 export class TeamMemberService {
   constructor(private env: Env) {}
@@ -49,6 +50,10 @@ export class TeamMemberService {
     await this.env.DB.prepare(
       'INSERT INTO team_members (id, team_id, user_id, role_id, status, joined_at) VALUES (?, ?, ?, ?, ?, ?)'
     ).bind(uuid(), teamId, userId, roleId, 'active', now()).run();
+    // Qoşulmada MƏNFİ keş sətri qala bilər (istifadəçi əvvəl komandanın faylına
+    // dəyibsə `tm:{team}:{uid}` = '0' yazılmışdı) → 60 s ərzində yeni üzv öz
+    // komandasının fayllarını görməzdi. Bax files-auth.ts §7.3.
+    await invalidateTeamMembership(this.env, teamId, userId);
     return roleId;
   }
 
@@ -83,6 +88,11 @@ export class TeamMemberService {
       ).bind(userId, teamId),
       this.env.DB.prepare('DELETE FROM team_members WHERE team_id = ? AND user_id = ?').bind(teamId, userId),
     ]);
+    // 🔴 AUDIT C-1-in ƏSAS SSENARİSİ: "komandadan çıxarılmış üzv gördüyü hər
+    // fayla ƏBƏDİ çıxış saxlayır". Üzvlük keşinin TTL-i (60 s) tək başına
+    // kifayət deyil — çıxış DƏRHAL kəsilməlidir, ona görə açar burada silinir.
+    // `leaveTeam` də bu metoddan keçir, yəni hər iki yol örtülüdür.
+    await invalidateTeamMembership(this.env, teamId, userId);
   }
 
   /**

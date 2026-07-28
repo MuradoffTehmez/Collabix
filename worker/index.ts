@@ -397,7 +397,12 @@ export default {
     // səhifəsi 20+ obyekt çəkir, `read` səbətinə salınsaydı normal gəzinti bir
     // neçə səhifədən sonra 429 alardı. Əvəzində ayrıca `asset` səbəti (1200/dəq)
     // R2 oxu xərcini qoruyur. Açar `uid` üzrədir — giriş onsuz da tələb olunur.
-    if (path.startsWith('/files/') && request.method === 'GET') {
+    //
+    // ⚠ AUDIT C-1 / TASK-7: burada YALNIZ autentifikasiya var. Avtorizasiya
+    // (`canReadKey` → default DENY) `R.serveFile` içindədir və R2 oxusundan
+    // ƏVVƏL işləyir. HEAD də eyni yoldan keçir — əvvəl o, SPA fallback-ına
+    // düşüb 200 HTML qaytarırdı, yəni yoxlamadan yan keçirdi.
+    if (path.startsWith('/files/') && (request.method === 'GET' || request.method === 'HEAD')) {
       const auth = await resolveUser(env, request);
       const c: Ctx = {
         env, req: request, url, user: auth?.user || null, isAdmin: false,
@@ -411,7 +416,13 @@ export default {
         res429.headers.set('Retry-After', String(assetRl.retryAfter));
         return withSecurityHeaders(res429, false);
       }
-      const res = await R.serveFile(c, decodeURIComponent(path.slice('/files/'.length)));
+      // ⚠ `c.isAdmin` BURADA HESABLANMIR. `archive/` və sadalanmayan prefikslər
+      // admin statusundan asılıdır, lakin sorğunu qabaqcadan etmək HƏR məxfi
+      // fayl sorğusuna bir D1 çağırışı əlavə edirdi (ölçüldü: +30 ms p95).
+      // `serveFile` tənbəl resolver işlədir — sorğu yalnız qərar ondan asılı
+      // olanda gedir (§7.3).
+      const key = decodeURIComponent(path.slice('/files/'.length));
+      const res = await R.serveFile(c, key, request.method as 'GET' | 'HEAD');
       return withSecurityHeaders(res, false);
     }
 

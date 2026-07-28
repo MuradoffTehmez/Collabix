@@ -25,6 +25,7 @@ import { readCookie } from './auth';
 import { emailEnabled, sendEmail, magicLinkMail, mailLang } from './email';
 import { QueueService } from './services/queue';
 import { sanitizeMsg } from './msg';
+import { canReadKey, lazyAdminCheck, shouldLogDenial, CACHE_HEADER } from './files-auth';
 import {
   generateSecret, otpauthUri, verifyTotp, generateBackupCodes,
   hashBackupCode, mfaEnabled,
@@ -768,6 +769,77 @@ export async function progressOf(c: Ctx, uid: string) {
 }
 
 /* ================= POSTS ================= */
+
+/**
+ * Post şəkil istinadının normallaşdırılması — AUDIT C-1 / zəncirin 1-ci addımı.
+ *
+ * Eyni R2 açarı client-dən üç formada gələ bilər:
+ *   `/files/posts/x/y`, `posts/x/y`, `https://<domen>/files/posts/x/y`
+ * Yoxlama xam sətrə baxsaydı, hücumçu sadəcə formanı dəyişib yan keçərdi.
+ * Tanınmayan forma (data:, xarici domen) boş sətrə düşür və yoxlamada rədd olunur.
+ */
+function normalizeFileRef(raw: unknown, ownHost: string): string {
+  let v = String(raw ?? '').trim();
+  if (!v) return '';
+  // Mütləq URL → yalnız ÖZ host-umuz qəbul olunur (sorğunun gəldiyi host).
+  if (/^https?:\/\//i.test(v)) {
+    try {
+      const u = new URL(v);
+      if (u.host !== ownHost) return '';
+      v = u.pathname;
+    } catch { return ''; }
+  }
+  if (v.startsWith('/files/')) v = v.slice('/files/'.length);
+  // Traversal və protokol-nisbi (`//evil.com/...`) formalar birbaşa rədd.
+  if (!v || v.startsWith('/') || v.includes('..') || v.includes('//')) return '';
+  return v;
+}
+
+/**
+ * Post şəkil mənbələrinin sahiblik yoxlaması — AUDIT C-1 / zəncirin 1-ci addımı.
+ *
+ * ƏVVƏL: `blocks` verbatim, `imageKeys` isə `toJSON(b.imageKeys, '[]')` ilə XAM
+ * saxlanılırdı. Hücumçu `blocks:[{type:'image',urls:['/files/teams/<yad>/…']}]`
+ * göndərib QLOBAL FEED-də yad komandanın məxfi sənədini göstərə bilirdi — feed-i
+ * açan hər kəsin brauzeri faylı çəkirdi.
+ *
+ * ⚠ Bu, `canReadKey`-in ƏVƏZİ deyil, ONA ƏLAVƏDİR (dərinlikdə müdafiə):
+ * `canReadKey` oxunu bağlayır, bu yoxlama isə istinadın ilk növbədə
+ * yaradılmasının qarşısını alır (feed-də sınıq şəkil görünməsin).
+ *
+ * Qayda: post yalnız MÜƏLLİFİN öz yüklədiyi şəkilləri göstərə bilər →
+ * `posts/{uid}/…`. Xarici URL-lərə icazə verilmir; CSP `img-src 'self'` onsuz da
+ * bloklayırdı, indi server də aydın xəta ilə rədd edir.
+ */
+function collectImageRefs(blocks: any[], imageKeys: unknown): string[] {
+  const refs: string[] = [];
+  // Bütün blok növləri gəzilir, yalnız `image` deyil: gələcəkdə `video`/`file`
+  // bloku əlavə edilsə də URL sahələri bu siyahıya avtomatik düşsün.
+  for (const b of Array.isArray(blocks) ? blocks : []) {
+    if (!b || typeof b !== 'object') continue;
+    if (Array.isArray(b.urls)) refs.push(...b.urls.slice(0, 20).map(String));
+    if (typeof b.url === 'string') refs.push(b.url);
+    if (typeof b.src === 'string') refs.push(b.src);
+  }
+  if (Array.isArray(imageKeys)) refs.push(...imageKeys.slice(0, 30).map(String));
+  return refs;
+}
+
+/**
+ * `ownerUid` = postun MÜƏLLİFİ, redaktə edən şəxs yox. Admin başqasının postunu
+ * redaktə edəndə (`patchPost`) müəllifin öz şəkilləri qanunidir — yoxlamanı
+ * redaktorun uid-inə bağlasaq admin hər redaktəsində postun şəkillərini sındırardı.
+ */
+function assertOwnedImageRefs(c: Ctx, refs: string[], ownerUid: string): Response | null {
+  const own = `posts/${ownerUid}/`;
+  for (const raw of refs) {
+    const key = normalizeFileRef(raw, c.url.host);
+    if (!key || !key.startsWith(own)) {
+      return err('Post yalnız öz yüklədiyiniz şəkilləri göstərə bilər.', 400, 'invalid_image_ref');
+    }
+  }
+  return null;
+}
 /**
  * AUDIT M-10 — bloklanmış istifadəçinin postları feed-də QALIRDI, halbuki
  * `publicGetPost` onları 404 ilə gizlədirdi. Daxili ziddiyyət: eyni post
@@ -825,6 +897,11 @@ export async function createPost(c: Ctx) {
   if (JSON.stringify(blocks).length > POST_BLOCKS_MAX_BYTES) {
     return err('Post həddindən artıq böyükdür.', 400, 'payload_too_large');
   }
+  // AUDIT C-1 — istismar zəncirinin 1-ci addımı burada kəsilir (bax
+  // `assertOwnedImageRefs`). `imageKeys` VƏ `blocks[].urls` birlikdə yoxlanılır:
+  // birini qoruyub digərini açıq qoymaq zənciri bağlamazdı.
+  const refDenied = assertOwnedImageRefs(c, collectImageRefs(blocks, b.imageKeys), c.user!.id);
+  if (refDenied) return refDenied;
   let sharedPostId = b.sharedPostId ? clampStr(b.sharedPostId, 50) : null;
   if (sharedPostId) {
     // İçiçə re-postların qarşısını al: hədəf özü də re-post-dursa, ən orijinal posta düzəlt (flatten-to-root).
@@ -893,6 +970,14 @@ export async function patchPost(c: Ctx, id: string) {
   if (row.author_id !== c.user!.id && !c.isAdmin) return err('İcazə yoxdur.', 403, 'forbidden');
   const b = await readJson(c.req);
   const blocks = Array.isArray(b.blocks) ? b.blocks.slice(0, 20) : fromJSON(row.blocks, []);
+  // AUDIT C-1 — redaktə yolu da yoxlanılır. Yalnız `createPost`-u qorusaydıq
+  // hücumçu boş post yaradıb dərhal PATCH ilə məxfi açarı yerləşdirərdi.
+  // Yoxlama YALNIZ client yeni bloklar göndərəndə işləyir: mövcud sətrin öz
+  // blokları (`fromJSON(row.blocks)`) müəllifin köhnə, qanuni məzmunudur.
+  if (Array.isArray(b.blocks)) {
+    const refDenied = assertOwnedImageRefs(c, collectImageRefs(blocks, null), String(row.author_id));
+    if (refDenied) return refDenied;
+  }
   const firstText = (blocks.find((x: any) => x.type === 'text') || {}).content || b.text || '';
   await D(c).prepare('UPDATE posts SET blocks = ?, text = ?, edited_at = ? WHERE id = ?')
     .bind(JSON.stringify(blocks), clampStr(firstText, 300), now(), id).run();
@@ -1187,7 +1272,7 @@ export async function sendRoomMessage(c: Ctx, roomId: string) {
   if (denied) return denied;
 
   const b = await readJson(c.req);
-  const m = sanitizeMsg(b);
+  const m = sanitizeMsg(b, c.user!.id);
   if (!m) return badReq('Mesaj boşdur.');
   await D(c).prepare(`INSERT INTO room_messages ${MSG_COLS} VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`)
     .bind(uuid(), roomId, c.user!.id, c.user!.name, m.type, m.text, m.fileKey, m.fileName, m.fileSize, m.mimeType, m.language, now()).run();
@@ -1262,7 +1347,7 @@ export async function sendDM(c: Ctx, toUid: string) {
   }
 
   const b = await readJson(c.req);
-  const m = sanitizeMsg(b);
+  const m = sanitizeMsg(b, me.id);
   if (!m) return badReq('Mesaj boşdur.');
   const pairId = pairIdFor(me.id, toUid);
   const [a, bUid] = pairId.split('_');
@@ -2982,12 +3067,67 @@ export async function upload(c: Ctx) {
   });
 }
 
-export async function serveFile(c: Ctx, key: string) {
-  const obj = await c.env.FILES.get(key);
-  if (!obj) return new Response('Not found', { status: 404 });
+/**
+ * Rədd cavabı — HƏMİŞƏ boş `404`, `403` DEYİL (AUDIT-TASK-7 §5.4).
+ *
+ * `403` faylın MÖVCUDLUĞUNU təsdiqləyər və hücumçu açar sadalaması ilə komanda
+ * strukturunu öyrənə bilərdi. Burada `code` sahəsi də verilmir — Task 4-də
+ * əlavə edilən maşın kodları diaqnostika üçündür, bu cavab isə "yoxdur"dan
+ * fərqlənməməlidir. `no-store`: rədd cavabı da keşlənməməlidir.
+ */
+const fileNotFound = () => new Response('Not found', {
+  status: 404,
+  headers: { 'Cache-Control': CACHE_HEADER['no-store'], 'X-Content-Type-Options': 'nosniff' },
+});
+
+/**
+ * R2 obyektinin verilməsi — AUDIT-2026-07-26 / C-1.
+ *
+ * ⚠ AVTORİZASİYA R2 OXUSUNDAN ƏVVƏL GƏLİR. Əvvəl bu funksiya yalnız
+ * `c.env.FILES.get(key)` edirdi və `index.ts`-dəki 401 qapısından başqa heç bir
+ * yoxlama yox idi — yəni istənilən giriş etmiş istifadəçi yad komandanın
+ * sənədini, başqasının DM əlavəsini və bütöv arxiv dump-larını oxuya bilirdi.
+ * Qərar məntiqi `files-auth.ts`-dədir (default DENY + keş siyasəti).
+ */
+export async function serveFile(c: Ctx, key: string, method: 'GET' | 'HEAD' = 'GET') {
+  // Admin yoxlaması TƏNBƏLDİR — bax `lazyAdminCheck`. Öz DM əlavəsini oxumaq
+  // üçün `admins` cədvəlinə sorğu lazım deyil və ilk versiyada məhz o, ölçülən
+  // +30 ms p95 artımını yaradırdı (§7.3).
+  const decision = await canReadKey(c, key, lazyAdminCheck(c.env, c.user?.id || null));
+  if (!decision.allow) {
+    // §5.3 — rədd hadisələri loglanır: (a) reqressiya diaqnostikası
+    // ("istifadəçi sınıq şəkil görür, səbəbini bilmir"), (b) real hücum
+    // cəhdlərinin aşkarlanması.
+    // ⚠ TAM AÇAR LOGLANMIR — açarın özü həssas ola bilər. Yalnız prefiks + səbəb.
+    // ⚠ `shouldLogDenial` təkrarları birləşdirir: `asset` səbəti dəqiqədə 1200
+    // sorğuya icazə verir və filtrsiz jurnal öz-özünə D1 yazı seli olardı.
+    c.ctx.waitUntil((async () => {
+      if (!(await shouldLogDenial(c.env, c.user?.id || null, decision.prefix, decision.reason))) return;
+      await logSecurityEvent(c.env, c.req, {
+        type: 'file_access_denied', severity: 'warning', uid: c.user?.id || null,
+        meta: { key_prefix: decision.prefix, reason: decision.reason, method },
+      });
+    })());
+    return fileNotFound();
+  }
+
+  // HEAD də eyni avtorizasiyadan keçir (§7.10). Əvvəl `index.ts` yalnız GET-i
+  // bu yola salırdı, HEAD isə SPA fallback-ına düşüb 200 HTML qaytarırdı.
+  const obj = method === 'HEAD'
+    ? await c.env.FILES.head(key)
+    : await c.env.FILES.get(key);
+  if (!obj) return fileNotFound();
+
   const headers = new Headers();
   obj.writeHttpMetadata(headers as any);
-  headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+  // 🔴 Keş siyasəti QƏRARIN bir hissəsidir (§7.4). Məxfi prefikslərə `public`
+  // qoysaq Cloudflare edge cavabı saxlayar və İKİNCİ istifadəçi sorğusu
+  // Worker-ə heç çatmaz — avtorizasiya tamamilə keçilərdi.
+  // "Performans üçün hamısını public edək" DEMƏ: publik prefikslər onsuz da
+  // `public` alır, məxfilər isə edge-də QALMAMALIDIR.
+  headers.set('Cache-Control', CACHE_HEADER[decision.cache]);
+  // Cavab istifadəçiyə görə dəyişir — proxy-lər üçün açıq siqnal (`private` ilə birlikdə).
+  if (decision.cache !== 'public') headers.set('Vary', 'Cookie');
   headers.set('ETag', obj.httpEtag);
   headers.set('X-Content-Type-Options', 'nosniff');
   // Yalnız imzası doğrulanmış şəkillər brauzerdə açılır (inline).
@@ -2995,5 +3135,9 @@ export async function serveFile(c: Ctx, key: string) {
   // inline açılsaydı R2 stored-XSS vektoru olardı. `nosniff` ikinci qat qorumadır.
   const ct = headers.get('Content-Type') || '';
   headers.set('Content-Disposition', IMAGE_TYPES.includes(ct) ? 'inline' : 'attachment');
-  return new Response(obj.body as any, { headers });
+  if (method === 'HEAD') {
+    headers.set('Content-Length', String((obj as R2Object).size));
+    return new Response(null, { headers });
+  }
+  return new Response((obj as R2ObjectBody).body as any, { headers });
 }

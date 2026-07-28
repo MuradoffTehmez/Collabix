@@ -125,7 +125,10 @@ export class RoomDO extends DurableObject<Env> {
     // ⚠ PAYLAŞILAN validasiya (worker/msg.ts) — REST yolu ilə EYNİ qaydalar.
     // DO-ya ayrıca nüsxə yazsaydıq, qaydalar ayrılar və bir qapı zəif qalardı
     // (məhz belə oldu: ilk versiya `fileKey`-ə xam şəkildə inanırdı).
-    const msg = sanitizeMsg(data);
+    // `meta.uid` WS upgrade-də SERVERDƏ doğrulanıb (index.ts `resolveUser` →
+    // query param), client onu spoof edə bilmir — `fileKey` sahibliyi məhz ona
+    // görə yoxlanılır (AUDIT C-1 əlavə vektoru).
+    const msg = sanitizeMsg(data, meta.uid);
     if (!msg) {
       try { ws.send(JSON.stringify({ t: 'error', cid, code: 'empty' })); } catch { /* keç */ }
       return;

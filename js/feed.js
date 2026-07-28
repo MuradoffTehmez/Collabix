@@ -7,7 +7,7 @@ import {
   toggleRepost, deriveMyReposts
 } from './store.js';
 import {
-  el, clear, avatarNode, nameWithBadge, fmtTime, isSafeImageURL, highlightEl,
+  el, clear, avatarNode, nameWithBadge, fmtTime, isSafeImageURL, isSafeFileURL, highlightEl,
   debounce, bus, emit, updateDynamicSEO, levelFromXP
 } from './util.js';
 import { toast, confirmDialog, showModal, closeModal, skeletons, emptyState } from './ui.js';
@@ -943,8 +943,11 @@ function mountComments(box, p){
   resubscribe();
 }
 
+// ⚠ Bu modal HƏM feed şəkilləri, HƏM DƏ söhbət əlavələri üçün işlədilir
+// (`richmsg.js` çağırır), ona görə burada `isSafeFileURL` lazımdır —
+// `isSafeImageURL` DM şəkil önizləməsini sındırardı (AUDIT-TASK-7 §5.2/tələ 2).
 export function openImageModal(src){
-  if(!isSafeImageURL(src)) return;
+  if(!isSafeFileURL(src)) return;
   const img = document.createElement('img');
   img.className = 'modal-img'; img.src = src; img.alt = '';
   showModal([img], { wide: true });

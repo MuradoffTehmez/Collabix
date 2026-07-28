@@ -74,7 +74,11 @@ export type SecEventType =
   | 'login_failed' | 'login_ok' | 'geo_change' | 'rate_limit' | 'token_reuse'
   | 'turnstile_failed' | 'session_revoked' | 'upload_rejected' | 'password_changed'
   // AUDIT M-1 — yalnız MÜŞAHİDƏ: sorğu bloklanmır, hal jurnala düşür.
-  | 'csrf_suspect';
+  | 'csrf_suspect'
+  // AUDIT C-1 / TASK-7 §5.3 — `/files/*` oxu rəddi. Fail-closed sistem SÜKUTLA
+  // sınа bilər (istifadəçi "sınıq şəkil" görür, səbəbini bilmir), ona görə hər
+  // rədd jurnala düşür. ⚠ Meta-da yalnız PREFİKS + səbəb olur, tam açar YOX.
+  | 'file_access_denied';
 
 export type Severity = 'info' | 'warning' | 'critical';
 

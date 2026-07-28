@@ -1,6 +1,7 @@
 import { Env, uuid, now, b64uRandom } from '../../util';
 import { TeamRoleService } from './role.service';
 import { OWNER_ROLE } from './permissions';
+import { invalidateTeamMembership } from '../../files-auth';
 
 export interface AcceptResult {
   teamId: string;
@@ -127,6 +128,9 @@ export class TeamInviteService {
       ).bind(uuid(), invite.team_id, userId, roleId, 'active', now()),
     ]);
 
+    // Üzvlük keşində MƏNFİ sətir qalmış ola bilər → yeni üzv 60 s komandanın
+    // fayllarını görməzdi (AUDIT-TASK-7 §7.3, files-auth.ts).
+    await invalidateTeamMembership(this.env, String(invite.team_id), userId);
     return { teamId: String(invite.team_id), roleId };
   }
 

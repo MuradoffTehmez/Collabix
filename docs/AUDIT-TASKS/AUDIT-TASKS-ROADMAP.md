@@ -87,6 +87,19 @@
                DONE: yad komanda faylı 404 qaytarır; eksfiltrasiya zənciri E2E-də qırılıb.
 ```
 
+> 🔴 **TASK 7 → TASK 8 SƏRHƏDİ** (AUDIT-TASK-7 §7.9, icra olunub 2026-07-28).
+> Task 7 `archive/` prefiksini `/files/*` üzərində **yalnız sayt admininə** açıq
+> qoyub. Task 8 bu qapını **AÇMAMALIDIR**:
+>
+> - ❌ **SƏHV:** istifadəçiyə `/files/archive/...` vermək → `canReadKey`-i
+>   zəiflətmək tələb olunar → C-1 qismən yenidən açılar.
+> - ✅ **DÜZGÜN:** ayrıca API endpoint-i — `GET /api/rooms/:id/messages?before=<ts>`
+>   → öz avtorizasiyasını edir (otaq üzvlüyü / DM iştirakçılığı)
+>   → R2-dən **server tərəfdə** oxuyur (`worker/archive.ts` → `readArchive`)
+>   → JSON qaytarır, R2 açarını client-ə **heç vaxt** vermir.
+>
+> Mənbə: `worker/files-auth.ts` başlıq şərhi + `AUDIT-TASK-7-REPORT.md` §7.
+
 ```
 /goal AUDIT-8  Arxiv oxu yolunu qur (?before= → readArchive), UI-da 'daha köhnə' yükləmə,
                GDPR ixracına arxiv + komanda datası + contact_messages əlavə et,
