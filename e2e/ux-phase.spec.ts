@@ -117,6 +117,11 @@ test.describe('Admin Geri al (Bənd 17)', () => {
   }
 
   async function findVictimRow(page: Page) {
+    // ⚠ Admin paneli sidebar tab-larına bölünüb; `#adminUserList` `#tab-users`
+    // panelindədir və açılışda AKTİV DEYİL. Tab açılmadan sətir DOM-da olsa da
+    // görünmür (bax e2e/admin.spec.ts → `openTab`).
+    await page.locator('.admin-sidebar-btn[data-tab="tab-users"]').click();
+    await expect(page.locator('#tab-users')).toHaveClass(/active/);
     // Axtarış qutusu debounce (250ms) + server reload tetikləyir. `fill` bir
     // `input` hadisəsi yaradır; sətrin GÖRÜNMƏSİNİ gözləyirik (sabit timeout yox).
     await page.locator('#adminUserSearch').fill('');

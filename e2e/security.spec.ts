@@ -54,20 +54,29 @@ test.describe('Təhlükə paneli UI (Bənd 1)', () => {
     const errors = collectConsoleErrors(page);
     await openApp(page, '#admin');
     await expect(page.locator('#page-admin')).toHaveClass(/active/);
+    // Təhlükə paneli `#tab-threats` panelindədir — açılışda aktiv deyil.
+    await page.locator('.admin-sidebar-btn[data-tab="tab-threats"]').click();
+    await expect(page.locator('#tab-threats')).toHaveClass(/active/);
 
     await expect(page.locator('#threatSummary .adm-stat').first()).toBeVisible();
-    // Hadisə siyahısı ya sətir, ya "boşdur" mesajı göstərir — hər ikisi düzgündür.
-    await expect(page.locator('#threatEvents .threat-row, #threatEvents .threat-empty').first()).toBeVisible();
+    // ⚠ UI DƏYİŞİB: hadisələr əvvəl `.threat-row` div-ləri idi, indi
+    // `<table>` daxilində `<tr>` sətirləridir (`js/threat.js` → `eventRow`).
+    // Siyahı ya sətir, ya "boşdur" sətri göstərir — hər ikisi düzgündür.
+    await expect(page.locator('#threatEvents tr').first()).toBeVisible();
 
     assertConsoleClean(errors);
   });
 
   test('ciddilik etiketi MƏTNlə də verilir (yalnız rənglə deyil)', async ({ page }) => {
     await openApp(page, '#admin');
-    const row = page.locator('#threatEvents .threat-row').first();
+    await page.locator('.admin-sidebar-btn[data-tab="tab-threats"]').click();
+    await expect(page.locator('#tab-threats')).toHaveClass(/active/);
+    // Ciddilik `<span class="badge badge-*">` nişanı ilə verilir və MƏTN daşıyır
+    // (`t('thr.sev_*')`) — yəni siqnal yalnız rəng deyil.
+    const row = page.locator('#threatEvents tr').filter({ has: page.locator('.badge') }).first();
     // Hadisə yoxdursa yoxlanacaq bir şey də yoxdur — panel boş vəziyyətdədir.
     if (await row.count() === 0) test.skip(true, 'jurnalda hadisə yoxdur');
-    await expect(row.locator('.threat-sev')).not.toBeEmpty();
+    await expect(row.locator('.badge')).not.toBeEmpty();
   });
 });
 

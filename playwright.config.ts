@@ -19,7 +19,24 @@ export default defineConfig({
   },
   projects: [
     { name: 'desktop', use: { ...devices['Desktop Chrome'] } },
-    { name: 'mobile', use: { ...devices['Pixel 7'] } },
+    // 🔴 Sessiya yeniləmə addımı — `mobile`-dan ƏVVƏL işləyir.
+    //
+    // `globalSetup` sessiyanı bir dəfə yazır, access token ömrü isə 15 dəqiqədir
+    // (`worker/auth.ts` → ACCESS_TTL). Tam dəst ~28 dəqiqə çəkdiyi üçün `mobile`
+    // başlayanda paylaşılan `AUTH_FILE` KÖHNƏLMİŞ olur; üstəlik desktop
+    // testlərində refresh rotasiyası baş veribsə, fayldakı köhnə refresh token
+    // "reuse" sayılıb sessiyanı LƏĞV EDİR. Nəticədə mobile-ın autentifikasiyalı
+    // testləri kütləvi 401 alırdı (≈40 sınıq) və bu, səhvən "mobile responsive
+    // qüsuru" kimi qeyd olunmuşdu.
+    //
+    // ⚠ `dependencies` yalnız `mobile`-dadır: `--project=mobile` ilə tək
+    // işlədəndə də sessiya təzələnir, `desktop` isə səbəbsiz işə düşmür.
+    {
+      name: 'auth-refresh',
+      testMatch: /_auth-refresh\.setup\.ts/,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    { name: 'mobile', use: { ...devices['Pixel 7'] }, dependencies: ['auth-refresh'] },
   ],
   webServer: {
     // İki var override-ı — hər ikisi YALNIZ test mühitinə aiddir:

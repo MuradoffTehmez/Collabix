@@ -119,7 +119,13 @@ async function loadEvents({ append = false } = {}){
 
   if(!append) clear(box);
   if(!d.events.length && !append){
-    box.append(el('div', { class: 'threat-empty' }, t('thr.empty')));
+    // ⚠ `#threatEvents` <tbody>-dir: bura birbaşa <div> qoymaq ETİBARSIZ
+    // HTML-dir və brauzer onu cədvəldən KƏNARA çıxarır (mesaj səhv yerdə
+    // görünürdü). Jurnal cədvəlindəki (`js/admin.js` → renderLogLines) eyni
+    // naxış işlədilir: <tr><td colspan>.
+    box.append(el('tr', { class: 'threat-empty' },
+      el('td', { colspan: '5', style: 'text-align:center; padding:20px; color:var(--text-sec);' },
+        t('thr.empty'))));
   }
   d.events.forEach(e => box.appendChild(eventRow(e)));
 

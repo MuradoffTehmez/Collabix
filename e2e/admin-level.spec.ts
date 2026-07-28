@@ -71,6 +71,9 @@ test.describe('Admin XP/Level redaktəsi (Bənd 6)', () => {
     });
     await page.goto('/#admin', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('#page-admin')).toHaveClass(/active/);
+    // İstifadəçi siyahısı `#tab-users` panelindədir — açılışda aktiv deyil.
+    await page.locator('.admin-sidebar-btn[data-tab="tab-users"]').click();
+    await expect(page.locator('#tab-users')).toHaveClass(/active/);
     const editBtn = page.locator('#adminUserList .admin-user-row button.btn-mini[title="Redaktə et"]').first();
     await expect(editBtn).toBeVisible({ timeout: 12_000 });
     await editBtn.click();

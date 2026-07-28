@@ -15,11 +15,39 @@ async function openAdmin(page: Page) {
   await expect(page.locator('#adminStatRow .stat-card').first()).toBeVisible();
 }
 
+/**
+ * Admin paneli SIDEBAR TAB-larına bölünüb (`index.html` → `.admin-sidebar-btn`
+ * + `.admin-tab-pane`). Yalnız `#tab-dashboard` açılışda aktivdir; qalan
+ * panellərin məzmunu DOM-dadır, lakin `.active` sinfi olmadan GÖRÜNMÜR.
+ *
+ * ⚠ Bu testlər əvvəl tək-səhifəlik admin dizaynına yazılmışdı və panel
+ * yenidən qurulduqdan sonra yenilənməmişdi — 40-a yaxın test məhz buna görə
+ * "element var, amma hidden" xətası ilə sınırdı (tətbiqdə qüsur YOX idi).
+ */
+async function openTab(page: Page, tab: 'tab-dashboard' | 'tab-threats' | 'tab-content'
+  | 'tab-teams' | 'tab-users' | 'tab-logs') {
+  await page.locator(`.admin-sidebar-btn[data-tab="${tab}"]`).click();
+  await expect(page.locator('#' + tab)).toHaveClass(/active/);
+}
+
+/**
+ * Taksonomiya `#tab-content` daxilində AYRICA `<details class="admin-accordion">`
+ * blokundadır və default olaraq BAĞLIDIR — tab açmaq kifayət etmir.
+ */
+async function openTaxonomyAccordion(page: Page) {
+  const acc = page.locator('details.admin-accordion').filter({ has: page.locator('#taxList') });
+  if (!(await acc.evaluate((d: HTMLDetailsElement) => d.open))) {
+    await acc.locator('summary').click();
+  }
+  await expect(page.locator('#taxList')).toBeVisible();
+}
+
 test.describe('Admin paneli', () => {
 
   test('yüklənir, sıfır konsol xətası', async ({ page }) => {
     const errors = collectConsoleErrors(page);
     await openAdmin(page);
+    await openTab(page, 'tab-users');
     await expect(page.locator('#adminUserList .admin-user-row').first()).toBeVisible();
     assertConsoleClean(errors);
   });
@@ -70,6 +98,8 @@ test.describe('Admin paneli', () => {
   // #3 — taksonomiya sıralaması: klaviatura alternativi (DnD-nin accessible qarşılığı).
   test('#3 taksonomiya ↑/↓ ilə sıralanır və serverdə saxlanılır', async ({ page }) => {
     await openAdmin(page);
+    await openTab(page, 'tab-content');
+    await openTaxonomyAccordion(page);
     const rows = page.locator('#taxList .tax-row');
     await expect(rows.first()).toBeVisible();
     await expect(rows.first()).toHaveAttribute('draggable', 'true');
@@ -88,6 +118,8 @@ test.describe('Admin paneli', () => {
 
     // yenidən açanda sıra qorunur (serverdə yazılıb)
     await page.reload({ waitUntil: 'networkidle' });
+    await openTab(page, 'tab-content');
+    await openTaxonomyAccordion(page);
     await expect(page.locator('#taxList .tax-row').first()).toBeVisible();
     const persisted = await page.locator('#taxList .tax-row')
       .evaluateAll(els => els.map(e => (e as HTMLElement).dataset.id));
@@ -97,6 +129,7 @@ test.describe('Admin paneli', () => {
   // #4 — siyahı filtri (serverdə WHERE).
   test('#4 istifadəçi filtri serverə gedir', async ({ page }) => {
     await openAdmin(page);
+    await openTab(page, 'tab-users');
     const req = page.waitForRequest(r =>
       r.url().includes('/api/admin/users') && r.url().includes('filter=blocked'));
     await page.locator('#adminUserFilter').selectOption('blocked');
@@ -114,6 +147,7 @@ test.describe('Admin paneli', () => {
   // #5 — toplu əməliyyatlar.
   test('#5 bulk blok/blokdan çıxarma işləyir', async ({ page }) => {
     await openAdmin(page);
+    await openTab(page, 'tab-users');
     await page.locator('#adminUserSearch').fill('dilara');
     await expect(page.locator('#adminUserList .admin-user-row')).toHaveCount(1);
 
@@ -139,6 +173,7 @@ test.describe('Admin paneli', () => {
 
   test('#5 admin özünü seçə bilmir', async ({ page }) => {
     await openAdmin(page);
+    await openTab(page, 'tab-users');
     await page.locator('#adminUserSearch').fill('e2e_main');
     const row = page.locator('#adminUserList .admin-user-row').first();
     await expect(row).toBeVisible();
@@ -146,17 +181,20 @@ test.describe('Admin paneli', () => {
     await expect(row.locator('.row-check')).toHaveCount(0);
   });
 
-  // #6 — terminal jurnalı.
-  test('#6 jurnal terminal görünüşündə və səviyyəyə görə rənglidir', async ({ page }) => {
+  // #6 — jurnal.
+  //
+  // ⚠ UI DƏYİŞİB: jurnal əvvəl "terminal" görünüşü idi (`#adminLogTerm`,
+  // `.term-head`, `.log-line`, `.lvl-*`, `.tl-lvl`, monospace şrift). İndi
+  // `<table class="admin-table">` daxilində sətirlərdir və səviyyə `<span
+  // class="badge badge-{lvl}">` nişanı ilə göstərilir (`js/admin.js` → `logLine`).
+  // Testin NİYYƏTİ dəyişmir: hər səviyyə öz sinfi ilə render olunur, rənglər
+  // bir-birindən fərqlidir və filtr serverdə işləyir.
+  test('#6 jurnal cədvəldə səviyyəyə görə nişanlanır', async ({ page }) => {
     await openAdmin(page);
-    const term = page.locator('#adminLogTerm');
-    await expect(term).toBeVisible();
-    await expect(term.locator('.term-head')).toBeVisible();
+    await openTab(page, 'tab-logs');
 
     const body = page.locator('#adminLogList');
-    await expect(body.locator('.log-line').first()).toBeVisible();
-    // monospace şrift
-    expect(await body.evaluate(e => getComputedStyle(e).fontFamily)).toMatch(/mono/i);
+    await expect(body.locator('tr').first()).toBeVisible();
 
     // Hər səviyyə öz sinfi ilə render olunur. Filtrdən keçirik, çünki jurnal
     // səhifələnir və testlərin özü yeni sətrlər yaradır — seed sətrləri ilk
@@ -167,18 +205,19 @@ test.describe('Admin paneli', () => {
         r.url().includes('/api/admin/logs') && r.url().includes('level=' + lvl) && r.status() === 200);
       await page.locator('#adminLogLevel').selectOption(lvl);
       await res;
-      await expect(body.locator(`.lvl-${lvl}`).first()).toBeVisible();
-      // seçilmiş səviyyədən başqa sətir qalmır
-      await expect.poll(() => body.locator(`.log-line:not(.lvl-${lvl})`).count()).toBe(0);
-      colors[lvl] = await body.locator(`.lvl-${lvl} .tl-lvl`).first()
+      await expect(body.locator(`.badge-${lvl}`).first()).toBeVisible();
+      // seçilmiş səviyyədən başqa nişan qalmır
+      await expect.poll(() => body.locator(`.badge:not(.badge-${lvl})`).count()).toBe(0);
+      colors[lvl] = await body.locator(`.badge-${lvl}`).first()
         .evaluate(e => getComputedStyle(e).color);
     }
-    // error / warning / success bir-birindən fərqli rəngdədir (syntax highlighting)
+    // error / warning / success bir-birindən fərqli rəngdədir (semantik kodlama)
     expect(new Set([colors.error, colors.warning, colors.success]).size).toBe(3);
   });
 
   test('#6 səviyyə filtri serverdə işləyir', async ({ page }) => {
     await openAdmin(page);
+    await openTab(page, 'tab-logs');
     // Cavabı gözləyirik, sorğunu yox: waitForRequest sorğu GÖNDƏRİLƏNDƏ həll olur,
     // DOM isə yalnız cavab gəldikdən sonra yenilənir.
     const res = page.waitForResponse(r =>
@@ -186,10 +225,10 @@ test.describe('Admin paneli', () => {
     await page.locator('#adminLogLevel').selectOption('error');
     await res;
 
-    await expect(page.locator('#adminLogList .lvl-error').first()).toBeVisible();
+    await expect(page.locator('#adminLogList .badge-error').first()).toBeVisible();
     // yalnız error sətrləri qalır (render tamamlanana qədər poll)
     await expect
-      .poll(() => page.locator('#adminLogList .log-line:not(.lvl-error)').count())
+      .poll(() => page.locator('#adminLogList .badge:not(.badge-error)').count())
       .toBe(0);
   });
 
@@ -197,7 +236,8 @@ test.describe('Admin paneli', () => {
     test.skip(browserName !== 'chromium', 'clipboard icazəsi yalnız chromium-da');
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     await openAdmin(page);
-    await expect(page.locator('#adminLogList .log-line').first()).toBeVisible();
+    await openTab(page, 'tab-logs');
+    await expect(page.locator('#adminLogList tr').first()).toBeVisible();
     await page.locator('#adminLogCopy').click();
     const clip = await page.evaluate(() => navigator.clipboard.readText());
     expect(clip).toMatch(/ERROR|WARNING|SUCCESS|INFO/);
@@ -215,6 +255,9 @@ test.describe('Admin paneli', () => {
       await route.continue();
     });
     await page.goto('/#admin');
+    // Skeleton `#adminUserList`-dədir → tab dərhal açılmalıdır ki, aralıq
+    // vəziyyət (1200 ms ləngimə pəncərəsi) tutula bilsin.
+    await page.locator('.admin-sidebar-btn[data-tab="tab-users"]').click();
     await expect(page.locator('#adminUserList .skeleton').first()).toBeVisible();
     // sonra əsl məzmun gəlir və skeleton yox olur
     await expect(page.locator('#adminUserList .admin-user-row').first()).toBeVisible({ timeout: 15000 });
@@ -321,6 +364,9 @@ test.describe('Admin paneli', () => {
       }, theme);
       await page.goto('/#admin', { waitUntil: 'networkidle' });
       await expect(page.locator('#adminStatRow .stat-card').first()).toBeVisible();
+      // Jurnal toolbar-ı `#tab-logs` panelindədir — ölçü götürmək üçün açılmalıdır
+      // (gizli elementin `boundingBox()`-u `null` olur).
+      await openTab(page, 'tab-logs');
 
       // Avto-sürüşmə checkbox-u uzanmamalıdır (flex:1 `input` seçicisi onu da tuturdu).
       const cb = await page.locator('#adminLogAuto').boundingBox();

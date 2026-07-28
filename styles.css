@@ -3661,6 +3661,14 @@ select.code-lang-sel.show {
 }
 
 .user-card {
+  /* ⚠ TASK-9 responsive auditi (`overflow-x`): fasiləsiz uzun mətn (URL, spam,
+     yaxud 2000 simvolluq təsvir) qrid elementinin MIN-CONTENT enini nəhəng
+     edir və `1fr` treki onunla birlikdə genişlənir — ölçüldü: scrollWidth
+     18810 px / viewport 360 px, yəni BÜTÜN səhifə üfüqi sürüşürdü.
+     `min-width: 0` avtomatik minimum ölçünü ləğv edir, `overflow-wrap` isə
+     sözü zəruri yerdə qırır. İkisi birlikdə lazımdır. */
+  min-width: 0;
+  overflow-wrap: anywhere;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -8638,5 +8646,11 @@ body.theme-transitioning {
   .admin-sidebar-btn {
     width: auto;
     padding: 10px 16px;
+    /* ⚠ TASK-9 responsive auditi (`text-clip`): sidebar mobildə üfüqi sürüşən
+       zolağa çevrilir, lakin flex uşaqları default olaraq SIXILIR
+       (`flex-shrink: 1`). 6 düymə 360 px-ə sığmadığı üçün hər birinin mətni
+       kəsilirdi (scrollW 127 > clientW 47). Sürüşən zolaqda düymələr öz təbii
+       enini saxlamalıdır — sıxılma yox, sürüşmə olmalıdır. */
+    flex: 0 0 auto;
   }
 }
