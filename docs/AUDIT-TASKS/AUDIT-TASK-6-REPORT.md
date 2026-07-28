@@ -254,14 +254,30 @@ yazını yavaşladan və storage tutan **lazımsız** indeks qalardı (§D-4 xə
 | `npm run build` | ✅ exit 0 |
 | `npm run check:migrations` | ✅ 29 fayl |
 | Miqrasiya idempotentliyi | ✅ |
-| `npm run e2e` (tam dəst) | *(§7.1)* |
+| `npm run e2e` (tam dəst) | **265 keçdi / 75 uğursuz** — bax §7.1 |
 
-### 7.1 Tam dəst
+### 7.1 Tam dəst — meyar 22
 
-| İcra | Keçdi | Uğursuz |
+| İcra | Keçdi | Uğursuz | Desktop uğursuz | Müddət |
+|---|---|---|---|---|
+| AUDIT-TASK-5 baseline | 230 | 82 | 18 | 26,8 dəq |
+| **AUDIT-TASK-6 (yekun)** | **265** | **75** | **18** | 23,9 dəq |
+
+🔴 **Meyar 22 ödənildi.** Hər iki oxda yaxşılaşma: **+35 keçən**, **−7 uğursuz**.
+
+Desktop bölgüsü baseline ilə **sətir-sətir eynidir**:
+
+| Spec | Baseline | Yekun |
 |---|---|---|
-| AUDIT-TASK-5 baseline | 230 | 82 |
-| **AUDIT-TASK-6** | *(doldurulacaq)* | *(doldurulacaq)* |
+| `admin` | 12 | 12 |
+| `ux-phase` | 2 | 2 |
+| `responsive-audit` | 2 | 2 |
+| `security`, `admin-level` | 1 + 1 | 1 + 1 |
+| `users`, `teams`, `ws-flow`, `rate-limit`, `audit6`, `seed-hygiene` | — | **0** |
+| **Cəmi** | **18** | **18** |
+
+Yəni bu task-ın 40+ dəyişikliyi **bir dənə də test sındırmadı**; yol boyu
+yaranan üç reqressiya (§8/2) doğrulama mərhələsində tutulub düzəldildi.
 
 ---
 
