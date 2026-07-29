@@ -505,6 +505,14 @@ const D = {
   'thr.t_token_reuse': { az: 'Token təkrar istifadəsi', en: 'Token reuse detected', ru: 'Повторное использование токена' },
   'thr.t_geo_change': { az: 'Yeni ölkədən giriş', en: 'Login from new country', ru: 'Вход из новой страны' },
   'thr.t_rate_limit': { az: 'Sorğu limiti aşıldı', en: 'Rate limit exceeded', ru: 'Превышен лимит запросов' },
+  // AUDIT-TASK-9 / B-3 — gündəlik XP tavanı. Əməliyyat UĞURLUDUR (post/rəy
+  // yaranır), yalnız XP verilmir — mətn bunu açıq deməlidir, əks halda
+  // istifadəçi paylaşımının getmədiyini düşünüb təkrar göndərər.
+  'xp.daily_cap': {
+    az: 'Bugünkü XP limitinə çatdınız — paylaşımınız yerləşdirildi, XP sabah yenidən verilir.',
+    en: 'You have reached today’s XP limit — your content was posted, XP resumes tomorrow.',
+    ru: 'Вы достигли дневного лимита XP — публикация создана, начисление возобновится завтра.',
+  },
   'thr.t_turnstile_failed': { az: 'Bot yoxlaması uğursuz', en: 'Bot check failed', ru: 'Проверка на бота не пройдена' },
   'thr.t_upload_rejected': { az: 'Fayl rədd edildi', en: 'Upload rejected', ru: 'Загрузка отклонена' },
   'thr.t_session_revoked': { az: 'Sessiya ləğv edildi', en: 'Session revoked', ru: 'Сессия отозвана' },

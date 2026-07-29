@@ -2,6 +2,21 @@
 // Export adları köhnə Firestore versiyası ilə eynidir — UI modulları dəyişmədən qalır.
 import { api, startPoll } from './api.js';
 import { emit } from './util.js';
+import { toast } from './ui.js';
+import { t } from './i18n.js';
+
+/**
+ * AUDIT-TASK-9 / B-3 — gündəlik XP tavanı bildirişi.
+ *
+ * Server tavana çatanda əməliyyatı RƏDD ETMİR (post/rəy yaranır), sadəcə
+ * `xpCapped: true` qaytarır. İstifadəçiyə bunu deməsək, o, XP-nin artmadığını
+ * görüb sistemi sınıq sanacaq — və ya daha pisi, təkrar-təkrar göndərəcək.
+ *
+ * ⚠ `ui.js`/`i18n.js` `store.js`-i import ETMİR → dairəvi asılılıq yoxdur.
+ */
+function notifyXpCap(res){
+  if(res && res.xpCapped) toast(t('xp.daily_cap'), 'warn');
+}
 
 export const state = {
   authUser: null,     // { uid } — sessiya sahibi
@@ -132,6 +147,7 @@ export async function createPost({ blocks, tags, sharedPostId }){
     }
   }
   const d = await api('/posts', { method: 'POST', body: { blocks: outBlocks, tags, imageKeys, sharedPostId } });
+  notifyXpCap(d);
   emit('refresh-feed');
   emit('refresh-users');
   return d.post.id;
@@ -242,6 +258,7 @@ export function watchComments(postId, opts, cb){
 // parentId verilsə cavabdır (server bir səviyyəyə flatten edir). Yaradılan rəyi qaytarır.
 export async function addComment(post, text, parentId){
   const d = await api(`/posts/${post.id}/comments`, { method: 'POST', body: { text, parentId: parentId || undefined } });
+  notifyXpCap(d);
   emit('refresh-comments-' + post.id);
   emit('refresh-feed');
   emit('refresh-users');

@@ -12,6 +12,7 @@ import {
   upgradePasswordHash, PBKDF2_ITER_LEGACY,
 } from './auth';
 import { logAdmin, isAdminLogAction, invalidAdminAction } from './admin-log';
+import { grantXp, compensateXp, xpInvariant } from './xp';
 import {
   reqInfo, logSecurityEvent, recentFailures, checkGeoChange, verifyTurnstile,
   sniffType, imageDimensions,
@@ -114,6 +115,12 @@ const badReq = (m: string) => err(m, 400);
  * deyil.
  */
 const POST_BLOCKS_MAX_BYTES = 64 * 1024;
+
+// XP dəyərləri tək yerdə — əvvəl `xp + 10` / `xp + 5` kimi sətirlərə
+// yayılmışdı və tavan hesabı ilə uyğunluğu gözlə yoxlanmalı olurdu (bax xp.ts).
+const POST_XP = 10;
+const COMMENT_XP = 5;
+const SOLUTION_XP = 50;
 
 // Realtime: otaq mesajı dəyişəndə (yeni / redaktə / sil) həmin otağın DO-suna
 // "yenilə" siqnalı göndərilir → bağlı client-lər dərhal refetch edir. Fan-out
@@ -583,6 +590,10 @@ export async function deleteAccount(c: Ctx) {
     D(c).prepare('DELETE FROM admins WHERE user_id = ?').bind(u.id),
     D(c).prepare('DELETE FROM sessions WHERE uid = ?').bind(u.id),
     D(c).prepare('DELETE FROM oauth_accounts WHERE uid = ?').bind(u.id),
+    // AUDIT-TASK-9 / B-4: `xp_logs`-da FK yoxdur → sətirlər YETİM qalardı və
+    // `SUM(xp_logs) == users.xp` invariantı hər hesab silinməsindən sonra
+    // pozulardı (`/api/health` daimi "drift" göstərərdi).
+    D(c).prepare('DELETE FROM xp_logs WHERE uid = ?').bind(u.id),
     // security_events-də uid boşaldılır, SƏTİR SAXLANILIR: hadisələr təhlükəsizlik
     // telemetriyasıdır (hansı IP-dən neçə uğursuz giriş oldu) və şəxsi məlumat
     // çıxarıldıqdan sonra artıq həmin istifadəçiyə aid deyil. Silinsəydi, hesabı
@@ -798,9 +809,13 @@ async function maybeProfileBonus(c: Ctx, u: any): Promise<boolean> {
   if (!isProfileComplete(u)) return false;
 
   settings.profileBonusGiven = true;
-  await D(c).prepare('UPDATE users SET xp = xp + ?, settings = ? WHERE id = ?')
-    .bind(PROFILE_BONUS_XP, JSON.stringify(settings), u.id).run();
-  return true;
+  await D(c).prepare('UPDATE users SET settings = ? WHERE id = ?')
+    .bind(JSON.stringify(settings), u.id).run();
+  // H-5: XP artıq birbaşa yazılmır. `refId = 'profile'` sabitdir → UNIQUE
+  // indeksi bonusu hesab başına BİR DƏFƏYƏ bağlayır. `settings` bayrağı ilə
+  // ikiqat qoruma: bayraq JSON birləşdirməsində itsə belə XP təkrar verilmir.
+  const g = await grantXp(c.env, u.id, 'profile_bonus', 'profile', PROFILE_BONUS_XP);
+  return g.granted;
 }
 
 export async function patchSettings(c: Ctx) {
@@ -1051,7 +1066,9 @@ export async function createPost(c: Ctx) {
     'INSERT INTO posts (id, author_id, author_name, blocks, image_keys, text, tags, created_at, shared_post_id, post_type, quote_text) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
   ).bind(id, c.user!.id, c.user!.name, JSON.stringify(blocks),
     JSON.stringify(imageKeys), clampStr(firstText, 300), JSON.stringify(tags), now(), sharedPostId, postType, quoteText).run();
-  await D(c).prepare('UPDATE users SET xp = xp + 10 WHERE id = ?').bind(c.user!.id).run();
+  // H-5: XP idempotent + gündəlik tavanlı verilir. Tavana çatanda post YENƏ DƏ
+  // yaradılır — yalnız XP verilmir (audit §B-3: "əməliyyat uğurlu olsun").
+  const xpGrant = await grantXp(c.env, c.user!.id, 'post', id, POST_XP);
   await bumpActivity(c);
   for (const t of tags) await bumpProgress(c, c.user!.id, t, 'posts');
   // ⚡ FAN-OUT NÖVBƏYƏ (TASK-8 / Bənd 18).
@@ -1091,7 +1108,8 @@ export async function createPost(c: Ctx) {
     WHERE p.id = ?
   `;
   const row = await D(c).prepare(query).bind(id).first();
-  return json({ post: mapPost(row) });
+  // `xpCapped` — UI "Bugünkü XP limitinə çatdınız" bildirişi üçün (3 dildə).
+  return json({ post: mapPost(row), xpCapped: xpGrant.reason === 'daily_cap' });
 }
 
 export async function patchPost(c: Ctx, id: string) {
@@ -1144,6 +1162,14 @@ export async function deletePost(c: Ctx, id: string) {
     stmts.push(D(c).prepare('UPDATE posts SET share_count = MAX(0, share_count - 1) WHERE id = ?').bind(row.shared_post_id));
   }
   await D(c).batch(stmts);
+  // 🔴 H-5 #3 — istismarın ƏSAS dövrəsi burada bağlanır: yarat (+10) → sil →
+  // təkrarla. Kompensasiya YALNIZ uyğun `xp_logs` sətri varsa işləyir və
+  // məbləği mövcud XP ilə clamp edir → Task 6-nın `users_xp_nonneg` trigger-i
+  // TETİKLƏNMİR (bax xp.ts `compensateXp` üç qatlı müdafiə).
+  //
+  // ⚠ Batch-dən SONRA və `waitUntil`-siz: XP geri alınmadan cavab qaytarsaq,
+  //   sürətli yarat-sil dövrəsi kompensasiyanı qabaqlaya bilərdi.
+  await compensateXp(c.env, String(row.author_id), 'post', id);
   return json({ ok: true });
 }
 
@@ -1292,14 +1318,13 @@ export async function addComment(c: Ctx, postId: string) {
   const ts = now();
   await D(c).prepare('INSERT INTO comments (id, post_id, author_id, author_name, text, created_at, parent_comment_id) VALUES (?,?,?,?,?,?,?)')
     .bind(id, postId, c.user!.id, c.user!.name, text, ts, parentId).run();
-  await D(c).batch([
-    D(c).prepare('UPDATE posts SET comment_count = comment_count + 1 WHERE id = ?').bind(postId),
-    D(c).prepare('UPDATE users SET xp = xp + 5 WHERE id = ?').bind(c.user!.id),
-  ]);
+  await D(c).prepare('UPDATE posts SET comment_count = comment_count + 1 WHERE id = ?').bind(postId).run();
+  // H-5: XP idempotent + tavanlı. Tavana çatanda rəy YENƏ yazılır.
+  const cXp = await grantXp(c.env, c.user!.id, 'comment', id, COMMENT_XP);
   if (parentId && replyToAuthor) await notify(c, replyToAuthor, 'comment', 'şərhinə cavab yazdı', postId);
   else await notify(c, post.author_id, 'comment', 'paylaşımına şərh yazdı', postId);
   await notifyMentions(c, text, 'səni şərhdə qeyd etdi', postId);
-  return json({ ok: true, id, createdAt: ts, parentId });
+  return json({ ok: true, id, createdAt: ts, parentId, xpCapped: cXp.reason === 'daily_cap' });
 }
 export async function editComment(c: Ctx, postId: string, cid: string) {
   const b = await readJson(c.req);
@@ -1318,8 +1343,17 @@ export async function deleteComment(c: Ctx, postId: string, cid: string) {
   const allowed = row.author_id === c.user!.id || c.isAdmin || post?.author_id === c.user!.id;
   if (!allowed) return err('İcazə yoxdur.', 403, 'forbidden');
   // Cascade sil: rəy + bütün cavabları (dərinlik 1 olduğu üçün birbaşa uşaqlar tamdır) + reaksiyalar.
-  const kids = await D(c).prepare('SELECT id FROM comments WHERE parent_comment_id = ?').bind(cid).all<any>();
-  const ids = [cid, ...kids.results.map(r => r.id as string)];
+  // `author_id` də oxunur: cascade silinən cavabların müəllifi BAŞQA
+  // istifadəçilər ola bilər və XP kompensasiyası hər sətrin ÖZ müəllifinə
+  // tətbiq edilməlidir (yanlış uid ilə `xp_logs` sətri tapılmazdı və dövrə
+  // sükutla açıq qalardı).
+  const kids = await D(c).prepare('SELECT id, author_id FROM comments WHERE parent_comment_id = ?')
+    .bind(cid).all<any>();
+  const owners: Array<{ id: string; uid: string }> = [
+    { id: cid, uid: String(row.author_id) },
+    ...kids.results.map(r => ({ id: String(r.id), uid: String(r.author_id) })),
+  ];
+  const ids = owners.map(o => o.id);
   // D-1: cavabların sayı SƏRHƏDSİZDİR — populyar rəyin 500 cavabı olsa
   // `IN (?×501)` D1-i çökdürür və rəy HEÇ VAXT silinə bilmirdi.
   // Silmələr hissələnir, lakin hamısı EYNİ `batch()`-də qalır → atomiklik
@@ -1332,6 +1366,10 @@ export async function deleteComment(c: Ctx, postId: string, cid: string) {
   }
   stmts.push(D(c).prepare('UPDATE posts SET comment_count = MAX(0, comment_count - ?) WHERE id = ?').bind(ids.length, postId));
   await D(c).batch(stmts);
+  // H-5 #3 — rəy dövrəsi də bağlanır. Cascade silinən CAVABLARIN XP-si də geri
+  // alınır: yalnız kök rəyi kompensasiya etsək, hücumçu cavab yazıb valideyni
+  // silməklə cavabların XP-sini saxlayardı.
+  for (const o of owners) await compensateXp(c.env, o.uid, 'comment', o.id);
   return json({ ok: true });
 }
 export async function commentLikePut(c: Ctx, postId: string, cid: string) {
@@ -1851,9 +1889,18 @@ export async function submitSolution(c: Ctx, taskId: string) {
   await D(c).prepare(
     `INSERT INTO submissions (task_id, user_id, username, name, task_title, category, text, link, status, submitted_at)
      VALUES (?,?,?,?,?,?,?,?, 'pending', ?)
-     ON CONFLICT(task_id, user_id) DO UPDATE SET text = ?, link = ?, status = 'pending', submitted_at = ?`,
+     ON CONFLICT(task_id, user_id) DO UPDATE SET
+       text = excluded.text,
+       link = excluded.link,
+       -- 🔴 B-5 / AUDIT H-5 istismar 2: TƏSDİQLƏNMİŞ həll yenidən 'pending'-ə
+       -- DÜŞMÜR. Əvvəl düşürdü və reviewSubmission-dakı
+       -- "approved və row.status !== approved" şərti YENİDƏN doğru olurdu →
+       -- hər təkrar təsdiqdə +50 XP və tasks_completed+1 verilirdi.
+       status = CASE WHEN submissions.status = 'approved'
+                     THEN 'approved' ELSE 'pending' END,
+       submitted_at = excluded.submitted_at`,
   ).bind(taskId, c.user!.id, c.user!.username, c.user!.name, task.title, task.category,
-    text, link, now(), text, link, now()).run();
+    text, link, now()).run();
   await bumpActivity(c);
   return json({ ok: true });
 }
@@ -1876,7 +1923,12 @@ export async function reviewSubmission(c: Ctx, taskId: string, uid: string) {
   await D(c).prepare('UPDATE submissions SET status = ?, reviewed_at = ?, reviewed_by = ? WHERE task_id = ? AND user_id = ?')
     .bind(status, now(), c.user!.id, taskId, uid).run();
   if (status === 'approved' && row.status !== 'approved') {
-    await D(c).prepare('UPDATE users SET xp = xp + 50, tasks_completed = tasks_completed + 1 WHERE id = ?').bind(uid).run();
+    // ⚠ İKİNCİ MÜDAFİƏ XƏTTİ (audit §B-5): status məntiqi sınsa belə
+    // `UNIQUE(uid, 'solution', refId)` XP-ni təkrar verməyə qoymur.
+    // `refId` = tapşırıq + istifadəçi cütü — `submissions`-un kompozit açarı ilə
+    // eynidir, yəni bir istifadəçi bir tapşırıqdan yalnız bir dəfə XP alır.
+    await grantXp(c.env, uid, 'solution', `${taskId}:${uid}`, SOLUTION_XP,
+      { alsoCompletedTask: true });
     if (row.category) await bumpProgress(c, uid, row.category, 'tasks');
   }
   await notify(c, uid, 'task',
@@ -2126,10 +2178,29 @@ export async function adminPatchUser(c: Ctx, uid: string) {
   if ('blocked' in b) { sets.push('blocked = ?'); vals.push(b.blocked ? 1 : 0); }
   // TASK-7 / Bənd 6: admin XP redaktəsi. Level XP-dən törənir (levelFromXP) —
   // ayrıca stored sütun yoxdur, ona görə "Lv redaktəsi" = XP redaktəsi.
-  if ('xp' in b) { sets.push('xp = ?'); vals.push(Math.max(0, parseInt(String(b.xp), 10) || 0)); }
+  //
+  // ⚠ AUDIT-TASK-9 / B: bu, XP-ni MÜTLƏQ dəyərlə yazan YEGANƏ yoldur (qalan
+  //   hamısı `grantXp`-dən keçir). Loglanmasa `SUM(xp_logs) == users.xp`
+  //   invariantı hər admin düzəlişində pozulardı və `/api/health` yalançı
+  //   "drift" verərdi. Ona görə FƏRQ `xp_logs`-a 'admin' mənbəyi ilə yazılır.
+  let xpDelta = 0;
+  if ('xp' in b) {
+    const next = Math.max(0, parseInt(String(b.xp), 10) || 0);
+    const cur = await D(c).prepare('SELECT xp FROM users WHERE id = ?').bind(uid).first<any>();
+    xpDelta = next - Number(cur?.xp || 0);
+    sets.push('xp = ?'); vals.push(next);
+  }
   if (!sets.length) return badReq('Dəyişiklik yoxdur.');
   vals.push(uid);
   await D(c).prepare(`UPDATE users SET ${sets.join(', ')} WHERE id = ?`).bind(...vals).run();
+  if (xpDelta !== 0) {
+    // `ref_id` NULL — admin eyni istifadəçini dəfələrlə düzəldə bilər, yəni
+    // burada idempotentlik İSTƏNMİR; hər düzəliş ayrıca audit sətridir.
+    await D(c).prepare(
+      `INSERT INTO xp_logs (id, uid, source, ref_id, amount, created_at)
+       VALUES (?, ?, 'admin', NULL, ?, ?)`,
+    ).bind(uuid(), uid, xpDelta, now()).run();
+  }
   if ('blocked' in b && b.blocked) await destroyAllSessions(c.env, uid);
 
   // Jurnal: blok/blokdan-çıxarma AYRICA əməliyyatdır. Əvvəl hamısı 'user-edit'
@@ -3237,7 +3308,21 @@ export async function health(c: Ctx) {
     db = 'fail';
   }
 
-  const checks = { db, bootstrap_general_room: bootstrapGeneralRoom, migrations_applied: migrationsApplied };
+  // AUDIT-TASK-9 §5.4 — XP invariantı yoxlanıla bilən sağlamlıq göstəricisidir.
+  // 'drift' o deməkdir ki, nəyisə `xp_logs`-dan KƏNARDA `users.xp`-ni dəyişir
+  // (əl ilə SQL, sadalanmamış route, yarımçıq batch). Bu, H-5-in yenidən
+  // açılmasının ilk əlamətidir və sükutla baş verir — ona görə ölçülür.
+  let xpInv: 'ok' | 'drift' | 'unknown' = 'unknown';
+  try {
+    xpInv = (await xpInvariant(c.env)).ok ? 'ok' : 'drift';
+  } catch { /* sxem hələ migrate olunmayıb — 'unknown' qalır */ }
+
+  const checks = {
+    db, bootstrap_general_room: bootstrapGeneralRoom,
+    migrations_applied: migrationsApplied, xp_invariant: xpInv,
+  };
+  // ⚠ `drift` `ok`-u AŞAĞI SALMIR: bu, məlumat bütövlüyü siqnalıdır, xidmət
+  //   nasazlığı deyil — 503 vermək sağlam saytı monitorinqdə "ölü" göstərərdi.
   const ok = db === 'ok' && bootstrapGeneralRoom === 'ok';
   // 503: monitorinq alətləri status kodundan da oxuya bilsin.
   return json({ ok, checks }, ok ? 200 : 503);

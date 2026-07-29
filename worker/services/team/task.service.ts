@@ -1,5 +1,6 @@
 import { Env, uuid, now, clampStr } from '../../util';
 import { taskXpFor, USER_TASK_XP } from './xp';
+import { grantXp, compensateXp } from '../../xp';
 
 export const TASK_STATUSES = ['To Do', 'In Progress', 'Review', 'Done'] as const;
 export const TASK_PRIORITIES = ['Low', 'Medium', 'High', 'Critical'] as const;
@@ -115,16 +116,25 @@ export class TeamTaskService {
     const justCompleted = !wasDone && isDone;
     const reopened = wasDone && !isDone;
 
+    // 🔴 AUDIT-TASK-9 / 9.0-Sual 3: audit XP verilən 4 yer sadalayırdı, faktiki
+    // say 7-dir — BU İKİSİ SADALANMAMIŞDI. Task 2 §5.2 və Task 3 §8/6 dərsi
+    // ("öz sayğacınla təsdiqlə") burada da özünü doğrultdu.
     if (justCompleted && after?.assignee_id) {
-      await this.env.DB.prepare(
-        'UPDATE users SET xp = xp + ?, tasks_completed = tasks_completed + 1 WHERE id = ?'
-      ).bind(USER_TASK_XP, after.assignee_id).run();
+      await grantXp(this.env, String(after.assignee_id), 'team_task', taskId, USER_TASK_XP,
+        { alsoCompletedTask: true });
     } else if (reopened && before.assignee_id) {
-      // Geri qaytarılırsa XP-ni də geri alırıq ki, "Done → To Do → Done" dövrü
-      // XP fabrikinə çevrilməsin.
-      await this.env.DB.prepare(
-        'UPDATE users SET xp = MAX(0, xp - ?), tasks_completed = MAX(0, tasks_completed - 1) WHERE id = ?'
-      ).bind(USER_TASK_XP, before.assignee_id).run();
+      // "Done → To Do → Done" dövrü XP fabrikinə çevrilməsin.
+      //
+      // ⚠ `compensateXp` kompensasiya sətrini `UNIQUE(uid,'compensation',taskId)`
+      //   ilə yazır. Yəni bir tapşırıq üzrə XP yalnız BİR DƏFƏ geri alına bilər,
+      //   `grantXp` isə `UNIQUE(uid,'team_task',taskId)` ilə yalnız bir dəfə
+      //   verə bilər → dövrə hər iki istiqamətdə bağlıdır.
+      const back = await compensateXp(this.env, String(before.assignee_id), 'team_task', taskId);
+      if (back > 0) {
+        await this.env.DB.prepare(
+          'UPDATE users SET tasks_completed = MAX(0, tasks_completed - 1) WHERE id = ?'
+        ).bind(before.assignee_id).run();
+      }
     }
 
     return {
