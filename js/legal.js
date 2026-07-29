@@ -624,31 +624,284 @@ Collabix использует только **необходимые функци
 };
 
 // Default FAQ dəsti (seed + public fallback)
+// Kateqoriyalar: account (hesab), privacy (məxfilik), security (təhlükəsizlik), 
+// usage (istifadə), moderation (moderasiya)
 export const DEFAULT_FAQS = [
-  { id: 'reg1', category: 'account', order: 1, active: true,
-    q: { az: 'Qeydiyyat pulludur?', en: 'Is registration paid?', ru: 'Регистрация платная?' },
-    a: { az: 'Xeyr, Collabix tam pulsuzdur.', en: 'No, Collabix is completely free.', ru: 'Нет, Collabix полностью бесплатен.' } },
-  { id: 'reg2', category: 'account', order: 2, active: true,
-    q: { az: 'Email tələb olunur?', en: 'Do I need an email?', ru: 'Нужен ли email?' },
-    a: { az: 'Xeyr — yalnız istifadəçi adı və şifrə kifayətdir. Email könüllüdür.', en: 'No — just a username and password. Email is optional.', ru: 'Нет — достаточно имени пользователя и пароля.' } },
-  { id: 'age', category: 'account', order: 3, active: true,
-    q: { az: 'Neçə yaşdan qoşulmaq olar?', en: 'What is the minimum age?', ru: 'С какого возраста можно?' },
-    a: { az: 'Platforma yalnız 18 yaşdan yuxarı istifadəçilər üçündür.', en: 'The platform is for users 18 and older only.', ru: 'Платформа только для пользователей 18+.' } },
-  { id: 'sec1', category: 'security', order: 4, active: true,
-    q: { az: 'Şifrəm təhlükəsizdirmi?', en: 'Is my password safe?', ru: 'Мой пароль в безопасности?' },
-    a: { az: 'Şifrələr PBKDF2 ilə heşlənmiş saxlanılır — heç kim (admin daxil) onları açıq şəkildə görə bilmir.', en: 'Passwords are stored hashed with PBKDF2 — nobody (including admins) can see them in plain text.', ru: 'Пароли хранятся в хешированном виде (PBKDF2) — никто, включая администраторов, не может их увидеть.' } },
-  { id: 'sec2', category: 'security', order: 5, active: true,
-    q: { az: 'Şifrəmi unutsam nə edim?', en: 'What if I forget my password?', ru: 'Что делать, если забыл пароль?' },
-    a: { az: 'Giriş ekranındakı "Parolu unutmusan?" bölməsinə bax — admin sənə müvəqqəti parol təyin edəcək.', en: 'See "Forgot password?" on the login screen — an admin will set you a temporary password.', ru: 'См. «Забыли пароль?» на экране входа.' } },
-  { id: 'use1', category: 'usage', order: 6, active: true,
-    q: { az: 'XP və nişanlar necə qazanılır?', en: 'How do I earn XP and badges?', ru: 'Как заработать XP и бейджи?' },
-    a: { az: 'Post paylaş (+10), şərh yaz (+5), tapşırıq həllin təsdiqlənsin (+50). Nişanlar avtomatik açılır.', en: 'Share posts (+10), comment (+5), get task solutions approved (+50). Badges unlock automatically.', ru: 'Посты (+10), комментарии (+5), одобренные решения (+50).' } },
-  { id: 'use2', category: 'usage', order: 7, active: true,
-    q: { az: 'Seriya (🔥) necə işləyir?', en: 'How do streaks (🔥) work?', ru: 'Как работает серия (🔥)?' },
-    a: { az: 'Hər gün platformaya daxil olub aktiv olsan seriya artır; bir gün ötürsən sıfırlanır.', en: 'Log in and be active daily to grow your streak; missing a day resets it.', ru: 'Заходите и будьте активны каждый день; пропуск обнуляет серию.' } },
-  { id: 'use3', category: 'usage', order: 8, active: true,
-    q: { az: 'Kod paylaşanda highlighting varmı?', en: 'Is there code highlighting?', ru: 'Есть ли подсветка кода?' },
-    a: { az: 'Bəli — post yazanda "Kod" bloku əlavə et, dili seç, avtomatik highlight olunur.', en: 'Yes — add a "Code" block to your post, pick a language, and it highlights automatically.', ru: 'Да — добавьте блок «Код» и выберите язык.' } },
+  // ============================================================
+  // KATEQORİYA 1: HESAB & QEYDİYYAT (ACCOUNT & REGISTRATION)
+  // ============================================================
+  {
+    id: 'faq-account-1',
+    category: 'account',
+    order: 1,
+    active: true,
+    q: {
+      az: 'Qeydiyyat pulludur?',
+      en: 'Is registration paid?',
+      ru: 'Регистрация платная?'
+    },
+    a: {
+      az: 'Xeyr, **Collabix** tamamilə pulsuzdur. Bütün əsas funksiyalar — post paylaşmaq, şərh yazmaq, otaqlarda mesajlaşmaq, tapşırıq həll etmək və XP toplamaq — heç bir ödəniş tələb etmir. Gələcəkdə əlavə xüsusiyyətlər (məsələn, premium nişanlar) təqdim olunarsa, bu barədə istifadəçilərə əvvəlcədən məlumat veriləcək.',
+      en: 'No, **Collabix** is completely free. All core features — posting, commenting, messaging in rooms, solving tasks, and earning XP — require no payment. If additional features (e.g., premium badges) are introduced in the future, users will be notified in advance.',
+      ru: 'Нет, **Collabix** полностью бесплатен. Все основные функции — публикация постов, комментарии, обмен сообщениями в комнатах, решение задач и получение XP — не требуют оплаты. Если в будущем появятся дополнительные функции (например, премиум-бейджи), пользователи будут уведомлены заранее.'
+    }
+  },
+  {
+    id: 'faq-account-2',
+    category: 'account',
+    order: 2,
+    active: true,
+    q: {
+      az: 'Email ünvanı mütləq tələb olunur?',
+      en: 'Is an email address mandatory?',
+      ru: 'Обязателен ли адрес электронной почты?'
+    },
+    a: {
+      az: 'Xeyr. Qeydiyyatdan keçərkən **yalnız istifadəçi adı və şifrə** tələb olunur. Email tamamilə **könüllüdür**. Onu əlavə etsəniz, bu ünvandan iki halda istifadə olunacaq: (1) şifrənizi unutduqda müvəqqəti şifrə göndərmək, (2) vacib platforma xəbərdarlıqları (məsələn, təhlükəsizlik yeniləməsi) üçün. Email ünvanınız heç vaxt üçüncü tərəflərlə paylaşılmır.',
+      en: 'No. **Only a username and password** are required to register. Email is completely **optional**. If you provide it, we will use it in two cases: (1) to send a temporary password if you forget yours, (2) for important platform announcements (e.g., security updates). Your email is never shared with third parties.',
+      ru: 'Нет. Для регистрации требуются **только имя пользователя и пароль**. Электронная почта полностью **необязательна**. Если вы её укажете, мы будем использовать её в двух случаях: (1) для отправки временного пароля при его потере, (2) для важных уведомлений платформы (например, обновлений безопасности). Ваш email никогда не передаётся третьим лицам.'
+    }
+  },
+  {
+    id: 'faq-account-3',
+    category: 'account',
+    order: 3,
+    active: true,
+    q: {
+      az: 'Yaş məhdudiyyəti varmı? Doğum tarixini niyə istəyirsiniz?',
+      en: 'Is there an age limit? Why do you ask for my date of birth?',
+      ru: 'Есть ли возрастное ограничение? Зачем вы запрашиваете дату рождения?'
+    },
+    a: {
+      az: 'Bəli, platforma **yalnız 18 yaşdan yuxarı** şəxslər üçündür. Qeydiyyat zamanı doğum tarixini soruşuruq ki, yaş həddinə uyğunluğu yoxlaya bilək. Bu məlumat **yoxlanılır** və profilinizda başqalarına göstərilmir (yalnız sizin üçün saxlanılır). Yanlış yaş bəyan etdiyi aşkarlanan hesablar xəbərdarlıq edilmədən bağlanacaq.',
+      en: 'Yes, the platform is **for users 18 and older only**. We ask for your date of birth during registration to verify age eligibility. This information is **validated** and is **not shown** to other users on your profile (it is stored only for internal verification). Accounts found to have misrepresented their age will be terminated without prior notice.',
+      ru: 'Да, платформа предназначена **только для пользователей старше 18 лет**. При регистрации мы запрашиваем дату рождения для проверки возрастного ценза. Эта информация **проверяется** и **не отображается** в вашем профиле для других пользователей (хранится только для внутренней проверки). Аккаунты, уличенные в указании ложного возраста, будут заблокированы без предупреждения.'
+    }
+  },
+  {
+    id: 'faq-account-4',
+    category: 'account',
+    order: 4,
+    active: true,
+    q: {
+      az: 'Hesabımı necə silə bilərəm? Nə baş verir?',
+      en: 'How do I delete my account? What happens to my data?',
+      ru: 'Как удалить аккаунт? Что произойдет с моими данными?'
+    },
+    a: {
+      az: 'Hesabı silmək üçün **Parametrlər → Hesabı sil** bölməsinə keçin. Silindikdən dərhal sonra: profil, istifadəçi adı, avatar, bildirişlər **ani olaraq** silinir. Son 90 gün ərzində yazdığınız otaq/şəxsi mesajlar **anonimləşdirilir** (adınız "Silinmiş istifadəçi" ilə əvəz olunur, mətn qalır). 90 gündən köhnə arxivlənmiş mesajlarınız isə oxuculardan **dərhal gizlənir** və 24 saat ərzində fiziki olaraq məhv edilir. İcma postlarınız isə sizin tərəfinizdən silinməyibsə, müəllif "Silinmiş istifadəçi" kimi görünəcək.',
+      en: 'To delete your account, go to **Settings → Delete account**. Immediately after deletion: your profile, username, avatar, and notifications are **instantly** removed. Room and direct messages from the last 90 days are **anonymized** (your name is replaced with "Deleted user", while the text remains). Your archived messages (older than 90 days) are **immediately hidden** from readers and physically purged within 24 hours. If you haven\'t manually deleted your community posts, their author will be shown as "Deleted user".',
+      ru: 'Чтобы удалить аккаунт, перейдите в **Настройки → Удалить аккаунт**. Сразу после удаления: ваш профиль, имя пользователя, аватар и уведомления **мгновенно** удаляются. Сообщения в комнатах и личные сообщения за последние 90 дней **анонимизируются** (ваше имя заменяется на "Удаленный пользователь", текст остается). Ваши архивные сообщения (старше 90 дней) **немедленно скрываются** от читателей и физически удаляются в течение 24 часов. Если вы не удалили свои посты вручную, их автором будет указан "Удаленный пользователь".'
+    }
+  },
+
+  // ============================================================
+  // KATEQORİYA 2: MƏXFİLİK & DATA (PRIVACY & DATA)
+  // ============================================================
+  {
+    id: 'faq-privacy-1',
+    category: 'privacy',
+    order: 5,
+    active: true,
+    q: {
+      az: 'Məlumatlarımı kimlər görə bilər? Üçüncü tərəflərlə paylaşılırmı?',
+      en: 'Who can see my data? Is it shared with third parties?',
+      ru: 'Кто может видеть мои данные? Передаются ли они третьим лицам?'
+    },
+    a: {
+      az: 'Məlumatlarınız heç vaxt üçüncü tərəflərə **satılmır** və marketinq məqsədilə paylaşılmır. Profil məlumatlarınız (ad, bio, bacarıqlar) digər platforma istifadəçilərinə göstərilir. Texniki emal üçün **Cloudflare, Inc.** (Workers, D1 verilənlər bazası, R2 fayl anbarı, KV) ilə işləyirik — onlar bizim üçün **məlumat emalçısı (prosessor)** kimi çıxış edir və Avropa Komissiyasının Standart Müqavilə Şərtlərinə (SCC) uyğun fəaliyyət göstərirlər. Şifrəniz, e-poçtunuz və sessiya məlumatlarınız heç bir istifadəçiyə (administratorlara belə) açıq görünmür.',
+      en: 'Your data is **never sold** or shared with third parties for marketing purposes. Your profile information (name, bio, skills) is visible to other platform users. For technical processing, we work with **Cloudflare, Inc.** (Workers, D1 database, R2 storage, KV) — they act as our **data processors** and operate in compliance with the EU Standard Contractual Clauses (SCC). Your password, email, and session data are never visible to any user (including administrators).',
+      ru: 'Ваши данные **никогда не продаются** и не передаются третьим лицам в маркетинговых целях. Информация вашего профиля (имя, био, навыки) видна другим пользователям платформы. Для технической обработки мы работаем с **Cloudflare, Inc.** (Workers, D1, R2, KV) — они выступают в роли наших **процессоров данных** и действуют в соответствии со Стандартными договорными положениями ЕС (SCC). Ваш пароль, email и данные сессии никогда не видны никому из пользователей (включая администраторов).'
+    }
+  },
+  {
+    id: 'faq-privacy-2',
+    category: 'privacy',
+    order: 6,
+    active: true,
+    q: {
+      az: 'Məlumatlarımın ixracını (export) necə edə bilərəm?',
+      en: 'How can I export my data?',
+      ru: 'Как я могу экспортировать свои данные?'
+    },
+    a: {
+      az: 'Bütün məlumatlarınızı **Parametrlər → Məlumat ixracı** bölməsindən özünüz endirə bilərsiniz. Endirdiyiniz fayl (JSON və ya CSV formatında) aşağıdakıları əhatə edir: tam profil, bütün postlar, şərhlər, otaq və şəxsi mesajlar (arxivlənmişlər daxil olmaqla), XP tarixçəsi, qazanılmış nişanlar, komanda üzvlükləri və əlaqə sorğuları. Fayl hazırlandıqdan sonra birbaşa brauzerinizə yüklənir. Texniki məhdudiyyət: sui-istifadənin qarşısını almaq üçün saatda məhdud sayda sorğu qəbul edilir; limit aşıldıqda bir müddət sonra yenidən cəhd edin.',
+      en: 'You can download all your data yourself from **Settings → Export Data**. The downloaded file (in JSON or CSV format) includes: your full profile, all posts, comments, room and direct messages (including archived ones), XP history, earned badges, team memberships, and contact requests. The file is generated and downloaded directly to your browser. Technical limitation: to prevent abuse, a limited number of requests are processed per hour; if you hit the limit, please retry later.',
+      ru: 'Вы можете самостоятельно скачать все свои данные в разделе **Настройки → Экспорт данных**. Загружаемый файл (в формате JSON или CSV) включает: полный профиль, все посты, комментарии, сообщения в комнатах и личные сообщения (включая архивные), историю XP, полученные бейджи, участие в командах и ваши обращения. Файл генерируется и загружается непосредственно в ваш браузер. Техническое ограничение: во избежание злоупотреблений обрабатывается ограниченное число запросов в час; при достижении лимита повторите попытку позже.'
+    }
+  },
+  {
+    id: 'faq-privacy-3',
+    category: 'privacy',
+    order: 7,
+    active: true,
+    q: {
+      az: 'Köhnə mesajlarım harada saxlanılır? "Arxiv" nə deməkdir?',
+      en: 'Where are my old messages stored? What does "archive" mean?',
+      ru: 'Где хранятся мои старые сообщения? Что значит "архив"?'
+    },
+    a: {
+      az: 'Otaq və şəxsi mesajlar **90 gündən** sonra əsas sürətli verilənlər bazasından çıxarılaraq sıxılmış **arxiv anbarına** (R2) köçürülür. Bu **silmə deyil** — arxivləşdirilmiş mesajlar sizin üçün əlçatan qalır: söhbət ekranında "Daha köhnə mesajlar" düyməsi ilə onları yükləyə bilərsiniz. Bu mesajlar həm də data ixracına daxil edilir. Arxiv fiziki olaraq Cloudflare R2-də şifrələnmiş şəkildə saxlanılır.',
+      en: 'Room and direct messages are moved from the primary fast database to compressed **archive storage** (R2) after **90 days**. This is **not deletion** — archived messages remain accessible to you: you can load them in the chat via the "Load older messages" button. They are also included in your data export. The archive is stored encrypted in Cloudflare R2.',
+      ru: 'Сообщения в комнатах и личные сообщения через **90 дней** перемещаются из основной быстрой базы данных в сжатое **архивное хранилище** (R2). Это **не удаление** — архивные сообщения остаются доступными для вас: вы можете загрузить их в чате через кнопку "Загрузить старые сообщения". Они также включаются в экспорт данных. Архив хранится в зашифрованном виде в Cloudflare R2.'
+    }
+  },
+
+  // ============================================================
+  // KATEQORİYA 3: TƏHLÜKƏSİZLİK (SECURITY)
+  // ============================================================
+  {
+    id: 'faq-security-1',
+    category: 'security',
+    order: 8,
+    active: true,
+    q: {
+      az: 'Şifrəm nə dərəcədə təhlükəsizdir?',
+      en: 'How secure is my password?',
+      ru: 'Насколько безопасен мой пароль?'
+    },
+    a: {
+      az: 'Şifrələr **heç vaxt** açıq mətndə saxlanılmır. Qeydiyyat və daxil olma zamanı şifrəniz dərhal **PBKDF2-HMAC-SHA256** alqoritmi ilə (310.000 iterasiya) heşlənir (hash) və bazaya bu heşlənmiş versiya yazılır. Bu o deməkdir ki, nə adminlər, nə də başqa heç kim şifrənizi oxuya bilməz. Şifrənizi yalnız siz bilirsiniz. Əlavə olaraq, giriş cəhdləri **rate limiting** ilə məhdudlaşdırılır ki, brute-force (qüvvə ilə sındırma) hücumlarının qarşısı alınsın.',
+      en: 'Passwords are **never** stored in plain text. During registration and login, your password is immediately hashed using **PBKDF2-HMAC-SHA256** (310,000 iterations), and only this hashed version is stored in the database. This means neither admins nor anyone else can read your password — only you know it. Additionally, login attempts are protected by **rate limiting** to prevent brute-force attacks.',
+      ru: 'Пароли **никогда** не хранятся в открытом виде. При регистрации и входе ваш пароль немедленно хешируется с помощью **PBKDF2-HMAC-SHA256** (310 000 итераций), и в базе данных сохраняется только эта хешированная версия. Это означает, что ни администраторы, ни кто-либо ещё не могут прочитать ваш пароль — только вы его знаете. Кроме того, попытки входа ограничены по частоте (**rate limiting**) для предотвращения атак перебором (brute-force).'
+    }
+  },
+  {
+    id: 'faq-security-2',
+    category: 'security',
+    order: 9,
+    active: true,
+    q: {
+      az: 'Şifrəmi unutmuşam. Nə etməliyəm?',
+      en: 'I forgot my password. What should I do?',
+      ru: 'Я забыл пароль. Что делать?'
+    },
+    a: {
+      az: 'Giriş ekranında **"Parolu unutmusan?"** linkinə klikləyin. Əgər qeydiyyat zamanı e-poçt ünvanınızı daxil etmisinizsə, sistem həmin ünvana müvəqqəti (bir dəfəlik) şifrə göndərəcək. Bu şifrə ilə daxil olduqdan sonra profilinizdən yeni, daimi şifrə təyin edə bilərsiniz. **Email daxil etməmisinizsə**, zəhmət olmasa dəstək xidmətinə (`${SITE.email}`) müraciət edin — administrator şəxsiyyətinizi təsdiqlədikdən sonra hesabınıza müvəqqəti giriş yaradacaq.',
+      en: 'Click the **"Forgot password?"** link on the login screen. If you provided an email address during registration, the system will send a temporary (one-time) password to that address. Once logged in with this password, you can set a new permanent password in your profile. **If you did not provide an email**, please contact support at `${SITE.email}` — after verifying your identity, an administrator will grant temporary access to your account.',
+      ru: 'Нажмите ссылку **"Забыли пароль?"** на экране входа. Если вы указали адрес электронной почты при регистрации, система отправит временный (одноразовый) пароль на этот адрес. Войдя с этим паролем, вы сможете установить новый постоянный пароль в своем профиле. **Если вы не указали email**, обратитесь в службу поддержки (`${SITE.email}`) — после проверки личности администратор предоставит вам временный доступ к аккаунту.'
+    }
+  },
+  {
+    id: 'faq-security-3',
+    category: 'security',
+    order: 10,
+    active: true,
+    q: {
+      az: 'Sessiyam nə vaxt bitir? Birdən çox cihazda daxil ola bilərəmmi?',
+      en: 'When does my session expire? Can I log in from multiple devices?',
+      ru: 'Когда истекает моя сессия? Могу ли я войти с нескольких устройств?'
+    },
+    a: {
+      az: 'Hər daxil olanda sizin üçün **JWT (HS256)** ilə imzalanmış unikal sessiya yaradılır və **Cloudflare KV**-da saxlanılır. Sessiya **30 gün** ərzində yenilənmədikdə avtomatik silinir. Siz istədiyiniz qədər cihazda eyni hesabla daxil ola bilərsiniz — hər cihaz üçün ayrıca sessiya yaradılır. **Çıxış (Logout)** etdikdə həmin cihazdakı sessiya dərhal ləğv edilir. Başqa cihazlardakı sessiyalar isə aktiv qalır.',
+      en: 'Each time you log in, a unique session is created, signed with **JWT (HS256)** and stored in **Cloudflare KV**. Sessions automatically expire after **30 days** of inactivity. You can log in to your account from as many devices as you like — each device gets its own separate session. **Logging out** immediately invalidates that specific device\'s session. Sessions on other devices remain active.',
+      ru: 'При каждом входе создается уникальная сессия, подписанная с помощью **JWT (HS256)** и хранящаяся в **Cloudflare KV**. Сессия автоматически истекает через **30 дней** бездействия. Вы можете войти в свой аккаунт с любого количества устройств — для каждого устройства создается отдельная сессия. **Выход** из системы немедленно аннулирует сессию на этом устройстве. Сессии на других устройствах остаются активными.'
+    }
+  },
+
+  // ============================================================
+  // KATEQORİYA 4: PLATFORMA & İSTİFADƏ (PLATFORM & USAGE)
+  // ============================================================
+  {
+    id: 'faq-usage-1',
+    category: 'usage',
+    order: 11,
+    active: true,
+    q: {
+      az: 'XP (təcrübə xalı) və nişanları necə qazanım?',
+      en: 'How do I earn XP (experience points) and badges?',
+      ru: 'Как заработать XP (очки опыта) и бейджи?'
+    },
+    a: {
+      az: 'XP aktivliyə görə avtomatik verilir: yeni post paylaşmaq (+10 XP), şərh yazmaq (+5 XP), tapşırıq həllinizin administrator tərəfindən təsdiqlənməsi (+50 XP), gündəlik daxil olmaq (+2 XP). Müəyyən XP həddinə çatdıqda nişanlar avtomatik olaraq profilinizə əlavə olunur (məsələn, "İlk post", "10 həll", "30 günlük seriya"). Bütün XP və nişan tarixçəniz profilinizin "Statistika" bölməsində izlənilə bilər.',
+      en: 'XP is awarded automatically for activity: creating a new post (+10 XP), writing a comment (+5 XP), having your task solution approved by an admin (+50 XP), and daily login (+2 XP). Badges are added to your profile automatically when you reach certain XP milestones (e.g., "First Post", "10 Solutions", "30-Day Streak"). Your full XP and badge history can be viewed in the "Statistics" section of your profile.',
+      ru: 'XP начисляется автоматически за активность: создание нового поста (+10 XP), написание комментария (+5 XP), одобрение администратором вашего решения задачи (+50 XP), ежедневный вход (+2 XP). Бейджи автоматически добавляются в ваш профиль при достижении определенных порогов XP (например, "Первый пост", "10 решений", "30-дневная серия"). Полная история XP и бейджей доступна в разделе "Статистика" вашего профиля.'
+    }
+  },
+  {
+    id: 'faq-usage-2',
+    category: 'usage',
+    order: 12,
+    active: true,
+    q: {
+      az: '🔥 Gündəlik seriya (streak) necə işləyir?',
+      en: 'How does the daily streak (🔥) work?',
+      ru: 'Как работает ежедневная серия (🔥)?'
+    },
+    a: {
+      az: 'Seriya hər gün platformaya daxil olub **heç olmasa bir hərəkət** etdikdə (post paylaşmaq, şərh yazmaq və ya tapşırıq göndərmək) artır. Seriyanı saxlamaq üçün hər 24 saatda bir dəfə aktiv olmaq kifayətdir. Əgər bir gün aktivlik etməsəniz, seriyanız **sıfırlanır** (0-a düşür). Seriya göstəricisi profilinizdə və başlıq panelində görünür. Uzun seriyalar (məsələn, 30, 100, 365 gün) üçün xüsusi nişanlar nəzərdə tutulub.',
+      en: 'Your streak increases when you log in and perform **at least one action** (e.g., posting, commenting, or submitting a task) each day. To keep your streak alive, you only need to be active once every 24 hours. If you miss a day of activity, your streak **resets to zero**. Your streak counter is displayed on your profile and header bar. Special badges are awarded for long streaks (e.g., 30, 100, and 365 days).',
+      ru: 'Серия увеличивается, когда вы входите на платформу и совершаете **хотя бы одно действие** (например, публикуете пост, пишете комментарий или отправляете задание) каждый день. Чтобы сохранить серию, достаточно быть активным раз в 24 часа. Если вы пропустите день активности, ваша серия **сбрасывается до нуля**. Счетчик серии отображается в вашем профиле и в верхней панели. За длинные серии (например, 30, 100, 365 дней) предусмотрены специальные бейджи.'
+    }
+  },
+  {
+    id: 'faq-usage-3',
+    category: 'usage',
+    order: 13,
+    active: true,
+    q: {
+      az: 'Postda kod paylaşanda avtomatik highlighting olurmu?',
+      en: 'Is there automatic syntax highlighting when I share code in a post?',
+      ru: 'Будет ли автоматическая подсветка синтаксиса, если я поделюсь кодом в посте?'
+    },
+    a: {
+      az: 'Bəli. Post yazarkən "Kod bloku" əlavə edin və açılan siyahıdan proqramlaşdırma dilini seçin (JavaScript, Python, Java, C++, Rust, Go və s.). Sistem avtomatik olaraq həmin dilin sintaksisinə uyğun rəngləmə (highlighting) tətbiq edəcək. Bu, həm oxunaqlılığı artırır, həm də kodun strukturunu aydın şəkildə göstərir. Highlighting bütün istifadəçilər üçün eyni görünür.',
+      en: 'Yes. When writing a post, add a "Code block" and select the programming language from the dropdown (JavaScript, Python, Java, C++, Rust, Go, etc.). The system will automatically apply syntax highlighting based on that language. This improves readability and clearly displays the code structure. The highlighting looks the same for all users.',
+      ru: 'Да. При написании поста добавьте "Блок кода" и выберите язык программирования из выпадающего списка (JavaScript, Python, Java, C++, Rust, Go и др.). Система автоматически применит подсветку синтаксиса в соответствии с этим языком. Это повышает читаемость и наглядно показывает структуру кода. Подсветка выглядит одинаково для всех пользователей.'
+    }
+  },
+
+  // ============================================================
+  // KATEQORİYA 5: MODERASİYA & QAYDALAR (MODERATION & RULES)
+  // ============================================================
+  {
+    id: 'faq-moderation-1',
+    category: 'moderation',
+    order: 14,
+    active: true,
+    q: {
+      az: 'Qaydaları pozan məzmun və ya istifadəçi görsəm, nə etməliyəm?',
+      en: 'What should I do if I see content or a user that violates the rules?',
+      ru: 'Что делать, если я вижу контент или пользователя, нарушающего правила?'
+    },
+    a: {
+      az: 'Hər bir post, şərh və istifadəçi profilində **"Şikayət et" (🚩 bayraq)** düyməsi var. Ona klikləyib şikayət səbəbini qeyd edin. Bütün şikayətlər administrator tərəfindən **48 saat ərzində** nəzərdən keçirilir. Şikayət əsaslandırılmış olarsa, məzmun silinir və ya istifadəçiyə qarşı müvafiq tədbirlər (xəbərdarlıq, müvəqqəti və ya daimi blok) tətbiq edilir. Siz şikayətinizin statusunu şəxsi mesajlarınızda izləyə bilərsiniz.',
+      en: 'Every post, comment, and user profile has a **"Report" (🚩 flag)** button. Click it and describe the reason for your report. All reports are reviewed by an administrator within **48 hours**. If the report is justified, the content will be removed or the user will face appropriate action (warning, temporary ban, or permanent ban). You can track the status of your report in your direct messages.',
+      ru: 'Каждый пост, комментарий и профиль пользователя имеют кнопку **"Пожаловаться" (🚩 флаг)**. Нажмите её и укажите причину жалобы. Все жалобы рассматриваются администратором в течение **48 часов**. Если жалоба обоснована, контент будет удален, а к пользователю будут применены соответствующие меры (предупреждение, временная или постоянная блокировка). Статус вашей жалобы можно отслеживать в личных сообщениях.'
+    }
+  },
+  {
+    id: 'faq-moderation-2',
+    category: 'moderation',
+    order: 15,
+    active: true,
+    q: {
+      az: 'Bloklansam, etiraz edə bilərəmmi?',
+      en: 'Can I appeal if I get banned?',
+      ru: 'Могу ли я обжаловать бан?'
+    },
+    a: {
+      az: 'Bəli. Əgər hesabınız bloklanıbsa və bu qərarın səhv olduğunu düşünürsünüzsə, rəsmi əlaqə ünvanımıza (`${SITE.email}`) müraciət edə bilərsiniz. Müraciətinizdə istifadəçi adınızı, blok tarixini və qısa izahatınızı qeyd edin. Administrator müraciəti **5 iş günü** ərzində yenidən araşdıracaq. Əgər blok səhvən tətbiq edilibsə, hesabınız bərpa olunacaq; əks halda blok qüvvədə qalacaq. Təkrar ciddi pozuntular zamanı etiraz hüququ məhdudlaşdırıla bilər.',
+      en: 'Yes. If your account is banned and you believe the decision was incorrect, you can appeal by contacting our official address (`${SITE.email}`). In your appeal, include your username, the ban date, and a brief explanation. An administrator will review your case within **5 business days**. If the ban was applied by mistake, your account will be restored; otherwise, the ban remains in place. In cases of repeated severe violations, the right to appeal may be limited.',
+      ru: 'Да. Если ваш аккаунт заблокирован, и вы считаете это решение ошибочным, вы можете подать апелляцию, обратившись по нашему официальному адресу (`${SITE.email}`). В обращении укажите ваше имя пользователя, дату блокировки и краткое объяснение. Администратор рассмотрит ваше обращение в течение **5 рабочих дней**. Если бан был применен ошибочно, ваш аккаунт будет восстановлен; в противном случае бан останется в силе. При повторных серьезных нарушениях право на апелляцию может быть ограничено.'
+    }
+  },
+  {
+    id: 'faq-moderation-3',
+    category: 'moderation',
+    order: 16,
+    active: true,
+    q: {
+      az: 'Platformada hansı məzmun qadağandır?',
+      en: 'What type of content is prohibited on the platform?',
+      ru: 'Какой контент запрещен на платформе?'
+    },
+    a: {
+      az: 'Aşağıdakı məzmun qəti qadağandır: **təhqir, nifrət nitqi, ayrı-seçkilik**, spam, digər istifadəçilərin razılığı olmadan şəxsi məlumatlarını paylaşmaq (doxxing), zərərli kod və ya linklər, qanunsuz fəaliyyətə təşviq, açıq-saçıq pornoqrafik materiallar və müəllif hüquqları pozulan məzmun. Həmçinin, platforma xarici dillər və proqramlaşdırma öyrənmək məqsədi daşıdığı üçün mövzudan kənar (off-topic) daimi paylaşımlar da məhdudlaşdırıla bilər. Qaydaların tam siyahısı **İstifadə Şərtləri (Terms of Service)** sənədində verilmişdir.',
+      en: 'The following content is strictly prohibited: **harassment, hate speech, discrimination**, spam, sharing other users\' personal data without consent (doxxing), malicious code or links, incitement to illegal activity, explicit pornographic material, and copyrighted content. Additionally, since the platform is focused on learning languages and programming, persistent off-topic posts may also be restricted. The full list of rules is provided in the **Terms of Service**.',
+      ru: 'Следующий контент строго запрещен: **оскорбления, язык вражды, дискриминация**, спам, распространение личных данных других пользователей без их согласия (доксинг), вредоносный код или ссылки, призывы к незаконным действиям, откровенный порнографический материал и контент, нарушающий авторские права. Кроме того, поскольку платформа ориентирована на изучение языков и программирования, постоянные посты не по теме (off-topic) также могут быть ограничены. Полный список правил приведен в документе **Условия использования (Terms of Service)**.'
+    }
+  }
 ];
 
 // Default testimonial dəsti (seed + public fallback)
