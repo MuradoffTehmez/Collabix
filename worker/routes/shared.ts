@@ -11,7 +11,10 @@
 //
 // ⚠ ŞƏRH MƏDƏNİYYƏTİ (sənəd §11.5): audit bu layihənin şərhlərini "ən dəyərli
 //   aktivlərindən biri" adlandırıb. Bölünmə zamanı şərhlər KÖÇÜRÜLÜB, silinməyib.
-import { Ctx, err, todayStr, chunkForD1, placeholders, extractMentions } from '../util';
+import {
+  Ctx, err, json, todayStr, chunkForD1, placeholders, extractMentions, withCookies,
+} from '../util';
+import { sessionCookies, type TokenPair } from '../auth';
 import { NotificationService } from '../services/notification';
 
 /** D1 qısayolu — bütün domen modulları bunu işlədir. */
@@ -184,3 +187,12 @@ export const csvCell = (v: unknown) => {
   return /[",\n\r]/.test(safe) ? '"' + safe.replace(/"/g, '""') + '"' : safe;
 };
 export const csvRow = (cells: unknown[]) => cells.map(csvCell).join(',') + '\r\n';
+
+/**
+ * Sessiya cavabı: gövdə + access/refresh cookie cütü.
+ *
+ * ⚠ AUDIT-TASK-10 / Faza 3.1 — paylaşılan qata köçürüldü: `auth.ts` (parol
+ *   girişi), `auth-methods.ts` (MFA/magic/OAuth) — hər üç yol sessiya verir.
+ */
+export const withSession = (body: unknown, pair: TokenPair) =>
+  withCookies(json(body), sessionCookies(pair));
