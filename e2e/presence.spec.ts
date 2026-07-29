@@ -1,11 +1,11 @@
-import { test, expect, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { test, expect } from './auth-fixture';
 import { collectConsoleErrors, assertConsoleClean } from './helpers';
 import { AUTH_FILE } from './seed';
 
 // TASK-7 / Realtime — Mərhələ 2: canlı presence (qlobal PresenceDO).
 // Yoxlanılan: WS upgrade + snapshot, çox-tab dublikat qorunması (eyni uid ikinci
 // dəfə qoşulanda "on" yayılmır, biri bağlananda "off" yayılmır).
-test.use({ storageState: AUTH_FILE });
 
 async function bootApp(page: Page) {
   await page.addInitScript(() => {

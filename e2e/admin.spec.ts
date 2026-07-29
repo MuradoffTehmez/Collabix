@@ -1,9 +1,9 @@
-import { test, expect, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { test, expect } from './auth-fixture';
 import { collectConsoleErrors, assertConsoleClean, apiGet } from './helpers';
 import { AUTH_FILE } from './seed';
 
 // TASK-6 / BÖLMƏ 3 — Admin paneli (11 bənd; #12 real-time DO fazasındadır).
-test.use({ storageState: AUTH_FILE });
 
 async function openAdmin(page: Page) {
   await page.addInitScript(() => {

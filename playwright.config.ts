@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import { AUTH_FILE_DESKTOP, AUTH_FILE_MOBILE } from './e2e/seed';
 
 // E2E: real Worker (wrangler dev) üzərində — dist/ + D1/KV/R2 lokal state ilə.
 // Məqsəd tam funksional əhatə deyil, TASK-6 UI bəndlərinin smoke doğrulaması
@@ -17,26 +18,26 @@ export default defineConfig({
     baseURL: 'http://127.0.0.1:8788',
     trace: 'retain-on-failure',
   },
+  // 🔴 HƏR LAYİHƏ ÖZ SESSİYASINI İŞLƏDİR (`e2e/global-setup.ts` ikisini yaradır).
+  //
+  // Paylaşılan `AUTH_FILE` ~40 sınığın kök səbəbi idi: access token ömrü 15
+  // dəqiqədir, tam dəst isə ~28 dəqiqə çəkir. Token bitəndə client refresh edir,
+  // refresh ROTASİYA edir və fayldakı nüsxə köhnəlir; növbəti kontekst köhnə
+  // token təqdim edəndə bu, "token reuse" sayılıb SESSİYANI LƏĞV EDİR
+  // (server davranışı DÜZGÜNDÜR — qüsur harness-də idi).
+  //
+  // ⚠ Layihələr arasında sessiyanı təzələmək cəhdləri UĞURSUZ oldu, təkrarlanmasın:
+  //   • asılılıqsız "auth-refresh" layihəsi → Playwright onu ƏN ƏVVƏL işlətdi;
+  //   • `dependencies: ['desktop']` → sıra düzəldi, lakin desktop sınanda
+  //     ondan asılı layihələr ATLANIR (570 → 292 test);
+  //   • `teardown` → yalnız ƏN SONDA, mobile-dan sonra işləyir.
+  // Ayrı sessiyalar sıra tələbini TAMAMİLƏ aradan qaldırır.
+  //
+  // ⚠ Spec fayllarında `test.use({ storageState })` OLMAMALIDIR — o, buradakı
+  // layihə parametrini üstələyər və hər iki layihə yenidən eyni faylı paylaşar.
   projects: [
-    { name: 'desktop', use: { ...devices['Desktop Chrome'] } },
-    // 🔴 Sessiya yeniləmə addımı — `mobile`-dan ƏVVƏL işləyir.
-    //
-    // `globalSetup` sessiyanı bir dəfə yazır, access token ömrü isə 15 dəqiqədir
-    // (`worker/auth.ts` → ACCESS_TTL). Tam dəst ~28 dəqiqə çəkdiyi üçün `mobile`
-    // başlayanda paylaşılan `AUTH_FILE` KÖHNƏLMİŞ olur; üstəlik desktop
-    // testlərində refresh rotasiyası baş veribsə, fayldakı köhnə refresh token
-    // "reuse" sayılıb sessiyanı LƏĞV EDİR. Nəticədə mobile-ın autentifikasiyalı
-    // testləri kütləvi 401 alırdı (≈40 sınıq) və bu, səhvən "mobile responsive
-    // qüsuru" kimi qeyd olunmuşdu.
-    //
-    // ⚠ `dependencies` yalnız `mobile`-dadır: `--project=mobile` ilə tək
-    // işlədəndə də sessiya təzələnir, `desktop` isə səbəbsiz işə düşmür.
-    {
-      name: 'auth-refresh',
-      testMatch: /_auth-refresh\.setup\.ts/,
-      use: { ...devices['Desktop Chrome'] },
-    },
-    { name: 'mobile', use: { ...devices['Pixel 7'] }, dependencies: ['auth-refresh'] },
+    { name: 'desktop', use: { ...devices['Desktop Chrome'], storageState: AUTH_FILE_DESKTOP } },
+    { name: 'mobile', use: { ...devices['Pixel 7'], storageState: AUTH_FILE_MOBILE } },
   ],
   webServer: {
     // İki var override-ı — hər ikisi YALNIZ test mühitinə aiddir:

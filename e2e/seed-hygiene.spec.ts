@@ -8,12 +8,12 @@
 // İkinci qrup daha vacibdir: demo data qalsa sayt çirkli görünür, bootstrap
 // data silinsə sayt ÇÖKÜR. Faktiki hal: `general` otağı həm lokal, həm
 // İSTEHSAL bazasında silinmişdi və qlobal çat sınıq idi (§1).
-import { test, expect, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { test, expect } from './auth-fixture';
 import { readdirSync, readFileSync } from 'node:fs';
 import { AUTH_FILE } from './seed';
 import { E2E_TEAM, E2E_OWNER, GENERAL_ROOM_ID } from './fixtures';
 
-test.use({ storageState: AUTH_FILE });
 
 test.beforeEach(({ }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop',

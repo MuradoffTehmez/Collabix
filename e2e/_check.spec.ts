@@ -1,6 +1,5 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './auth-fixture';
 import { AUTH_FILE } from './seed';
-test.use({ storageState: AUTH_FILE });
 test('code btn text', async ({ page }, info) => {
   if (info.project.name !== 'mobile') { test.skip(); return; }
   await page.addInitScript(() => {

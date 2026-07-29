@@ -14,11 +14,11 @@
 // ⚠ İZOLYASİYA: `PRIMARY` (e2e_main) seed-də SAYT ADMİNİDİR və admin bütün
 // prefiksləri oxuya bilir (qəsdən belədir) — "üzv deyiləm → 404" ssenariləri
 // onunla yoxlana BİLMƏZ. Kənar hesab öz izolə kontekstində işlədilir.
-import { test, expect, type Page, type Browser } from '@playwright/test';
+import { type Page, type Browser } from '@playwright/test';
+import { test, expect } from './auth-fixture';
 import { AUTH_FILE, TEST_PASS, E2E_TURNSTILE } from './seed';
 import { E2E_TEAM } from './fixtures';
 
-test.use({ storageState: AUTH_FILE });
 
 // Protokol testləri — viewport-dan asılı deyil. İki layihədə işlətmək əlavə
 // əhatə vermir, əvəzində asset rate-limit-ini yandırır.

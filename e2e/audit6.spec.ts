@@ -4,11 +4,11 @@
 // AYRICA task-dır, ona görə bu faylın testləri paylaşılan `AUTH_FILE`-ı
 // limitə/vəziyyətə salmır — dəyişdirici testlər öz hesablarını yaradır
 // (`loginAs` naxışı, Task 3/4-dən).
-import { test, expect, type Page, type Browser, type BrowserContext } from '@playwright/test';
+import { type Page, type Browser, type BrowserContext } from '@playwright/test';
+import { test, expect } from './auth-fixture';
 import { AUTH_FILE, TEST_PASS, E2E_TURNSTILE } from './seed';
 import { E2E_TEAM } from './fixtures';
 
-test.use({ storageState: AUTH_FILE });
 
 test.beforeEach(({ }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop',

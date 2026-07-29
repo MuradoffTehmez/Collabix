@@ -6,12 +6,12 @@
 //
 // ⚠ Test datası YAZI YOLUNUN ÖZ funksiyası ilə yaradılır (`/__scheduled` cron →
 // `archiveKind`), əl ilə qurulmuş JSON ilə YOX — bax e2e/archive-seed.ts (§8.9).
-import { test, expect, type Page, type Browser } from '@playwright/test';
+import { type Page, type Browser } from '@playwright/test';
+import { test, expect } from './auth-fixture';
 import { AUTH_FILE, TEST_PASS, E2E_TURNSTILE, d1 } from './seed';
 import { E2E_TEAM } from './fixtures';
 import { seedRoomMessages, seedDmMessages, archiveMetaFor, queryJson } from './archive-seed';
 
-test.use({ storageState: AUTH_FILE });
 
 test.beforeEach(({ }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop',

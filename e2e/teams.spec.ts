@@ -1,9 +1,9 @@
-import { test, expect, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { test, expect } from './auth-fixture';
 import { collectConsoleErrors, assertConsoleClean } from './helpers';
 import { AUTH_FILE } from './seed';
 import { E2E_TEAM, E2E_OWNER } from './fixtures';
 
-test.use({ storageState: AUTH_FILE });
 
 async function loginAndGoToTeams(page: Page) {
   await page.addInitScript(() => {

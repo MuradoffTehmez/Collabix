@@ -1,4 +1,5 @@
-import { test, expect, type Page, type Browser } from '@playwright/test';
+import { type Page, type Browser } from '@playwright/test';
+import { test, expect } from './auth-fixture';
 import { AUTH_FILE, PRIMARY, TEST_PASS, E2E_TURNSTILE } from './seed';
 
 // TASK-8 / FAZA 1 — PROTOKOL səviyyəsi: token refresh (15), sessiya API-si (3),
@@ -16,7 +17,6 @@ test.beforeEach(({ }, testInfo) => {
     'Protokol testi — viewport-dan asılı deyil, bir dəfə icra olunur');
 });
 
-test.use({ storageState: AUTH_FILE });
 
 // Dağıdıcı sessiya testləri üçün ayrıca hesab — PRIMARY paylaşılan
 // storageState-i daşıyır və ona toxunmaq bütün dəsti sıradan çıxarır.

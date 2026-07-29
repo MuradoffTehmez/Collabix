@@ -1,4 +1,5 @@
-import { test, expect, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { test, expect } from './auth-fixture';
 import { collectConsoleErrors, assertConsoleClean } from './helpers';
 import { AUTH_FILE } from './seed';
 
@@ -9,7 +10,6 @@ import { AUTH_FILE } from './seed';
 // və ya sessiya ləğv etmir. Səbəb: `AUTH_FILE` bütün dəst üzrə paylaşılır və
 // ona toxunmaq sonrakı testləri sistemdən çıxarardı. Mutasiya edən protokol
 // testləri izolə edilmiş kontekstlərlə `security-api.spec.ts`-dədir.
-test.use({ storageState: AUTH_FILE });
 
 async function openApp(page: Page, hash: string) {
   await page.addInitScript(() => {

@@ -1,9 +1,9 @@
-import { test, expect, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { test, expect } from './auth-fixture';
 import { collectConsoleErrors, assertConsoleClean, apiGet } from './helpers';
 import { AUTH_FILE } from './seed';
 
 // TASK-7 / Bənd 6 — admin XP redaktəsi (Level XP-dən törənir) + 'user-level-edit' audit log.
-test.use({ storageState: AUTH_FILE });
 
 async function apiSend(page: Page, path: string, method: string, body?: unknown) {
   return page.evaluate(async ({ p, m, b }) => {

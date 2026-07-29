@@ -1,4 +1,5 @@
-import { test, expect, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { test, expect } from './auth-fixture';
 import { collectConsoleErrors, assertConsoleClean } from './helpers';
 import { AUTH_FILE, TEST_PASS, E2E_TURNSTILE } from './seed';
 
@@ -7,7 +8,6 @@ import { AUTH_FILE, TEST_PASS, E2E_TURNSTILE } from './seed';
 // ikinci kontekst `e2e_zara` kimi giriş edir və qlobal PresenceDO-ya qoşulur.
 // Yoxlanılan yol: primary DM göndərir → worker userPush → zara-nın soketi
 // {t:'dm'} + {t:'notif'} alır.
-test.use({ storageState: AUTH_FILE });
 
 const RECIPIENT = 'e2e_zara';
 

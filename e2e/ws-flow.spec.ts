@@ -1,4 +1,5 @@
-import { test, expect, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { test, expect } from './auth-fixture';
 import { AUTH_FILE, TEST_PASS, E2E_TURNSTILE, d1 } from './seed';
 
 // TASK-8 / FAZA 5 / Bənd 13 — mesaj birbaşa WS → DO → broadcast → asinxron D1.
@@ -13,7 +14,6 @@ test.beforeEach(({ }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop',
     'Protokol testi — viewport-dan asılı deyil, bir dəfə icra olunur');
 });
-test.use({ storageState: AUTH_FILE });
 
 const ROOM = 'general';
 

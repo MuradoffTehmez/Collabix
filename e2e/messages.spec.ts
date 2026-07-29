@@ -1,10 +1,10 @@
-import { test, expect, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { test, expect } from './auth-fixture';
 import { collectConsoleErrors, assertConsoleClean, apiGet } from './helpers';
 import { AUTH_FILE } from './seed';
 
 // TASK-7 / Bənd 9 — otaq/DM mesajlarında initials-avatar + vaxt + ardıcıl
 // eyni-göndərən qruplaşdırma (Slack/LinkedIn üslubu).
-test.use({ storageState: AUTH_FILE });
 
 async function apiSend(page: Page, path: string, method: string, body?: unknown) {
   return page.evaluate(async ({ p, m, b }) => {

@@ -9,11 +9,11 @@
 // düzəlişdən ƏVVƏLKİ vəziyyətin ekvivalentidir. `teams/` isə üstünə üzvlük
 // yoxlamasını (KV oxusu, miss halında + D1 sorğusu) əlavə edir.
 // Artım = p95(teams) − p95(posts).
-import { test, expect, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { test, expect } from './auth-fixture';
 import { AUTH_FILE } from './seed';
 import { E2E_TEAM } from './fixtures';
 
-test.use({ storageState: AUTH_FILE });
 
 const PNG_B64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';

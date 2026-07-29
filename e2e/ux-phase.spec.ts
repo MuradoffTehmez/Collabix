@@ -1,4 +1,5 @@
-import { test, expect, type Page, type Browser } from '@playwright/test';
+import { type Page, type Browser } from '@playwright/test';
+import { test, expect } from './auth-fixture';
 import { collectConsoleErrors, assertConsoleClean } from './helpers';
 import { AUTH_FILE, TEST_PASS, E2E_TURNSTILE } from './seed';
 
@@ -6,7 +7,6 @@ import { AUTH_FILE, TEST_PASS, E2E_TURNSTILE } from './seed';
 //   Bənd 16 — markdown redaktoru + canlı önbaxış
 //   Bənd 17 — admin "Geri al" toast
 //   Bənd 6  — profil tamlığı + gamification
-test.use({ storageState: AUTH_FILE });
 
 async function openApp(page: Page, hash: string) {
   await page.addInitScript(() => {

@@ -1,10 +1,10 @@
-import { test, expect, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { test, expect } from './auth-fixture';
 import { collectConsoleErrors, assertConsoleClean } from './helpers';
 import { AUTH_FILE } from './seed';
 
 // TASK-7 / Realtime (RoomDO + WebSocket) — Mərhələ 1: canlı otaq mesajı + typing.
 // wrangler dev DO-nu lokal işlədir → tam yol (upgrade → broadcast) yoxlanılır.
-test.use({ storageState: AUTH_FILE });
 
 async function bootApp(page: Page) {
   await page.addInitScript(() => {

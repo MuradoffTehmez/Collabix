@@ -1,11 +1,11 @@
-import { test, expect, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { test, expect } from './auth-fixture';
 import { collectConsoleErrors, assertConsoleClean } from './helpers';
 import { AUTH_FILE } from './seed';
 
 // TASK-6 / BÖLMƏ 2 — İstifadəçilər səhifəsi (6 bənd).
 // Sessiya global-setup-da bir dəfə qurulub (auth rate-limit-i üçün) —
 // bütün testlər hazır cookie ilə başlayır.
-test.use({ storageState: AUTH_FILE });
 
 async function login(page: Page) {
   // Səhifə açılmadan ƏVVƏL: razılıq banneri və onboarding turu klikləri örtməsin.

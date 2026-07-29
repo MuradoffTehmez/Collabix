@@ -6,11 +6,11 @@
 // ⚠ `page.request` İŞLƏDİLMİR: sessiya cookie-si `Secure` bayraqlıdır və
 // Playwright-in Node tərəfli konteksti onu http://127.0.0.1-ə göndərmir → 401.
 // Sorğular səhifədaxili `fetch` ilə gedir (helpers.ts-dəki eyni izah).
-import { test, expect, type Page, type Browser, type BrowserContext } from '@playwright/test';
+import { type Page, type Browser, type BrowserContext } from '@playwright/test';
+import { test, expect } from './auth-fixture';
 import { AUTH_FILE, TEST_PASS, E2E_TURNSTILE } from './seed';
 import { E2E_TEAM, E2E_TEAM_PRIVATE, E2E_TEAM_PUBLIC } from './fixtures';
 
-test.use({ storageState: AUTH_FILE });
 
 // Bu testlər viewport-dan asılı deyil (HTTP cavabları, D1 sətrləri) — iki
 // layihədə işlətmək əlavə əhatə vermir, əvəzində rate-limit-i yandırır.

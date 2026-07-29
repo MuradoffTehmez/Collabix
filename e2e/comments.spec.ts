@@ -1,10 +1,10 @@
-import { test, expect, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { test, expect } from './auth-fixture';
 import { collectConsoleErrors, assertConsoleClean, apiGet } from './helpers';
 import { AUTH_FILE } from './seed';
 
 // TASK-7 / Bənd 8 — LinkedIn üslublu rəylər (thread + reaksiya + sort + cascade sil).
 // Səhifədaxili fetch ilə əsl server kod yolu işlədilir (Secure-cookie 401 problemi yoxdur).
-test.use({ storageState: AUTH_FILE });
 
 async function apiSend(page: Page, path: string, method: string, body?: unknown) {
   return page.evaluate(async ({ p, m, b }) => {
