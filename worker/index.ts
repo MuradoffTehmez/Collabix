@@ -455,6 +455,10 @@ export default {
         const doUrl = new URL(request.url);
         doUrl.searchParams.set('uid', auth.user.id);
         doUrl.searchParams.set('name', auth.user.name);
+        // AUDIT H-6 / C-1: DO periodik re-auth-da sessiyanın hələ etibarlı
+        // olduğunu yoxlayır. `sid` olmasa `revokeAllSessions` yalnız növbəti
+        // HTTP sorğusunda hiss olunardı — açıq soket isə toxunulmaz qalardı.
+        doUrl.searchParams.set('sid', auth.sid || '');
         return stub.fetch(new Request(doUrl.toString(), request));
       }
       // Real-time presence (online/offline) — tək qlobal PresenceDO.

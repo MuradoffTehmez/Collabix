@@ -13,6 +13,7 @@ import {
 } from './auth';
 import { logAdmin, isAdminLogAction, invalidAdminAction } from './admin-log';
 import { grantXp, compensateXp, xpInvariant } from './xp';
+import { kickEverywhere } from './ws-kick';
 import {
   reqInfo, logSecurityEvent, recentFailures, checkGeoChange, verifyTurnstile,
   sniffType, imageDimensions,
@@ -479,6 +480,10 @@ export async function revokeOneSession(c: Ctx, sid: string) {
 // "Hamısını çıxart (bu istisna)" — cari cihaz qalır, qalanları ləğv olunur.
 export async function revokeOtherSessions(c: Ctx) {
   await revokeAllSessions(c.env, c.user!.id, 'user', c.sid);
+  // H-6 / C-2: sessiya ləğvi WS-ə TƏSİR ETMİRDİ — ləğv edilmiş cihaz açıq soket
+  // üzərindən oxumağa/yazmağa davam edirdi. `c.sid` istisna edilir ki, CARİ
+  // cihazın çatı ölməsin (client 4403-də yenidən qoşulmur).
+  c.ctx.waitUntil(kickEverywhere(c.env, c.user!.id, c.sid));
   await logSecurityEvent(c.env, c.req, {
     type: 'session_revoked', uid: c.user!.id, username: c.user!.username,
     severity: 'warning', meta: { scope: 'others', keep: c.sid },
@@ -513,6 +518,7 @@ export async function changePassword(c: Ctx) {
   // səbəbi "kimsə hesabıma girib" şübhəsidir — köhnə sessiyalar canlı qalsaydı
   // parol dəyişmək təhlükəni aradan qaldırmazdı. Cari cihaz saxlanılır.
   await revokeAllSessions(c.env, u.id, 'password', c.sid);
+  c.ctx.waitUntil(kickEverywhere(c.env, u.id, c.sid));   // H-6 / C-2
   await logSecurityEvent(c.env, c.req, {
     type: 'password_changed', uid: u.id, username: u.username, severity: 'warning',
   });
@@ -610,6 +616,7 @@ export async function deleteAccount(c: Ctx) {
   // isə dump-ları yenidən yazıb onları FİZİKİ silir (archive.ts).
   await markUidDeleted(c.env, u.id);
   await destroyAllSessions(c.env, u.id);
+  c.ctx.waitUntil(kickEverywhere(c.env, u.id));   // H-6 / C-2 — hesab silindi
   return withCookies(json({ ok: true }), clearCookies());
 }
 
@@ -2201,7 +2208,10 @@ export async function adminPatchUser(c: Ctx, uid: string) {
        VALUES (?, ?, 'admin', NULL, ?, ?)`,
     ).bind(uuid(), uid, xpDelta, now()).run();
   }
-  if ('blocked' in b && b.blocked) await destroyAllSessions(c.env, uid);
+  if ('blocked' in b && b.blocked) {
+    await destroyAllSessions(c.env, uid);
+    c.ctx.waitUntil(kickEverywhere(c.env, uid));   // H-6 / C-2 — bloklanan istifadəçi
+  }
 
   // Jurnal: blok/blokdan-çıxarma AYRICA əməliyyatdır. Əvvəl hamısı 'user-edit'
   // kimi yazılırdı və audit jurnalında "user-edit blocked" sətrləri adi profil
@@ -2233,6 +2243,7 @@ export async function adminTempPassword(c: Ctx, uid: string) {
   await D(c).prepare('UPDATE users SET pass_hash = ?, pass_salt = ?, pass_iter = ?, must_reset_password = 1 WHERE id = ?')
     .bind(hash, salt, iterations, uid).run();
   await destroyAllSessions(c.env, uid);
+  c.ctx.waitUntil(kickEverywhere(c.env, uid));   // H-6 / C-2 — müvəqqəti parol
   await logAdmin(c, 'temp-password', uid);
   return json({ ok: true });
 }
@@ -2389,7 +2400,11 @@ export async function adminBulkUsers(c: Ctx) {
     `${targets.length} istifadəçi`, now(), blocked ? 'error' : 'success'));
   await D(c).batch(stmts);
   // Bloklananların sessiyaları dərhal ləğv olunur (batch-dən kənar — KV işidir).
-  if (blocked) for (const id of targets) await destroyAllSessions(c.env, id);
+  if (blocked) {
+    for (const id of targets) await destroyAllSessions(c.env, id);
+    // H-6 / C-2 — toplu bloklama da soketləri kəsməlidir.
+    c.ctx.waitUntil(Promise.all(targets.map(id => kickEverywhere(c.env, id))));
+  }
 
   return json({ ok: true, affected: targets.length });
 }

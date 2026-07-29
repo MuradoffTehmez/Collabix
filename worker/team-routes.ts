@@ -1,4 +1,5 @@
 import { Ctx, err, json, readJson, fileUrl, uuid, now, likePattern } from './util';
+import { kickFromTeam, kickTeamRooms } from './ws-kick';
 import { TeamService, reputationFor, normalizeVisibility } from './services/team/team.service';
 import { TeamMemberService } from './services/team/member.service';
 import { TeamProjectService } from './services/team/project.service';
@@ -208,6 +209,10 @@ export async function deleteTeam(c: Ctx, idOrSlug: string) {
   if (denied) return denied;
 
   await new TeamService(c.env).deleteTeam(r.team.id);
+  // 🔴 H-6 / C-2: `deleteTeam` SOFT-DELETE-dir (Task 7 §8/3) — `team_members`
+  // sətirləri qalır, yəni üzvlük yoxlaması otağı BAĞLAMIR. Açıq soketlər
+  // burada açıq kəsilməsə, silinmiş komandanın çatı işləməyə davam edərdi.
+  c.ctx.waitUntil(kickTeamRooms(c.env, r.team.id));
   emit(c, { type: 'TeamDeleted', teamId: r.team.id, userId: c.user!.id } as any);
   return json({ success: true });
 }
@@ -235,6 +240,8 @@ export async function leaveTeam(c: Ctx, idOrSlug: string) {
   if ('res' in r) return r.res;
   try {
     await new TeamMemberService(c.env).leaveTeam(r.team.id, c.user!.id);
+    // H-6 / C-2 — istifadəçi özü çıxır, açıq soketi qalmamalıdır.
+    c.ctx.waitUntil(kickFromTeam(c.env, c.user!.id, r.team.id));
     emit(c, { type: 'MemberLeft', teamId: r.team.id, userId: c.user!.id });
     return json({ success: true });
   } catch (e: any) {
@@ -311,6 +318,11 @@ export async function updateMemberRole(c: Ctx, idOrSlug: string, userId: string)
   } catch (e: any) {
     return err(e.message, 400);
   }
+  // H-6 / C-2: rol dəyişikliyi otaq çıxışını DARALDA bilər. Hansı icazənin
+  // hansı otağa təsir etdiyini burada hesablamaq əvəzinə soket sadəcə kəsilir —
+  // client dərhal yenidən qoşulur və `index.ts` yeni rolla avtorizasiya edir.
+  // Bu, "hansı hallarda kəsmək lazımdır" sualını tamamilə aradan qaldırır.
+  c.ctx.waitUntil(kickFromTeam(c.env, userId, r.team.id));
 
   const notify = new TeamNotifyService(c.env);
   c.ctx.waitUntil(notify.toUser(userId, c.user!.id, actorName(c), 'team_role',
@@ -334,6 +346,10 @@ export async function removeTeamMember(c: Ctx, idOrSlug: string, userId: string)
   }
 
   await new TeamMemberService(c.env).removeMember(r.team.id, userId);
+  // 🔴 H-6-nın ƏSAS SSENARİSİ: Task 3 `removeMember`-i düzəltdi, lakin WS-ə
+  // TƏSİR ETMİRDİ — çıxarılan üzv açıq soket üzərindən məxfi otağı oxumağa və
+  // yazmağa davam edirdi.
+  c.ctx.waitUntil(kickFromTeam(c.env, userId, r.team.id));
   const notify = new TeamNotifyService(c.env);
   c.ctx.waitUntil(notify.toUser(userId, c.user!.id, actorName(c), 'team_kick',
     `${r.team.name} komandasından çıxarıldınız`));

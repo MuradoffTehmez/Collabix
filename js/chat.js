@@ -25,6 +25,10 @@ let lastTypingSent = 0;
 let typingHideTimer = null;
 const wsProto = () => (location.protocol === 'https:' ? 'wss:' : 'ws:');
 
+// Server tərəfli avtorizasiya rəddi — `worker/room-do.ts` CLOSE_UNAUTHORIZED.
+// 4000-4999 diapazonu tətbiqə aiddir və brauzer onu olduğu kimi ötürür.
+const WS_UNAUTHORIZED = 4403;
+
 function closeRoomWs(){
   const ws = roomWs;
   roomWs = null;
@@ -63,9 +67,20 @@ function connectRoomWs(roomId){
     else if(d.t === 'refresh') emit('refresh-msgs-' + roomId);
     else if(d.t === 'typing') showTyping(d.name);
   });
-  ws.addEventListener('close', () => {
+  ws.addEventListener('close', ev => {
     if(roomWs !== ws) return;                 // artıq başqa bağlantı aktivdir
     roomWs = null;
+    // 🔴 AUDIT-TASK-9 / C-2 client tərəfi: 4403 = server avtorizasiyanı ləğv
+    // etdi (komandadan çıxarıldın / bloklandın / sessiya ləğv olundu).
+    // Yenidən qoşulmaq MƏNASIZDIR — upgrade onsuz da 403 verəcək — və hər
+    // 3 saniyədə bir DO-ya yük, mobil cihazda isə batareya sərfi yaradar.
+    // Bu, Task 4 §7/1-dəki dərslə eyni sinifdir (polling 429-da dayanmalıdır).
+    if(ev.code === WS_UNAUTHORIZED){
+      roomWsFor = null;                       // reconnect döngəsini dayandır
+      toast(t('chat.ws_unauthorized'), 'warn');
+      emit('refresh-msgs-' + roomId);         // REST oxusu da 403 verib UI-ı düzəldəcək
+      return;
+    }
     setTimeout(() => { if(roomWsFor === roomId && !roomWs) connectRoomWs(roomId); }, 3000);
   });
   ws.addEventListener('error', () => { try{ ws.close(); }catch(e){} });

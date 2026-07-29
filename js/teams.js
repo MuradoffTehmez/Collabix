@@ -1576,9 +1576,18 @@ async function renderTeamChat(container, team) {
       let d; try { d = JSON.parse(ev.data); } catch (e) { return; }
       if (d.t === 'msg' || d.t === 'refresh' || d.t === 'ack') emit('refresh-msgs-' + roomId);
     });
-    sock.addEventListener('close', () => {
+    sock.addEventListener('close', (ev) => {
       if (ws !== sock || disposed) return;
       ws = null;
+      // 🔴 AUDIT-TASK-9 / C-2: 4403 = komandadan çıxarıldın / bloklandın /
+      // sessiya ləğv olundu. Yenidən qoşulmaq sonsuz döngə yaradır (upgrade
+      // onsuz da 403 verir) — dayanırıq. Komanda çatında bu ssenari MƏHZ
+      // əsas ssenaridir (H-6), ona görə mətn açıq olmalıdır.
+      if (ev.code === 4403) {
+        wsRoomId = null;
+        statusEl.textContent = '⛔ çıxışınız ləğv edildi';
+        return;
+      }
       statusEl.textContent = 'yenidən qoşulur…';
       setTimeout(() => { if (!disposed && wsRoomId === roomId && !ws) connectWs(roomId); }, 3000);
     });

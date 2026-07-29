@@ -391,6 +391,14 @@ const D = {
   /* ---------- FAZA 5: realtime mesaj axını (TASK-8 / Bənd 13) ---------- */
   'chat.back': { az: 'Siyahıya qayıt', en: 'Back to list', ru: 'Назад к списку' },
   'chat.rate_limit': { az: 'Çox sürətli yazırsan — bir az yavaşla.', en: 'You’re sending too fast — slow down a little.', ru: 'Слишком быстро — немного помедленнее.' },
+  // AUDIT-TASK-9 / C-2 — WS 4403. Səbəb QƏSDƏN ümumidir: "komandadan çıxarıldın"
+  // ilə "sessiyan ləğv olundu" arasındakı fərq client-ə bilinmir və onu təxmin
+  // etmək yanlış mesaj göstərmək riskidir.
+  'chat.ws_unauthorized': {
+    az: 'Bu söhbətə çıxışınız dayandırıldı.',
+    en: 'Your access to this chat has ended.',
+    ru: 'Ваш доступ к этому чату прекращён.',
+  },
 
   /* ---------- Arxiv tarixçəsi (AUDIT-TASK-8 / §8.4) ---------- */
   // ⚠ Üç dil PARALEL saxlanılır: Task 2-də bir dildə qalan mətn placeholder
