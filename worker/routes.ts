@@ -14,6 +14,7 @@ import {
 import { logAdmin, isAdminLogAction, invalidAdminAction } from './admin-log';
 import { grantXp, compensateXp, xpInvariant } from './xp';
 import { alert, noteFileAccessDenied } from './alerts';
+import { NotificationService } from './services/notification';
 import { kickEverywhere } from './ws-kick';
 import {
   reqInfo, logSecurityEvent, recentFailures, checkGeoChange, verifyTurnstile,
@@ -38,20 +39,37 @@ import {
 const D = (c: Ctx) => c.env.DB;
 
 /* ================= köməkçilər ================= */
+
+/**
+ * Bildiriş göndərmə — `Ctx` üçün NAZİK ÖRTÜK.
+ *
+ * 🔴 AUDIT-TASK-10 / Faza 3.2 (audit struktur borcu #4) — İKİ `notify()`
+ * BİRLƏŞDİRİLDİ.
+ *
+ * Əvvəl eyni qaydalar İKİ yerdə yazılmışdı: burada və
+ * `services/notification/index.ts`-də. Audit xəbərdarlığı: *"Şərh bunu 'eyni
+ * qaydalar' kimi təsvir edir; VAXTLA AYRILACAQLAR."*
+ *
+ * Sənədin tələbi ilə əvvəlcə DIFF edildi — qaydalar hələ eyni idi (tərcih
+ * yoxlaması + eyni INSERT). Fərq yalnız interfeysdə idi:
+ *   • servis  — `env` alır, `fromId`/`fromName` AÇIQ ötürülür, `boolean` qaytarır,
+ *               realtime siqnalı AYRICA metoddadır (queue/job-lar üçün uyğun)
+ *   • bu örtük — `Ctx` alır, göndərəni `c.user`-dan çıxarır və siqnalı özü atır
+ *
+ * Ona görə SERVİS kanonik implementasiya seçildi (o, `Ctx`-dən asılı deyil və
+ * artıq `queue.ts`, `jobs/ai.ts`, `jobs/render.ts` tərəfindən işlədilir), bu
+ * funksiya isə yalnız uyğunlaşdırıcı qaldı. `msg.ts`-in paylaşılan modul kimi
+ * çıxarılması ilə EYNİ naxışdır (auditin "düzgün naxış" adlandırdığı).
+ *
+ * ⚠ Realtime siqnal YALNIZ sətir həqiqətən yazılanda atılır: servis `false`
+ *   qaytarırsa (tərcih söndürülüb və ya istifadəçi yoxdur) boş yerə siqnal
+ *   getməməlidir.
+ */
 async function notify(c: Ctx, toUid: string, type: string, text: string, postId: string | null = null) {
-  if (!c.user || toUid === c.user.id) return;
-  // bildiriş tərcihləri
-  const target = await D(c).prepare('SELECT settings FROM users WHERE id = ?').bind(toUid).first<any>();
-  if (!target) return;
-  const prefs = fromJSON<any>(target.settings, {})?.notifications || {};
-  const prefKey = ({ like: 'likes', comment: 'comments', follow: 'follows' } as any)[type];
-  if (prefKey && prefs[prefKey] === false) return;
-  await D(c).prepare(
-    'INSERT INTO notifications (id, user_id, type, from_id, from_name, post_id, text, read, created_at) VALUES (?,?,?,?,?,?,?,0,?)',
-  ).bind(uuid(), toUid, type, c.user.id, c.user.name, postId, text, now()).run();
-  // Sətir HƏQİQƏTƏN yazıldıqdan sonra fan-out (tərcih söndürülübsə yuxarıda
-  // return olunur → boş yerə siqnal getmir).
-  await userPush(c, toUid, { t: 'notif' });
+  if (!c.user) return;
+  const wrote = await new NotificationService(c.env)
+    .notify(toUid, c.user.id, c.user.name, type, text, postId);
+  if (wrote) await userPush(c, toUid, { t: 'notif' });
 }
 
 async function notifyMentions(c: Ctx, text: string, label: string, postId: string | null = null) {
@@ -1814,7 +1832,38 @@ export async function markThreadRead(c: Ctx, pairId: string) {
   return json({ ok: true });
 }
 
-/* ================= PRESENCE ================= */
+/* ================= PRESENCE =================
+ *
+ * 🔴 AUDIT-TASK-10 / Faza 3.2 (audit struktur borcu #5) — "İKİ PRESENCE SİSTEMİ".
+ *
+ * Audit haqlı olaraq iki mexanizm gördü, lakin onlar DUBLİKAT DEYİL — fərqli
+ * suallara cavab verir və biri digərini əvəz edə bilmir:
+ *
+ * ┌────────────────────┬──────────────────────────┬─────────────────────────┐
+ * │                    │ D1 `presence` (bu blok)  │ `PresenceDO` (WS)       │
+ * ├────────────────────┼──────────────────────────┼─────────────────────────┤
+ * │ Sual               │ "kim son 2 dəqiqədə      │ "kim MƏHZ İNDİ          │
+ * │                    │  aktiv olub?"            │  qoşulub?"              │
+ * │ Nəqliyyat          │ HTTP polling (30 s)      │ WebSocket (anlıq)       │
+ * │ WS olmayanda       │ ✅ işləyir (fallback)     │ ❌ heç nə               │
+ * │ DO təmizlənəndə    │ ✅ sağ qalır (D1)         │ ❌ state itir           │
+ * │ Əlavə vəzifə       │ `users.last_active_at`   │ `push(uid, …)` — bildiriş│
+ * │                    │ tarixçəsi                │  siqnallarının marşrutu │
+ * └────────────────────┴──────────────────────────┴─────────────────────────┘
+ *
+ * Yəni `PresenceDO` yalnız online statusu deyil, HƏM DƏ istifadəçiyə real-time
+ * siqnal göndərmə kanalıdır (`userPush` → `NotificationService.pushSignal`).
+ * Onu silsək bildirişlər polling-ə qayıdardı.
+ *
+ * ⚠ REDUNDANTLIQ HARADADIR: "kim onlaydır" sualına HƏR İKİSİ cavab verir —
+ *   client WS ilə qoşulubsa D1 polling-i BOŞ İŞDİR. Bu, presence-in özündə
+ *   deyil, POLLING MODELİNDƏDİR və `AUDIT-TASK-10` Faza 5/#3 (polling → WS)
+ *   ilə bağlanır. Ora qədər D1 yolu fallback kimi SAXLANILIR — silmək
+ *   WS-siz client-ləri (köhnə brauzer, proxy) statussuz qoyardı.
+ *
+ * ⚠ Task 4 §4.2 `presence` rate-limitini məhz polling tezliyinə görə
+ *   qaldırmışdı — polling silinəndə limit YENİDƏN AŞAĞI salına bilər.
+ */
 export async function heartbeat(c: Ctx) {
   const priv = fromJSON<any>(c.user!.settings as any, {})?.privacy || {};
   if (priv.showOnlineStatus === false) {
