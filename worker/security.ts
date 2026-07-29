@@ -117,19 +117,41 @@ export async function logSecurityEvent(
 // Yalnız IP-yə baxsaq NAT arxasındakı bütöv ofis bir hücumçuya görə bloklanardı;
 // yalnız istifadəçi adına baxsaq botnet fərqli IP-lərdən eyni hesabı döyəcləyərdi.
 // İkisinin maksimumu götürülür.
+//
+// 🔴 AUDIT-TASK-9 / A-3 — "Sayğacın sıfırlanması: UĞURLU GİRİŞDƏ sıfırlanmalıdır".
+// Əvvəl sıfırlanmırdı: şifrəsini 3 dəfə səhv yazıb sonra düzgün daxil olan
+// istifadəçi növbəti 15 dəqiqə ərzində HƏR girişdə CAPTCHA görürdü.
+// İndi sayğac son `login_ok`-dan SONRAKI uğursuzluqları sayır.
+//
+// ⚠ İki sayğac AYRI-AYRI sıfırlanır və bu qəsdəndir: hücumçu öz hesabına
+//   uğurla girib IP sayğacını sıfırlaya bilər, lakin QURBANIN adı üzrə sayğac
+//   toxunulmaz qalır — hədəflənmiş hücumda hesab qapısı yenə də işə düşür.
+//   Məhz ona görə iki müstəqil siqnalın MAKSİMUMU götürülür.
 export async function recentFailures(
   env: Env, req: Request, username: string, windowMs = 15 * 60_000,
 ): Promise<number> {
   const since = now() - windowMs;
   const ip = reqInfo(req).ip;
   try {
+    // 1) Pəncərə daxilində sonuncu uğurlu giriş — ayrıca IP və ad üçün.
+    const ok = await env.DB.prepare(
+      `SELECT
+         COALESCE(MAX(CASE WHEN ip = ?1 THEN created_at END), 0)       AS ip_ok,
+         COALESCE(MAX(CASE WHEN username = ?2 THEN created_at END), 0) AS user_ok
+       FROM security_events
+       WHERE type = 'login_ok' AND created_at > ?3 AND (ip = ?1 OR username = ?2)`,
+    ).bind(ip, username, since).first<any>();
+    const ipSince = Math.max(since, Number(ok?.ip_ok || 0));
+    const userSince = Math.max(since, Number(ok?.user_ok || 0));
+
+    // 2) Yalnız həmin andan sonrakı uğursuzluqlar sayılır.
     const row = await env.DB.prepare(
       `SELECT
-         SUM(CASE WHEN ip = ?1 THEN 1 ELSE 0 END)       AS by_ip,
-         SUM(CASE WHEN username = ?2 THEN 1 ELSE 0 END) AS by_user
+         SUM(CASE WHEN ip = ?1       AND created_at > ?4 THEN 1 ELSE 0 END) AS by_ip,
+         SUM(CASE WHEN username = ?2 AND created_at > ?5 THEN 1 ELSE 0 END) AS by_user
        FROM security_events
        WHERE type = 'login_failed' AND created_at > ?3 AND (ip = ?1 OR username = ?2)`,
-    ).bind(ip, username, since).first<any>();
+    ).bind(ip, username, since, ipSince, userSince).first<any>();
     return Math.max(Number(row?.by_ip || 0), Number(row?.by_user || 0));
   } catch { return 0; }
 }

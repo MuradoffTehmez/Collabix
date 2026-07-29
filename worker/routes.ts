@@ -22,7 +22,7 @@ import {
   createPending, readPending, consumePending, suggestUsername,
 } from './oauth';
 import { readCookie, rateLimit } from './auth';
-import { emailEnabled, sendEmail, magicLinkMail, mailLang } from './email';
+import { emailEnabled, sendEmail, magicLinkMail, attackAlertMail, mailLang } from './email';
 import { QueueService } from './services/queue';
 import { sanitizeMsg } from './msg';
 import { canReadKey, lazyAdminCheck, shouldLogDenial, CACHE_HEADER } from './files-auth';
@@ -141,13 +141,70 @@ async function userPush(c: Ctx, uid: string, payload: unknown): Promise<void> {
 // Sessiya cavabı: gövdə + access/refresh cookie cütü.
 const withSession = (body: unknown, pair: TokenPair) => withCookies(json(body), sessionCookies(pair));
 
-// Turnstile qapısı (Bənd 7). Açar qurulmayıbsa `verifyTurnstile` skipped:true
-// qaytarır və axın maneəsiz davam edir — bax security.ts-dəki izah.
-async function turnstileGate(c: Ctx, token: unknown, username = ''): Promise<Response | null> {
+/**
+ * 🔴 HESAB BAŞINA QORUMA ASTANALARI — AUDIT-TASK-9 / A-3.
+ *
+ * IP əsaslı rate limit paylanmış hücumu (hər IP-dən 5 cəhd, 1000 IP) TUTMUR.
+ * `recentFailures` isə həm IP, həm İSTİFADƏÇİ ADI üzrə sayır → hədəflənmiş
+ * hücum məhz orada görünür.
+ *
+ * ⚠ NİYƏ KİLİD DEYİL, CAPTCHA: sadə hesab kilidi YENİ hücum vektoru yaradır —
+ * rəqib qurbanın hesabını istənilən vaxt bloklaya bilər (audit §5.2 "dörd tələ").
+ * Turnstile layihədə artıq qurulub və qurbanı heç vaxt kilidləmir.
+ */
+const CAPTCHA_SOFT_AT = 3;    // şübhə → CAPTCHA istənilir, lakin fail-open qalır
+const CAPTCHA_HARD_AT = 10;   // hücum → CAPTCHA MƏCBURİDİR, fail-open BAĞLANIR
+
+/**
+ * Hesab sahibinə hücum xəbərdarlığı — AUDIT-TASK-9 / A-3 "Bildiriş".
+ *
+ * ⚠ HESAB SADALANMASI: funksiya çağırılır, lakin nəticəsi cavaba TƏSİR ETMİR
+ *   və `waitUntil` ilə arxada işləyir. Mövcud olmayan hesab üçün sadəcə sətir
+ *   tapılmır — cavab və gecikmə eyni qalır.
+ *
+ * Tıxac qapısı: eyni hesaba pəncərə başına BİR məktub. Olmasaydı hücumçu
+ * 11-ci cəhddən sonrakı hər cəhdlə qurbanın poçtunu doldura bilərdi — yəni
+ * xəbərdarlığın özü spam vektoruna çevrilərdi.
+ */
+async function alertAccountOwner(c: Ctx, username: string, attempts: number): Promise<void> {
+  if (!emailEnabled(c.env)) return;
+  const throttleKey = `secalert:${username}`;
+  if (await c.env.SESSIONS.get(throttleKey)) return;
+  const row = await D(c).prepare('SELECT name, contact_email, settings FROM users WHERE username = ?')
+    .bind(username).first<any>();
+  const to = String(row?.contact_email || '').trim();
+  if (!to) return;
+  await c.env.SESSIONS.put(throttleKey, '1', { expirationTtl: 3600 });
+  const mail = attackAlertMail(String(row.name || username), attempts,
+    mailLang(fromJSON<any>(row.settings, {})?.lang));
+  await sendEmail(c.env, { ...mail, to });
+}
+
+/**
+ * Turnstile qapısı (Bənd 7).
+ *
+ * `required = false` (default): açar qurulmayıbsa və ya Turnstile xidmətinə
+ *   çatılmasa axın maneəsiz davam edir (`verifyTurnstile` → `skipped: true`).
+ *   Bu, qəsdli fail-open-dır — CAPTCHA əlçatmazlığı bütün saytı bağlamamalıdır.
+ *
+ * `required = true` (AUDIT-TASK-9 / A-3): FAIL-CLOSED. `CAPTCHA_HARD_AT`-dan
+ *   sonra qapı yeganə hesab-səviyyəli müdafiədir; orada "skipped" qəbul etmək
+ *   qorumanı tamamilə mənasızlaşdırardı — hücumçu sadəcə Turnstile-ı
+ *   əlçatmaz etməyə çalışar (və ya açar konfiqi düşərsə qapı sükutla açılar).
+ *
+ * ⚠ HESAB SADALANMASI: bu qapı `recentFailures` ilə açılır, istifadəçinin
+ *   MÖVCUDLUĞU ilə YOX. Uğursuz girişlər mövcud olmayan ad üçün də jurnala
+ *   düşdüyünə görə (bax `login`) sayğac hər iki halda eyni artır və cavab
+ *   fərqlənmir → hücumçu hansı adların mövcud olduğunu öyrənə bilmir.
+ */
+async function turnstileGate(
+  c: Ctx, token: unknown, username = '', required = false,
+): Promise<Response | null> {
   const r = await verifyTurnstile(c.env, c.req, token);
-  if (r.ok) return null;
+  if (r.ok && !(required && r.skipped)) return null;
   await logSecurityEvent(c.env, c.req, {
-    type: 'turnstile_failed', username, severity: 'warning', meta: { reason: r.reason },
+    type: 'turnstile_failed', username, severity: required ? 'critical' : 'warning',
+    meta: { reason: r.reason || (r.skipped ? 'skipped_but_required' : 'failed'), required },
   });
   return err('Bot yoxlaması uğursuz oldu. Səhifəni yeniləyib yenidən cəhd edin.', 403, 'turnstile_failed');
 }
@@ -242,10 +299,18 @@ export async function login(c: Ctx) {
   // Turnstile yalnız ŞÜBHƏ YARANANDA tələb olunur — ilk uğursuz cəhddən sonra.
   // Hər girişdə göstərsək normal istifadəçiyə hər dəfə maneə çıxarardıq;
   // parol seçən bot isə bir neçə cəhddən sonra onsuz da bura ilişir.
+  //
+  // A-3: 10 cəhddən sonra qapı FAIL-CLOSED olur (bax `turnstileGate`).
   const fails = await recentFailures(c.env, c.req, username);
-  if (fails >= 3) {
-    const gate = await turnstileGate(c, b.turnstileToken, username);
-    if (gate) return gate;
+  if (fails >= CAPTCHA_SOFT_AT) {
+    const gate = await turnstileGate(c, b.turnstileToken, username, fails >= CAPTCHA_HARD_AT);
+    if (gate) {
+      // Sərt astanaya çatan hesabın sahibi xəbərdar edilir. `waitUntil` —
+      // məktub 403 cavabını gecikdirməməlidir (və gecikmə fərqi sadalama
+      // siqnalı olardı).
+      if (fails >= CAPTCHA_HARD_AT) c.ctx.waitUntil(alertAccountOwner(c, username, fails));
+      return gate;
+    }
   }
 
   const row = await D(c).prepare('SELECT * FROM users WHERE username = ?').bind(username).first<any>();
@@ -2771,9 +2836,29 @@ export async function mfaVerify(c: Ctx) {
   const uid = await c.env.SESSIONS.get(key);
   if (!uid) return err('Təsdiq müddəti bitib. Yenidən daxil olun.', 401, 'mfa_challenge_expired');
 
+  // 🔴 AUDIT-TASK-9 / A-3: audit qeyd edirdi ki, MFA kodu hücumu YALNIZ `auth`
+  // səbətinə güvənir. Səbət indi atomikdir (Faza A), lakin o, IP üzrə sayır —
+  // paylanmış hücum 6 rəqəmlik fəzanı yenə də gəzə bilər. Login ilə EYNİ
+  // hesab-səviyyəli qapı buraya da qoyulur.
+  //
+  // `username` MƏHZ ONA GÖRƏ oxunur ki, uğursuz MFA cəhdi jurnala adla düşsün:
+  // `recentFailures` istifadəçi adı üzrə saymasa, bütün MFA nasazlıqları
+  // `username = ''` altında qarışar və sayğac mənasızlaşardı.
+  const acct = await D(c).prepare('SELECT username FROM users WHERE id = ?').bind(uid).first<any>();
+  const uname = String(acct?.username || '');
+  const mfaFails = await recentFailures(c.env, c.req, uname);
+  if (uname && mfaFails >= CAPTCHA_SOFT_AT) {
+    const gate = await turnstileGate(c, b.turnstileToken, uname, mfaFails >= CAPTCHA_HARD_AT);
+    if (gate) {
+      if (mfaFails >= CAPTCHA_HARD_AT) c.ctx.waitUntil(alertAccountOwner(c, uname, mfaFails));
+      return gate;
+    }
+  }
+
   if (!(await consumeMfaCode(c, uid, String(b.code || '')))) {
     await logSecurityEvent(c.env, c.req, {
-      type: 'login_failed', uid, severity: 'warning', meta: { flow: 'mfa', reason: 'bad_code' },
+      type: 'login_failed', uid, username: uname, severity: 'warning',
+      meta: { flow: 'mfa', reason: 'bad_code' },
     });
     // Challenge SİLİNMİR: istifadəçi kodu səhv yazmış ola bilər, yenidən
     // parol daxil etməyə məcbur etmək lazım deyil. Cəhdlərin sayı rate-limit

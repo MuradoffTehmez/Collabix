@@ -159,3 +159,57 @@ export function teamInviteMail(
     text: `${opts.inviterName} → ${opts.teamName} (${opts.roleName})\n\n${opts.url}\n\n${L.expires}\n${L.ignore}`,
   };
 }
+
+/* ================= hesab təhlükəsizliyi xəbərdarlığı (AUDIT-TASK-9 / A-3) ================= */
+
+const ATTACK_LANG = {
+  az: {
+    subject: 'Collabix — hesabınıza çoxsaylı uğursuz giriş cəhdi',
+    hi: 'Salam',
+    body: (n: number) => `Son 15 dəqiqədə hesabınıza <b>${n} uğursuz giriş cəhdi</b> qeydə alındı. `
+      + 'Hesabınız <b>bloklanmayıb</b> və girişiniz açıqdır — yalnız bot yoxlaması məcburi edildi.',
+    you: 'Bu cəhdlər sizə aiddirsə (şifrəni unutmusunuzsa), heç nə etmək lazım deyil.',
+    act: 'Sizə aid deyilsə, şifrənizi dəyişin və Parametrlər → Təhlükəsizlik bölməsindən iki mərhələli doğrulamanı aktivləşdirin.',
+  },
+  en: {
+    subject: 'Collabix — repeated failed sign-in attempts',
+    hi: 'Hi',
+    body: (n: number) => `We recorded <b>${n} failed sign-in attempts</b> on your account in the last 15 minutes. `
+      + 'Your account is <b>not locked</b> and you can still sign in — we only made the bot check mandatory.',
+    you: 'If this was you (forgotten password), no action is needed.',
+    act: 'If this was not you, change your password and enable two-factor authentication under Settings → Security.',
+  },
+  ru: {
+    subject: 'Collabix — повторные неудачные попытки входа',
+    hi: 'Привет',
+    body: (n: number) => `За последние 15 минут зафиксировано <b>${n} неудачных попыток входа</b> в ваш аккаунт. `
+      + 'Аккаунт <b>не заблокирован</b>, вход открыт — обязательной стала только проверка на бота.',
+    you: 'Если это были вы (забыли пароль), делать ничего не нужно.',
+    act: 'Если это были не вы, смените пароль и включите двухфакторную аутентификацию в разделе Настройки → Безопасность.',
+  },
+} as const;
+
+/**
+ * Hücum xəbərdarlığı — AUDIT-TASK-9 / A-3.
+ *
+ * ⚠ Mətn QƏSDƏN "hesabınız bloklanmayıb" deyir. Seçilmiş model kilid DEYİL,
+ * məcburi CAPTCHA-dır (kilid rəqibə qurbanı bloklamaq imkanı verərdi) —
+ * istifadəçi "hesabım bağlandı" deyə paniklə dəstəyə yazmamalıdır.
+ */
+export function attackAlertMail(name: string, attempts: number, lang: MailLang): Mail {
+  const L = ATTACK_LANG[lang];
+  return {
+    to: '',
+    subject: L.subject,
+    html: `<!doctype html><html><body style="margin:0;padding:24px;background:#0f1115;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;">
+  <div style="max-width:520px;margin:0 auto;background:#171a21;border:1px solid #262b36;border-radius:14px;padding:28px;color:#e6e8ee;">
+    <div style="font-size:20px;font-weight:700;margin-bottom:18px;color:#fff;">Collabix</div>
+    <p style="font-size:15px;line-height:1.6;margin:0 0 14px;">${L.hi}, ${esc(name)}</p>
+    <p style="font-size:15px;line-height:1.6;margin:0 0 18px;color:#b6bcc9;">${L.body(attempts)}</p>
+    <p style="font-size:14px;line-height:1.6;margin:0 0 10px;color:#8b93a3;">${L.you}</p>
+    <p style="font-size:14px;line-height:1.6;margin:0;color:#e6e8ee;border-top:1px solid #262b36;padding-top:16px;">${L.act}</p>
+  </div>
+</body></html>`,
+    text: `${L.hi}, ${name}\n\n${L.body(attempts).replace(/<\/?b>/g, '')}\n\n${L.you}\n${L.act}`,
+  };
+}

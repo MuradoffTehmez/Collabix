@@ -9,6 +9,7 @@ import { api } from './api.js';
 import { el, clear } from './util.js';
 import { showModal, closeModal, toast, confirmDialog } from './ui.js';
 import { t } from './i18n.js';
+import { ensureWidget, tokenFor, resetWidget } from './turnstile.js';
 
 /* ---------- QR ---------- */
 // SVG kimi render olunur, <img src="data:..."> kimi YOX: CSP `img-src`-də
@@ -97,6 +98,12 @@ export function promptMfaCode(challenge){
       style: 'width:100%; text-align:center; letter-spacing:.35em; font-size:1.25rem; background:var(--surface-2); border:1px solid var(--border); color:var(--text); padding:12px; border-radius:9px;',
     });
     const status = el('div', { class: 'form-err' });
+    // AUDIT-TASK-9 / A-3 — MFA addımı da hesab səviyyəsində qorunur: 3 uğursuz
+    // cəhddən sonra server Turnstile tələb edir, 10-dan sonra isə onu MƏCBURİ
+    // edir (fail-closed). Widget həmişə qurulur, çünki client neçə uğursuzluq
+    // olduğunu bilmir; qoruma söndürülübsə `tokenFor` boş sətir qaytarır və
+    // slot görünmür — yəni normal istifadəçi heç nə görmür.
+    const tsSlot = el('div', { class: 'turnstile-slot', id: 'mfaTurnstile' });
     let done = false;
 
     const submit = async e => {
@@ -105,11 +112,15 @@ export function promptMfaCode(challenge){
       if(e?.target) e.target.disabled = true;
       status.textContent = '';
       try{
-        const res = await api('/auth/mfa', { method: 'POST', body: { challenge, code } });
+        const res = await api('/auth/mfa', {
+          method: 'POST',
+          body: { challenge, code, turnstileToken: await tokenFor('mfa') },
+        });
         done = true;
         closeModal();
         resolve(res);
       }catch(ex){
+        resetWidget('mfa');   // token birdəfəlikdir
         status.textContent = ex.message;
         input.value = '';
         input.focus();
@@ -123,7 +134,7 @@ export function promptMfaCode(challenge){
       el('div', { class: 'section-title' }, t('mfa.step_title')),
       el('p', { style: 'color:var(--muted); font-size:.84rem; line-height:1.6; margin-bottom:14px;' },
         t('mfa.step_sub')),
-      input, status,
+      input, tsSlot, status,
       el('button', { class: 'btn-primary', style: 'width:100%; margin-top:12px;', onclick: submit },
         t('mfa.step_btn')),
     ], {
@@ -131,6 +142,9 @@ export function promptMfaCode(challenge){
       // `resolve(null)` olmasa `login()` əbədi gözləyərdi.
       onClose: () => { if(!done) resolve(null); },
     });
+    // Modal DOM-a düşəndən sonra qoşulur — `mountTurnstile` konteynerin
+    // sənəddə olmasını tələb edir.
+    ensureWidget('mfa', tsSlot, 'mfa');
     input.focus();
   });
 }
