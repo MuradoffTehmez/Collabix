@@ -96,7 +96,12 @@ export function d1(sql: string, capture = false): string {
       return out || '';
     } catch (e: any) {
       const detail = [e?.stderr, e?.stdout].filter(Boolean).join('\n').slice(0, 1200);
-      throw new Error(`d1 sorğusu uğursuz:\n${sql.slice(0, 400)}\n--- wrangler çıxışı ---\n${detail}`);
+      // `cause` ORİJİNAL xətanı saxlayır: onsuz `execFileSync`-in stack-i və
+      // exit kodu itirdi, diaqnoz yalnız stderr mətninə qalırdı.
+      throw new Error(
+        `d1 sorğusu uğursuz:\n${sql.slice(0, 400)}\n--- wrangler çıxışı ---\n${detail}`,
+        { cause: e },
+      );
     }
   } finally {
     rmSync(file, { force: true });

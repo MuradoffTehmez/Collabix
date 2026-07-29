@@ -328,7 +328,9 @@ test.describe('Admin paneli', () => {
     });
     expect(head, 'UTF-8 BOM yoxdur — Excel Azərbaycan hərflərini pozar').toEqual([0xEF, 0xBB, 0xBF]);
 
-    const lines = res.body.replace(/^﻿/, '').trim().split('\r\n');
+    // BOM ESCAPE ilə yazılır: literal simvol mənbədə GÖRÜNMÜR və
+    // "burada nə var?" sualını yaradır (ESLint no-irregular-whitespace).
+    const lines = res.body.replace(/^\uFEFF/, '').trim().split('\r\n');
     expect(lines[0]).toBe('username,name,email,xp,streak,tasks_completed,verified,blocked,role,joined_at,last_active_at');
     expect(lines.length).toBeGreaterThan(1);
     expect(res.body).toContain('e2e_zara');
@@ -338,7 +340,7 @@ test.describe('Admin paneli', () => {
     await openAdmin(page);
     const res = await apiGet(page, '/api/admin/export/logs.csv');
     expect(res.ok, res.body.slice(0, 200)).toBeTruthy();
-    const body = res.body.replace(/^﻿/, '');
+    const body = res.body.replace(/^\uFEFF/, '');
     expect(body.split('\r\n')[0]).toBe('created_at,level,action,by_name,target_id,detail');
   });
 

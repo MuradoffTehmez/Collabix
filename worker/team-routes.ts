@@ -495,7 +495,7 @@ export async function createTeamInvite(c: Ctx, idOrSlug: string) {
   const b = await readJson(c.req);
   const rawEmail = String(b.email || '').trim();
   let targetUserId: string | null = b.userId ? String(b.userId) : null;
-  let email: string | null = rawEmail || null;
+  const email: string | null = rawEmail || null;
 
   // Email daxil edilibsə və sistemdə belə istifadəçi varsa dəvəti birbaşa
   // ona bağlayırıq — beləcə "Mənim dəvətlərim" siyahısında dərhal görünür.

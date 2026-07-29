@@ -89,8 +89,79 @@
     "ARCHIVE_HOT_DAYS": "90"
   },
 
+  // ════════════════════════════════════════════════════════════════════════
+  // STAGING — AUDIT-TASK-10 / Faza 1.7 (audit proses borcu #10)
+  // ════════════════════════════════════════════════════════════════════════
+  //
+  // Audit: "`wrangler.jsonc`-da `env.*` bölməsi yoxdur; deploy BİRBAŞA
+  // istehsala." Yəni miqrasiya sırası, sxem dəyişikliyi və yeni kod ilk dəfə
+  // CANLI istifadəçilərin üzərində sınanırdı.
+  //
+  // ⚠ Task 8 §7.b-dəki gizli Critical qüsur (`IN (?×2000)` D1 limitini aşırdı)
+  //   staging-də TUTULARDI — orada real həcmli data ilə cron bir dəfə işləyərdi.
+  //
+  // 🔴 QURULMA ADDIMLARI (icra agenti bunları edə BİLMƏZ — hesab sahibi lazımdır):
+  //     wrangler d1 create collabix-db-staging
+  //     wrangler r2 bucket create collabix-files-staging
+  //     wrangler kv namespace create SESSIONS_STAGING
+  //   Sonra aşağıdakı `PLACEHOLDER` dəyərləri əsl id-lərlə əvəz olunur.
+  //   Bu, `docs/TASK-10-SCOPE.md` §5-də xarici öhdəlik kimi qeyd olunub.
+  //
+  // ⚠ Bu blok YALNIZ `--env staging` ilə oxunur; adi `wrangler dev`/`deploy`
+  //   ona toxunmur, ona görə placeholder-lər istehsalı bloklamır.
+  //
+  // İstifadə:  npx wrangler deploy --env staging
+  //            npx wrangler d1 migrations apply collabix-db-staging --remote --env staging
+  "env": {
+    "staging": {
+      "name": "collabix-staging",
+      "vars": {
+        "ENVIRONMENT": "staging",
+        // ⚠ Staging ÖZ origin-ini daşımalıdır: Task 2-nin `SITE_ORIGIN` tək
+        //   mənbəsi canonical URL, sitemap və OG şəkillərini idarə edir —
+        //   istehsal domenini işlətsək staging kontenti indeksləmə üçün
+        //   istehsal URL-lərini elan edərdi.
+        "SITE_ORIGIN": "https://collabix-staging.muradofftehmez01.workers.dev",
+        "APP_URL": "https://collabix-staging.muradofftehmez01.workers.dev",
+        "TURNSTILE_SITE_KEY": "1x00000000000000000000AA",
+        "ARCHIVE_HOT_DAYS": "90"
+      },
+      "d1_databases": [
+        { "binding": "DB", "database_name": "collabix-db-staging", "database_id": "PLACEHOLDER-STAGING-D1-ID" }
+      ],
+      "r2_buckets": [
+        { "binding": "FILES", "bucket_name": "collabix-files-staging" }
+      ],
+      "kv_namespaces": [
+        { "binding": "SESSIONS", "id": "PLACEHOLDER-STAGING-KV-ID" }
+      ],
+      "durable_objects": {
+        "bindings": [
+          { "name": "ROOM_DO", "class_name": "RoomDO" },
+          { "name": "PRESENCE_DO", "class_name": "PresenceDO" },
+          { "name": "RATE_LIMIT_DO", "class_name": "RateLimitDO" }
+        ]
+      },
+      "observability": { "enabled": true }
+    }
+  },
+
+  // 🔴 AUDIT-TASK-10 / Faza 2.1 — ANA AÇAR `false` idi.
+  //
+  // Alt açarlar (`logs.enabled`, `traces.enabled`) `true` olsa da ana açar
+  // sönülü olduğu üçün HEÇ NƏ toplanmırdı. Bu bir sətir Task 1–9-un bütün
+  // ölçmə öhdəliklərini mümkün edir:
+  //   • Task 4  — istehsalda p50/p95 (rate limit səbətləri ölçmədən çıxıb)
+  //   • Task 7  — `/files/` gecikməsi prefiks üzrə
+  //   • Task 9  — DO gecikməsi (lokal ölçmədə şəbəkə round-trip-i YOXDUR,
+  //               ona görə istehsal rəqəmi başqa ola bilər)
+  //   • Task 9  — XP tavanlarının real trafiklə yenidən qiymətləndirilməsi
+  //
+  // ⚠ `head_sampling_rate: 1` = 100% sampling. Trafik böyüyəndə bu, xərcə
+  //   çevrilir; Task 4 §5.2 `read` səbəti üçün sampling təklif etmişdi —
+  //   həmin qərar məhz BU ölçmələrdən sonra verilməlidir.
   "observability": {
-    "enabled": false,
+    "enabled": true,
     "head_sampling_rate": 1,
     "logs": {
       "enabled": true,

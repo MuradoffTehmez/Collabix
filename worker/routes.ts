@@ -1306,7 +1306,7 @@ export async function listComments(c: Ctx, postId: string) {
   // (100) aşırdı. Hissələmə SIRALAMANI POZMUR: bölgü VALİDEYN id-ləri üzrədir,
   // yəni bir valideynin bütün cavabları eyni hissədədir və aşağıdakı
   // `replies[parent]` qruplaşdırması xronoloji sıranı olduğu kimi saxlayır.
-  let replyRows: any[] = [];
+  const replyRows: any[] = [];
   for (const chunk of chunkForD1(topIds)) {
     const rr = await D(c).prepare(
       `SELECT cm.* FROM comments cm JOIN users u ON cm.author_id = u.id
@@ -2400,7 +2400,10 @@ export async function adminUsersList(c: Ctx) {
     case 'admin':    where.push('a.user_id IS NOT NULL'); break;
   }
   const cursor = u.get('cursor');
-  if (cursor) where.push('u.username > ?'), vals.push(cursor);
+  // ⚠ Əvvəl vergül operatoru ilə tək sətirdə idi (`a(), b()`) — işləyirdi,
+  // lakin ESLint onu "istifadəsiz ifadə" kimi işarələyirdi və oxunuşda ikinci
+  // çağırışın şərtə bağlı olduğu görünmürdü.
+  if (cursor) { where.push('u.username > ?'); vals.push(cursor); }
 
   const limit = Math.min(Math.max(parseInt(u.get('limit') || '', 10) || 30, 1), 100);
   // admins ilə LEFT JOIN — hər sətrin admin olub-olmadığı bir sorğuda gəlir
@@ -2761,7 +2764,8 @@ export async function exportMyData(c: Ctx) {
 function ftsQuery(raw: string): string | null {
   const terms = String(raw || '')
     .toLowerCase()
-    .replace(/["*():^\-]/g, ' ')      // FTS operator simvolları söz ayırıcıya çevrilir
+    // `-` simvol sinfinin SONUNDADIR → qaçırılmağa ehtiyacı yoxdur.
+    .replace(/["*():^-]/g, ' ')       // FTS operator simvolları söz ayırıcıya çevrilir
     .split(/\s+/)
     .filter(t => t.length >= 2)       // tək hərf indeksdə mənalı deyil, hər şeyi qaytarır
     .slice(0, 8);                     // sorğu uzunluğu limiti (DoS qapısı)
@@ -3616,7 +3620,8 @@ export async function upload(c: Ctx) {
     }
   }
 
-  const safeName = (file.name || 'file').replace(/[^\w.\-]/g, '_').slice(0, 80);
+  // `-` simvol sinfinin SONUNDADIR → qaçırılma lazım deyil.
+  const safeName = (file.name || 'file').replace(/[^\w.-]/g, '_').slice(0, 80);
   // PDR-dəki komanda qovluq strukturu: /teams/{team_id}/{category}/...
   const key = teamCtx
     ? `teams/${teamCtx.teamId}/${teamCtx.category}/${now()}-${uuid().slice(0, 8)}-${safeName}`

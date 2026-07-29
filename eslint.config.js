@@ -65,6 +65,13 @@ export default [
       // `catch {}` bloklarının hamısında izahlı şərh var (Task 10 inventarı:
       // 16 blok, şərhsiz 0) — qayda yalançı pozitiv verərdi.
       'no-empty': ['error', { allowEmptyCatch: true }],
+
+      // ⚠ QƏSDƏN SÖNDÜRÜLÜB — `let ok = false; try { ok = … } catch { … }`
+      // naxışı bu layihədə FAIL-CLOSED başlanğıc dəyəridir (auth.ts verifyJWT,
+      // files-auth.ts üzvlük, archive.ts). ESLint 10 onu "istifadəsiz təyinat"
+      // sayır, çünki hər yol yenidən mənimsədir. İnitializer-i silmək
+      // dəyişəni `undefined` riskinə açardı və qorumanın NİYYƏTİNİ gizlədərdi.
+      'no-useless-assignment': 'off',
     },
   }),
 
@@ -114,6 +121,11 @@ export default [
       '@typescript-eslint/no-unused-vars': 'off',
       'no-empty': ['error', { allowEmptyCatch: true }],
       'no-unused-vars': 'off',
+      // ⚠ `test.beforeEach(({ }, testInfo) => …)` PLAYWRIGHT İDİOMUDUR: birinci
+      // parametr fixture obyektidir və bu testlərdə lazım deyil, lakin ikinci
+      // (`testInfo`) lazımdır. Boş naxışı silmək mümkün deyil.
+      'no-empty-pattern': 'off',
+      'no-useless-assignment': 'off',
     },
   }),
 ];
