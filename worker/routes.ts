@@ -1407,7 +1407,22 @@ export async function deleteComment(c: Ctx, postId: string, cid: string) {
   // H-5 #3 — rəy dövrəsi də bağlanır. Cascade silinən CAVABLARIN XP-si də geri
   // alınır: yalnız kök rəyi kompensasiya etsək, hücumçu cavab yazıb valideyni
   // silməklə cavabların XP-sini saxlayardı.
-  for (const o of owners) await compensateXp(c.env, o.uid, 'comment', o.id);
+  //
+  // ⚠ D-1 intizamı: hər cavab üçün ayrıca `compensateXp` çağırsaq, 120 cavablı
+  //   rəydə ən azı 120 SELECT olardı. Əvvəlcə HİSSƏLƏNMİŞ tək sorğu ilə hansı
+  //   sətirlərin ümumiyyətlə XP qazandığı tapılır — gündəlik tavan səbəbindən
+  //   bu siyahı praktikada xeyli qısadır.
+  const earned = new Set<string>();
+  for (const chunk of chunkForD1(ids)) {
+    const rs = await D(c).prepare(
+      `SELECT ref_id FROM xp_logs
+        WHERE source = 'comment' AND amount > 0 AND ref_id IN (${placeholders(chunk.length)})`,
+    ).bind(...chunk).all<any>();
+    for (const r of rs.results) earned.add(String(r.ref_id));
+  }
+  for (const o of owners) {
+    if (earned.has(o.id)) await compensateXp(c.env, o.uid, 'comment', o.id);
+  }
   return json({ ok: true });
 }
 export async function commentLikePut(c: Ctx, postId: string, cid: string) {

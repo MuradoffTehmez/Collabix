@@ -2,6 +2,21 @@ import { test, expect } from '@playwright/test';
 import { collectConsoleErrors, assertConsoleClean, gotoHome, dismissCookies } from './helpers';
 
 // TASK-6 / BÖLMƏ 1 — Ana səhifə (13 bənd) smoke doğrulaması.
+
+// 🔴 QONAQ SPEC-İ — sessiya AÇIQ şəkildə TƏMİZLƏNİR.
+//
+// `playwright.config.ts` layihə səviyyəsində `storageState` təyin edir, yəni
+// SESSİYALI kontekst BÜTÜN spec-lərə, o cümlədən buna da tətbiq olunur.
+// Sessiya ilə `/` açılanda tətbiq publik səhifəni deyil, giriş etmiş görünüşü
+// qurur → `#pub-welcome` heç vaxt `active` olmur və BÜTÜN 21 test 7 saniyəlik
+// timeout-a düşür. (`e2e/auth-fixture.ts` başlığındakı xəbərdarlıq məhz bunu
+// proqnozlaşdırırdı.)
+//
+// ⚠ Konfiqdəki "spec-lərdə `test.use({ storageState })` OLMAMALIDIR" qaydası
+//   AUTENTİFİKASİYALI spec-lərə aiddir — orada paylaşılan fayla qayıtmaq
+//   layihə ayrımını pozardı. Sessiyanı BOŞALTMAQ o problemi yaratmır.
+test.use({ storageState: { cookies: [], origins: [] } });
+
 test.describe('Ana səhifə', () => {
 
   test('yüklənir, sıfır konsol xətası', async ({ page }) => {

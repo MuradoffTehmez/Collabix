@@ -156,8 +156,14 @@ export async function seedTestUsers(base: string) {
     //
     // `source = 'admin'`, `ref_id = NULL` — bu, məhz "kənardan təyin edilmiş XP"
     // kateqoriyasıdır (admin paneli ilə eyni yol).
-    `DELETE FROM xp_logs WHERE source = 'admin' AND ref_id IS NULL ` +
-    `AND uid IN (SELECT id FROM users WHERE username = '${username}');`,
+    //
+    // ⚠ BÜTÜN sətirlər silinir, təkcə 'admin' olanlar yox. Seed `users.xp`-ni
+    //   SABİT dəyərə qaytarır; əvvəlki qaçışda qazanılmış organik sətirləri
+    //   ('post', 'comment', …) saxlasaq, jurnal cəmi XP-dən BÖYÜK qalar və
+    //   `/api/health` hər qaçışdan sonra `drift` göstərər (ölçüldü: e2e_main
+    //   xp=10, jurnal=55). Seed test hesablarının BAŞLANĞIC vəziyyətini təyin
+    //   edir — jurnal da həmin vəziyyətə sıfırlanmalıdır.
+    `DELETE FROM xp_logs WHERE uid IN (SELECT id FROM users WHERE username = '${username}');`,
     `INSERT INTO xp_logs (id, uid, source, ref_id, amount, created_at) ` +
     `SELECT 'e2e-xp-${username}', id, 'admin', NULL, ${xp}, ${nowMs} ` +
     `FROM users WHERE username = '${username}' AND ${xp} <> 0;`,
@@ -221,7 +227,7 @@ export async function seedTestUsers(base: string) {
     //   sətri isə yazılır → invariant məhz seed tərəfindən pozulur. İkisi
     //   BİRLİKDƏ, açıq şəkildə eyni dəyərə gətirilir.
     `UPDATE users SET xp = 100 WHERE id = '${owner.id}';`,
-    `DELETE FROM xp_logs WHERE id = 'e2e-xp-${owner.username}';`,
+    `DELETE FROM xp_logs WHERE uid = '${owner.id}';`,
     `INSERT INTO xp_logs (id, uid, source, ref_id, amount, created_at) ` +
     `VALUES ('e2e-xp-${owner.username}', '${owner.id}', 'admin', NULL, 100, ${nowMs});`,
 
