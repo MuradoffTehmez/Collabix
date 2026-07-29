@@ -358,13 +358,34 @@ export async function adminBulkUsers(c: Ctx) {
 // qaytarır. Ayrıca cron lazım deyil — panel açıldıqca seriya özü dolur.
 export async function adminStatsDaily(c: Ctx) {
   const day = todayStr();
-  const [uc, pc, rc, bc] = await D(c).batch([
-    D(c).prepare('SELECT COUNT(*) AS n FROM users'),
-    D(c).prepare('SELECT COUNT(*) AS n FROM posts'),
-    D(c).prepare("SELECT COUNT(*) AS n FROM reports WHERE status = 'open'"),
-    D(c).prepare('SELECT COUNT(*) AS n FROM users WHERE blocked = 1'),
-  ]);
-  const g = (r: any) => (r.results[0] as any).n as number;
+  // AUDIT-TASK-10 / Faza 4 — DÖRD TAM SKAN əvəzinə bir rollup oxusu.
+  //
+  // Audit `adminStatsDaily`-nin 4 × `COUNT(*)` etdiyini qeyd etmişdi; panel
+  // 9 paralel poll işlətdiyi üçün bu, tam skanların ən sıx yeri idi.
+  // Sayğaclar gecə cron-unda hesablanır (`archive.ts` → `refreshStatsRollup`).
+  //
+  // ⚠ FALLBACK: rollup sətri yoxdursa (miqrasiya təzə tətbiq olunub, cron hələ
+  //   işləməyib) KÖHNƏ yola düşülür — panel boş rəqəm göstərməməlidir.
+  const roll = await D(c).prepare('SELECT metric, value FROM stats_rollup').all<any>();
+  const cached: Record<string, number> = {};
+  for (const r of roll.results) cached[String(r.metric)] = Number(r.value);
+
+  const need = ['users_total', 'posts_total', 'reports_open', 'users_blocked']
+    .some(k => cached[k] === undefined);
+  if (need) {
+    const [u2, p2, r2, b2] = await D(c).batch([
+      D(c).prepare('SELECT COUNT(*) AS n FROM users'),
+      D(c).prepare('SELECT COUNT(*) AS n FROM posts'),
+      D(c).prepare("SELECT COUNT(*) AS n FROM reports WHERE status = 'open'"),
+      D(c).prepare('SELECT COUNT(*) AS n FROM users WHERE blocked = 1'),
+    ]);
+    const pick = (r: any) => Number((r.results[0] as any)?.n || 0);
+    cached.users_total = pick(u2); cached.posts_total = pick(p2);
+    cached.reports_open = pick(r2); cached.users_blocked = pick(b2);
+  }
+  const uc = cached.users_total, pc = cached.posts_total;
+  const rc = cached.reports_open, bc = cached.users_blocked;
+  const g = (n: number) => n;
   await D(c).prepare(
     `INSERT INTO stats_daily (date, users, posts, complaints, blocked, updated_at)
      VALUES (?,?,?,?,?,?)

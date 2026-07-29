@@ -229,12 +229,74 @@ export async function runArchiveJob(env: Env): Promise<Record<string, unknown>> 
   // `deleteAccount` `room_messages`/`dm_messages` sətirlərinə toxunmur).
   const purge = await purgeDeletedFromArchives(env);
 
+  // AUDIT-TASK-10 / Faza 4 — Task 6 §8/3-ün açıq öhdəliyi.
+  const rollup = await refreshStatsRollup(env);
+  const analyzed = await runAnalyze(env);
+
   const summary = {
     hotDays: hotDays(env), rooms, dms,
     prunedSessions: sessions, prunedEvents: events, purge,
+    rollup, analyzed,
   };
   console.log('arxiv işi tamamlandı', JSON.stringify(summary));
   return summary;
+}
+
+/**
+ * `stats_rollup` yenilənməsi — AUDIT-TASK-10 / Faza 4 (sarı qrup).
+ *
+ * Audit: `adminStatsDaily` hər çağırışda DÖRD `COUNT(*)` işlədir və panel
+ * 9 paralel poll etdiyi üçün bu, tam skanların çoxaldığı yerdir. Sayğaclar
+ * indi gecədə bir dəfə hesablanır.
+ *
+ * ⚠ DƏQİQLİK MÜBADİLƏSİ AÇIQDIR: rəqəmlər 24 saata qədər köhnə ola bilər.
+ *   Admin paneli üçün bu məqbuldur (trend göstəricisidir, mühasibat deyil) —
+ *   `updated_at` cavabda qaytarılır ki, köhnəlik GÖRÜNSÜN, gizlənməsin.
+ */
+async function refreshStatsRollup(env: Env): Promise<number> {
+  const ts = now();
+  const metrics: Array<[string, string]> = [
+    ['users_total',   'SELECT COUNT(*) AS n FROM users'],
+    ['posts_total',   'SELECT COUNT(*) AS n FROM posts'],
+    ['reports_open',  "SELECT COUNT(*) AS n FROM reports WHERE status = 'open'"],
+    ['users_blocked', 'SELECT COUNT(*) AS n FROM users WHERE blocked = 1'],
+  ];
+  let written = 0;
+  for (const [metric, sql] of metrics) {
+    try {
+      const row = await env.DB.prepare(sql).first<any>();
+      await env.DB.prepare(
+        `INSERT INTO stats_rollup (metric, value, updated_at) VALUES (?1,?2,?3)
+         ON CONFLICT(metric) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+      ).bind(metric, Number(row?.n || 0), ts).run();
+      written++;
+    } catch (e: any) {
+      // Bir metrik alınmasa qalanları yazılmalıdır — cron çökməməlidir.
+      console.error('rollup metriki yazılmadı', metric, e?.message || e);
+    }
+  }
+  return written;
+}
+
+/**
+ * `ANALYZE` — AUDIT-TASK-6 §8/3-ün açıq öhdəliyi.
+ *
+ * Miqrasiya 0024 `ANALYZE`-i BİR DƏFƏ işlətmişdi və orada açıq yazılmışdı:
+ * *"Data profili köklü dəyişəndə təkrarlanmalıdır"* — lakin təkrarlayan
+ * mexanizm yox idi. Statistika köhnəldikcə planlayıcı səhv indeks seçir və
+ * sorğular sükutla yavaşlayır.
+ *
+ * ⚠ Gündəlik cron kifayətdir: `ANALYZE` bütün cədvəlləri skan edir, yəni ucuz
+ *   deyil; hər sorğuda və ya hər saatda işlətmək faydadan çox xərc olardı.
+ */
+async function runAnalyze(env: Env): Promise<boolean> {
+  try {
+    await env.DB.prepare('ANALYZE').run();
+    return true;
+  } catch (e: any) {
+    console.error('ANALYZE alınmadı', e?.message || e);
+    return false;
+  }
 }
 
 /* ---------- GDPR ixracı (§8.5) ---------- */

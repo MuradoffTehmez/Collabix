@@ -93,8 +93,14 @@ export async function contactSubmit(c: Ctx) {
   const email = clampStr(b.email, 120).trim();
   const message = clampStr(b.message, 2000).trim();
   if (!name || !message || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return badReq('Sahələri düzgün doldurun.');
-  await D(c).prepare('INSERT INTO contact_messages (id, name, email, message, created_at) VALUES (?,?,?,?,?)')
-    .bind(uuid(), name, email, message, now()).run();
+  // AUDIT-TASK-10 / Faza 4 — Task 8 §9/5: `uid` saxlanılır.
+  //
+  // Əvvəl yalnız `email` yazılırdı. İstifadəçi e-poçtunu dəyişsə köhnə
+  // müraciətləri GDPR ixracında İTİRİRDİ (ixrac onları məhz e-poçt üzrə
+  // tapır). ⚠ Qonaq da forma doldura bilər → `uid` NULL ola bilər.
+  await D(c).prepare(
+    'INSERT INTO contact_messages (id, uid, name, email, message, created_at) VALUES (?,?,?,?,?,?)',
+  ).bind(uuid(), c.user?.id ?? null, name, email, message, now()).run();
   return json({ ok: true });
 }
 

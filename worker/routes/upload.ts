@@ -135,6 +135,24 @@ export async function upload(c: Ctx) {
     ? `teams/${teamCtx.teamId}/${teamCtx.category}/${now()}-${uuid().slice(0, 8)}-${safeName}`
     : `${kind === 'avatar' ? 'avatars' : kind === 'msg' ? 'msgfiles' : 'posts'}/${c.user!.id}/${now()}-${uuid().slice(0, 8)}-${safeName}`;
   await c.env.FILES.put(key, bytes, { httpMetadata: { contentType } });
+
+  // AUDIT-TASK-10 / Faza 4 (sarı qrup) — `media` kataloqu.
+  //
+  // Əvvəl R2 obyektləri YALNIZ `posts.image_keys` JSON-unda və mesaj
+  // sətirlərində izlənilirdi. Nəticələr: "bu istifadəçi nə qədər yer tutur?"
+  // sualı cavabsız idi (kvota mümkünsüz) və yetim obyektləri tapmaq üçün
+  // bütün R2-ni sadalamaq lazım gəlirdi — Faza 3-də tapılan `slice(0, 100)`
+  // yetimləri məhz buna görə görünməz idi.
+  //
+  // ⚠ `waitUntil`: kataloq yazısı yükləmə cavabını GECİKDİRMƏMƏLİDİR, və
+  //   uğursuzluğu yükləməni ÇÖKDÜRMƏMƏLİDİR — fayl R2-də artıq var.
+  c.ctx.waitUntil(
+    c.env.DB.prepare(
+      'INSERT OR REPLACE INTO media (key, uid, kind, mime, size, created_at) VALUES (?,?,?,?,?,?)',
+    ).bind(key, c.user!.id, teamCtx ? 'team' : kind, contentType, bytes.length, now())
+      .run().then(() => {}).catch(() => {}),
+  );
+
   return json({
     key, url: fileUrl(key), fileName: file.name, fileSize: bytes.length, mimeType: contentType,
     category: teamCtx?.category,
