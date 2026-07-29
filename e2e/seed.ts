@@ -39,7 +39,25 @@ export const TEST_PASS = 'Test12345!';
 // bunu göndərir.
 export const E2E_TURNSTILE = 'e2e-dummy-token';
 export const PRIMARY = 'e2e_main';          // giriş üçün əsas hesab
-export const AUTH_FILE = 'e2e/.auth/user.json';
+/**
+ * Sessiya faylları — HƏR LAYİHƏYƏ AYRICA.
+ *
+ * 🔴 NİYƏ AYRI (bu, ~40 mobile sınığının kök səbəbi idi):
+ * `globalSetup` bir dəfə giriş edirdi və hər iki layihə EYNİ faylı paylaşırdı.
+ * Access token ömrü 15 dəqiqədir (`worker/auth.ts` → ACCESS_TTL), tam dəst isə
+ * ~28 dəqiqə çəkir. Token bitəndə client `/api/auth/refresh` çağırır, refresh
+ * isə ROTASİYA edir — fayldakı nüsxə köhnəlir və növbəti kontekst onu təqdim
+ * edəndə bu, "token reuse" sayılıb SESSİYANI LƏĞV EDİR (server davranışı
+ * DÜZGÜNDÜR — qüsur harness-də idi). Nəticədə dəstin ikinci yarısı 401 alırdı.
+ *
+ * İki AYRI sessiya bu zənciri qırır: desktop-un rotasiyası mobile-ın sessiyasına
+ * TOXUNMUR. Layihələr arasında sıra tənzimləmək cəhdləri (`dependencies`,
+ * `teardown`) uğursuz oldu — bax `playwright.config.ts`-dəki qeyd.
+ */
+export const AUTH_FILE_DESKTOP = 'e2e/.auth/user-desktop.json';
+export const AUTH_FILE_MOBILE = 'e2e/.auth/user-mobile.json';
+/** Geriyə uyğunluq: birbaşa idxal edən köhnə yerlər desktop sessiyasını alır. */
+export const AUTH_FILE = AUTH_FILE_DESKTOP;
 
 // [username, ad, xp, neçə gün əvvəl aktiv, skill-lər]
 // xp və aktivlik qəsdən fərqlidir ki, sıralama birmənalı yoxlansın.
@@ -125,9 +143,25 @@ export async function seedTestUsers(base: string) {
   // ("Son aktiv olanlar"). Registrasiya hamısına eyni dəyər verir, ona görə
   // burada birbaşa yazılır — bunlar API ilə təyin edilə bilməyən qazanılan dəyərlərdir.
   const nowMs = Date.now();
-  const sql = USERS.map(([username, , xp, daysAgo]) =>
+  const sql = USERS.flatMap(([username, , xp, daysAgo]) => [
     `UPDATE users SET xp = ${xp}, last_active_at = ${nowMs - daysAgo * 86400000} ` +
-    `WHERE username = '${username}';`);
+    `WHERE username = '${username}';`,
+    // 🔴 AUDIT-TASK-9 / B — `SUM(xp_logs.amount) == users.xp` invariantı.
+    //
+    // Seed XP-ni BİRBAŞA yazır (yuxarıdakı səbəbə görə), yəni `grantXp`-dən
+    // KEÇMİR. Uyğun jurnal sətri yazılmasa `/api/health` daimi `xp_invariant:
+    // 'drift'` göstərər — və bu, YALANÇI siqnal olar: məhsulda qüsur yoxdur,
+    // sadəcə harness invarianti pozur. Seed-in özü invariantı qorumalıdır,
+    // əks halda invariantın real drift-i aşkarlama qabiliyyəti səs-küydə itər.
+    //
+    // `source = 'admin'`, `ref_id = NULL` — bu, məhz "kənardan təyin edilmiş XP"
+    // kateqoriyasıdır (admin paneli ilə eyni yol).
+    `DELETE FROM xp_logs WHERE source = 'admin' AND ref_id IS NULL ` +
+    `AND uid IN (SELECT id FROM users WHERE username = '${username}');`,
+    `INSERT INTO xp_logs (id, uid, source, ref_id, amount, created_at) ` +
+    `SELECT 'e2e-xp-${username}', id, 'admin', NULL, ${xp}, ${nowMs} ` +
+    `FROM users WHERE username = '${username}' AND ${xp} <> 0;`,
+  ]);
 
   // BÖLMƏ 3 testləri admin paneli tələb edir → əsas hesaba admin hüququ.
   // (API-də "özünü admin et" endpoint-i yoxdur və olmamalıdır — birbaşa D1.)
@@ -179,6 +213,17 @@ export async function seedTestUsers(base: string) {
     // mümkün olmamalıdır, o yalnız üzv siyahısında görünmək üçündür.
     `INSERT OR IGNORE INTO users (id, username, name, xp, joined_at, pass_hash, pass_salt) ` +
     `VALUES ('${owner.id}', '${owner.username}', '${owner.name}', 100, ${nowMs}, 'e2e-invalid', 'e2e-invalid');`,
+    // XP invariantı (yuxarıdakı izaha bax) — komanda sahibinin 100 XP-si də
+    // jurnalda əks olunmalıdır.
+    //
+    // ⚠ `INSERT OR IGNORE` TƏK BAŞINA KİFAYƏT ETMİR: yuxarıdakı `users` sətri də
+    //   `OR IGNORE`-dur, yəni hesab artıq varsa onun `xp`-si TOXUNULMUR, jurnal
+    //   sətri isə yazılır → invariant məhz seed tərəfindən pozulur. İkisi
+    //   BİRLİKDƏ, açıq şəkildə eyni dəyərə gətirilir.
+    `UPDATE users SET xp = 100 WHERE id = '${owner.id}';`,
+    `DELETE FROM xp_logs WHERE id = 'e2e-xp-${owner.username}';`,
+    `INSERT INTO xp_logs (id, uid, source, ref_id, amount, created_at) ` +
+    `VALUES ('e2e-xp-${owner.username}', '${owner.id}', 'admin', NULL, 100, ${nowMs});`,
 
     // ── Əsas komanda (UI testləri) ──
     `INSERT OR IGNORE INTO teams (id, slug, name, description, visibility, owner_id, status, xp, created_at, updated_at) ` +
