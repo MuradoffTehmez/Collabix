@@ -1,0 +1,155 @@
+// `routes.ts` bölünməsinin PAYLAŞILAN QATI — AUDIT-TASK-10 / Faza 3.1.
+//
+// Audit struktur borcu #1 (*"ən böyük borc"*): `routes.ts` 185 KB / 120 export.
+// Hər dəyişiklik bütün faylı toxundururdu, merge konflikti riski və koqnitiv
+// yük yaradırdı. `team-routes.ts` + `services/team/` nümunəsi düzgün yolu
+// göstərirdi — bu bölünmə həmin naxışı `routes.ts`-ə tətbiq edir.
+//
+// 🔴 SAF REFAKTOR QAYDASI (sənəd §11.2): bu köçürmə DAVRANIŞ DƏYİŞMİR.
+//   Funksiyaların gövdəsi, şərhləri və sırası OLDUĞU KİMİ köçürülüb; yalnız
+//   `export` sözü əlavə edilib ki, domen modulları onlara çata bilsin.
+//
+// ⚠ ŞƏRH MƏDƏNİYYƏTİ (sənəd §11.5): audit bu layihənin şərhlərini "ən dəyərli
+//   aktivlərindən biri" adlandırıb. Bölünmə zamanı şərhlər KÖÇÜRÜLÜB, silinməyib.
+import { Ctx, err, todayStr, chunkForD1, placeholders, extractMentions } from '../util';
+import { NotificationService } from '../services/notification';
+
+/** D1 qısayolu — bütün domen modulları bunu işlədir. */
+export const D = (c: Ctx) => c.env.DB;
+
+/* ================= köməkçilər ================= */
+
+/**
+ * Bildiriş göndərmə — `Ctx` üçün NAZİK ÖRTÜK.
+ *
+ * 🔴 AUDIT-TASK-10 / Faza 3.2 (audit struktur borcu #4) — İKİ `notify()`
+ * BİRLƏŞDİRİLDİ.
+ *
+ * Əvvəl eyni qaydalar İKİ yerdə yazılmışdı: burada və
+ * `services/notification/index.ts`-də. Audit xəbərdarlığı: *"Şərh bunu 'eyni
+ * qaydalar' kimi təsvir edir; VAXTLA AYRILACAQLAR."*
+ *
+ * Sənədin tələbi ilə əvvəlcə DIFF edildi — qaydalar hələ eyni idi (tərcih
+ * yoxlaması + eyni INSERT). Fərq yalnız interfeysdə idi:
+ *   • servis  — `env` alır, `fromId`/`fromName` AÇIQ ötürülür, `boolean` qaytarır,
+ *               realtime siqnalı AYRICA metoddadır (queue/job-lar üçün uyğun)
+ *   • bu örtük — `Ctx` alır, göndərəni `c.user`-dan çıxarır və siqnalı özü atır
+ *
+ * Ona görə SERVİS kanonik implementasiya seçildi (o, `Ctx`-dən asılı deyil və
+ * artıq `queue.ts`, `jobs/ai.ts`, `jobs/render.ts` tərəfindən işlədilir), bu
+ * funksiya isə yalnız uyğunlaşdırıcı qaldı. `msg.ts`-in paylaşılan modul kimi
+ * çıxarılması ilə EYNİ naxışdır (auditin "düzgün naxış" adlandırdığı).
+ *
+ * ⚠ Realtime siqnal YALNIZ sətir həqiqətən yazılanda atılır: servis `false`
+ *   qaytarırsa (tərcih söndürülüb və ya istifadəçi yoxdur) boş yerə siqnal
+ *   getməməlidir.
+ */
+export async function notify(c: Ctx, toUid: string, type: string, text: string, postId: string | null = null) {
+  if (!c.user) return;
+  const wrote = await new NotificationService(c.env)
+    .notify(toUid, c.user.id, c.user.name, type, text, postId);
+  if (wrote) await userPush(c, toUid, { t: 'notif' });
+}
+
+export async function notifyMentions(c: Ctx, text: string, label: string, postId: string | null = null) {
+  const names = extractMentions(text);
+  if (!names.length) return;
+  // D-1: mətn 5000 simvola qədərdir və `@abc` cəmi 4 simvoldur → NƏZƏRİ olaraq
+  // 1000+ unikal qeyd. Bölünmədən `IN (?×1000)` D1-i çökdürürdü.
+  for (const chunk of chunkForD1(names)) {
+    const q = `SELECT id FROM users WHERE username IN (${placeholders(chunk.length)})`;
+    const rows = await D(c).prepare(q).bind(...chunk).all<any>();
+    for (const r of rows.results) await notify(c, r.id, 'mention', label, postId);
+  }
+}
+
+// Gündəlik fəaliyyət sayğacı (Bənd 9).
+//
+// İKİ yerə yazılır və bu, keçid dövrü üçün QƏSDƏNDİR:
+//   * `user_activity` — yeni, normalized mənbə. Artımlı UPSERT: bütün tarixçəni
+//     oxuyub geri yazmır, yəni "lost update" problemi yoxdur və yazı həcmi sabitdir.
+//   * `users.activity_days` — köhnə JSON blob. Hələ də yenilənir, çünki keşlənmiş
+//     köhnə client-lər (`mapUser` → `activityDays`) onu oxuyur. Bütün client-lər
+//     yeni endpoint-ə keçəndən sonra bu sətir silinə bilər.
+export async function bumpActivity(c: Ctx) {
+  const day = todayStr();
+  // AUDIT M-8 — köhnə `users.activity_days` JSON blob-una yazı DAYANDIRILDI.
+  //
+  // Problem: blob read-modify-write idi (bütün tarixçəni oxu → dəyiş → geri
+  // yaz). İki paralel sorğu eyni köhnə blob-u oxuyub bir-birinin artımını
+  // itirirdi (lost update). `user_activity` isə artımlı UPSERT-dir — yarış
+  // yoxdur və yazı həcmi sabitdir.
+  //
+  // ⚠ Oxu yolu ƏVVƏLCƏ köçürülüb (Task 3 §5.2 "giriş yolu ≠ qiymətləndirmə
+  // yolu" tələsi): `activityFor` artıq `user_activity` cədvəlindən oxuyur və
+  // sətri olmayan istifadəçi üçün blob-u BİR DƏFƏ köçürür (tənbəl miqrasiya).
+  // Blob sütunu SİLİNMİR — həmin tənbəl miqrasiya hələ ona güvənir.
+  await D(c).prepare(
+    `INSERT INTO user_activity (uid, date, count) VALUES (?,?,1)
+     ON CONFLICT(uid, date) DO UPDATE SET count = count + 1`,
+  ).bind(c.user!.id, day).run();
+}
+
+export async function bumpProgress(c: Ctx, uid: string, field: string, col: 'posts' | 'tasks', amount = 1) {
+  await D(c).prepare(
+    `INSERT INTO progress (user_id, field, ${col}) VALUES (?,?,?)
+     ON CONFLICT(user_id, field) DO UPDATE SET ${col} = ${col} + ?`,
+  ).bind(uid, field, amount, amount).run();
+}
+
+// Admin jurnalı `worker/admin-log.ts`-ə köçürüldü (AUDIT-TASK-6 §B-3):
+// `team-routes.ts` də ona ehtiyac duyur (M-11), lakin oradan `routes.ts`-i
+// import etmək komanda route-larının lazy yüklənməsini pozardı.
+export type { LogLevel } from '../admin-log';
+
+export const badReq = (m: string) => err(m, 400);
+
+/**
+ * Post `blocks` JSON-unun ümumi tavanı — AUDIT M-5.
+ *
+ * 64 KB seçimi ölçmə ilədir, təxminlə deyil: bazadakı ƏN BÖYÜK mövcud post
+ * 58 bayt idi (uzaq bazada ümumiyyətlə post yox idi), yəni tavan real
+ * istifadədən üç böyüklük dərəcəsi yuxarıdadır və heç bir mövcud postu
+ * kəsmir. Məqsəd storage DoS-un qarşısını almaqdır, məzmunu məhdudlaşdırmaq
+ * deyil.
+ */
+export const POST_BLOCKS_MAX_BYTES = 64 * 1024;
+
+// XP dəyərləri tək yerdə — əvvəl `xp + 10` / `xp + 5` kimi sətirlərə
+// yayılmışdı və tavan hesabı ilə uyğunluğu gözlə yoxlanmalı olurdu (bax xp.ts).
+export const POST_XP = 10;
+export const COMMENT_XP = 5;
+export const SOLUTION_XP = 50;
+
+/**
+ * AUDIT-TASK-9 / D-2 — silinmiş hesabın mesajlarındakı əvəzləyici kimlik.
+ *
+ * ⚠ `users` cədvəlində BELƏ SƏTİR YOXDUR və olmamalıdır: sentinel real hesab
+ *   deyil, sadəcə "müəllif artıq mövcud deyil" işarəsidir. UI adı mesaj sətrinin
+ *   `author_name` sütunundan oxuyur, `users`-dan yox — ona görə sınıq istinad
+ *   yaranmır. `deleted_uids` tombstone-u ilə qarışdırma: o, ARXİV filtri üçündür.
+ */
+export const DELETED_UID = 'deleted_user';
+export const DELETED_NAME = 'Silinmiş istifadəçi';
+
+// Realtime: otaq mesajı dəyişəndə (yeni / redaktə / sil) həmin otağın DO-suna
+// "yenilə" siqnalı göndərilir → bağlı client-lər dərhal refetch edir. Fan-out
+// yalnız siqnaldır, məzmun D1-dən gəlir (persistence orada qalır). Xəta olsa
+// susdurulur — realtime opsionaldır, REST hər halda işləyir.
+export async function roomBroadcast(c: Ctx, roomId: string, payload: unknown): Promise<void> {
+  try {
+    const stub = c.env.ROOM_DO.get(c.env.ROOM_DO.idFromName(roomId));
+    await stub.broadcast(payload);
+  } catch { /* realtime opsional */ }
+}
+
+// Realtime: konkret istifadəçinin açıq tablarına siqnal (bildiriş / DM).
+// Qlobal PresenceDO uid→soket indeksini saxlayır — ayrıca DO sinfi lazım deyil.
+// roomBroadcast kimi: yalnız siqnal, məzmun REST-dən; xəta susdurulur.
+export async function userPush(c: Ctx, uid: string, payload: unknown): Promise<void> {
+  try {
+    const stub = c.env.PRESENCE_DO.get(c.env.PRESENCE_DO.idFromName('global'));
+    await stub.push(uid, payload);
+  } catch { /* realtime opsional */ }
+}
+
