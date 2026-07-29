@@ -175,3 +175,12 @@ export async function deleteR2Keys(c: Ctx, keys: string[]): Promise<void> {
     await c.env.FILES.delete(uniq.slice(i, i + R2_DELETE_CHUNK)).catch(() => {});
   }
 }
+
+export const csvCell = (v: unknown) => {
+  const s = v === null || v === undefined ? '' : String(v);
+  // Formula injection qorunması: =, +, -, @ ilə başlayan xanalar Excel-də
+  // formul kimi icra oluna bilər — apostrofla neytrallaşdırılır.
+  const safe = /^[=+\-@\t\r]/.test(s) ? "'" + s : s;
+  return /[",\n\r]/.test(safe) ? '"' + safe.replace(/"/g, '""') + '"' : safe;
+};
+export const csvRow = (cells: unknown[]) => cells.map(csvCell).join(',') + '\r\n';
