@@ -409,6 +409,17 @@ yaşıl/qırmızı edirdi):
 | 6 | `home.spec` | **21/21** | əvvəl 0/21 |
 | 7 | `archive-read` | **18/18** | |
 | 8 | `admin` + `archive` | **25/25** | |
+| 9 | `mobile` layihəsi | 286/312-yə çatdı · **2 sındı** | ikisi də `admin.spec` — aşağı bax |
+
+**`mobile` sınıqlarının atribusiyası (ölçmə ilə, təxminlə yox):**
+
+| Test | Mənim ağacımda | Dəyişikliklərdən ƏVVƏLKİ ağacda | Hökm |
+|---|---|---|---|
+| `admin.spec:235` "#6 jurnal kopyalanır" | ✘ (30,4 s) | ✘ (30,4 s) | **MÖVCUD qüsur** — mənim işimdən deyil |
+| `admin.spec:247` "#7 skeleton" | ✓ (1,9 s) təcriddə | ✓ (1,9 s) | **Kaskad** — #6-nın 30 s timeout-undan sonra serial rejimdə sınırdı |
+
+⚠ Hər ikisi `KNOWN-FAILING.md`-in "bağlandı" saydığı qrupdadır — yəni "0 sınıq"
+iddiasının etibarsızlığı yalnız `home.spec` ilə məhdud deyil (bax R-1b).
 
 ⚠ **Tək qalan sınıq növü `heavy` səbətinin saatlıq büdcəsidir** (20/saat, testdə
 ×5 = 100/uid) və o, **bir saat ərzində təkrar tam qaçışların** nəticəsidir, kod
@@ -455,6 +466,13 @@ və `home.spec.ts`-in **21 testinin hamısı** 7 saniyəlik timeout-a düşürd�
 proqnozlaşdırırdı** ("layihə səviyyəsində `use.storageState` təyin etsək, o,
 QONAQ testlərinə də … tətbiq olunar və onlar sınar") — yəni səbəb məlum idi,
 sadəcə konfiq uyğunlaşdırılmamışdı. Düzəldildi (`20079ab`).
+
+Əlavə olaraq `mobile / admin.spec:235` ("#6 jurnal kopyalanır") **hələ də
+sınır** və bu, dəyişikliklərdən ƏVVƏLKİ ağacda da təkrarlanır (§5-dəki
+atribusiya cədvəli). Yəni siyahı bir deyil, **iki müstəqil yerdən** natamamdır.
+
+🔴 **Nəticə:** növbəti task `KNOWN-FAILING.md`-ə güvənməməli, baseline-ı
+ÖZÜ ölçməlidir — və ölçməni kod dəyişməzdən əvvəl bitirməlidir.
 
 ### 🟠 R-3 — Test izolyasiyası: sabit id-li seed + yarımçıq qaçış
 

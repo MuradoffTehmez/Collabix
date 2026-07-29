@@ -42,3 +42,27 @@ Sınıq sayı **0** olmalıdır.
 ⚠ Yeni sınıq çıxarsa, onu bu fayla **ƏLAVƏ ETMƏ** — səbəbini tap və bağla.
 Bu siyahının yenidən böyüməsi baseline-ın itməsi deməkdir və sonrakı task-ların
 reqressiyaları yenidən səs-küydə itər.
+
+---
+
+## 🔴 DÜZƏLİŞ (AUDIT-TASK-9, 2026-07-29) — "0 sınıq" İDDİASI ETİBARSIZ İDİ
+
+Yuxarıdakı "**0 sınıq**" nəticəsi ölçüldüyü an üçün doğru ola bilər, lakin bu
+faylın commit edildiyi İŞ AĞACINDA doğru DEYİLDİ. Task 9 iki müstəqil boşluq
+tapdı:
+
+1. **`home.spec.ts` — 21 testin HAMISI sınırdı.** `auth-fixture.ts` yaradılıb,
+   lakin `playwright.config.ts`-dən layihə səviyyəsindəki `storageState`
+   ÇIXARILMAYIB. Nəticədə sessiyalı kontekst QONAQ spec-inə də tətbiq olunurdu:
+   `/` açılanda tətbiq publik səhifəni deyil, giriş etmiş görünüşü qurur →
+   `#pub-welcome` heç vaxt `active` olmur → hər test 7 s timeout.
+   ⚠ `auth-fixture.ts`-in ÖZ başlıq şərhi məhz bunu proqnozlaşdırırdı.
+   → Düzəldildi: `home.spec.ts` sessiyanı açıq təmizləyir (`20079ab`).
+
+2. **`mobile / admin.spec:235` ("#6 jurnal kopyalanır") hələ də sınır.**
+   Dəyişikliklərdən ƏVVƏLKİ ağacda da təkrarlanır (30,4 s timeout), yəni Task 9
+   reqressiyası deyil — sadəcə bağlanmamış qalıb.
+
+**Dərs:** bu fayl artıq baseline SƏNƏDİ deyil, TARİXİ qeyddir. Növbəti task
+baseline-ı **özü ölçməlidir** və ölçməni **kod dəyişməzdən əvvəl** bitirməlidir
+(watch rejimi + `reuseExistingServer` ölçməni səssizcə korlayır — Task 9 §0).
