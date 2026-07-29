@@ -103,3 +103,7 @@ export {
   publicFaqs, publicTestimonials, publicStats, publicGetPost, publicGetUser,
   newsletterSubscribe, contactSubmit, publicConfig, health,
 } from './routes/public';
+export {
+  warnUser, listWarnings, banUser, muteUser, restoreUser, moderationStatus,
+  listRoles, setUserRole, setUserPermission, myPermissions,
+} from './routes/moderation';

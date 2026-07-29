@@ -13,6 +13,7 @@ import {
   mapPost, chunkForD1, placeholders,
 } from '../util';
 import { grantXp, compensateXp } from '../xp';
+import { grantReputation, evaluateProgression } from '../progression';
 import { QueueService } from '../services/queue';
 import {
   D, badReq, notify, notifyMentions, bumpActivity, bumpProgress, deleteR2Keys,
@@ -204,6 +205,9 @@ export async function createPost(c: Ctx) {
   // H-5: XP idempotent + gündəlik tavanlı verilir. Tavana çatanda post YENƏ DƏ
   // yaradılır — yalnız XP verilmir (audit §B-3: "əməliyyat uğurlu olsun").
   const xpGrant = await grantXp(c.env, c.user!.id, 'post', id, POST_XP);
+  // FAZA A2 — nişan/nailiyyət mühərriki. `waitUntil`: qiymətləndirmə post
+  // yaratma cavabını GECİKDİRMƏMƏLİDİR.
+  c.ctx.waitUntil(evaluateProgression(c.env, c.user!.id).then(() => {}));
   await bumpActivity(c);
   for (const t of tags) await bumpProgress(c, c.user!.id, t, 'posts');
   // ⚡ FAN-OUT NÖVBƏYƏ (TASK-8 / Bənd 18).
@@ -352,6 +356,16 @@ export async function likePut(c: Ctx, id: string) {
   if (r.meta.changes > 0) {
     await D(c).prepare('UPDATE posts SET like_count = like_count + 1 WHERE id = ?').bind(id).run();
     await notify(c, post.author_id, 'like', 'paylaşımını bəyəndi', id);
+    // FAZA A2 / PRD §8 — "Like" reputasiya mənbəyidir.
+    //
+    // ⚠ `refId` = `${postId}:${bəyənən}` — idempotentlik açarı. Eyni istifadəçi
+    //   bəyənib-geri götürüb yenidən bəyənsə reputasiya BİR DƏFƏ verilir;
+    //   əks halda bu, sonsuz reputasiya fabriki olardı (AUDIT-TASK-9 / H-5-in
+    //   XP üçün bağladığı eyni istismar sinfi).
+    c.ctx.waitUntil((async () => {
+      await grantReputation(c.env, String(post.author_id), 'like', `${id}:${c.user!.id}`);
+      await evaluateProgression(c.env, String(post.author_id));
+    })());
   }
   return json({ ok: true });
 }

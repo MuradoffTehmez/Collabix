@@ -1,6 +1,7 @@
 // Tapşırıq və şikayət domeni — AUDIT-TASK-10 / Faza 3.1.
 import { Ctx, json, err, readJson, uuid, now, clampStr, mapTask, mapSubmission } from '../util';
 import { grantXp } from '../xp';
+import { grantReputation, evaluateProgression } from '../progression';
 import { logAdmin } from '../admin-log';
 import { D, badReq, notify, bumpActivity, bumpProgress, SOLUTION_XP } from './shared';
 
@@ -132,6 +133,11 @@ export async function reviewSubmission(c: Ctx, taskId: string, uid: string) {
     // eynidir, yəni bir istifadəçi bir tapşırıqdan yalnız bir dəfə XP alır.
     await grantXp(c.env, uid, 'solution', `${taskId}:${uid}`, SOLUTION_XP,
       { alsoCompletedTask: true });
+    // FAZA A2 / PRD §8 — təsdiqlənmiş həll "Accepted Answer" mənbəyidir.
+    c.ctx.waitUntil((async () => {
+      await grantReputation(c.env, uid, 'accepted_answer', `${taskId}:${uid}`);
+      await evaluateProgression(c.env, uid);
+    })());
     if (row.category) await bumpProgress(c, uid, row.category, 'tasks');
   }
   await notify(c, uid, 'task',

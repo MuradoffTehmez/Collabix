@@ -13,6 +13,7 @@ import { handleSearchSemantic } from './services/search';
 import { noteSocket } from './ws-kick';
 import { runWithRequestContext, newRequestContext, log } from './request-context';
 import { alert } from './alerts';
+import { moderationState } from './rbac';
 
 // Durable Object-lar (realtime) — binding class_name-ləri burdan export olunmalıdır.
 export { RoomDO } from './room-do';
@@ -210,6 +211,23 @@ const ROUTES: Route[] = [
   // TASK-6 / BÖLMƏ 3
   { method: 'GET', pattern: /^\/api\/admin\/users$/, handler: R.adminUsersList, auth: true, admin: true, rl: 'admin' },
   { method: 'POST', pattern: /^\/api\/admin\/users\/bulk$/, handler: R.adminBulkUsers, auth: true, admin: true, rl: 'admin' },
+
+  // ═══ FAZA A2 — PRD §4-6: moderasiya, rol və icazə (AUDIT-TASK-10) ═══
+  //
+  // ⚠ `admin: true` bayrağı QOYULMUR — bu marşrutlar `requirePermission` ilə
+  //   qorunur. Fərq mühümdür: `admin` BİNARdır, icazə isə rol ierarxiyasını
+  //   nəzərə alır (MODERATOR xəbərdarlıq verə bilər, bloklaya bilməz).
+  //   `auth: true` isə lazımdır — qonaq heç birinə çata bilməz.
+  { method: 'GET',  pattern: /^\/api\/me\/permissions$/, handler: R.myPermissions, auth: true, rl: 'read' },
+  { method: 'GET',  pattern: /^\/api\/roles$/, handler: R.listRoles, auth: true, rl: 'admin' },
+  { method: 'PUT',  pattern: /^\/api\/users\/([\w-]+)\/role$/, handler: R.setUserRole, auth: true, rl: 'admin' },
+  { method: 'PUT',  pattern: /^\/api\/users\/([\w-]+)\/permission$/, handler: R.setUserPermission, auth: true, rl: 'admin' },
+  { method: 'GET',  pattern: /^\/api\/users\/([\w-]+)\/moderation$/, handler: R.moderationStatus, auth: true, rl: 'read' },
+  { method: 'GET',  pattern: /^\/api\/users\/([\w-]+)\/warnings$/, handler: R.listWarnings, auth: true, rl: 'admin' },
+  { method: 'POST', pattern: /^\/api\/users\/([\w-]+)\/warn$/, handler: R.warnUser, auth: true, rl: 'write' },
+  { method: 'POST', pattern: /^\/api\/users\/([\w-]+)\/ban$/, handler: R.banUser, auth: true, rl: 'write' },
+  { method: 'POST', pattern: /^\/api\/users\/([\w-]+)\/mute$/, handler: R.muteUser, auth: true, rl: 'write' },
+  { method: 'POST', pattern: /^\/api\/users\/([\w-]+)\/restore$/, handler: R.restoreUser, auth: true, rl: 'write' },
   { method: 'GET', pattern: /^\/api\/admin\/stats-daily$/, handler: R.adminStatsDaily, auth: true, admin: true, rl: 'heavy' },
   { method: 'GET', pattern: /^\/api\/admin\/teams$/, handler: async (c) => TR(c, m => m.listAllTeams(c)), auth: true, admin: true, rl: 'admin' },
   { method: 'GET', pattern: /^\/api\/admin\/teams\/([\w-]+)$/, handler: async (c, id) => TR(c, m => m.adminTeamDetail(c, id)), auth: true, admin: true, rl: 'admin' },
@@ -597,7 +615,46 @@ async function handleRequest(
             ctx,
           };
           if (c.user) {
-            c.isAdmin = !!(await env.DB.prepare('SELECT 1 FROM admins WHERE user_id = ?').bind(c.user.id).first());
+            // 🔴 FAZA A2 — `users.role` NƏHAYƏT AVTORİZASİYAYA BAĞLANDI.
+            //
+            // Audit tapıntısı: sütun mövcud idi, lakin HEÇ BİR qərarda
+            // oxunmurdu; admin yoxlaması binar idi (`admins` cədvəli) və
+            // HƏR ADMIN TAM SƏLAHİYYƏTLİ olurdu.
+            //
+            // ⚠ `admins` cədvəli SAXLANILIR və `isAdmin` ONA GÖRƏ hesablanır:
+            //   33 mövcud admin route-u ondan asılıdır və hamısını bir
+            //   commit-də icazə modelinə köçürmək davranış dəyişikliyi riski
+            //   olardı. Miqrasiya 0031 hər admini ən azı `ADMIN` roluna
+            //   qoyub, yəni iki model UZLAŞIR. Yeni marşrutlar isə
+            //   `requirePermission` işlədir (bax routes/moderation.ts).
+            //
+            // ⚠ `ADMIN` və yuxarı rol da `isAdmin` sayılır — belədə rol
+            //   sistemi ilə təyin edilmiş admin köhnə panelə də çata bilir.
+            const [adminRow, roleRow] = await Promise.all([
+              env.DB.prepare('SELECT 1 AS x FROM admins WHERE user_id = ?').bind(c.user.id).first<any>(),
+              env.DB.prepare(
+                `SELECT r.priority AS p FROM users u
+                   JOIN roles r ON r.name = u.role WHERE u.id = ?`,
+              ).bind(c.user.id).first<any>().catch(() => null),
+            ]);
+            // `roles` cədvəli hələ migrate olunmayıbsa `roleRow` null olur →
+            // yalnız köhnə yoxlama işləyir (fail-safe, kilidlənmə yoxdur).
+            c.isAdmin = !!adminRow || Number(roleRow?.p ?? 0) >= 80;
+
+            // 🔴 BAN TƏTBİQİ — PRD §16.
+            //
+            // Müddətli ban bitəndə `users.blocked` sütunu ÖZÜ sıfırlanmır
+            // (onu dəyişən cron yoxdur), ona görə həqiqət mənbəyi `bans`
+            // cədvəlidir. Vaxtı bitmiş ban burada SÜKUTLA keçir.
+            if (c.user.blocked) {
+              const st = await moderationState(env, c.user.id);
+              if (!st.banned) {
+                // Ban bitib/ləğv edilib, lakin köhnə bayraq qalıb → uzlaşdır.
+                ctx.waitUntil(env.DB.prepare('UPDATE users SET blocked = 0 WHERE id = ?')
+                  .bind(c.user.id).run().then(() => {}));
+                c.user.blocked = 0;
+              }
+            }
           }
           // `auth_required` kodu client üçün siqnaldır: "access token bitib ola
           // bilər — bir dəfə refresh et və təkrar cəhd et". Kod olmasaydı client
@@ -610,6 +667,21 @@ async function handleRequest(
           // maşın kodunu oxuyur (util.ts-dəki `code` fəlsəfəsi).
           if (route.admin && !c.isAdmin) {
             return withSecurityHeaders(err('Yalnız admin.', 403, 'forbidden'), false);
+          }
+          // 🔴 SUSDURMA TƏTBİQİ — PRD §4.
+          //
+          // Mute BAN DEYİL: istifadəçi oxuya bilər, YAZA bilməz. Ona görə
+          // yalnız mutasiya metodları bağlanır və sessiya ləğv EDİLMİR.
+          //
+          // ⚠ `write` səbətindəki route-lar deyil, HTTP METODU meyar seçilib:
+          //   rate-limit səbəti xərc təsnifatıdır, mutasiya isə semantikadır —
+          //   ikisini qarışdırmaq gələcəkdə səssiz boşluq yaradardı.
+          if (c.user && request.method !== 'GET' && request.method !== 'HEAD') {
+            const st = await moderationState(env, c.user.id);
+            if (st.muted) {
+              return withSecurityHeaders(
+                err('Hesabınız müvəqqəti susdurulub.', 403, 'muted'), false);
+            }
           }
           const res = await route.handler(c, ...m.slice(1));
           const out = withSecurityHeaders(res, false);
