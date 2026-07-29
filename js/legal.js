@@ -346,7 +346,7 @@ Collabix istifadəçi məlumatlarının qorunmasını ciddi şəkildə prioritet
 
 ### Parol təhlükəsizliyi
 
-Bütün parollar **PBKDF2 (100.000 iterasiya)** ilə heşlənir və heç vaxt açıq saxlanılmır. Heç kim — admin daxil — parolunuzu görə bilmir.
+Bütün parollar **PBKDF2 (600.000 iterasiya)** ilə heşlənir və heç vaxt açıq saxlanılmır. Heç kim — admin daxil — parolunuzu görə bilmir.
 
 ### Sessiya idarəetməsi
 
@@ -906,10 +906,16 @@ export const DEFAULT_FAQS = [
 
 // Default testimonial dəsti (seed + public fallback)
 export const DEFAULT_TESTIMONIALS = [
-  { id: 't1', authorName: 'Aysel M.', authorTitle: { az: 'Python öyrənən', en: 'Python learner', ru: 'Изучает Python' }, rating: 5, featured: true, approved: true,
-    text: { az: 'Study-partner tapmaq heç vaxt bu qədər asan olmamışdı. Seriya sistemi məni hər gün öyrənməyə məcbur edir 🔥', en: 'Finding a study partner was never this easy. The streak system keeps me learning daily 🔥', ru: 'Найти партнёра по учёбе никогда не было так просто. Серия мотивирует каждый день 🔥' } },
-  { id: 't2', authorName: 'Rauf H.', authorTitle: { az: 'Frontend developer', en: 'Frontend developer', ru: 'Frontend-разработчик' }, rating: 5, featured: true, approved: true,
-    text: { az: 'Kod bloklarının highlighting-i və tapşırıq sistemi əladır — mentorluq etdiyim tələbələrlə burada işləyirəm.', en: 'Code highlighting and the task system are great — I work with my mentees right here.', ru: 'Подсветка кода и система заданий — отлично. Работаю здесь со своими менти.' } },
-  { id: 't3', authorName: 'Nigar Q.', authorTitle: { az: 'İngilis dili həvəskarı', en: 'English enthusiast', ru: 'Изучает английский' }, rating: 4, featured: true, approved: true,
-    text: { az: 'Dil otaqlarında hər gün praktika edirəm. İcma çox dəstəkləyicidir!', en: 'I practice daily in the language rooms. The community is super supportive!', ru: 'Практикуюсь каждый день в языковых комнатах. Сообщество очень поддерживает!' } },
+  {
+    id: 't1', authorName: 'Aysel M.', authorTitle: { az: 'Python öyrənən', en: 'Python learner', ru: 'Изучает Python' }, rating: 5, featured: true, approved: true,
+    text: { az: 'Study-partner tapmaq heç vaxt bu qədər asan olmamışdı. Seriya sistemi məni hər gün öyrənməyə məcbur edir 🔥', en: 'Finding a study partner was never this easy. The streak system keeps me learning daily 🔥', ru: 'Найти партнёра по учёбе никогда не было так просто. Серия мотивирует каждый день 🔥' }
+  },
+  {
+    id: 't2', authorName: 'Rauf H.', authorTitle: { az: 'Frontend developer', en: 'Frontend developer', ru: 'Frontend-разработчик' }, rating: 5, featured: true, approved: true,
+    text: { az: 'Kod bloklarının highlighting-i və tapşırıq sistemi əladır — mentorluq etdiyim tələbələrlə burada işləyirəm.', en: 'Code highlighting and the task system are great — I work with my mentees right here.', ru: 'Подсветка кода и система заданий — отлично. Работаю здесь со своими менти.' }
+  },
+  {
+    id: 't3', authorName: 'Nigar Q.', authorTitle: { az: 'İngilis dili həvəskarı', en: 'English enthusiast', ru: 'Изучает английский' }, rating: 4, featured: true, approved: true,
+    text: { az: 'Dil otaqlarında hər gün praktika edirəm. İcma çox dəstəkləyicidir!', en: 'I practice daily in the language rooms. The community is super supportive!', ru: 'Практикуюсь каждый день в языковых комнатах. Сообщество очень поддерживает!' }
+  },
 ];

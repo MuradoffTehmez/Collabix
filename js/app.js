@@ -14,6 +14,7 @@ import { changePassword } from './auth.js';
 import { el, clear, avatarNode, authErrMessage, bus, emit } from './util.js';
 import { initWizard } from './wizard.js';
 import { initTheme, toast, showModal, closeModal, toggleTheme, onThemeChange } from './ui.js';
+import { initErrorBoundary } from './error-boundary.js';
 import { startPresence, stopPresence } from './presence.js';
 import { t, setLang, getLang, applyI18n } from './i18n.js';
 import { attachParticles } from './particles.js';
@@ -424,6 +425,10 @@ function setBadge(ids, count){
 }
 
 /* ================= boot ================= */
+// 🔴 ƏN ƏVVƏL — AUDIT-TASK-10 / Faza 2.2.
+// Boot-un qalan hissəsində atılan hər tutulmayan xəta bu qatdan keçir; sonraya
+// qoysaq, məhz boot xətaları (ən kritikləri) tutulmamış qalardı.
+initErrorBoundary();
 initTheme();
 document.addEventListener('DOMContentLoaded', () => {
   // SSR locale prefix (/en/..., /ru/...) → dili tətbiq et, sonra path-dan təmizlə.

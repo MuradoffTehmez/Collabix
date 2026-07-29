@@ -13,6 +13,7 @@ import {
 } from './auth';
 import { logAdmin, isAdminLogAction, invalidAdminAction } from './admin-log';
 import { grantXp, compensateXp, xpInvariant } from './xp';
+import { alert, noteFileAccessDenied } from './alerts';
 import { kickEverywhere } from './ws-kick';
 import {
   reqInfo, logSecurityEvent, recentFailures, checkGeoChange, verifyTurnstile,
@@ -3379,7 +3380,12 @@ export async function health(c: Ctx) {
   // açılmasının ilk əlamətidir və sükutla baş verir — ona görə ölçülür.
   let xpInv: 'ok' | 'drift' | 'unknown' = 'unknown';
   try {
-    xpInv = (await xpInvariant(c.env)).ok ? 'ok' : 'drift';
+    const inv = await xpInvariant(c.env);
+    xpInv = inv.ok ? 'ok' : 'drift';
+    // 🔴 AUDIT-TASK-10 / Faza 2.3 — Task 9 §5.4 öhdəliyi: invariant yalnız
+    // GÖSTƏRİLİRDİ, heç bir siqnala bağlı deyildi. Drift H-5-in yenidən
+    // açılmasının ilk əlamətidir və sükutla baş verir.
+    if (!inv.ok) alert('xp_invariant_drift', { users: inv.users, logs: inv.logs });
   } catch { /* sxem hələ migrate olunmayıb — 'unknown' qalır */ }
 
   const checks = {
@@ -3668,6 +3674,14 @@ export async function serveFile(c: Ctx, key: string, method: 'GET' | 'HEAD' = 'G
     // ⚠ `shouldLogDenial` təkrarları birləşdirir: `asset` səbəti dəqiqədə 1200
     // sorğuya icazə verir və filtrsiz jurnal öz-özünə D1 yazı seli olardı.
     c.ctx.waitUntil((async () => {
+      // 🔴 AUDIT-TASK-10 / Faza 2.3 — Task 7 §8/5 açıq öhdəliyi:
+      // "bir uid-dən dəqiqədə onlarla rədd = açar sadalama. Avtomatik reaksiya
+      // yoxdur." İndi var: sayğac astananı keçəndə siqnal verilir.
+      //
+      // ⚠ `shouldLogDenial`-dan ƏVVƏL çağırılır: o, təkrarları BİRLƏŞDİRİR
+      //   (D1 yazı selini əngəlləmək üçün), yəni sadalama cəhdinin əsl HƏCMİ
+      //   ondan sonra görünməzdi — məhz sayğacın ölçdüyü şey isə odur.
+      await noteFileAccessDenied(c.env, c.user?.id || '', decision.prefix);
       if (!(await shouldLogDenial(c.env, c.user?.id || null, decision.prefix, decision.reason))) return;
       await logSecurityEvent(c.env, c.req, {
         type: 'file_access_denied', severity: 'warning', uid: c.user?.id || null,

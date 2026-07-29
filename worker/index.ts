@@ -11,6 +11,8 @@ import { ogImageResponse, ogDefaultResponse } from './og';
 import { handleChat } from './services/ai';
 import { handleSearchSemantic } from './services/search';
 import { noteSocket } from './ws-kick';
+import { runWithRequestContext, newRequestContext, log } from './request-context';
+import { alert } from './alerts';
 
 // Durable Object-lar (realtime) — binding class_name-ləri burdan export olunmalıdır.
 export { RoomDO } from './room-do';
@@ -372,9 +374,39 @@ function serveStatic(body: string, contentType: string, cache = 'public, max-age
 }
 
 export default {
+  // AUDIT-TASK-10 / Faza 2.2 — bütün emal SORĞU KONTEKSTİ içindədir.
+  //
+  // `runWithRequestContext` `AsyncLocalStorage` işlədir: `err()`/`json()` və
+  // `log()` request ID-ni parametr almadan görür. Onsuz 100+ çağırış yerini
+  // dəyişmək lazım gələrdi (bax worker/request-context.ts başlığı).
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
     const path = url.pathname;
+    return runWithRequestContext(newRequestContext(request, path),
+      () => handleRequest(request, env, ctx, url, path));
+  },
+
+  // Queue consumer (TASK-8 / Bənd 18). `wrangler.jsonc` → queues.consumers.
+  // Hər mesaj ayrıca ack/retry olunur — bax queue.ts-dəki izah.
+  async queue(batch: MessageBatch<SystemEvent>, env: Env): Promise<void> {
+    await handleQueueBatch(batch, env);
+  },
+
+  // Cron Trigger (TASK-8 / Bənd 12). `wrangler.jsonc` → triggers.crons.
+  //
+  // ⚠ `waitUntil` MƏCBURİDİR: `scheduled` handler qaytardıqdan sonra runtime
+  // işi dayandıra bilər. Promise-i ona bağlamasaq arxivləmə yarımçıq kəsilər
+  // və R2-yə yazılıb D1-dən silinməmiş mesajlar dublikat yaradardı.
+  async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(runArchiveJob(env).catch(e => {
+      log('error', 'archive_job_failed', { message: e?.message || String(e) });
+    }));
+  },
+} satisfies ExportedHandler<Env, SystemEvent>;
+
+async function handleRequest(
+  request: Request, env: Env, ctx: ExecutionContext, url: URL, path: string,
+): Promise<Response> {
 
     // CORS: yalnız same-origin istifadə olunur; cross-origin preflight-ları rədd et
     if (request.method === 'OPTIONS' && path.startsWith('/api/')) {
@@ -521,16 +553,39 @@ export default {
               return withSecurityHeaders(res429, false);
             }
           }
-          // AUDIT M-1 — CSRF dərinlikdə müdafiə, HAZIRDA YALNIZ LOG REJİMİ.
-          // Sorğu BLOKLANMIR: yoxlama çox sərt olsa mobil/API client-lər
-          // kəsilərdi. Əvvəlcə real trafikdə pozma halları toplanır, sonra
-          // bloklamaya keçilir (hesabatda açıq öhdəlik).
+          // 🔴 AUDIT M-1 — CSRF: LOG REJİMİNDƏN BLOKLAMAYA KEÇİD
+          //                  (AUDIT-TASK-10 / Faza 2.3, Task 6-nın açıq öhdəliyi).
+          //
+          // Task 6 bunu qəsdən log rejimində qoymuşdu: "yoxlama çox sərt olarsa
+          // mobil tətbiq, API client-lər və `Sec-Fetch-Site` göndərməyən köhnə
+          // brauzerlər kəsilər. Əvvəlcə real trafikdə pozma halları toplanır."
+          //
+          // İNDİ BLOKLANIR, LAKİN YALNIZ TƏHLÜKƏSİZ ALT-ÇOXLUQDA:
+          //
+          //   `csrfSuspicion` iki fərqli siqnal qaytarır (bax security.ts):
+          //     `cross_origin:<origin>`   → `Origin` VAR və BİZİM DEYİL
+          //     `sec_fetch_site:<value>`  → `Origin` yoxdur, yalnız Sec-Fetch-Site
+          //
+          //   Yalnız BİRİNCİSİ bloklanır. Səbəb: `Origin` başlığını brauzer
+          //   özü qoyur və onu saxtalaşdırmaq mümkün deyil — yəni yad origin
+          //   YALANÇI POZİTİV OLA BİLMƏZ. İkinci siqnal isə köhnə brauzerlərdə
+          //   və proxy arxasında səhv dəyər daşıya bilər → log rejimində qalır.
+          //
+          // ⚠ Cookie-siz client-lər (mobil app, curl) `Bearer` token yolundadır
+          //   və `Origin` göndərmir → onlara TOXUNULMUR.
           const csrf = csrfSuspicion(request, env.SITE_ORIGIN || '');
           if (csrf) {
+            const blocked = csrf.startsWith('cross_origin:');
             ctx.waitUntil(logSecurityEvent(env, request, {
-              type: 'csrf_suspect', severity: 'warning',
-              meta: { reason: csrf, path, method: request.method, mode: 'log_only' },
+              type: 'csrf_suspect', severity: blocked ? 'critical' : 'warning',
+              meta: { reason: csrf, path, method: request.method,
+                mode: blocked ? 'blocked' : 'log_only' },
             }));
+            if (blocked) {
+              alert('csrf_blocked', { reason: csrf, path, method: request.method });
+              return withSecurityHeaders(
+                err('Sorğu mənbəyi qəbul edilmədi.', 403, 'csrf_blocked'), false);
+            }
           }
           const auth = await resolveUser(env, request);
           const c: Ctx = {
@@ -562,7 +617,16 @@ export default {
           out.headers.set('X-Robots-Tag', 'noindex, nofollow');
           return out;
         } catch (e: any) {
-          console.error('API error', path, e?.message || e);
+          // AUDIT-TASK-10 / Faza 2.2 — strukturlu log + request ID.
+          //
+          // ⚠ `stack` LOGA düşür, CAVABA yox: stack trace fayl yollarını və
+          //   daxili struktur adlarını sızdırır. İstifadəçi yalnız `requestId`
+          //   alır və dəstək onunla LOG-u tapır (`err()` 5xx-də onu gövdəyə
+          //   qoyur; başlıq isə hər cavabda var).
+          log('error', 'api_unhandled', {
+            message: e?.message || String(e),
+            stack: typeof e?.stack === 'string' ? e.stack.slice(0, 800) : undefined,
+          });
           return withSecurityHeaders(err('Server xətası.', 500), false);
         }
       }
@@ -612,24 +676,4 @@ export default {
       out.headers.set('Cache-Control', 'no-cache');
     }
     return out;
-  },
-
-  // Cron Trigger (TASK-8 / Bənd 12). `wrangler.jsonc` → triggers.crons.
-  //
-  // ⚠ `waitUntil` MƏCBURİDİR: `scheduled` handler qaytardıqdan sonra runtime
-  // işi dayandıra bilər. Promise-i ona bağlamasaq arxivləmə yarımçıq kəsilər
-  // və R2-yə yazılıb D1-dən silinməmiş mesajlar dublikat yaradardı.
-  // Queue consumer (TASK-8 / Bənd 18). `wrangler.jsonc` → queues.consumers.
-  // Hər mesaj ayrıca ack/retry olunur — bax queue.ts-dəki izah.
-  async queue(batch: MessageBatch<SystemEvent>, env: Env): Promise<void> {
-    await handleQueueBatch(batch, env);
-  },
-
-  async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
-    ctx.waitUntil(runArchiveJob(env).catch(e => {
-      console.error('arxiv işi uğursuz', e?.message || e);
-    }));
-  },
-  // İkinci tip parametri növbə mesajının gövdəsidir — onsuz `queue`
-  // handler-i `unknown` gözləyir və tip uyğunsuzluğu verir.
-} satisfies ExportedHandler<Env, SystemEvent>;
+}

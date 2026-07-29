@@ -521,6 +521,14 @@ const D = {
     en: 'You have reached today’s XP limit — your content was posted, XP resumes tomorrow.',
     ru: 'Вы достигли дневного лимита XP — публикация создана, начисление возобновится завтра.',
   },
+  // AUDIT-TASK-10 / Faza 2.2 — qlobal error boundary mesajı.
+  // ⚠ Mətn QƏSDƏN ÜMUMİDİR: texniki detal (stack, fayl adı) istifadəçiyə
+  //   heç nə vermir və daxili strukturu açır. Detal konsola/logə düşür.
+  'err.unexpected': {
+    az: 'Gözlənilməz xəta baş verdi. Səhifəni yeniləyin.',
+    en: 'Something went wrong. Please refresh the page.',
+    ru: 'Произошла непредвиденная ошибка. Обновите страницу.',
+  },
   'thr.t_turnstile_failed': { az: 'Bot yoxlaması uğursuz', en: 'Bot check failed', ru: 'Проверка на бота не пройдена' },
   'thr.t_upload_rejected': { az: 'Fayl rədd edildi', en: 'Upload rejected', ru: 'Загрузка отклонена' },
   'thr.t_session_revoked': { az: 'Sessiya ləğv edildi', en: 'Session revoked', ru: 'Сессия отозвана' },

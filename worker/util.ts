@@ -1,4 +1,9 @@
 // Ortaq yardımçılar: cavab formatları, id-lər, validasiya.
+//
+// ⚠ `request-context` YALNIZ oxu üçün idxal olunur (dairəvi asılılıq yoxdur:
+//   o modul `util`-dan heç nə götürmür).
+import { currentRequestId } from './request-context';
+
 export interface Env {
   DB: D1Database;
   FILES: R2Bucket;
@@ -105,16 +110,34 @@ export const b64uRandom = (bytes = 32) =>
     .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
 export function json(data: unknown, status = 200, extra: Record<string, string> = {}): Response {
+  // AUDIT-TASK-10 / Faza 2.2 — `X-Request-Id` HƏR cavabda.
+  // İstifadəçi "xəta aldım" deyəndə dəstək məhz bu id ilə logu tapır; onsuz
+  // yeganə ipucu təxmini vaxt idi.
+  const rid = currentRequestId();
   return new Response(JSON.stringify(data), {
     status,
-    headers: { 'Content-Type': 'application/json; charset=utf-8', ...extra },
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      ...(rid ? { 'X-Request-Id': rid } : {}),
+      ...extra,
+    },
   });
 }
 // `code` maşın üçündür, `error` insan üçün. Client 401-i görəndə mesajı oxuyub
 // təxmin etmək əvəzinə koda baxır: `token_expired` → səssiz refresh + təkrar cəhd,
 // başqa hər şey → çıxış. Mesaja görə qərar vermək tərcümə dəyişən kimi sınardı.
-export const err = (message: string, status = 400, code?: string) =>
-  json(code ? { error: message, code } : { error: message }, status);
+//
+// ⚠ `requestId` YALNIZ 5xx cavablarında gövdəyə qoyulur (Faza 2.2): server
+//   xətasında istifadəçi onu dəstəyə ötürməlidir. 4xx-lər istifadəçinin öz
+//   səhvidir və orada id səs-küydür — başlıq onsuz da hər cavabda var.
+export const err = (message: string, status = 400, code?: string) => {
+  const rid = status >= 500 ? currentRequestId() : null;
+  return json({
+    error: message,
+    ...(code ? { code } : {}),
+    ...(rid ? { requestId: rid } : {}),
+  }, status);
+};
 
 // Bir cavaba BİR NEÇƏ Set-Cookie başlığı əlavə edir.
 // `json(..., { 'Set-Cookie': ... })` obyekt formasında yalnız birini saxlaya bilər —
