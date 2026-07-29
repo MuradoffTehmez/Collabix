@@ -415,6 +415,12 @@ test.describe('AUDIT hüquqi risk #13 — GDPR ixracı @archive', () => {
   test('CSV formula injection qoruması işləyir', async ({ page }) => {
     await openApp(page);
     // `=` ilə başlayan məzmun — Excel-də düstur kimi icra olunmamalıdır.
+    //
+    // ⚠ SABİT id işlədilir, ona görə seed İDEMPOTENT olmalıdır: əvvəlki qaçış
+    //   sonuncu sətrə (aşağıdakı DELETE) çatmadan kəsilibsə (timeout, Ctrl-C)
+    //   sətir bazada qalır və növbəti qaçış `UNIQUE constraint failed:
+    //   team_posts.id` ilə sınırdı — məhsulda qüsur olmadığı halda.
+    d1(`DELETE FROM team_posts WHERE id = 'e2e_tp_csv';`);
     d1(`INSERT INTO team_posts (id, team_id, author_id, content, visibility, created_at) ` +
        `SELECT 'e2e_tp_csv', '${E2E_TEAM.id}', id, '=SUM(1+1)', 'Team', ${Date.now()} ` +
        `FROM users WHERE username = 'e2e_main';`);

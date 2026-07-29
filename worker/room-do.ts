@@ -228,6 +228,18 @@ export class RoomDO extends DurableObject<Env> {
   }
 
   /**
+   * Otağın BÜTÜN soketlərini bağlayır — `deleteTeam` (bax ws-kick.ts).
+   *
+   * Üzv-üzv `disconnect()` çağırmaqdan ucuzdur: 1000 üzvlü komandada o, 1000
+   * RPC deməkdir, bu isə otaq başına birdir.
+   */
+  disconnectAll(): number {
+    const list = this.ctx.getWebSockets();
+    for (const ws of list) this.closeUnauthorized(ws);
+    return list.length;
+  }
+
+  /**
    * 🔴 OXU YOLUNUN BAĞLANMASI (audit §C-1 sonuncu sətir).
    *
    * `handleSend`-dəki yoxlama yalnız YAZINI dayandırır. Çıxarılmış üzv yaza

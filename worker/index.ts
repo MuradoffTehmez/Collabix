@@ -10,6 +10,7 @@ import { matchPublicRoute, buildMeta, rewriteHead, buildRobots, buildSitemap, bu
 import { ogImageResponse, ogDefaultResponse } from './og';
 import { handleChat } from './services/ai';
 import { handleSearchSemantic } from './services/search';
+import { noteSocket } from './ws-kick';
 
 // Durable Object-lar (realtime) — binding class_name-ləri burdan export olunmalıdır.
 export { RoomDO } from './room-do';
@@ -459,6 +460,12 @@ export default {
         // olduğunu yoxlayır. `sid` olmasa `revokeAllSessions` yalnız növbəti
         // HTTP sorğusunda hiss olunardı — açıq soket isə toxunulmaz qalardı.
         doUrl.searchParams.set('sid', auth.sid || '');
+        // AUDIT H-6 / C-2: "bu istifadəçinin bu otaqda soketi var" qeydi.
+        // 101 cavabından ƏVVƏL yazılır — əks halda soket mövcud olur, qeyd isə
+        // hələ yoxdur və həmin pəncərədə kəsmə otağı görməz.
+        // Bu qeyd sayəsində bloklama/sessiya ləğvi BÜTÜN otaqları yox, yalnız
+        // faktiki soketi olanları oyadır (ölçmə: əvvəl növbəti sorğu 32 s).
+        await noteSocket(env, auth.user.id, roomId);
         return stub.fetch(new Request(doUrl.toString(), request));
       }
       // Real-time presence (online/offline) — tək qlobal PresenceDO.
