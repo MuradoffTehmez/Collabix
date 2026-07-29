@@ -382,7 +382,12 @@ export function postCard(p, { full = false } = {}){
       const sCard = el('div', { class: 'feed-card', style: 'margin-top:12px; padding:12px 16px; margin-bottom:0; box-shadow:none; cursor:pointer;' });
       sCard.onclick = () => emit('nav', { page: 'post/' + sp.id });
       sCard.append(el('div', { class: 'feed-head', style: 'margin-bottom:8px;' },
-        avatarNode({ name: sp.authorName }, 'avatar', { style: 'width:24px; height:24px; font-size:12px; margin-right:4px;' }),
+        // 🔴 AUDIT-TASK-10 / Faza 1.4 — `checkJs` ƏSL QÜSUR tapdı:
+        // burada stil obyekti `avatarNode`-un ÜÇÜNCÜ parametrinə (`online`)
+        // ötürülürdü. Obyekt truthy olduğu üçün sitat gətirilən postun
+        // müəllifinə HƏMİŞƏ yanlış "onlayn" nöqtəsi əlavə olunurdu, stillər
+        // isə sükutla itirdi. Ölçü indi `.avatar-mini` sinfi ilə verilir.
+        avatarNode({ name: sp.authorName }, 'avatar avatar-mini'),
         el('div', { class: 'feed-head-info' },
           el('div', { class: 'feed-head-top' },
             el('span', { class: 'name', style: 'font-size:0.85em;' }, sp.authorName)

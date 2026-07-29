@@ -126,7 +126,9 @@ function renderList(){
 
 export function initNotifs(){
   document.getElementById('markAllReadBtn').addEventListener('click', async () => {
-    try{ await markAllNotifsRead(notifs); toast('Hamısı oxunmuş edildi'); }
+    // `markAllNotifsRead()` arqument QƏBUL ETMİR — server bütün oxunmamışları
+    // özü tapır. Əvvəl ona `notifs` ötürülürdü və sükutla atılırdı (checkJs TS2554).
+    try{ await markAllNotifsRead(); toast('Hamısı oxunmuş edildi'); }
     catch(e){ toast('Alınmadı', 'err'); }
   });
 }

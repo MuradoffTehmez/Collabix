@@ -532,6 +532,19 @@ button {
   position: relative;
 }
 
+/* Sitat gətirilən postun müəllif avatarı — AUDIT-TASK-10 / Faza 1.4.
+ *
+ * Əvvəl ölçü `avatarNode(...)`-a inline stil OBYEKTİ kimi ötürülürdü, lakin
+ * həmin parametr `online` bayrağıdır: obyekt truthy sayılıb HƏMİŞƏ yanlış
+ * "onlayn" nöqtəsi çıxarırdı, stillər isə heç vaxt tətbiq olunmurdu.
+ * `checkJs` bunu TS2345 kimi tutdu. İndi ölçü sinifdən gəlir. */
+.avatar.avatar-mini {
+  width: 24px;
+  height: 24px;
+  font-size: 12px;
+  margin-right: 4px;
+}
+
 .avatar img {
   width: 100%;
   height: 100%;
