@@ -1,0 +1,162 @@
+# CI — AUDIT-TASK-10 / Faza 1.6 (audit proses borcu #8).
+#
+# Audit sətir 783: "Bu şəraitdə hər düzəliş yeni reqressiya riskidir və
+# reqressiyanı tutacaq mexanizm yoxdur." Bu fayl həmin mexanizmdir.
+#
+# ⚠ ALTI QAPI, İKİ JOB:
+#   `gates` — sürətli (typecheck / lint / unit / migrations / build): hər push-da
+#   `e2e`   — yavaş (~30 dəq): ayrıca job, `gates` keçməsə ümumiyyətlə başlamır.
+#   Səbəb: sürətli qapılar 2 dəqiqədə cavab verir; E2E-ni onlara qarışdırsaq
+#   yazı səhvi üçün 30 dəqiqə gözləmək lazım gələrdi.
+#
+# 🔴 GİT REMOTE: bu fayl yazılan anda repo-nun remote-u YOX idi (Task 2-dən
+# açıq öhdəlik). Fayl hazırdır və remote bağlanan kimi işə düşəcək —
+# `docs/TASK-10-SCOPE.md` §5/1-də sahibi ilə birlikdə qeyd olunub.
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+# Eyni branch-da yeni push əvvəlkini ləğv etsin — CI növbəsi tıxanmasın.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gates:
+    name: Qapılar (typecheck · lint · unit · migrations · build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      # `npm ci` — `package-lock.json`-a TAM sadiq quraşdırma. `npm install`
+      # lock-u yeniləyə bilər və CI-nin ölçdüyü ağac developer-in ağacından
+      # fərqlənərdi.
+      - run: npm ci
+
+      # ── Qapı 1: tip yoxlaması (worker + e2e + js) ──────────────────────
+      # `js/` Task 10-a qədər TAMAMİLƏ typecheck-siz idi (audit: ≈450 KB).
+      - name: Qapı 1 — typecheck
+        run: npm run typecheck
+
+      # ── Qapı 2: lint ──────────────────────────────────────────────────
+      - name: Qapı 2 — lint
+        run: npm run lint
+
+      # ── Qapı 3: unit testlər ──────────────────────────────────────────
+      - name: Qapı 3 — unit test
+        run: npm run test:unit
+
+      # ── Qapı 4: miqrasiya nizamı (Task 5-də quruldu) ──────────────────
+      # ⚠ Burada `--remote` YOXDUR: o, Cloudflare API token tələb edir və
+      #   PR-lərdə (fork daxil) sirr əlçatmazdır. Remote qapısı deploy
+      #   job-undadır (aşağı bax).
+      - name: Qapı 4 — miqrasiya nizamı
+        run: npm run check:migrations
+
+      # ── Qapı 5: build ─────────────────────────────────────────────────
+      - name: Qapı 5 — build
+        run: npm run build
+
+  e2e:
+    name: Qapı 6 — E2E (Playwright + wrangler dev)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: gates
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Playwright brauzerləri
+        run: npx playwright install --with-deps chromium
+
+      # Lokal D1 miqrasiyaları — `globalSetup` seed-i tətbiq oluna bilməmiş
+      # sxemə yazmağa çalışsa bütün dəst çökür (Task 5 dərsi).
+      - name: D1 lokal miqrasiyalar
+        run: npm run db:migrate:local
+
+      # ⚠ `.dev.vars` repo-da YOXDUR (gitignore). `JWT_SECRET` olmasa bütün
+      #   sessiya axını çökür, ona görə CI-da təsadüfi dəyər yaradılır —
+      #   test mühitində sirrin dəyəri əhəmiyyətsizdir, MÖVCUDLUĞU vacibdir.
+      - name: Test sirrləri
+        run: echo "JWT_SECRET=$(openssl rand -base64 48)" > .dev.vars
+
+      - name: E2E
+        run: npx playwright test
+
+      - name: Nəticələri saxla
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-nəticələri
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7
+
+  # ── Deploy qapısı ───────────────────────────────────────────────────────
+  #
+  # 🔴 Task 5-in `predeploy` qapısı (`check-migrations.mjs --remote`) MƏHZ
+  # BURADAN çağırılır. `d1-migrations-must-precede-deploy` qaydası nəhayət
+  # yaddaşdan koda keçir: tətbiq olunmamış miqrasiya varsa deploy BLOKLANIR.
+  #
+  # Səbəb (audit, proses borcu #8): sıra pozulsa istehsalda yalnız DÜZGÜN parol
+  # 500 verir, uğursuz giriş 401 qalır — yəni qüsur "normal 401 fonu" kimi
+  # gizlənir.
+  #
+  # ⚠ `CLOUDFLARE_API_TOKEN` repo secret-i tələb olunur (ən az səlahiyyət:
+  #   D1 Write + Workers Scripts Edit). Yoxdursa bu job ATLANIR — deploy
+  #   əl ilə edilir və qapı tətbiq olunmur.
+  deploy:
+    name: Deploy (yalnız main/master)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [gates, e2e]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+
+      - name: Sirr yoxlaması
+        id: secret
+        run: |
+          if [ -z "${{ secrets.CLOUDFLARE_API_TOKEN }}" ]; then
+            echo "⚠ CLOUDFLARE_API_TOKEN yoxdur — deploy ATLANIR"
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # 🔴 MİQRASİYA QAPISI — deploy-dan ƏVVƏL, ayrıca addım.
+      - name: Miqrasiya qapısı (--remote)
+        if: steps.secret.outputs.ok == 'true'
+        run: node scripts/check-migrations.mjs --remote
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Deploy
+        if: steps.secret.outputs.ok == 'true'
+        run: npm run build && npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

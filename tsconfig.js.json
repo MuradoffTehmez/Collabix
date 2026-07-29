@@ -1,0 +1,45 @@
+// `js/` üçün tip yoxlaması — AUDIT-TASK-10 / Faza 1.4.
+//
+// Audit: "`js/` (≈450 KB) TAMAMİLƏ typecheck-siz". Task 7-də bu, real zərər
+// verdi — frontend dəyişikliyi yalnız E2E ilə doğrulana bilirdi, yəni yazı
+// səhvi 30 dəqiqəlik dəst qaçışında üzə çıxırdı.
+//
+// ⚠ `strict: false` QƏSDƏNDİR (sənədin açıq göstərişi). 450 KB kodda
+//   `strict: true` yüzlərlə xəta verər və bu task-ı bloklayardı. Məqsəd
+//   MÜKƏMMƏL TİPLƏMƏ DEYİL — tipik səhvləri tutmaqdır:
+//     • olmayan sahəyə müraciət
+//     • yanlış arqument sayı
+//     • yazı səhvi ilə çağırılan funksiya
+//
+// ⚠ JSDoc tipləri tədricən əlavə edilə bilər; indi məcburi deyil.
+//
+// ⚠ `worker/` ilə AYRI konfiqdir: orada `strict: true` və `lib: ES2022`
+//   (DOM yoxdur), burada isə DOM məcburidir və strict söndürülüb.
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+
+    "strict": false,
+    // ⚠ Bu iki qayda `worker/`-da AÇIQDIR, burada isə söndürülüb: mövcud
+    //   `js/` kodunda onlarla istifadə olunmayan dəyişən var və onları
+    //   təmizləmək DAVRANIŞ dəyişikliyi riski daşıyır (Faza 3 refaktor
+    //   qaydası: təmizlik və davranış eyni commit-də olmamalıdır).
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+
+    // Xarici paketlərin (`marked`, `dompurify`, `highlight.js`) öz tip
+    // fayllarındakı xətalar bizim kodumuzun qapısını bağlamamalıdır.
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    // `js/` ES modullarıdır və `.js` uzantısı ilə idxal edir.
+    "allowImportingTsExtensions": false
+  },
+  "include": ["js/**/*.js", "js/dom-shims.d.ts"]
+}
