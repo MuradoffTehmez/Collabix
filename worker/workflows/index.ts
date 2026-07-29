@@ -1,9 +1,14 @@
 import { WorkflowEntrypoint, WorkflowStep, WorkflowEvent } from 'cloudflare:workers';
 import { Env } from '../util';
 
+// ⚠ `DigestWorkflow` BU SİYAHIDAN ÇIXARILDI — AUDIT-TASK-10 / Faza 3.3.
+//   Onu yaradan yeganə fayl (`workflows/daily_digest.ts`) heç yerdən
+//   çağırılmırdı, `runDigest` isə yalnız `console.log` edirdi. Yəni tip
+//   birləşməsində "gündəlik xülasə var" görünürdü, halbuki heç bir yol ona
+//   çatmırdı. Boş dal saxlamaqdansa silinir; niyyət `docs/ARCHITECTURE.md`-də
+//   qeydə alınıb.
 export type WorkflowParams =
   | { type: 'WelcomeWorkflow'; userId: string; email: string }
-  | { type: 'DigestWorkflow'; userId: string }
   | { type: 'TeamOnboardingWorkflow'; teamId: string; ownerId: string };
 
 export class CollabixWorkflow extends WorkflowEntrypoint<Env, WorkflowParams> {
@@ -14,9 +19,6 @@ export class CollabixWorkflow extends WorkflowEntrypoint<Env, WorkflowParams> {
       case 'WelcomeWorkflow':
         await this.runWelcome(params, step);
         break;
-      case 'DigestWorkflow':
-        await this.runDigest(params, step);
-        break;
       case 'TeamOnboardingWorkflow':
         // Əvvəl bu `case` ÜMUMİYYƏTLƏ yox idi — workflow yaradılırdı, amma
         // heç bir addım icra olunmurdu (bax docs/TASK-11-REPORT.md §2.2).
@@ -25,17 +27,47 @@ export class CollabixWorkflow extends WorkflowEntrypoint<Env, WorkflowParams> {
     }
   }
 
+  /**
+   * Yeni istifadəçinin ilk günləri — AUDIT-TASK-10 / Faza 3.3 (B2 "doldur").
+   *
+   * ⚠ ƏVVƏLKİ VƏZİYYƏT: bu workflow REAL YARADILIRDI (`queue.ts` →
+   *   `processUserRegistered`), 1 gün gözləyirdi və sonra yalnız
+   *   `console.log('Sending followup email…')` edirdi. Yəni istifadəçi
+   *   heç nə almırdı — `runTeamOnboarding`-in TASK-11-də düzəldilən
+   *   qüsurunun eyni sinfi.
+   *
+   * ⚠ E-POÇT DEYİL, TƏTBİQDAXİLİ BİLDİRİŞ göndərilir. Səbəb: e-poçt yolu
+   *   `EMAIL` binding-inə bağlıdır və qurulmayan quraşdırmada SƏSSİZCƏ heç nə
+   *   etməzdi — yəni illüziyanı yenidən qurardıq. Bildiriş yolu isə həmişə
+   *   işləyir və `runTeamOnboarding`-də artıq sınaqdan çıxıb.
+   *
+   * Hər addım istifadəçinin REAL vəziyyətini yoxlayır: fəal istifadəçiyə
+   * xatırlatma getmir.
+   */
   private async runWelcome(params: Extract<WorkflowParams, { type: 'WelcomeWorkflow' }>, step: WorkflowStep) {
-    await step.sleep('wait-1-day', '1 days');
+    const { userId } = params;
 
-    await step.do('send-followup-email', async () => {
-      console.log(`Sending followup email to ${params.email}`);
+    await step.sleep('wait-before-first-post-nudge', '1 days');
+
+    await step.do('nudge-first-post', async () => {
+      const row = await this.env.DB
+        .prepare('SELECT COUNT(*) AS c FROM posts WHERE author_id = ?')
+        .bind(userId).first<any>();
+      if (Number(row?.c || 0) > 0) return;
+      await this.notifyUser(userId, 'onboarding',
+        'İlk paylaşımını et — icma səni məhz belə tanıyır.');
     });
-  }
 
-  private async runDigest(params: Extract<WorkflowParams, { type: 'DigestWorkflow' }>, step: WorkflowStep) {
-    await step.do('build-digest', async () => {
-      console.log(`Building digest for ${params.userId}`);
+    await step.sleep('wait-before-profile-nudge', '2 days');
+
+    await step.do('nudge-profile', async () => {
+      const u = await this.env.DB
+        .prepare('SELECT bio, photo_url FROM users WHERE id = ?')
+        .bind(userId).first<any>();
+      if (!u) return;   // hesab silinib
+      if (String(u.bio || '').trim() && u.photo_url) return;
+      await this.notifyUser(userId, 'onboarding',
+        'Profilini tamamla: qısa bio və şəkil əlavə et — profilin daha çox baxılır.');
     });
   }
 
@@ -97,14 +129,25 @@ export class CollabixWorkflow extends WorkflowEntrypoint<Env, WorkflowParams> {
     const team = await this.env.DB.prepare("SELECT name FROM teams WHERE id = ? AND status = 'active'")
       .bind(teamId).first<any>();
     if (!team) return; // komanda silinibsə xatırlatma göndərmirik
+    await this.notifyUser(ownerId, type, text, String(team.name));
+  }
 
+  /**
+   * Sistem bildirişi — `from_id` BOŞDUR, yəni göndərən istifadəçi yoxdur.
+   *
+   * ⚠ `NotificationService.notify()` İŞLƏDİLMİR: o, `toUid === fromId`
+   *   yoxlamasına və istifadəçi tərcihlərinə baxır. Onboarding xatırlatması
+   *   isə sistemdəndir və `like/comment/follow` tərcih açarlarının heç birinə
+   *   uyğun gəlmir — həmin yoldan keçsəydi qaydalar səhv tətbiq olunardı.
+   */
+  private async notifyUser(uid: string, type: string, text: string, fromName = 'Collabix') {
     const { NotificationService } = await import('../services/notification');
     const notif = new NotificationService(this.env);
     await this.env.DB.prepare(
       'INSERT INTO notifications (id, user_id, type, from_id, from_name, post_id, text, read, created_at) VALUES (?,?,?,?,?,?,?,0,?)',
     ).bind(
-      crypto.randomUUID().replace(/-/g, ''), ownerId, type, '', String(team.name), null, text, Date.now(),
+      crypto.randomUUID().replace(/-/g, ''), uid, type, '', fromName, null, text, Date.now(),
     ).run();
-    await notif.pushSignal(ownerId, { t: 'notif' });
+    await notif.pushSignal(uid, { t: 'notif' });
   }
 }
