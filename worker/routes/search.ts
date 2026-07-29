@@ -44,11 +44,15 @@ export async function globalSearch(c: Ctx) {
     kinds.push('posts');
     stmts.push(D(c).prepare(
       `SELECT p.id, p.author_id, p.author_name, p.created_at, p.tags,
-              snippet(posts_fts, 0, '<mark>', '</mark>', '…', 18) AS snip
+              -- Sütun indeksi 2 = search_text (AUDIT-TASK-10 / Faza 5/#4).
+              -- Əvvəl 0 (text — 300 simvol önizləmə) idi: uyğunluq gövdənin
+              -- 300-cü simvolundan sonra olsaydı snippet BOŞ qayıdırdı.
+              snippet(posts_fts, 2, '<mark>', '</mark>', '…', 18) AS snip
          FROM posts_fts
          JOIN posts p ON p.rowid = posts_fts.rowid
         WHERE posts_fts MATCH ?1
-        ORDER BY bm25(posts_fts, 1.0, 2.0), p.created_at DESC
+        -- bm25 çəkiləri: text 1.0 · tags 2.0 · search_text 1.0
+        ORDER BY bm25(posts_fts, 1.0, 2.0, 1.0), p.created_at DESC
         LIMIT ?2`,
     ).bind(q, SEARCH_LIMIT));
   }

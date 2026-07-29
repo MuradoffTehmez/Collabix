@@ -196,3 +196,57 @@ export const csvRow = (cells: unknown[]) => cells.map(csvCell).join(',') + '\r\n
  */
 export const withSession = (body: unknown, pair: TokenPair) =>
   withCookies(json(body), sessionCookies(pair));
+
+/* ═══════════════ PAROL GÜCÜ — AUDIT-TASK-10 / Faza 5/#6 ═══════════════ */
+
+/**
+ * Audit: *"Parol gücü yalnız '≥6 simvol' — kompleksslik/pwned-check yoxdur."*
+ *
+ * ⚠ QAYDA QƏSDƏN MÜLAYİMDİR (8 simvol + iki simvol sinfi). Səbəb:
+ *   • NIST SP 800-63B UZUNLUĞU kompleksslikdən ÜSTÜN tutur və məcburi
+ *     xüsusi-simvol qaydalarını AÇIQ TÖVSİYƏ ETMİR (istifadəçi `P@ssw0rd!`
+ *     kimi proqnozlaşdırıla bilən naxışlara keçir)
+ *   • Layihədə 2FA, magic link, Turnstile və hesab-səviyyəli CAPTCHA artıq var
+ *     — parol TƏK müdafiə xətti deyil
+ *   • Çox sərt qayda MÖVCUD istifadəçiləri parol dəyişməkdə bloklayardı
+ *
+ * ⚠ ƏN ÇOX RAST GƏLİNƏN parollar AÇIQ rədd edilir: uzunluq qaydası `password`
+ *   və `12345678`-i buraxır, halbuki onlar hücumun BİRİNCİ sınadığı sətirlərdir.
+ *
+ * ⚠ PWNED (HIBP) YOXLAMASI İCRA OLUNMUR: o, hər qeydiyyatda ÜÇÜNCÜ TƏRƏF
+ *   API-sinə xarici sorğu deməkdir (k-anonymity ilə olsa belə). Bu, yeni
+ *   asılılıq, yeni gecikmə və yeni fail-open qərarı gətirir — `docs/` -də
+ *   açıq öhdəlik kimi qeyd olunur, sükutla buraxılmır.
+ */
+const COMMON_PASSWORDS = new Set([
+  'password', 'passw0rd', '12345678', '123456789', '1234567890', 'qwerty123',
+  'qwertyui', 'iloveyou', 'admin123', 'welcome1', 'abc12345', 'letmein1',
+  'collabix', 'parol123', '11111111', '00000000',
+]);
+
+export interface PasswordCheck { ok: boolean; error?: string }
+
+export function checkPasswordStrength(pass: unknown): PasswordCheck {
+  if (typeof pass !== 'string') return { ok: false, error: 'Şifrə tələb olunur.' };
+  if (pass.length < 8) return { ok: false, error: 'Şifrə minimum 8 simvol olmalıdır.' };
+  if (pass.length > 200) return { ok: false, error: 'Şifrə həddindən artıq uzundur.' };
+
+  if (COMMON_PASSWORDS.has(pass.toLowerCase())) {
+    return { ok: false, error: 'Bu şifrə çox işlənir — başqasını seçin.' };
+  }
+  // Yalnız təkrarlanan simvol (`aaaaaaaa`) uzunluq qaydasını keçir, lakin
+  // praktikada entropiyası sıfıra yaxındır.
+  //
+  // ⚠ `Set` işlədilir, regex backreference (`/^(.)+$/`) YOX: ESLint-in
+  //   `no-control-regex` qaydası backslash-rəqəm ardıcıllığını nəzarət simvolu
+  //   kimi oxuya bilir və qayda niyyəti gizlədirdi.
+  if (new Set(pass).size === 1) {
+    return { ok: false, error: 'Şifrə eyni simvoldan ibarət ola bilməz.' };
+  }
+  // İki fərqli simvol sinfi: hərf + (rəqəm və ya işarə).
+  const classes = [/[a-zA-Z]/, /[0-9]/, /[^a-zA-Z0-9]/].filter(re => re.test(pass)).length;
+  if (classes < 2) {
+    return { ok: false, error: 'Şifrədə hərf və rəqəm (və ya işarə) olmalıdır.' };
+  }
+  return { ok: true };
+}

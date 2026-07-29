@@ -39,7 +39,10 @@ import {
 } from '../totp';
 import { kickEverywhere } from '../ws-kick';
 import { markUidDeleted } from '../archive';
-import { D, badReq, deleteR2Keys, withSession, DELETED_UID, DELETED_NAME } from './shared';
+import {
+  D, badReq, deleteR2Keys, withSession, checkPasswordStrength,
+  DELETED_UID, DELETED_NAME,
+} from './shared';
 import {
   CAPTCHA_SOFT_AT, CAPTCHA_HARD_AT, turnstileGate, alertAccountOwner,
 } from './auth-guard';
@@ -58,6 +61,9 @@ export async function register(c: Ctx) {
   const pending = b.oauthTicket ? await readPending(c.env, String(b.oauthTicket)) : null;
   if (b.oauthTicket && !pending) return badReq('OAuth bileti etibarsız və ya vaxtı bitib.');
 
+  // AUDIT-TASK-10 / Faza 5/#6 — parol gücü qaydası (bax `checkPasswordStrength`).
+  const pw = !pending ? checkPasswordStrength(b.pass) : { ok: true as const };
+  if (!pw.ok) return badReq(pw.error!);
   if (!pending && (typeof b.pass !== 'string' || b.pass.length < 6)) {
     return badReq('Şifrə minimum 6 simvol olmalıdır.');
   }
@@ -337,7 +343,8 @@ export async function changePassword(c: Ctx) {
     const ok = await verifyPassword(String(b.current || ''), u.pass_hash as any, u.pass_salt as any, Number(u.pass_iter) || PBKDF2_ITER_LEGACY);
     if (!ok) return err('Hazırkı şifrə yanlışdır.', 403, 'invalid_password');
   }
-  if (typeof b.next !== 'string' || b.next.length < 6) return badReq('Yeni şifrə minimum 6 simvol.');
+  const pwNext = checkPasswordStrength(b.next);
+  if (!pwNext.ok) return badReq(pwNext.error!);
   const { hash, salt, iterations } = await hashPassword(b.next);
   await D(c).prepare(
     'UPDATE users SET pass_hash = ?, pass_salt = ?, pass_iter = ?, must_reset_password = 0, has_password = 1 WHERE id = ?',

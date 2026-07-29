@@ -232,14 +232,38 @@ export async function runArchiveJob(env: Env): Promise<Record<string, unknown>> 
   // AUDIT-TASK-10 / Faza 4 — Task 6 §8/3-ün açıq öhdəliyi.
   const rollup = await refreshStatsRollup(env);
   const analyzed = await runAnalyze(env);
+  const notifs = await pruneNotifications(env);
 
   const summary = {
     hotDays: hotDays(env), rooms, dms,
     prunedSessions: sessions, prunedEvents: events, purge,
-    rollup, analyzed,
+    rollup, analyzed, prunedNotifications: notifs,
   };
   console.log('arxiv işi tamamlandı', JSON.stringify(summary));
   return summary;
+}
+
+/**
+ * Köhnə bildirişlərin təmizlənməsi — AUDIT-TASK-10 / Faza 5/#2.
+ *
+ * Audit: *"`LIMIT 60`, köhnələr HEÇ VAXT SİLİNMİR."* Cədvəl sonsuz böyüyürdü
+ * və hər `listNotifs` sorğusu getdikcə daha böyük indeksdə axtarırdı.
+ *
+ * ⚠ İKİ QAYDA: OXUNMUŞ bildiriş 30 gündən, OXUNMAMIŞ isə 180 gündən sonra
+ *   silinir. Oxunmamışı erkən silmək istifadəçinin GÖRMƏDİYİ məlumatı yox
+ *   etmək olardı; oxunmuşu uzun saxlamaq isə heç bir dəyər vermir.
+ */
+async function pruneNotifications(env: Env): Promise<number> {
+  try {
+    const res = await env.DB.prepare(
+      `DELETE FROM notifications
+        WHERE (read = 1 AND created_at < ?1) OR (read = 0 AND created_at < ?2)`,
+    ).bind(now() - 30 * 86400000, now() - 180 * 86400000).run();
+    return res.meta?.changes ?? 0;
+  } catch (e: any) {
+    console.error('bildiriş təmizliyi alınmadı', e?.message || e);
+    return 0;
+  }
 }
 
 /**

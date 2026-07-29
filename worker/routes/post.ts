@@ -101,6 +101,23 @@ const clampBlockRefs = (blocks: any[]): any[] => blocks.map(blk => (
     : blk
 ));
 
+/**
+ * Postun TAM mətni — FTS indeksi üçün (AUDIT-TASK-10 / Faza 5/#4).
+ *
+ * ⚠ `posts.text` ÖNİZLƏMƏDİR (300 simvol) və feed kartında göstərilir; onu
+ *   uzatmaq görünüşü pozardı. Axtarış isə bütün gövdəni görməlidir, ona görə
+ *   ayrıca `search_text` sütunu var.
+ *
+ * ⚠ Tavan 20 000 simvol: `POST_BLOCKS_MAX_BYTES` (64 KB) onsuz da gövdəni
+ *   məhdudlaşdırır, lakin FTS sətrinin özü də sərhədsiz böyüməməlidir.
+ */
+const buildSearchText = (blocks: any[]): string =>
+  blocks
+    .map(b => (b && typeof b === 'object' && typeof b.content === 'string' ? b.content : ''))
+    .filter(Boolean)
+    .join(' ')
+    .slice(0, 20_000);
+
 const clampImageKeys = (v: unknown): string[] =>
   Array.isArray(v) ? v.slice(0, REF_IMAGE_KEYS).map(String) : [];
 
@@ -126,7 +143,33 @@ function assertOwnedImageRefs(c: Ctx, refs: string[], ownerUid: string): Respons
  * `JOIN users … WHERE blocked = 0` hər iki yolu eyniləşdirir.
  * (İndeks: `idx_users_blocked` — bax D-4.)
  */
+/**
+ * Feed — KEYSET (cursor) paginasiyası. AUDIT-TASK-10 / Faza 5/#1.
+ *
+ * ƏVVƏL: `LIMIT 60`, cursor YOX. Yəni 60-dan köhnə post İSTİFADƏÇİ ÜÇÜN
+ * MÖVCUD DEYİLDİ — feed məzmunu sükutla itirdi.
+ *
+ * ⚠ NİYƏ KEYSET, NİYƏ OFFSET: `OFFSET` böyüdükcə D1 atlanan sətirləri yenə
+ *   oxuyur (O(n)), üstəlik yeni post gələndə səhifələr SÜRÜŞÜR və istifadəçi
+ *   eyni postu iki dəfə görür. Layihə `adminLogs` və `usersDirectory`-də
+ *   onsuz da keyset işlədir — eyni naxış davam etdirilir.
+ *
+ * ⚠ KURSOR `(created_at, id)` CÜTÜDÜR, təkcə `created_at` deyil: eyni
+ *   millisaniyədə yaradılmış iki post sərhəddə İTƏ və ya TƏKRARLANA bilərdi.
+ */
 export async function feed(c: Ctx) {
+  const limit = Math.min(Math.max(parseInt(c.url.searchParams.get('limit') || '60', 10) || 60, 5), 100);
+  const cursor = c.url.searchParams.get('cursor');   // "<created_at>_<id>"
+  let after: { ts: number; id: string } | null = null;
+  if (cursor) {
+    const i = cursor.lastIndexOf('_');
+    const ts = Number(cursor.slice(0, i));
+    if (i > 0 && Number.isFinite(ts)) after = { ts, id: cursor.slice(i + 1) };
+  }
+
+  const where = after
+    ? 'WHERE u.blocked = 0 AND (p.created_at < ?1 OR (p.created_at = ?1 AND p.id < ?2))'
+    : 'WHERE u.blocked = 0';
   const query = `
     SELECT p.*,
            s.id AS s_id, s.author_id AS s_author_id, s.author_name AS s_author_name,
@@ -135,11 +178,23 @@ export async function feed(c: Ctx) {
     FROM posts p
     JOIN users u ON p.author_id = u.id
     LEFT JOIN posts s ON p.shared_post_id = s.id
-    WHERE u.blocked = 0
-    ORDER BY p.created_at DESC LIMIT 60
+    ${where}
+    ORDER BY p.created_at DESC, p.id DESC LIMIT ${limit + 1}
   `;
-  const rows = await D(c).prepare(query).all<any>();
-  return json({ posts: rows.results.map(mapPost) });
+  const stmt = after
+    ? D(c).prepare(query).bind(after.ts, after.id)
+    : D(c).prepare(query);
+  const rows = await stmt.all<any>();
+
+  // `limit + 1` çəkilir ki, "daha var?" sualı ƏLAVƏ SORĞU olmadan cavablansın.
+  const hasMore = rows.results.length > limit;
+  const page = rows.results.slice(0, limit);
+  const last = page[page.length - 1];
+  return json({
+    posts: page.map(mapPost),
+    hasMore,
+    nextCursor: hasMore && last ? `${last.created_at}_${last.id}` : null,
+  });
 }
 
 export async function getPost(c: Ctx, id: string) {
@@ -199,9 +254,10 @@ export async function createPost(c: Ctx) {
   const quoteText = postType === 'quote' ? clampStr(firstText, 500) : null;
   const id = uuid();
   await D(c).prepare(
-    'INSERT INTO posts (id, author_id, author_name, blocks, image_keys, text, tags, created_at, shared_post_id, post_type, quote_text) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+    'INSERT INTO posts (id, author_id, author_name, blocks, image_keys, text, tags, created_at, shared_post_id, post_type, quote_text, search_text) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
   ).bind(id, c.user!.id, c.user!.name, JSON.stringify(blocks),
-    JSON.stringify(imageKeys), clampStr(firstText, 300), JSON.stringify(tags), now(), sharedPostId, postType, quoteText).run();
+    JSON.stringify(imageKeys), clampStr(firstText, 300), JSON.stringify(tags), now(), sharedPostId, postType, quoteText,
+    buildSearchText(blocks)).run();
   // H-5: XP idempotent + gündəlik tavanlı verilir. Tavana çatanda post YENƏ DƏ
   // yaradılır — yalnız XP verilmir (audit §B-3: "əməliyyat uğurlu olsun").
   const xpGrant = await grantXp(c.env, c.user!.id, 'post', id, POST_XP);
@@ -268,8 +324,36 @@ export async function patchPost(c: Ctx, id: string) {
     if (refDenied) return refDenied;
   }
   const firstText = (blocks.find((x: any) => x.type === 'text') || {}).content || b.text || '';
-  await D(c).prepare('UPDATE posts SET blocks = ?, text = ?, edited_at = ? WHERE id = ?')
-    .bind(JSON.stringify(blocks), clampStr(firstText, 300), now(), id).run();
+
+  // AUDIT-TASK-10 / Faza 5/#7 — `imageKeys` və `tags` ƏVVƏL YENİLƏNMİRDİ.
+  //
+  // Nəticə: istifadəçi postdan şəkil silsə və ya teq dəyişsə, dəyişiklik
+  // `blocks`-da görünürdü, lakin `image_keys` və `tags` sütunları KÖHNƏ
+  // qalırdı. Bu, iki real problem yaradırdı:
+  //   • `deletePost` silinən şəkilləri R2-dən təmizləyəndə ARTIQ İSTİFADƏ
+  //     OLUNMAYAN açarları silirdi, YENİLƏRİ isə yetim qoyurdu
+  //   • teq axtarışı (`posts_fts.tags`) köhnə teqlərlə cavab verirdi
+  //
+  // ⚠ Sahələr YALNIZ client onları GÖNDƏRƏNDƏ yenilənir: `PATCH` qismidir və
+  //   göndərilməyən sahə toxunulmamalıdır (əks halda yalnız mətn redaktə edən
+  //   client bütün şəkilləri silərdi).
+  const sets = ['blocks = ?', 'text = ?', 'edited_at = ?', 'search_text = ?'];
+  const vals: unknown[] = [
+    JSON.stringify(blocks), clampStr(firstText, 300), now(), buildSearchText(blocks),
+  ];
+  if (Array.isArray(b.imageKeys)) {
+    const keys = clampImageKeys(b.imageKeys);
+    // C-1: yeni açarlar da SAHİBLİK yoxlamasından keçməlidir.
+    const denied = assertOwnedImageRefs(c, keys, String(row.author_id));
+    if (denied) return denied;
+    sets.push('image_keys = ?'); vals.push(JSON.stringify(keys));
+  }
+  if (Array.isArray(b.tags)) {
+    const tags = b.tags.slice(0, 12).map((t: unknown) => clampStr(t, 30));
+    sets.push('tags = ?'); vals.push(JSON.stringify(tags));
+  }
+  vals.push(id);
+  await D(c).prepare(`UPDATE posts SET ${sets.join(', ')} WHERE id = ?`).bind(...vals).run();
   return json({ ok: true });
 }
 
