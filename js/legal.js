@@ -152,6 +152,8 @@ Hesab aktiv olduğu müddətdə saxlanılır. Hesab silindikdə profil, istifad�
 
 **Hesab silindikdə arxiv.** Silinmə anından etibarən mesajlarınız arxiv oxunuşunda **dərhal gizlədilir** və heç kimə göstərilmir; arxiv fayllarından **fiziki silinmə** isə gündəlik təmizlik işi ilə, adətən 24 saat ərzində tamamlanır.
 
+**Hesab silindikdə son 90 gün.** Arxivə köçməmiş (son 90 günlük) mesajlarınız **anonimləşdirilir**: adınız və hesab identifikatorunuz «Silinmiş istifadəçi» ilə əvəz olunur, mesajın **mətni isə söhbətdə qalır**. Səbəb: söhbət iki tərəflidir — mətni tamamilə silmək qarşı tərəfin öz yazışma tarixçəsini anlaşılmaz edərdi. Anonimləşdirmədən sonra həmin mesajlar sizinlə əlaqələndirilə bilmir.
+
 ## 5. Hüquqlarınız
 
 - **Giriş və düzəliş** — profil redaktoru vasitəsilə istənilən vaxt;
@@ -192,6 +194,8 @@ Data is kept while your account is active. On account deletion, your profile, us
 
 **Archive on account deletion.** From the moment of deletion your messages are **immediately hidden** from archive reads and shown to no one; **physical removal** from the archive files is completed by the daily maintenance job, normally within 24 hours.
 
+**The last 90 days on account deletion.** Messages that have not yet moved to the archive (the last 90 days) are **anonymised**: your name and account identifier are replaced with “Deleted user”, while the **message text remains in the conversation**. The reason: a conversation has two sides — deleting the text outright would make the other person’s own history unreadable. After anonymisation those messages can no longer be linked to you.
+
 ## 5. Your rights
 
 Access & correction (profile editor), deletion (Settings → Delete account), data export — you download it **yourself** from Settings (JSON or CSV), covering your profile, posts, comments, messages (including archived ones), team memberships and contact requests — complaint (${SITE.email} or your supervisory authority). Technical note: to prevent abuse, data-export requests are processed a limited number of times per hour; if the limit is reached, please retry later. GDPR principles and the Azerbaijani Law "On Personal Data" are respected. Jurisdiction: **${SITE.jurisdiction}**.
@@ -224,6 +228,8 @@ The platform is **18+ only**; age is verified at registration.`,
 **Архив сообщений.** Сообщения в комнатах и личные сообщения переносятся в сжатое архивное хранилище через **90 дней**. Это **не удаление**: архивные сообщения остаются доступны вам — они загружаются в беседе кнопкой «Загрузить старые сообщения» и включаются в экспорт данных.
 
 **Архив при удалении аккаунта.** С момента удаления ваши сообщения **сразу скрываются** при чтении архива и никому не показываются; **физическое удаление** из архивных файлов выполняет ежедневная служебная задача, как правило в течение 24 часов.
+
+**Последние 90 дней при удалении аккаунта.** Сообщения, ещё не перенесённые в архив (последние 90 дней), **анонимизируются**: имя и идентификатор аккаунта заменяются на «Удалённый пользователь», а **текст сообщения остаётся в беседе**. Причина: беседа двусторонняя — полное удаление текста сделало бы историю собеседника нечитаемой. После анонимизации эти сообщения невозможно связать с вами.
 
 ## 5. Ваши права
 

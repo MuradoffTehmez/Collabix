@@ -123,6 +123,17 @@ const POST_XP = 10;
 const COMMENT_XP = 5;
 const SOLUTION_XP = 50;
 
+/**
+ * AUDIT-TASK-9 / D-2 — silinmiş hesabın mesajlarındakı əvəzləyici kimlik.
+ *
+ * ⚠ `users` cədvəlində BELƏ SƏTİR YOXDUR və olmamalıdır: sentinel real hesab
+ *   deyil, sadəcə "müəllif artıq mövcud deyil" işarəsidir. UI adı mesaj sətrinin
+ *   `author_name` sütunundan oxuyur, `users`-dan yox — ona görə sınıq istinad
+ *   yaranmır. `deleted_uids` tombstone-u ilə qarışdırma: o, ARXİV filtri üçündür.
+ */
+const DELETED_UID = 'deleted_user';
+const DELETED_NAME = 'Silinmiş istifadəçi';
+
 // Realtime: otaq mesajı dəyişəndə (yeni / redaktə / sil) həmin otağın DO-suna
 // "yenilə" siqnalı göndərilir → bağlı client-lər dərhal refetch edir. Fan-out
 // yalnız siqnaldır, məzmun D1-dən gəlir (persistence orada qalır). Xəta olsa
@@ -605,6 +616,26 @@ export async function deleteAccount(c: Ctx) {
     // çıxarıldıqdan sonra artıq həmin istifadəçiyə aid deyil. Silinsəydi, hesabı
     // silərək öz izini təmizləyən hücumçu monitorinqi kor edərdi.
     D(c).prepare('UPDATE security_events SET uid = NULL, username = \'\' WHERE uid = ?').bind(u.id),
+    // 🔴 AUDIT-TASK-9 / D-2 — İSTİ PƏNCƏRƏNİN ANONİMLƏŞDİRİLMƏSİ (variant b).
+    //
+    // PROBLEM (Task 8 §9/1): tombstone filtri yalnız ARXİV oxu yoluna tətbiq
+    // olunmuşdu. Nəticə ziddiyyətli idi — silinmiş hesabın son 90 günlük
+    // mesajları GÖRÜNÜRDÜ, 90 gündən köhnələri isə YOX.
+    //
+    // Variant (a) hər mesaj sorğusuna `LEFT JOIN deleted_uids` əlavə edərdi;
+    // mesaj oxusu ən sıx yoldur, ona görə rədd edildi. Variant (c) ziddiyyəti
+    // sadəcə sənədləşdirərdi. (b) həm GDPR-i, həm söhbət bütövlüyünü qoruyur:
+    // MƏZMUN qalır (qarşı tərəf öz tarixçəsini itirmir), KİMLİK silinir.
+    //
+    // ⚠ `author_id` da dəyişdirilir, təkcə ad yox: uid qalsaydı, o, hələ də
+    //   həmin şəxsə bağlanan identifikator olardı və anonimləşdirmə GDPR
+    //   mənasında natamam qalardı.
+    D(c).prepare(
+      `UPDATE room_messages SET author_id = ?2, author_name = ?3 WHERE author_id = ?1`,
+    ).bind(u.id, DELETED_UID, DELETED_NAME),
+    // `dm_messages`-də ad sütunu yoxdur (UI adı `users`-dan çəkir) — yalnız uid.
+    D(c).prepare('UPDATE dm_messages SET from_id = ?2 WHERE from_id = ?1').bind(u.id, DELETED_UID),
+    D(c).prepare('UPDATE dm_messages SET to_id = ?2 WHERE to_id = ?1').bind(u.id, DELETED_UID),
     D(c).prepare('DELETE FROM users WHERE id = ?').bind(u.id),
   ]);
   // AUDIT-TASK-8 §8.6 — GDPR Art. 17 (unudulmaq hüququ) arxiv üçün.
