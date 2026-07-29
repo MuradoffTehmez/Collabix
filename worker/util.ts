@@ -37,6 +37,13 @@ export interface Env {
   ROOM_DO: DurableObjectNamespace<import('./room-do').RoomDO>;
   // Real-time presence (online/offline) — tək qlobal instans.
   PRESENCE_DO: DurableObjectNamespace<import('./presence-do').PresenceDO>;
+  // ATOMİK rate limiter (AUDIT-TASK-9 / H-3) — hər limit açarına bir instans.
+  // ⚠ OPSİONALDIR: binding hələ tətbiq olunmayıbsa `mechanismFor` KV-yə düşür
+  //   və sayt işləməyə davam edir (konfiq çatışmazlığı ≠ runtime nasazlığı).
+  RATE_LIMIT_DO?: DurableObjectNamespace<import('./rate-limit-do').RateLimitDO>;
+  // 🔴 MÜVƏQQƏTİ geri qaytarma bayrağı ('kv') — bax auth.ts `mechanismFor`.
+  //    Atomik mexanizm 2 həftə stabil işlədikdən sonra SİLİNMƏLİDİR.
+  RL_MECHANISM?: string;
   
   // TASK-8 / Yeni Cloudflare Xidmətləri
   WORKFLOW?: any;
@@ -190,6 +197,43 @@ export const todayStr = () => new Date().toISOString().slice(0, 10);
 // @username qeydləri
 export const extractMentions = (text: string): string[] =>
   [...new Set((text.match(/@([a-z0-9._]{3,20})/g) || []).map(m => m.slice(1)))];
+
+/* ---------- D1 dəyişən limiti (AUDIT-TASK-9 / D-1) ---------- */
+
+/**
+ * D1 BİR sorğuda ən çox **100** bağlı parametr qəbul edir
+ * (developers.cloudflare.com/d1/platform/limits — "Maximum bound parameters
+ * per query: 100"). Aşıldıqda sorğu `D1_ERROR: too many SQL variables` ilə
+ * çökür — yəni funksiya tamamilə işləmir, yavaşlamır.
+ *
+ * 🔴 AUDIT-TASK-8 §7.b DƏRSİ — bu sinif qüsur SÜKUTLA yaşayır:
+ *   `archive.ts` `IN (?×2000)` qururdu, lakin `ARCHIVE_HOT_DAYS = 3650`
+ *   səbəbindən kod yolu heç vaxt işə düşmürdü və qüsur İKİ task boyu gizli
+ *   qaldı. Test datası da limitin altında (5 mesaj) idi.
+ *   → Ona görə bu köməkçidən istifadə edən HƏR yol üçün E2E testi limitin
+ *     ÜSTÜNDƏ data ilə yazılır (`e2e/batch-limits.spec.ts`).
+ */
+export const D1_MAX_VARS = 100;
+
+/**
+ * Siyahını D1 limitinə sığan hissələrə bölür.
+ *
+ * @param reserved Sorğuda `IN (...)` siyahısından ƏLAVƏ bağlanan parametr sayı.
+ *   Məsələn `WHERE user_id = ? AND comment_id IN (...)` üçün `reserved = 1`,
+ *   əks halda hissə tam 100 olanda ümumi say 101-ə çatıb sorğunu çökdürərdi.
+ *
+ * ⚠ Boş siyahı üçün boş massiv qaytarır — çağıran `IN ()` qurmamalıdır
+ *   (sintaksis xətası). Bütün çağırış yerləri əvvəlcədən `length` yoxlayır.
+ */
+export function chunkForD1<T>(items: readonly T[], reserved = 0): T[][] {
+  const size = Math.max(1, D1_MAX_VARS - reserved);
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
+}
+
+/** `IN (?,?,…)` üçün yer tutucu sətri. */
+export const placeholders = (n: number) => new Array(n).fill('?').join(',');
 
 /* ---------- sıra mapperleri: D1 sətri → client forması ---------- */
 export function mapUser(r: any, self = false): any {

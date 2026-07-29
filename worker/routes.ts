@@ -2,7 +2,7 @@
 import {
   Ctx, json, err, readJson, uuid, now, todayStr, b64uRandom,
   normalizeUsername, validUsername, clampStr, toJSON, fromJSON, likePattern, searchNormalize,
-  pairIdFor, extractMentions,
+  pairIdFor, extractMentions, chunkForD1, placeholders,
   mapUser, mapPost, mapMsg, mapTask, mapSubmission, fileUrl, withCookies,
 } from './util';
 import {
@@ -54,9 +54,13 @@ async function notify(c: Ctx, toUid: string, type: string, text: string, postId:
 async function notifyMentions(c: Ctx, text: string, label: string, postId: string | null = null) {
   const names = extractMentions(text);
   if (!names.length) return;
-  const q = `SELECT id FROM users WHERE username IN (${names.map(() => '?').join(',')})`;
-  const rows = await D(c).prepare(q).bind(...names).all<any>();
-  for (const r of rows.results) await notify(c, r.id, 'mention', label, postId);
+  // D-1: mətn 5000 simvola qədərdir və `@abc` cəmi 4 simvoldur → NƏZƏRİ olaraq
+  // 1000+ unikal qeyd. Bölünmədən `IN (?×1000)` D1-i çökdürürdü.
+  for (const chunk of chunkForD1(names)) {
+    const q = `SELECT id FROM users WHERE username IN (${placeholders(chunk.length)})`;
+    const rows = await D(c).prepare(q).bind(...chunk).all<any>();
+    for (const r of rows.results) await notify(c, r.id, 'mention', label, postId);
+  }
 }
 
 // Gündəlik fəaliyyət sayğacı (Bənd 9).
@@ -459,6 +463,29 @@ export async function changeUsername(c: Ctx) {
   return json({ ok: true, username: next });
 }
 
+/**
+ * R2-dən toplu silmə — AUDIT-TASK-9 / D-1.
+ *
+ * Əvvəl `keys.slice(0, 100)` (deleteAccount) və `keys.slice(0, 30)` (deletePost)
+ * işlədilirdi. Limitdən çox şəkli olan istifadəçi hesabını siləndə artıq fayllar
+ * R2-də YETİM qalırdı: GDPR "unudulmaq hüququ" yarımçıq icra olunur, heç bir
+ * xəta görünmür, sonrakı audit isə D1-ə baxdığı üçün problemi tapmır.
+ * Bu, Task 8 §7.b ilə eyni sinifdir — sərhəd test datasının üstündə olmadıqca
+ * fərq görünmür.
+ *
+ * R2 binding-i bir `delete()` çağırışında ən çox 1000 açar qəbul edir → hissələmə.
+ */
+const R2_DELETE_CHUNK = 1000;
+
+async function deleteR2Keys(c: Ctx, keys: string[]): Promise<void> {
+  const uniq = [...new Set(keys.filter(k => typeof k === 'string' && !!k))];
+  for (let i = 0; i < uniq.length; i += R2_DELETE_CHUNK) {
+    // Fayl silinməsi əsas əməliyyatı (hesab/post silmə) BLOKLAMAMALIDIR —
+    // əvvəlki `.catch(() => {})` davranışı qorunur.
+    await c.env.FILES.delete(uniq.slice(i, i + R2_DELETE_CHUNK)).catch(() => {});
+  }
+}
+
 export async function deleteAccount(c: Ctx) {
   const b = await readJson(c.req);
   const u = c.user!;
@@ -476,7 +503,7 @@ export async function deleteAccount(c: Ctx) {
     const m = String((u as any).photo_url).match(/^\/files\/(.+)$/);
     if (m) keys.push(m[1]);
   }
-  await Promise.all(keys.slice(0, 100).map(k => c.env.FILES.delete(k).catch(() => {})));
+  await deleteR2Keys(c, keys);
   await D(c).batch([
     // Bu istifadəçinin postlarının re-post/quote-larını soft-mark et (posts silinməzdən ƏVVƏL).
     D(c).prepare('UPDATE posts SET original_deleted = 1 WHERE shared_post_id IN (SELECT id FROM posts WHERE author_id = ?)').bind(u.id),
@@ -824,15 +851,42 @@ function collectImageRefs(blocks: any[], imageKeys: unknown): string[] {
   const refs: string[] = [];
   // Bütün blok növləri gəzilir, yalnız `image` deyil: gələcəkdə `video`/`file`
   // bloku əlavə edilsə də URL sahələri bu siyahıya avtomatik düşsün.
+  //
+  // ⚠ BURADA KƏSMƏ YOXDUR — girişlər `clampBlockRefs`/`clampImageKeys` ilə
+  // ARTIQ kəsilmiş gəlir. Bax həmin funksiyaların şərhi (AUDIT-TASK-9 / D-1).
   for (const b of Array.isArray(blocks) ? blocks : []) {
     if (!b || typeof b !== 'object') continue;
-    if (Array.isArray(b.urls)) refs.push(...b.urls.slice(0, 20).map(String));
+    if (Array.isArray(b.urls)) refs.push(...b.urls.map(String));
     if (typeof b.url === 'string') refs.push(b.url);
     if (typeof b.src === 'string') refs.push(b.src);
   }
-  if (Array.isArray(imageKeys)) refs.push(...imageKeys.slice(0, 30).map(String));
+  if (Array.isArray(imageKeys)) refs.push(...imageKeys.map(String));
   return refs;
 }
+
+/**
+ * 🔴 AUDIT-TASK-9 / D-1 — YOXLANILAN sərhəd = SAXLANILAN sərhəd.
+ *
+ * Əvvəl `collectImageRefs` yalnız ilk 30 `imageKeys`-i və blok başına ilk 20
+ * `urls`-i yoxlayırdı, `createPost` isə `toJSON(b.imageKeys)` ilə XAM massivi
+ * saxlayırdı. Nəticə: 31-ci açardan sonrakı istinadlar `assertOwnedImageRefs`
+ * yoxlamasından TAMAMİLƏ yan keçib bazaya düşürdü — yəni AUDIT C-1-in bağladığı
+ * zəncirin 1-ci addımı 30-dan çox şəkilli postda yenidən açıq idi.
+ *
+ * Bu, Task 8 §7.b ilə eyni sinifdir: sərhəd bir yerdə var, digərində yoxdur və
+ * fərq yalnız limit ÜSTÜ data ilə görünür. Kəsmə indi saxlamadan ƏVVƏL edilir.
+ */
+const REF_URLS_PER_BLOCK = 20;
+const REF_IMAGE_KEYS = 30;
+
+const clampBlockRefs = (blocks: any[]): any[] => blocks.map(blk => (
+  blk && typeof blk === 'object' && Array.isArray(blk.urls)
+    ? { ...blk, urls: blk.urls.slice(0, REF_URLS_PER_BLOCK).map(String) }
+    : blk
+));
+
+const clampImageKeys = (v: unknown): string[] =>
+  Array.isArray(v) ? v.slice(0, REF_IMAGE_KEYS).map(String) : [];
 
 /**
  * `ownerUid` = postun MÜƏLLİFİ, redaktə edən şəxs yox. Admin başqasının postunu
@@ -897,19 +951,21 @@ export async function createPost(c: Ctx) {
   // Ümumi tavan blok sayına deyil, `JSON.stringify(...).length`-ə baxır —
   // 20 × 5000 = 100 KB hələ də D1 sətri üçün çoxdur.
   const blocks = Array.isArray(b.blocks)
-    ? b.blocks.slice(0, 20).map((blk: any) => (
+    ? clampBlockRefs(b.blocks.slice(0, 20).map((blk: any) => (
       blk && typeof blk === 'object' && typeof blk.content === 'string'
         ? { ...blk, content: clampStr(blk.content, 5000) }
         : blk
-    ))
+    )))
     : [];
+  // D-1: yoxlanılan massivin EYNİSİ saxlanılır (bax `clampImageKeys`).
+  const imageKeys = clampImageKeys(b.imageKeys);
   if (JSON.stringify(blocks).length > POST_BLOCKS_MAX_BYTES) {
     return err('Post həddindən artıq böyükdür.', 400, 'payload_too_large');
   }
   // AUDIT C-1 — istismar zəncirinin 1-ci addımı burada kəsilir (bax
   // `assertOwnedImageRefs`). `imageKeys` VƏ `blocks[].urls` birlikdə yoxlanılır:
   // birini qoruyub digərini açıq qoymaq zənciri bağlamazdı.
-  const refDenied = assertOwnedImageRefs(c, collectImageRefs(blocks, b.imageKeys), c.user!.id);
+  const refDenied = assertOwnedImageRefs(c, collectImageRefs(blocks, imageKeys), c.user!.id);
   if (refDenied) return refDenied;
   let sharedPostId = b.sharedPostId ? clampStr(b.sharedPostId, 50) : null;
   if (sharedPostId) {
@@ -929,7 +985,7 @@ export async function createPost(c: Ctx) {
   await D(c).prepare(
     'INSERT INTO posts (id, author_id, author_name, blocks, image_keys, text, tags, created_at, shared_post_id, post_type, quote_text) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
   ).bind(id, c.user!.id, c.user!.name, JSON.stringify(blocks),
-    toJSON(b.imageKeys, '[]'), clampStr(firstText, 300), JSON.stringify(tags), now(), sharedPostId, postType, quoteText).run();
+    JSON.stringify(imageKeys), clampStr(firstText, 300), JSON.stringify(tags), now(), sharedPostId, postType, quoteText).run();
   await D(c).prepare('UPDATE users SET xp = xp + 10 WHERE id = ?').bind(c.user!.id).run();
   await bumpActivity(c);
   for (const t of tags) await bumpProgress(c, c.user!.id, t, 'posts');
@@ -978,7 +1034,9 @@ export async function patchPost(c: Ctx, id: string) {
   if (!row) return err('Post tapılmadı.', 404);
   if (row.author_id !== c.user!.id && !c.isAdmin) return err('İcazə yoxdur.', 403, 'forbidden');
   const b = await readJson(c.req);
-  const blocks = Array.isArray(b.blocks) ? b.blocks.slice(0, 20) : fromJSON(row.blocks, []);
+  const blocks = Array.isArray(b.blocks)
+    ? clampBlockRefs(b.blocks.slice(0, 20))   // D-1: yoxlanılan = saxlanılan
+    : fromJSON<any[]>(row.blocks, []);
   // AUDIT C-1 — redaktə yolu da yoxlanılır. Yalnız `createPost`-u qorusaydıq
   // hücumçu boş post yaradıb dərhal PATCH ilə məxfi açarı yerləşdirərdi.
   // Yoxlama YALNIZ client yeni bloklar göndərəndə işləyir: mövcud sətrin öz
@@ -1002,7 +1060,7 @@ export async function deletePost(c: Ctx, id: string) {
   if (!row) return err('Post tapılmadı.', 404);
   if (row.author_id !== c.user!.id && !c.isAdmin) return err('İcazə yoxdur.', 403, 'forbidden');
   const keys = fromJSON<string[]>(row.image_keys, []);
-  await Promise.all(keys.slice(0, 30).map(k => c.env.FILES.delete(k).catch(() => {})));
+  await deleteR2Keys(c, keys);
   // Cascade (Cloud-Function trigger ekvivalenti), atomik batch. D1-də
   // `PRAGMA foreign_keys` zəmanətli deyil, `bookmarks`/`notifications`-da isə
   // FK ümumiyyətlə yoxdur — ona görə asılılar burada AÇIQ təmizlənir.
@@ -1115,25 +1173,29 @@ export async function listComments(c: Ctx, postId: string) {
   const top = topRows.results.slice(0, limit);
   const topIds = top.map(r => r.id);
   // Yalnız yüklənmiş üst rəylərin cavabları (xronoloji).
+  // D-1: `limit` 200-ə qədər ola bilər → bölünmədən `IN (?×200)` D1 limitini
+  // (100) aşırdı. Hissələmə SIRALAMANI POZMUR: bölgü VALİDEYN id-ləri üzrədir,
+  // yəni bir valideynin bütün cavabları eyni hissədədir və aşağıdakı
+  // `replies[parent]` qruplaşdırması xronoloji sıranı olduğu kimi saxlayır.
   let replyRows: any[] = [];
-  if (topIds.length) {
-    const ph = topIds.map(() => '?').join(',');
+  for (const chunk of chunkForD1(topIds)) {
     const rr = await D(c).prepare(
       `SELECT cm.* FROM comments cm JOIN users u ON cm.author_id = u.id
-        WHERE cm.parent_comment_id IN (${ph}) AND u.blocked = 0
+        WHERE cm.parent_comment_id IN (${placeholders(chunk.length)}) AND u.blocked = 0
         ORDER BY cm.created_at ASC`,
-    ).bind(...topIds).all<any>();
-    replyRows = rr.results;
+    ).bind(...chunk).all<any>();
+    replyRows.push(...rr.results);
   }
-  // Mənim bəyəndiyim rəylər (yalnız görünənlər üçün — bir sorğu).
-  const allIds = [...topIds, ...replyRows.map(r => r.id)];
-  let myLikes = new Set<string>();
-  if (allIds.length) {
-    const ph = allIds.map(() => '?').join(',');
+  // Mənim bəyəndiyim rəylər. D-1: `allIds` = üst rəylər + BÜTÜN cavabları →
+  // praktikada sərhədsiz (200 rəyin hər birinin 50 cavabı = 10 000 dəyişən).
+  // `reserved: 1` — `user_id = ?` sorğuda IN siyahısından ƏLAVƏ bağlanır.
+  const allIds = [...topIds, ...replyRows.map(r => r.id as string)];
+  const myLikes = new Set<string>();
+  for (const chunk of chunkForD1(allIds, 1)) {
     const lr = await D(c).prepare(
-      `SELECT comment_id FROM comment_likes WHERE user_id = ? AND comment_id IN (${ph})`,
-    ).bind(c.user!.id, ...allIds).all<any>();
-    myLikes = new Set(lr.results.map(r => r.comment_id as string));
+      `SELECT comment_id FROM comment_likes WHERE user_id = ? AND comment_id IN (${placeholders(chunk.length)})`,
+    ).bind(c.user!.id, ...chunk).all<any>();
+    for (const r of lr.results) myLikes.add(r.comment_id as string);
   }
   const replies: Record<string, any[]> = {};
   for (const r of replyRows) (replies[r.parent_comment_id] ||= []).push(mapComment(r, myLikes));
@@ -1193,12 +1255,18 @@ export async function deleteComment(c: Ctx, postId: string, cid: string) {
   // Cascade sil: rəy + bütün cavabları (dərinlik 1 olduğu üçün birbaşa uşaqlar tamdır) + reaksiyalar.
   const kids = await D(c).prepare('SELECT id FROM comments WHERE parent_comment_id = ?').bind(cid).all<any>();
   const ids = [cid, ...kids.results.map(r => r.id as string)];
-  const ph = ids.map(() => '?').join(',');
-  await D(c).batch([
-    D(c).prepare(`DELETE FROM comments WHERE id IN (${ph})`).bind(...ids),
-    D(c).prepare(`DELETE FROM comment_likes WHERE comment_id IN (${ph})`).bind(...ids),
-    D(c).prepare('UPDATE posts SET comment_count = MAX(0, comment_count - ?) WHERE id = ?').bind(ids.length, postId),
-  ]);
+  // D-1: cavabların sayı SƏRHƏDSİZDİR — populyar rəyin 500 cavabı olsa
+  // `IN (?×501)` D1-i çökdürür və rəy HEÇ VAXT silinə bilmirdi.
+  // Silmələr hissələnir, lakin hamısı EYNİ `batch()`-də qalır → atomiklik
+  // qorunur (yarımçıq silmə yetim `comment_likes` sətirləri buraxardı).
+  const stmts = [];
+  for (const chunk of chunkForD1(ids)) {
+    const ph = placeholders(chunk.length);
+    stmts.push(D(c).prepare(`DELETE FROM comments WHERE id IN (${ph})`).bind(...chunk));
+    stmts.push(D(c).prepare(`DELETE FROM comment_likes WHERE comment_id IN (${ph})`).bind(...chunk));
+  }
+  stmts.push(D(c).prepare('UPDATE posts SET comment_count = MAX(0, comment_count - ?) WHERE id = ?').bind(ids.length, postId));
+  await D(c).batch(stmts);
   return json({ ok: true });
 }
 export async function commentLikePut(c: Ctx, postId: string, cid: string) {
@@ -2171,15 +2239,19 @@ export async function adminBulkUsers(c: Ctx) {
   if (!targets.length) return badReq('Özünü bloklaya bilməzsən.');
 
   const blocked = action === 'block' ? 1 : 0;
-  const ph = targets.map(() => '?').join(',');
-  // D1 batch(): tək sorğuda toplu yeniləmə + jurnal yazısı.
-  await D(c).batch([
-    D(c).prepare(`UPDATE users SET blocked = ? WHERE id IN (${ph})`).bind(blocked, ...targets),
-    D(c).prepare(
-      'INSERT INTO admin_logs (id, action, target_id, by_id, by_name, detail, created_at, level) VALUES (?,?,?,?,?,?,?,?)',
-    ).bind(uuid(), 'bulk-' + action, '', c.user!.id, c.user!.username,
-      `${targets.length} istifadəçi`, now(), blocked ? 'error' : 'success'),
-  ]);
+  // D-1: `uids` 200-ə qədər qəbul edilir → `blocked = ?` ilə birlikdə 201
+  // dəyişən, D1 limiti isə 100. Yəni 100+ istifadəçili toplu bloklama
+  // TAMAMİLƏ İŞLƏMİRDİ (`D1_ERROR: too many SQL variables`) — panel isə
+  // sadəcə 500 göstərirdi. `reserved: 1` → `blocked = ?` üçün.
+  // Hissələr EYNİ batch-dədir: yarımçıq bloklama admin üçün daha pisdir.
+  const stmts = chunkForD1(targets, 1).map(chunk =>
+    D(c).prepare(`UPDATE users SET blocked = ? WHERE id IN (${placeholders(chunk.length)})`)
+      .bind(blocked, ...chunk));
+  stmts.push(D(c).prepare(
+    'INSERT INTO admin_logs (id, action, target_id, by_id, by_name, detail, created_at, level) VALUES (?,?,?,?,?,?,?,?)',
+  ).bind(uuid(), 'bulk-' + action, '', c.user!.id, c.user!.username,
+    `${targets.length} istifadəçi`, now(), blocked ? 'error' : 'success'));
+  await D(c).batch(stmts);
   // Bloklananların sessiyaları dərhal ləğv olunur (batch-dən kənar — KV işidir).
   if (blocked) for (const id of targets) await destroyAllSessions(c.env, id);
 
