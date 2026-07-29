@@ -529,6 +529,20 @@ const D = {
     en: 'Something went wrong. Please refresh the page.',
     ru: 'Произошла непредвиденная ошибка. Обновите страницу.',
   },
+  // AUDIT-TASK-10 / Faza 5/#5 — parol bərpası axını.
+  'reset.title':      { az: '🔑 Şifrəni unutmusan?', en: '🔑 Forgot your password?', ru: '🔑 Забыли пароль?' },
+  'reset.sub':        { az: 'E-poçt ünvanını yaz — sıfırlama linki göndərəcəyik.', en: 'Enter your email — we will send a reset link.', ru: 'Укажите e-mail — мы отправим ссылку для сброса.' },
+  'reset.send':       { az: 'Link göndər', en: 'Send link', ru: 'Отправить ссылку' },
+  'reset.err_email':  { az: 'E-poçt düzgün deyil.', en: 'Invalid email address.', ru: 'Некорректный e-mail.' },
+  // ⚠ Mətn QƏSDƏN şərtlidir ("əgər hesab varsa"): server neytral cavab verir
+  //   və UI onu təkzib etməməlidir — əks halda hesab sadalanması siqnalı olardı.
+  'reset.sent':       { az: 'Əgər bu ünvanla hesab varsa, link göndərildi.', en: 'If an account exists for that address, a link has been sent.', ru: 'Если аккаунт с этим адресом существует, ссылка отправлена.' },
+  'reset.new_title':  { az: 'Yeni şifrə təyin et', en: 'Set a new password', ru: 'Задайте новый пароль' },
+  'reset.new_sub':    { az: 'Ən azı 8 simvol, hərf və rəqəm (və ya işarə).', en: 'At least 8 characters, letters and a digit (or symbol).', ru: 'Минимум 8 символов, буквы и цифра (или символ).' },
+  'reset.revoke_warn':{ az: '⚠ Şifrə dəyişəndə bütün cihazlardakı sessiyalar bağlanacaq.', en: '⚠ Changing the password signs you out of all devices.', ru: '⚠ После смены пароля все сессии на всех устройствах будут закрыты.' },
+  'reset.err_match':  { az: 'Şifrələr eyni deyil.', en: 'Passwords do not match.', ru: 'Пароли не совпадают.' },
+  'reset.save':       { az: 'Şifrəni yenilə', en: 'Update password', ru: 'Обновить пароль' },
+  'reset.done':       { az: 'Şifrə yeniləndi.', en: 'Password updated.', ru: 'Пароль обновлён.' },
   'thr.t_turnstile_failed': { az: 'Bot yoxlaması uğursuz', en: 'Bot check failed', ru: 'Проверка на бота не пройдена' },
   'thr.t_upload_rejected': { az: 'Fayl rədd edildi', en: 'Upload rejected', ru: 'Загрузка отклонена' },
   'thr.t_session_revoked': { az: 'Sessiya ləğv edildi', en: 'Session revoked', ru: 'Сессия отозвана' },

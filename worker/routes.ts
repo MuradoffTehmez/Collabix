@@ -77,6 +77,7 @@ export {
   mfaStatus, mfaSetup, mfaConfirm, mfaDisable, mfaRegenerateBackup, mfaVerify,
   magicLinkRequest, magicLinkConsume,
   oauthStart, oauthCallback, oauthPending, listOAuthAccounts, unlinkOAuth,
+  passwordResetRequest, passwordResetConfirm,
 } from './routes/auth-methods';
 
 

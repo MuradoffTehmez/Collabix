@@ -213,3 +213,59 @@ export function attackAlertMail(name: string, attempts: number, lang: MailLang):
     text: `${L.hi}, ${name}\n\n${L.body(attempts).replace(/<\/?b>/g, '')}\n\n${L.you}\n${L.act}`,
   };
 }
+
+/* ============ parol bərpası (AUDIT-TASK-10 / Faza 5/#5) ============ */
+
+const RESET_LANG = {
+  az: {
+    subject: 'Collabix — şifrə bərpası',
+    hi: 'Salam',
+    body: 'Şifrəni sıfırlamaq üçün aşağıdakı düyməyə klikləyin. Link <b>15 dəqiqə</b> etibarlıdır və <b>yalnız bir dəfə</b> işləyir.',
+    cta: 'Yeni şifrə təyin et',
+    warn: 'Bərpanı siz istəməmisinizsə, məktubu nəzərə almayın — şifrəniz dəyişməyəcək.',
+    revoke: '⚠ Yeni şifrə təyin ediləndə BÜTÜN cihazlardakı sessiyalar bağlanacaq.',
+  },
+  en: {
+    subject: 'Collabix — password reset',
+    hi: 'Hi',
+    body: 'Click the button below to reset your password. The link is valid for <b>15 minutes</b> and works <b>only once</b>.',
+    cta: 'Set a new password',
+    warn: 'If you did not request this, ignore this email — your password will not change.',
+    revoke: '⚠ Setting a new password signs you out of ALL devices.',
+  },
+  ru: {
+    subject: 'Collabix — сброс пароля',
+    hi: 'Привет',
+    body: 'Нажмите кнопку ниже, чтобы сбросить пароль. Ссылка действует <b>15 минут</b> и срабатывает <b>только один раз</b>.',
+    cta: 'Задать новый пароль',
+    warn: 'Если вы не запрашивали сброс, просто проигнорируйте письмо — пароль не изменится.',
+    revoke: '⚠ После установки нового пароля все сессии на всех устройствах будут закрыты.',
+  },
+} as const;
+
+/**
+ * Parol bərpası məktubu.
+ *
+ * ⚠ Mətn sessiya ləğvini AÇIQ xəbər verir: istifadəçi digər cihazlarından
+ *   çıxarıldığını gözlənilməz sürpriz kimi yox, qəsdli qoruma kimi görməlidir.
+ */
+export function passwordResetMail(name: string, url: string, lang: MailLang): Mail {
+  const L = RESET_LANG[lang];
+  const safeUrl = esc(url);
+  return {
+    to: '',
+    subject: L.subject,
+    html: `<!doctype html><html><body style="margin:0;padding:24px;background:#0f1115;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;">
+  <div style="max-width:520px;margin:0 auto;background:#171a21;border:1px solid #262b36;border-radius:14px;padding:28px;color:#e6e8ee;">
+    <div style="font-size:20px;font-weight:700;margin-bottom:18px;color:#fff;">Collabix</div>
+    <p style="font-size:15px;line-height:1.6;margin:0 0 14px;">${L.hi}, ${esc(name)}</p>
+    <p style="font-size:15px;line-height:1.6;margin:0 0 22px;color:#b6bcc9;">${L.body}</p>
+    <a href="${safeUrl}" style="display:inline-block;background:#5b8cff;color:#fff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 22px;border-radius:9px;">${L.cta}</a>
+    <p style="font-size:13px;line-height:1.6;margin:22px 0 6px;color:#8b93a3;">${L.revoke}</p>
+    <p style="font-size:12px;word-break:break-all;margin:0 0 20px;color:#5b8cff;">${safeUrl}</p>
+    <p style="font-size:12px;line-height:1.6;margin:0;color:#6e7688;border-top:1px solid #262b36;padding-top:16px;">${L.warn}</p>
+  </div>
+</body></html>`,
+    text: `${L.hi}, ${name}\n\n${L.body.replace(/<\/?b>/g, '')}\n\n${url}\n\n${L.revoke}\n${L.warn}`,
+  };
+}

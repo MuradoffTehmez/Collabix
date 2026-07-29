@@ -82,6 +82,10 @@ const ROUTES: Route[] = [
   // isə XHR — ikisi də giriş tələb etmir, kimlik məhz burada qurulur.
   { method: 'POST', pattern: /^\/api\/auth\/magic-link$/, handler: R.magicLinkRequest, rl: 'auth' },
   { method: 'GET', pattern: /^\/api\/auth\/magic\/([\w-]+)$/, handler: R.magicLinkConsume, rl: 'auth' },
+  // Parol bərpası (AUDIT-TASK-10 / Faza 5/#5). `auth: true` YOXDUR — məhz
+  // giriş edə bilməyən istifadəçi üçündür. `auth` səbəti: brute-force qapısı.
+  { method: 'POST', pattern: /^\/api\/auth\/password-reset$/, handler: R.passwordResetRequest, rl: 'auth' },
+  { method: 'POST', pattern: /^\/api\/auth\/password-reset\/confirm$/, handler: R.passwordResetConfirm, rl: 'auth' },
   // OAuth 2.0 (Bənd 5). `start` və `callback` BRAUZER NAVİQASİYASIDIR (302),
   // ona görə `auth: true` qoyulmur — kimlik `state` cookie-si ilə daşınır.
   { method: 'GET', pattern: /^\/api\/auth\/oauth\/(github|google|linkedin)\/start$/, handler: R.oauthStart, rl: 'auth' },

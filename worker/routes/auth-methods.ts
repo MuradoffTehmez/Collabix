@@ -7,7 +7,9 @@ import {
   Ctx, json, err, readJson, now, b64uRandom, fromJSON, 
   mapUser, withCookies,
 } from '../util';
-import { createSession, sessionCookies, readCookie } from '../auth';
+import {
+  createSession, sessionCookies, readCookie, hashPassword, revokeAllSessions,
+} from '../auth';
 import { logSecurityEvent, recentFailures } from '../security';
 import {
   isConfigured, configuredProviders, createState, consumeState, clearStateCookie,
@@ -18,8 +20,9 @@ import {
   generateSecret, otpauthUri, verifyTotp, generateBackupCodes,
   hashBackupCode, mfaEnabled,
 } from '../totp';
-import { emailEnabled, sendEmail, magicLinkMail, mailLang } from '../email';
-import { D, badReq, withSession } from './shared';
+import { emailEnabled, sendEmail, magicLinkMail, passwordResetMail, mailLang } from '../email';
+import { D, badReq, withSession, checkPasswordStrength } from './shared';
+import { kickEverywhere } from '../ws-kick';
 import { CAPTCHA_SOFT_AT, CAPTCHA_HARD_AT, turnstileGate, alertAccountOwner } from './auth-guard';
 
 /* ================= 2FA / TOTP (Bənd 2) ================= */
@@ -431,4 +434,115 @@ export async function unlinkOAuth(c: Ctx, provider: string) {
   return json({ ok: true });
 }
 
+/* ═══════════ PAROL BƏRPASI — AUDIT-TASK-10 / Faza 5/#5 ═══════════ */
 
+/**
+ * Audit: *"Parol bərpası (unutma) axını YOXDUR — yalnız admin `temp-password`
+ * verir."* Sənəd bunu belə qiymətləndirir: *"real boşluqdur: parolunu unudan
+ * istifadəçi hazırda ADMİN MÜDAXİLƏSİ OLMADAN hesabına qayıda bilmir."*
+ *
+ * ⚠ NİYƏ MAGIC LINK KİFAYƏT ETMİR: o, SESSİYA verir, lakin parolu DƏYİŞMİR.
+ *   İstifadəçi girə bilir, amma parolunu bilmədiyi üçün növbəti cihazda yenə
+ *   bloklanır. Üstəlik `changePassword` CARİ parolu tələb edir.
+ *
+ * ⚠ TOKEN AXINI magic link ilə EYNİ NAXIŞDADIR (yenisi icad edilmir):
+ *   • token KV-də YALNIZ HEŞ kimi saxlanılır — KV oxunsa belə token bərpa
+ *     oluna bilməz
+ *   • birdəfəlikdir: istifadə anında silinir
+ *   • ünvan başına limit — botnet fərqli IP-lərdən eyni qutunu doldura bilməsin
+ *
+ * 🔴 HESAB SADALANMASI: cavab HƏMİŞƏ eynidir (`{ok:true}`) — e-poçtun
+ *   qeydiyyatda olub-olmaması BİLİNMİR. Bu, magic link ilə eyni qaydadır.
+ */
+const RESET_TTL = 900;   // 15 dəqiqə — magic link-dən uzun, çünki istifadəçi
+                         // yeni parol düşünməlidir.
+
+export async function passwordResetRequest(c: Ctx) {
+  const b = await readJson(c.req);
+  const gate = await turnstileGate(c, b.turnstileToken);
+  if (gate) return gate;
+
+  const neutral = json({ ok: true });
+  if (!emailEnabled(c.env)) return neutral;
+
+  const email = String(b.email || '').trim().toLowerCase().slice(0, 160);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return neutral;
+
+  const perAddr = `pwrate:${await sha256Hex(email)}`;
+  const sent = parseInt((await c.env.SESSIONS.get(perAddr)) || '0', 10);
+  if (sent >= 3) return neutral;
+  await c.env.SESSIONS.put(perAddr, String(sent + 1), { expirationTtl: 900 });
+
+  const row = await D(c).prepare(
+    `SELECT id, name, blocked, settings FROM users
+      WHERE (email = ?1 AND email != '') OR lower(contact_email) = ?1 LIMIT 1`,
+  ).bind(email).first<any>();
+  if (!row || row.blocked) return neutral;
+
+  const token = b64uRandom(32);
+  await c.env.SESSIONS.put(
+    `pwreset:${await sha256Hex(token)}`,
+    JSON.stringify({ uid: row.id, email }),
+    { expirationTtl: RESET_TTL },
+  );
+
+  const lang = mailLang(fromJSON<any>(row.settings, {})?.lang);
+  const url = `${c.url.origin}/?reset=${token}`;
+  const mail = passwordResetMail(row.name || '', url, lang);
+  await sendEmail(c.env, { ...mail, to: email });
+
+  await logSecurityEvent(c.env, c.req, {
+    type: 'password_changed', uid: row.id, severity: 'warning',
+    meta: { flow: 'reset_requested' },
+  });
+  return neutral;
+}
+
+/**
+ * Yeni parolun təyini.
+ *
+ * ⚠ BÜTÜN SESSİYALAR LƏĞV EDİLİR: parol bərpası çox vaxt "hesabım ələ
+ *   keçirilib" ssenarisidir. Hücumçunun açıq sessiyası qalsaydı bərpa mənasız
+ *   olardı. Eyni səbəbdən WS soketləri də kəsilir (AUDIT-TASK-9 / H-6).
+ */
+export async function passwordResetConfirm(c: Ctx) {
+  const b = await readJson(c.req);
+  const token = String(b.token || '');
+  if (!token) return badReq('Token yoxdur.');
+
+  const pw = checkPasswordStrength(b.password);
+  if (!pw.ok) return badReq(pw.error!);
+
+  const key = `pwreset:${await sha256Hex(token)}`;
+  const raw = await c.env.SESSIONS.get(key);
+  if (!raw) {
+    await logSecurityEvent(c.env, c.req, {
+      type: 'login_failed', severity: 'warning',
+      meta: { flow: 'password_reset', reason: 'invalid_or_used' },
+    });
+    return err('Bərpa linki etibarsız və ya vaxtı bitib.', 400, 'reset_invalid');
+  }
+  // BİRDƏFƏLİK — oxunan kimi silinir (magic link ilə eyni qayda).
+  await c.env.SESSIONS.delete(key);
+
+  const { uid, email } = JSON.parse(raw) as { uid: string; email: string };
+  const row = await D(c).prepare('SELECT id, blocked FROM users WHERE id = ?')
+    .bind(uid).first<any>();
+  if (!row || row.blocked) return err('Hesab əlçatmazdır.', 403, 'account_blocked');
+
+  const { hash, salt, iterations } = await hashPassword(String(b.password));
+  await D(c).prepare(
+    `UPDATE users SET pass_hash = ?, pass_salt = ?, pass_iter = ?,
+            must_reset_password = 0, email = ?, email_verified = 1 WHERE id = ?`,
+  ).bind(hash, salt, iterations, email, uid).run();
+
+  await revokeAllSessions(c.env, uid, 'password');
+  c.ctx.waitUntil(kickEverywhere(c.env, uid));
+  await logSecurityEvent(c.env, c.req, {
+    type: 'password_changed', uid, severity: 'warning', meta: { flow: 'reset_confirmed' },
+  });
+
+  // Yeni sessiya DƏRHAL verilir: istifadəçi bir də əl ilə giriş etməməlidir.
+  const pair = await createSession(c.env, c.req, uid);
+  return withSession({ ok: true }, pair);
+}

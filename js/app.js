@@ -4,6 +4,7 @@ import { watchAuthState, login, logout } from './auth.js';
 import { ensureWidget } from './turnstile.js';
 import { mountOAuthButtons, handleOAuthReturn, loadLinkedAccounts } from './oauth.js';
 import { openMagicLinkModal, handleMagicReturn } from './magic.js';
+import { openPasswordResetModal, handlePasswordResetReturn } from './password-reset.js';
 import { loadMfaPanel } from './mfa.js';
 import { applyOAuthTicket } from './wizard.js';
 import {
@@ -63,9 +64,13 @@ function initAuthUI(){
     p.type = p.type === 'password' ? 'text' : 'password';
   });
   $('forgotBtn').addEventListener('click', async () => {
-    // Email qurulubsa parol bərpası magic link ilə gedir (Bənd 4).
-    // Qurulmayıbsa köhnə "admin ilə əlaqə saxla" izahı qalır — funksiya
-    // yoxdursa istifadəçini işləməyən axına salmırıq.
+    // AUDIT-TASK-10 / Faza 5/#5 — ƏSL parol bərpası.
+    //
+    // ⚠ Əvvəl bura yalnız MAGIC LINK açırdı. O, sessiya verir, lakin parolu
+    //   DƏYİŞMİR — istifadəçi növbəti cihazda yenə bloklanırdı. İndi əsl
+    //   sıfırlama axını birinci gəlir; magic link "parolsuz giriş" kimi
+    //   ikinci variant olaraq qalır.
+    if(await openPasswordResetModal()) return;
     if(await openMagicLinkModal()) return;
     showModal([
       el('div', { class: 'section-title' }, '🔑 Parolu unutmusan?'),
@@ -552,6 +557,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // və bilet ünvandan silindiyi üçün itərdi.
   initCyberpunkFX();
   handleMagicReturn();
+  // ⚠ SIRA: parol sıfırlama qayıdışı `handleOAuthReturn`-dən ƏVVƏL oxunmalıdır.
+  //   O, öz parametrlərini təmizləyərkən `history.replaceState` çağırır və
+  //   ünvandakı `?reset=` nişanını da silərdi — istifadəçi linki bir dəfə
+  //   açır, ikinci şans yoxdur.
+  handlePasswordResetReturn();
   handleOAuthReturn().then(async ticket => {
     // Bayraq qoyulur, ekran DƏYİŞDİRİLMİR: `watchAuthState` az sonra
     // `endSession`-u çağıracaq və auth ekranını məhz orada açacaq.
