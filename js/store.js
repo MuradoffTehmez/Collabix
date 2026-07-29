@@ -55,6 +55,10 @@ export async function getUser(uid){
 // pagination D1-də aparılır. Yuxarıdakı watchUsers() qlobal identifikasiya
 // keşidir (post müəllifi, DM, mention) və toxunulmur — bu, ondan ayrıca sorğudur.
 // Gələn sətrləri keşə də yazırıq ki, profil/DM keçidləri dərhal işləsin.
+/**
+ * @param {{ q?: string, skill?: string, level?: string, looking?: string,
+ *           extra?: string, sort?: string, cursor?: string, limit?: number }} [opts]
+ */
 export async function fetchUserDirectory({ q, skill, level, looking, extra, sort, cursor, limit } = {}){
   const p = new URLSearchParams();
   if(q) p.set('q', q);
@@ -553,6 +557,7 @@ export function watchAdminLogs(cb, { level = '' } = {}){
 /* ---------- TASK-6 / BÖLMƏ 3 — admin paneli ---------- */
 
 // Admin#6/#10 — jurnalın növbəti səhifəsi (keyset cursor).
+/** @param {{ level?: string, cursor?: string, limit?: number }} [opts] */
 export async function fetchAdminLogs({ level, cursor, limit } = {}){
   const p = new URLSearchParams();
   if(level) p.set('level', level);
@@ -562,6 +567,7 @@ export async function fetchAdminLogs({ level, cursor, limit } = {}){
 }
 
 // Admin#4/#10 — filtrlənən, səhifələnən istifadəçi siyahısı.
+/** @param {{ q?: string, filter?: string, cursor?: string, limit?: number }} [opts] */
 export async function fetchAdminUsers({ q, filter, cursor, limit } = {}){
   const p = new URLSearchParams();
   if(q) p.set('q', q);

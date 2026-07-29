@@ -6,6 +6,12 @@ import { getPosts } from './feed.js';
 import { emptyState } from './ui.js';
 
 let leaderMode = 'xp';
+/**
+ * `days` HƏM rəqəm, HƏM `'custom'` ola bilər (aşağıdakı sıra seçicisi).
+ * Elan tipini dar buraxsaq `range.days === 'custom'` müqayisəsi TypeScript
+ * tərəfindən "heç vaxt doğru olmaz" kimi işarələnirdi (TS2367).
+ * @type {{ days: number | 'custom', from: string | null, to: string | null }}
+ */
 let range = { days: 7, from: null, to: null };
 
 function rangeBounds(){

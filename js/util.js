@@ -144,7 +144,11 @@ export function fmtTime(ts){
   }catch(e){ return ''; }
 }
 export function todayStr(){ return new Date().toISOString().slice(0,10); }
-export function daysBetween(a, b){ return Math.round((new Date(b) - new Date(a)) / 86400000); }
+// `.getTime()` AÇIQ çağırılır: `new Date(b) - new Date(a)` icra vaxtında
+// işləyir (valueOf), lakin tip səviyyəsində Date üzərində arifmetikadır (TS2362).
+export function daysBetween(a, b){
+  return Math.round((new Date(b).getTime() - new Date(a).getTime()) / 86400000);
+}
 
 // Presence mənbəyi presence.js tərəfindən inyeksiya olunur (dairəvi import olmasın).
 let presenceGetter = null;
@@ -187,7 +191,9 @@ export function resizeImage(file, maxW, quality = 0.75){
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
         canvas.toBlob(b => b ? resolve(b) : reject(new Error('Şəkil emalı alınmadı')), 'image/jpeg', quality);
       };
-      img.src = ev.target.result;
+      // `readAsDataURL` HƏMİŞƏ string qaytarır; `FileReader.result` tipi isə
+      // `string | ArrayBuffer | null`-dır (readAsArrayBuffer üçün).
+      img.src = String(ev.target.result);
     };
     reader.readAsDataURL(file);
   });

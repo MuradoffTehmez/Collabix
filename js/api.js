@@ -40,7 +40,12 @@ function refreshSession(){
   return refreshing;
 }
 
-function buildOpts({ method = 'GET', body, form }){
+/**
+ * @param {{ method?: string, body?: any, form?: FormData }} [cfg]
+ * @returns {RequestInit}
+ */
+function buildOpts({ method = 'GET', body, form } = {}){
+  /** @type {RequestInit & { headers: Record<string,string> }} */
   const opts = { method, credentials: 'same-origin', headers: {} };
   if(form){ opts.body = form; }
   else if(body !== undefined){

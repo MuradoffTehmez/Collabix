@@ -24,7 +24,8 @@ const FIELDS = [
 const COMPLETION_XP = 20;   // 100%-ə çatanda verilən bonus (sənəddəki nümunə)
 
 /**
- * @returns {{ percent, done, total, missing:[{key,label}], complete:boolean }}
+ * @returns {{ percent: number, done: number, total: number,
+ *             missing: Array<{ key: string, label: string }>, complete: boolean }}
  */
 export function profileCompleteness(user){
   const u = user || {};

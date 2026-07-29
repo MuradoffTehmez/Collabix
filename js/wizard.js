@@ -51,7 +51,7 @@ export function passStrength(pass){
 export function ageFromBirthDate(bd){
   if(!bd) return 0;
   const d = new Date(bd);
-  if(isNaN(d)) return 0;
+  if(isNaN(d.getTime())) return 0;
   const now = new Date();
   let age = now.getFullYear() - d.getFullYear();
   if(now.getMonth() < d.getMonth() || (now.getMonth() === d.getMonth() && now.getDate() < d.getDate())) age--;

@@ -12,7 +12,12 @@ const ALLOWED_TAGS = [
 export function markdownNode(text){
   const div = el('div', { class: 'md-body' });
   try{
-    const html = marked.parse(text || '', { breaks: true, gfm: true, async: false });
+    // ⚠ `async: false` AÇIQ verilir ki, `parse` sinxron `string` qaytarsın —
+    // `marked` v12 `Promise<string>` overload-u da daşıyır. `/** @type */`
+    // cast-ı olmadan TypeScript hansı overload-un seçildiyini həll edə bilmir.
+    const html = /** @type {string} */ (
+      marked.parse(text || '', { breaks: true, gfm: true, async: false })
+    );
     div.innerHTML = DOMPurify.sanitize(html, {
       ALLOWED_TAGS,
       ALLOWED_ATTR: ['href', 'title'],

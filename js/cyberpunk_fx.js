@@ -49,7 +49,9 @@ export function initCyberpunkFX() {
   document.body.appendChild(canvas);
   const ctx = canvas.getContext('2d');
 
-  let w, h;
+  // Başlanğıc dəyər: `resize()` onları dərhal yeniləyir, lakin elan anında
+  // `undefined` olması hesablamalarda `NaN` riski yaradırdı (checkJs TS18048).
+  let w = 0, h = 0;
   function resize() {
     w = canvas.width = window.innerWidth;
     h = canvas.height = window.innerHeight;

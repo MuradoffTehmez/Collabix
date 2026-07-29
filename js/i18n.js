@@ -877,7 +877,7 @@ export function getLocaleTag(){ return localeTag(); }
 
 export function fmtDate(ts, opts){
   const d = ts instanceof Date ? ts : new Date(Number(ts));
-  if(isNaN(d)) return '';
+  if(isNaN(d.getTime())) return '';
   return new Intl.DateTimeFormat(localeTag(), opts || { day: 'numeric', month: 'short', year: 'numeric' }).format(d);
 }
 
@@ -894,6 +894,7 @@ export function fmtRelTime(ts){
   const diff = then - Date.now();
   const rtf = new Intl.RelativeTimeFormat(localeTag(), { numeric: 'auto' });
   const abs = Math.abs(diff);
+  /** @type {Array<[Intl.RelativeTimeFormatUnit, number]>} */
   const units = [
     ['year', 31536e6], ['month', 2592e6], ['week', 6048e5],
     ['day', 864e5], ['hour', 36e5], ['minute', 6e4], ['second', 1e3],
