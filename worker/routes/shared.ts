@@ -153,3 +153,25 @@ export async function userPush(c: Ctx, uid: string, payload: unknown): Promise<v
   } catch { /* realtime opsional */ }
 }
 
+/**
+ * R2-dən toplu silmə — AUDIT-TASK-9 / D-1.
+ *
+ * Əvvəl `keys.slice(0, 100)` (deleteAccount) və `keys.slice(0, 30)` (deletePost)
+ * işlədilirdi. Limitdən çox şəkli olan istifadəçi hesabını siləndə artıq fayllar
+ * R2-də YETİM qalırdı: GDPR "unudulmaq hüququ" yarımçıq icra olunur, heç bir
+ * xəta görünmür, sonrakı audit isə D1-ə baxdığı üçün problemi tapmır.
+ * Bu, Task 8 §7.b ilə eyni sinifdir — sərhəd test datasının üstündə olmadıqca
+ * fərq görünmür.
+ *
+ * R2 binding-i bir `delete()` çağırışında ən çox 1000 açar qəbul edir → hissələmə.
+ */
+const R2_DELETE_CHUNK = 1000;
+
+export async function deleteR2Keys(c: Ctx, keys: string[]): Promise<void> {
+  const uniq = [...new Set(keys.filter(k => typeof k === 'string' && !!k))];
+  for (let i = 0; i < uniq.length; i += R2_DELETE_CHUNK) {
+    // Fayl silinməsi əsas əməliyyatı (hesab/post silmə) BLOKLAMAMALIDIR —
+    // əvvəlki `.catch(() => {})` davranışı qorunur.
+    await c.env.FILES.delete(uniq.slice(i, i + R2_DELETE_CHUNK)).catch(() => {});
+  }
+}
