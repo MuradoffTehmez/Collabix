@@ -506,6 +506,39 @@ export interface RateLimitResult {
   ok: boolean;
   /** `Retry-After` başlığı üçün — cari pəncərənin bitməsinə qalan saniyə. */
   retryAfter: number;
+  /** Diaqnostika: qərarı hansı mexanizm verdi (AUDIT-TASK-9 / A-2 telemetriya). */
+  mechanism: RlMechanism;
+}
+
+export type RlMechanism = 'do' | 'kv';
+
+/**
+ * 🔴 MÜVƏQQƏTİ GERİ QAYTARMA BAYRAĞI — AUDIT-TASK-9 / H-3, §5.3.
+ *
+ * `RL_MECHANISM=kv` bütün səbətləri köhnə (atomik OLMAYAN) KV yoluna qaytarır.
+ * Yalnız miqrasiya dövründəki gözlənilməz problem üçün nəzərdə tutulub.
+ *
+ * ⛔ SİLİNMƏ ÖHDƏLİYİ: atomik mexanizm istehsalda 2 həftə stabil işlədikdən
+ *    sonra BU FUNKSİYA, `RL_MECHANISM` var-ı və aşağıdakı `kvHit` yolu
+ *    SİLİNMƏLİDİR. Əsas: AUDIT-TASK-1-in `ARCHIVE_HOT_DAYS = 3650` dərsi —
+ *    "müvəqqəti" bayraq öhdəliklə yazılmasa illərlə qalır və gizli qüsur örtür.
+ *
+ * Bayraq QOYULMAYANDA hədəf vəziyyət işləyir: təhlükəsizlik → DO, xərc → KV.
+ * `RL_MECHANISM=do` xərc səbətlərini DO-ya KÖÇÜRMÜR — taksonomiya qərarı
+ * (AUDIT-TASK-4 §4.1) qəsdən qorunur.
+ */
+function mechanismFor(env: Env, cfg: RateBucketCfg): RlMechanism {
+  if ((env.RL_MECHANISM || '').toLowerCase() === 'kv') return 'kv';
+  if (!cfg.critical) return 'kv';
+  // Binding ÜMUMİYYƏTLƏ yoxdursa (konfiq hələ tətbiq olunmayıb) KV-yə düşürük.
+  // Bu, `catch` blokundakı FAIL-CLOSED qaydasından FƏRQLİDİR və qəsdəndir:
+  // runtime nasazlığı ilə konfiq çatışmazlığı eyni şey deyil — sonuncuda
+  // fail-closed bütün girişi bloklayıb saytı özümüz çökdürərdik.
+  if (!env.RATE_LIMIT_DO) {
+    console.error('RATE_LIMIT_DO binding-i yoxdur — təhlükəsizlik səbəti KV-yə düşdü', cfg);
+    return 'kv';
+  }
+  return 'do';
 }
 
 export async function rateLimit(
@@ -517,31 +550,47 @@ export async function rateLimit(
   const win = Math.floor(nowSec / cfg.windowSec);
   // Sabit pəncərə: sayğac pəncərə sonunda sıfırlanır, ona görə "nə vaxt təkrar
   // cəhd et" sualının dəqiq cavabı pəncərənin bitməsinə qalan vaxtdır.
+  // ⚠ Bu hesab HƏR İKİ mexanizm üçün eynidir — `Retry-After` semantikası
+  // miqrasiyada dəyişmir (AUDIT-TASK-4 §4.6 reqressiyası).
   const retryAfter = cfg.windowSec - (nowSec % cfg.windowSec);
 
   const identity = cfg.key === 'auto' && uid
     ? `u:${uid}`
     : `i:${normalizeIp(req.headers.get('CF-Connecting-IP') || '')}`;
-  const key = `rl:${bucket}:${identity}:${win}`;
+  const mechanism = mechanismFor(env, cfg);
 
   try {
-    const cur = parseInt((await env.SESSIONS.get(key)) || '0', 10);
-    if (cur >= limit) return { ok: false, retryAfter };
-
-    // ⚠ MƏLUM VƏ QƏBUL EDİLMİŞ İTKİ (AUDIT-TASK-4 §5.2):
-    // (1) oxu→yaz atomik deyil — paralel sorğular eyni `cur` dəyərini görür;
-    // (2) KV eyni açara saniyədə ~1 yazı qəbul edir — aktiv istifadəçidə
-    //     artımların bir hissəsi sükutla itir.
-    // Yəni faktiki limit elan ediləndən bir qədər YUXARIDIR. Xərc qoruyucusu
-    // üçün bu məqbuldur. "Limiter işləmir" kimi səhv diaqnoz qoyulmasın deyə
-    // burada açıq yazılıb — atomik həll AUDIT-TASK-9-dadır.
-    await env.SESSIONS.put(key, String(cur + 1), { expirationTtl: cfg.windowSec + 60 });
-    return { ok: true, retryAfter };
+    const ok = mechanism === 'do'
+      // Pəncərə DO-ya ARQUMENT kimi ötürülür, açara QATILMIR: əks halda hər
+      // pəncərədə yeni DO instansı yaranar və köhnələri storage-da qalardı.
+      ? await env.RATE_LIMIT_DO!
+        .get(env.RATE_LIMIT_DO!.idFromName(`rl:${bucket}:${identity}`))
+        .hit(win, limit, cfg.windowSec)
+      : await kvHit(env, `rl:${bucket}:${identity}:${win}`, limit, cfg.windowSec);
+    return { ok, retryAfter, mechanism };
   } catch (e) {
-    // §5.3 — KV nasazlığında davranış səbətin sinfindən asılıdır:
-    //   xərc qoruyucusu → FAIL-OPEN (KV nasazlığı bütün saytı çökdürməməlidir),
+    // §5.3 — nasazlıqda davranış səbətin SİNFİNDƏN asılıdır:
+    //   xərc qoruyucusu → FAIL-OPEN (nasazlıq bütün saytı çökdürməməlidir),
     //   təhlükəsizlik   → FAIL-CLOSED (limiter işləmirsə brute-force açıqdır).
-    console.error('rateLimit KV xətası', bucket, (e as any)?.message || e);
-    return { ok: !cfg.critical, retryAfter };
+    console.error('rateLimit xətası', mechanism, bucket, (e as any)?.message || e);
+    return { ok: !cfg.critical, retryAfter, mechanism };
   }
+}
+
+/**
+ * Köhnə KV yolu — XƏRC qoruyucuları üçün QƏSDƏN saxlanılır (taksonomiya).
+ *
+ * ⚠ ATOMİK DEYİL və bu, məlum-qəbul edilmiş itkidir (AUDIT-TASK-4 §5.2):
+ *   (1) oxu→yaz yarışı — paralel sorğular eyni `cur` dəyərini görür;
+ *   (2) KV eyni açara saniyədə ~1 yazı qəbul edir → artımların bir hissəsi
+ *       sükutla itir.
+ * Yəni faktiki limit elan ediləndən bir qədər YUXARIDIR. 20 əvəzinə 25 AI
+ * çağırışı keçsə təsir kiçikdir; parol hücumunda isə deyil — məhz ona görə
+ * `critical: true` səbətlər artıq buradan KEÇMİR.
+ */
+async function kvHit(env: Env, key: string, limit: number, windowSec: number): Promise<boolean> {
+  const cur = parseInt((await env.SESSIONS.get(key)) || '0', 10);
+  if (cur >= limit) return false;
+  await env.SESSIONS.put(key, String(cur + 1), { expirationTtl: windowSec + 60 });
+  return true;
 }

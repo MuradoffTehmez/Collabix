@@ -142,12 +142,19 @@
   "durable_objects": {
     "bindings": [
       { "name": "ROOM_DO", "class_name": "RoomDO" },
-      { "name": "PRESENCE_DO", "class_name": "PresenceDO" }
+      { "name": "PRESENCE_DO", "class_name": "PresenceDO" },
+      // ATOMİK rate limiter (AUDIT-TASK-9 / H-3). Hər limit açarına AYRICA
+      // instans (`idFromName('rl:auth:i:<ip>')`) — DO tək-axınlı olduğu üçün
+      // `get`→`put` yarışsızdır. Native `ratelimit` binding-i seçilmədi:
+      // o, PoP BAŞINA sayır və sənəddə "not an accurate accounting system"
+      // kimi təsvir olunur (əsaslandırma: worker/rate-limit-do.ts başlığı).
+      { "name": "RATE_LIMIT_DO", "class_name": "RateLimitDO" }
     ]
   },
   "migrations": [
     { "tag": "v1", "new_sqlite_classes": ["RoomDO"] },
-    { "tag": "v2", "new_sqlite_classes": ["PresenceDO"] }
+    { "tag": "v2", "new_sqlite_classes": ["PresenceDO"] },
+    { "tag": "v3", "new_sqlite_classes": ["RateLimitDO"] }
   ],
   
   "workflows": [

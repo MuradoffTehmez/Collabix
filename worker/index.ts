@@ -14,6 +14,7 @@ import { handleSearchSemantic } from './services/search';
 // Durable Object-lar (realtime) — binding class_name-ləri burdan export olunmalıdır.
 export { RoomDO } from './room-do';
 export { PresenceDO } from './presence-do';
+export { RateLimitDO } from './rate-limit-do';
 export { CollabixWorkflow } from './workflows/index';
 
 // TASK-11 team route-ları ayrıca modulda saxlanılır və LAZY yüklənir: bundle
@@ -495,7 +496,11 @@ export default {
               const sampled = bucket !== 'read' || Math.random() < 0.1;
               if (sampled) {
                 ctx.waitUntil(logSecurityEvent(env, request, {
-                  type: 'rate_limit', severity: 'warning', meta: { bucket, path },
+                  // `mechanism` — AUDIT-TASK-9 / A-2: miqrasiya dövründə
+                  // "hansı limiter qərar verdi" sualı jurnaldan cavablanmalıdır,
+                  // əks halda `RL_MECHANISM` bayrağının təsiri görünməz olur.
+                  type: 'rate_limit', severity: 'warning',
+                  meta: { bucket, path, mechanism: verdict.mechanism },
                 }));
               }
               // `code` maşın üçündür (util.ts fəlsəfəsi), `Retry-After` isə HTTP
