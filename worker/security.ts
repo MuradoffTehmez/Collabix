@@ -217,7 +217,10 @@ export async function verifyTurnstile(
 // elan edilib R2-yə düşsə, /files/ üzərindən stored-XSS vektoru olardı.
 // Ona görə tip BAYTLARDAN oxunur, elandan yox.
 export type SniffedType =
-  | 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp' | 'application/pdf' | null;
+  | 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp' | 'application/pdf'
+  // Media (0044) — bax `sniffType`-dakı imzalar.
+  | 'video/mp4' | 'video/webm' | 'audio/mp4' | 'audio/mpeg' | 'audio/ogg' | 'audio/wav'
+  | null;
 
 export function sniffType(buf: Uint8Array): SniffedType {
   const b = buf;
@@ -234,6 +237,29 @@ export function sniffType(buf: Uint8Array): SniffedType {
       b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50) return 'image/webp';
   // PDF: "%PDF-"
   if (b[0] === 0x25 && b[1] === 0x50 && b[2] === 0x44 && b[3] === 0x46 && b[4] === 0x2d) return 'application/pdf';
+
+  /* ── Video / audio (0044) ───────────────────────────────────────────────
+   * ⚠ Şəkillərdəki eyni prinsip: tip BAYTLARDAN oxunur, `file.type`-a
+   *   inanılmır. Bu imzalar olmadan media faylı `unknown_signature` ilə
+   *   rədd edilirdi. */
+
+  // MP4 / M4A / MOV: 4-7 baytda "ftyp", sonra brand.
+  if (b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70) {
+    // Brand `M4A ` → audio, qalanları video kimi verilir.
+    const brand = String.fromCharCode(b[8], b[9], b[10], b[11]);
+    return brand.startsWith('M4A') ? 'audio/mp4' : 'video/mp4';
+  }
+  // WebM / Matroska: EBML başlığı 1A 45 DF A3.
+  if (b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf && b[3] === 0xa3) return 'video/webm';
+  // OGG: "OggS" — həm audio, həm video ola bilər; audio daha yayğındır.
+  if (b[0] === 0x4f && b[1] === 0x67 && b[2] === 0x67 && b[3] === 0x53) return 'audio/ogg';
+  // WAV: "RIFF" .... "WAVE" (WEBP ilə eyni RIFF konteyneri — 8-11 bayt ayırır).
+  if (b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 &&
+      b[8] === 0x57 && b[9] === 0x41 && b[10] === 0x56 && b[11] === 0x45) return 'audio/wav';
+  // MP3: "ID3" teqi, və ya çərçivə sinxronu (FF Ex/Fx).
+  if (b[0] === 0x49 && b[1] === 0x44 && b[2] === 0x33) return 'audio/mpeg';
+  if (b[0] === 0xff && (b[1] & 0xe0) === 0xe0) return 'audio/mpeg';
+
   return null;
 }
 

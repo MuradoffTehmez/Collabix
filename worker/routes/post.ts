@@ -249,6 +249,7 @@ export async function feed(c: Ctx) {
  *   variantında `user_id = ?` əlavə bir yer tutur.
  */
 async function loadPostReactions(c: Ctx, ids: string[]) {
+  // Bir istifadəçinin bir postda BİR reaksiyası olur (PK) → tək dəyər.
   const mine = new Map<string, string>();
   const agg = new Map<string, Record<string, number>>();
   if (!ids.length) return [mine, agg] as const;
@@ -902,8 +903,10 @@ async function createPollFor(c: Ctx, postId: string, poll: any) {
   // doğulan kimi bağlayardı, bu isə yəqin ki, səhv girişdir.
   const closesAt = Number(poll.closesAt) > ts ? Number(poll.closesAt) : null;
   await D(c).prepare(
-    'INSERT INTO polls (id, post_id, question, closes_at, hide_results, created_at) VALUES (?,?,?,?,?,?)',
-  ).bind(pollId, postId, question, closesAt, poll.hideResults ? 1 : 0, ts).run();
+    `INSERT INTO polls (id, post_id, question, closes_at, hide_results, multi_choice, anonymous, created_at)
+     VALUES (?,?,?,?,?,?,?,?)`,
+  ).bind(pollId, postId, question, closesAt, poll.hideResults ? 1 : 0,
+    poll.multiChoice ? 1 : 0, poll.anonymous ? 1 : 0, ts).run();
   for (let i = 0; i < options.length; i++) {
     await D(c).prepare('INSERT INTO poll_options (id, poll_id, text, position) VALUES (?,?,?,?)')
       .bind(uuid(), pollId, options[i], i).run();
@@ -941,7 +944,9 @@ async function loadPolls(c: Ctx, postIds: string[]) {
   }
   // Tip üzrə saylar + mənim səsim.
   const counts = new Map<string, number>();
-  const mine = new Map<string, string>();
+  // ⚠ Çoxlu seçimdə bir istifadəçinin bir sorğuda BİR NEÇƏ sətri olur →
+  //   dəyər massivdir. Tək seçimdə massivin uzunluğu 1 olur.
+  const mine = new Map<string, string[]>();
   for (const chunk of chunkForD1(pollIds)) {
     const agg = await D(c).prepare(
       `SELECT option_id, COUNT(*) AS n FROM poll_votes
@@ -954,20 +959,29 @@ async function loadPolls(c: Ctx, postIds: string[]) {
       `SELECT poll_id, option_id FROM poll_votes
         WHERE user_id = ? AND poll_id IN (${placeholders(chunk.length)})`,
     ).bind(c.user!.id, ...chunk).all<any>();
-    for (const v of r.results) mine.set(v.poll_id as string, v.option_id as string);
+    for (const v of r.results) {
+      const k = v.poll_id as string;
+      if (!mine.has(k)) mine.set(k, []);
+      mine.get(k)!.push(v.option_id as string);
+    }
   }
 
   for (const p of polls) {
     const opts = optsBy.get(p.id) || [];
-    const myOption = mine.get(p.id) || null;
+    const myOptions = mine.get(p.id) || [];
+    // ⚠ Çoxlu seçimdə "cəm səs" ≠ "səs verən adam sayı": bir nəfər üç variant
+    //   seçsə cəm 3 olur. Faizlər cəmə görə hesablanır ki, çubuqlar 100%-i
+    //   keçməsin — bu, LinkedIn/X-in də işlətdiyi modeldir.
     const total = opts.reduce((n: number, o: any) => n + (counts.get(o.id) || 0), 0);
     const closed = !!p.closes_at && p.closes_at <= now();
     // ⚠ Nəticə GİZLƏDİLİRSƏ saylar CAVABDA DA getmir — klientdə gizlətmək
     //   kifayət deyil, kim istəsə şəbəkə cavabına baxardı.
-    const reveal = !p.hide_results || !!myOption || closed;
+    const reveal = !p.hide_results || myOptions.length > 0 || closed;
     out.set(p.post_id as string, {
       id: p.id, question: p.question, closesAt: p.closes_at || null,
-      hideResults: !!p.hide_results, closed, myOption, total: reveal ? total : null,
+      hideResults: !!p.hide_results, closed,
+      multiChoice: !!p.multi_choice, anonymous: !!p.anonymous,
+      myOptions, total: reveal ? total : null,
       options: opts.map((o: any) => ({
         id: o.id, text: o.text,
         votes: reveal ? (counts.get(o.id) || 0) : null,
@@ -989,18 +1003,32 @@ export async function pollVote(c: Ctx, postId: string) {
     .bind(optionId, poll.id).first<any>();
   if (!opt) return badReq('Variant tapılmadı.');
 
-  const prev = await D(c).prepare('SELECT option_id FROM poll_votes WHERE poll_id = ? AND user_id = ?')
-    .bind(poll.id, c.user!.id).first<any>();
-  if (prev?.option_id === optionId) {
-    await D(c).prepare('DELETE FROM poll_votes WHERE poll_id = ? AND user_id = ?')
-      .bind(poll.id, c.user!.id).run();
-    return json({ ok: true, myOption: null });
+  // Cari seçimlər (çoxlu rejimdə bir neçə sətir ola bilər).
+  const cur = await D(c).prepare('SELECT option_id FROM poll_votes WHERE poll_id = ? AND user_id = ?')
+    .bind(poll.id, c.user!.id).all<any>();
+  const chosen = new Set(cur.results.map((r: any) => r.option_id as string));
+
+  if (chosen.has(optionId)) {
+    // Hər iki rejimdə: seçilmiş variantı təkrar basmaq onu GÖTÜRÜR.
+    await D(c).prepare('DELETE FROM poll_votes WHERE poll_id = ? AND user_id = ? AND option_id = ?')
+      .bind(poll.id, c.user!.id, optionId).run();
+    chosen.delete(optionId);
+  } else {
+    // ⚠ TƏK SEÇİM qaydası artıq SXEMDƏ deyil, BURADA təmin olunur: yeni PK
+    //   `(poll_id, user_id, option_id)` bir neçə sətrə icazə verir, ona görə
+    //   tək rejimdə köhnə seçimlər açıq şəkildə silinməlidir. Unudulsa
+    //   istifadəçi tək seçimli sorğuda bir neçə variant yığa bilərdi.
+    if (!poll.multi_choice) {
+      await D(c).prepare('DELETE FROM poll_votes WHERE poll_id = ? AND user_id = ?')
+        .bind(poll.id, c.user!.id).run();
+      chosen.clear();
+    }
+    await D(c).prepare(
+      `INSERT OR IGNORE INTO poll_votes (poll_id, user_id, option_id, created_at) VALUES (?,?,?,?)`,
+    ).bind(poll.id, c.user!.id, optionId, now()).run();
+    chosen.add(optionId);
   }
-  await D(c).prepare(
-    `INSERT INTO poll_votes (poll_id, user_id, option_id, created_at) VALUES (?,?,?,?)
-       ON CONFLICT(poll_id, user_id) DO UPDATE SET option_id = excluded.option_id`,
-  ).bind(poll.id, c.user!.id, optionId, now()).run();
-  return json({ ok: true, myOption: optionId });
+  return json({ ok: true, myOptions: [...chosen] });
 }
 
 /* ================= POST: REAKSİYA / MODERASİYA / ŞİKAYƏT (0040) =================

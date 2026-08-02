@@ -27,7 +27,7 @@ function newBlock(type){
  *   bir postda ən çox bir sorğu olur (`polls.post_id` UNIQUE). Blok modelinə
  *   salsaydıq, `meaningful` filtri və blok sırası məntiqi lazımsız yerə
  *   mürəkkəbləşərdi. Ona görə tag-lar kimi ayrıca bölmədir. */
-let poll = null;   // null = sorğu yoxdur; { question, options: string[], hideResults }
+let poll = null;   // null = sorğu yoxdur; { question, options, hideResults, multiChoice, anonymous, days }
 
 function renderPoll(){
   const box = document.getElementById('composerPoll');
@@ -59,6 +59,20 @@ function renderPoll(){
 
   const hide = el('input', { type: 'checkbox', checked: !!poll.hideResults,
     onchange: e => { poll.hideResults = e.target.checked; } });
+  const multi = el('input', { type: 'checkbox', checked: !!poll.multiChoice,
+    onchange: e => { poll.multiChoice = e.target.checked; } });
+  const anon = el('input', { type: 'checkbox', checked: !!poll.anonymous,
+    onchange: e => { poll.anonymous = e.target.checked; } });
+
+  // Müddət GÜN ilə seçilir, tarix seçici ilə deyil: sorğular qısamüddətlidir
+  // və "3 gün" seçmək təqvimdən tarix tapmaqdan sürətlidir.
+  // ⚠ Dəyər `days`-dir; `closesAt` mütləq zaman damğasına PAYLAŞMA anında
+  //   çevrilir — kompozitor açıq qalarsa müddət sürüşməsin.
+  const dur = el('select', { class: 'poll-dur',
+    onchange: e => { poll.days = Number(e.target.value) || 0; } });
+  for(const [v, key] of [[0, 'poll.dur_none'], [1, 'poll.dur_1'], [3, 'poll.dur_3'], [7, 'poll.dur_7']]){
+    dur.append(el('option', { value: String(v), selected: (poll.days || 0) === v }, t(key)));
+  }
 
   box.append(
     el('div', { class: 'poll-head' },
@@ -70,6 +84,9 @@ function renderPoll(){
     q, opts,
     el('div', { class: 'poll-foot' },
       addOpt,
+      el('label', { class: 'poll-hide' }, dur, t('poll.duration')),
+      el('label', { class: 'poll-hide' }, multi, t('poll.multi')),
+      el('label', { class: 'poll-hide' }, anon, t('poll.anonymous')),
       el('label', { class: 'poll-hide' }, hide, t('poll.hide_results')),
     ),
   );
@@ -82,7 +99,15 @@ function pollPayload(){
   const question = (poll.question || '').trim();
   const options = poll.options.map(o => (o || '').trim()).filter(Boolean);
   if(!question || options.length < 2) return undefined;
-  return { question, options, hideResults: !!poll.hideResults };
+  // Gün → mütləq zaman damğası (server keçmiş tarixi rədd edir).
+  const closesAt = poll.days ? Date.now() + poll.days * 86400000 : undefined;
+  return {
+    question, options,
+    hideResults: !!poll.hideResults,
+    multiChoice: !!poll.multiChoice,
+    anonymous: !!poll.anonymous,
+    closesAt,
+  };
 }
 
 function blockNode(b){

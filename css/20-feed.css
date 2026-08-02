@@ -2194,3 +2194,14 @@
   color: var(--muted);
   cursor: pointer;
 }
+
+/* Sorğu seçiciləri (müddət/çoxlu/anonim) — dar ekranda alt-alta düşür. */
+.poll-dur {
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-xs);
+}

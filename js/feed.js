@@ -331,8 +331,9 @@ function pollNode(p){
     const total = poll.total || 0;
     box.append(el('div', { class: 'poll-q' }, poll.question));
 
+    const mineSet = new Set(poll.myOptions || []);
     for(const o of poll.options){
-      const mine = poll.myOption === o.id;
+      const mine = mineSet.has(o.id);
       // Faiz yalnız nəticə açıq olduqda hesablanır.
       const pct = gizli || !total ? 0 : Math.round((o.votes / total) * 100);
       const row = el('button', {
@@ -340,6 +341,10 @@ function pollNode(p){
         class: 'poll-opt' + (mine ? ' mine' : '') + (poll.closed ? ' closed' : ''),
         disabled: poll.closed,
         // Vəziyyət RƏNGDƏN başqa yolla da bildirilir (WCAG color-not-only).
+        // ⚠ Çoxlu seçimdə semantika CHECKBOX-dur, tək seçimdə RADIO —
+        //   ekran oxuyucusuna düzgün model verilir.
+        role: poll.multiChoice ? 'checkbox' : 'radio',
+        'aria-checked': String(mine),
         'aria-pressed': String(mine),
         'aria-label': o.text + (gizli ? '' : ` — ${pct}%`),
         onclick: () => vote(o.id),
@@ -358,6 +363,8 @@ function pollNode(p){
     if(poll.closed) meta.push(t('poll.closed'));
     else if(poll.closesAt) meta.push(t('poll.closes').replace('{t}', fmtRelTime(poll.closesAt)));
     if(gizli) meta.push(t('poll.hidden_hint'));
+    if(poll.multiChoice) meta.push(t('poll.multi_hint'));
+    if(poll.anonymous) meta.push(t('poll.anon_hint'));
     box.append(el('div', { class: 'poll-meta' }, meta.join(' · ')));
     paintIcons(box);
   };
@@ -366,18 +373,25 @@ function pollNode(p){
     if(poll.closed) return;
     const prev = JSON.parse(JSON.stringify(poll));
     // Optimistik: sayğacları yerli hesabla.
-    const wasMine = poll.myOption;
-    const next = wasMine === optionId ? null : optionId;
+    const was = new Set(poll.myOptions || []);
+    const next = new Set(was);
+    if(was.has(optionId)) next.delete(optionId);
+    else {
+      // Tək seçimdə yeni seçim köhnəni əvəz edir (server də belə edir).
+      if(!poll.multiChoice) next.clear();
+      next.add(optionId);
+    }
     if(poll.total !== null){
       for(const o of poll.options){
-        if(o.id === wasMine) o.votes = Math.max(0, o.votes - 1);
-        if(o.id === next) o.votes += 1;
+        const əvvəl = was.has(o.id), sonra = next.has(o.id);
+        if(əvvəl && !sonra) o.votes = Math.max(0, o.votes - 1);
+        if(!əvvəl && sonra) o.votes += 1;
       }
       poll.total = poll.options.reduce((n, o) => n + o.votes, 0);
     }
-    poll.myOption = next;
+    poll.myOptions = [...next];
     // Gizli nəticə səsdən SONRA açılır — server də bunu edir.
-    if(poll.hideResults && next && poll.total === null) poll.total = 0;
+    if(poll.hideResults && next.size && poll.total === null) poll.total = 0;
     paint();
     try{
       await api(`/posts/${p.id}/poll/vote`, { method: 'POST', body: { optionId } });
