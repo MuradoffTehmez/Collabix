@@ -104,6 +104,8 @@ export {
   commentLikePut, commentLikeDelete,
   commentReactionPut, commentReactionDelete,
   commentPin, commentUnpin, commentHide, commentRestore, commentReport,
+  postReactionPut, postReactionDelete,
+  postPin, postUnpin, postHide, postRestore, postReport,
 } from './routes/post';
 
 export {

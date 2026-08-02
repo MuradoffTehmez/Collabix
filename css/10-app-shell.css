@@ -583,7 +583,13 @@ select.code-lang-sel.show {
     0 4px 12px rgba(0,0,0,.06),
     0 12px 36px rgba(0,0,0,.04);
   transition: transform 220ms ease-out, box-shadow 220ms ease-out, border-color 220ms ease-out;
-  contain: content;
+  /* ⚠ ƏVVƏL `contain: content` idi = `layout paint style`.
+     `paint` hissəsi TÖRƏMƏLƏRİ kartın qutusuna KƏSİR — ona görə açıq "..."
+     menyusunun son bəndləri ("Sancaqla", "Gizlət") görünmürdü. `overflow`
+     visible olduğu üçün səbəb overflow axtarışında tapılmırdı.
+     `paint` çıxarıldı, `layout`+`style` qaldı: performans faydasının böyük
+     hissəsi saxlanılır, kənara çıxan popover-lər isə düzgün göstərilir. */
+  contain: layout style;
 }
 
 .feed-card:hover {

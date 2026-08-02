@@ -742,6 +742,96 @@ export async function commentLikeDelete(c: Ctx, _postId: string, cid: string) {
   return json({ ok: true });
 }
 
+/* ================= POST: REAKSİYA / MODERASİYA / ŞİKAYƏT (0040) =================
+ * ⚠ Şərhlərdəki (0039) modelin EYNİSİ — bilərəkdən eyni struktur, eyni
+ *   invariantlar. Fərqləndirmək iki ayrı davranış yaradar və biri
+ *   düzəldiləndə digəri unudulardı. */
+
+/** `like` tipini köhnə `likes` + `posts.like_count` ilə sinxron saxlayır. */
+async function syncPostLike(c: Ctx, postId: string, wasLike: boolean, nowLike: boolean) {
+  if (nowLike && !wasLike) {
+    const ins = await D(c).prepare('INSERT OR IGNORE INTO likes (post_id, user_id, created_at) VALUES (?,?,?)')
+      .bind(postId, c.user!.id, now()).run();
+    if (ins.meta.changes > 0) await D(c).prepare('UPDATE posts SET like_count = like_count + 1 WHERE id = ?').bind(postId).run();
+  } else if (!nowLike && wasLike) {
+    const del = await D(c).prepare('DELETE FROM likes WHERE post_id = ? AND user_id = ?').bind(postId, c.user!.id).run();
+    if (del.meta.changes > 0) await D(c).prepare('UPDATE posts SET like_count = MAX(0, like_count - 1) WHERE id = ?').bind(postId).run();
+  }
+}
+
+export async function postReactionPut(c: Ctx, id: string) {
+  const b = await readJson(c.req);
+  if (!isReaction(b.type)) return badReq('Naməlum reaksiya tipi.');
+  const post = await D(c).prepare('SELECT author_id FROM posts WHERE id = ?').bind(id).first<any>();
+  if (!post) return err('Post tapılmadı.', 404);
+
+  const prev = await D(c).prepare('SELECT type FROM post_reactions WHERE post_id = ? AND user_id = ?')
+    .bind(id, c.user!.id).first<any>();
+  if (prev?.type === b.type) return json({ ok: true, type: b.type });
+
+  await D(c).prepare(
+    `INSERT INTO post_reactions (post_id, user_id, type, created_at) VALUES (?,?,?,?)
+       ON CONFLICT(post_id, user_id) DO UPDATE SET type = excluded.type`,
+  ).bind(id, c.user!.id, b.type, now()).run();
+  await syncPostLike(c, id, prev?.type === 'like', b.type === 'like');
+  if (!prev) await notify(c, post.author_id, 'like', 'paylaşımına reaksiya verdi', id);
+  return json({ ok: true, type: b.type });
+}
+
+export async function postReactionDelete(c: Ctx, id: string) {
+  const prev = await D(c).prepare('SELECT type FROM post_reactions WHERE post_id = ? AND user_id = ?')
+    .bind(id, c.user!.id).first<any>();
+  if (!prev) return json({ ok: true });
+  await D(c).prepare('DELETE FROM post_reactions WHERE post_id = ? AND user_id = ?').bind(id, c.user!.id).run();
+  await syncPostLike(c, id, prev.type === 'like', false);
+  return json({ ok: true });
+}
+
+/** Sancaq — YALNIZ admin: post sancağı qlobal feed-ə təsir edir. */
+export async function postPin(c: Ctx, id: string) {
+  if (!c.isAdmin) return err('İcazə yoxdur.', 403, 'forbidden');
+  const row = await D(c).prepare('SELECT id FROM posts WHERE id = ?').bind(id).first<any>();
+  if (!row) return err('Post tapılmadı.', 404);
+  await D(c).prepare('UPDATE posts SET pinned_at = NULL WHERE pinned_at IS NOT NULL').run();
+  await D(c).prepare('UPDATE posts SET pinned_at = ? WHERE id = ?').bind(now(), id).run();
+  return json({ ok: true, pinned: true });
+}
+
+export async function postUnpin(c: Ctx, id: string) {
+  if (!c.isAdmin) return err('İcazə yoxdur.', 403, 'forbidden');
+  await D(c).prepare('UPDATE posts SET pinned_at = NULL WHERE id = ?').bind(id).run();
+  return json({ ok: true, pinned: false });
+}
+
+export async function postHide(c: Ctx, id: string) {
+  if (!c.isAdmin) return err('İcazə yoxdur.', 403, 'forbidden');
+  const r = await D(c).prepare('UPDATE posts SET hidden_at = ?, hidden_by = ? WHERE id = ?')
+    .bind(now(), c.user!.id, id).run();
+  if (!r.meta.changes) return err('Post tapılmadı.', 404);
+  return json({ ok: true, hidden: true });
+}
+
+export async function postRestore(c: Ctx, id: string) {
+  if (!c.isAdmin) return err('İcazə yoxdur.', 403, 'forbidden');
+  const r = await D(c).prepare('UPDATE posts SET hidden_at = NULL, hidden_by = NULL WHERE id = ?').bind(id).run();
+  if (!r.meta.changes) return err('Post tapılmadı.', 404);
+  return json({ ok: true, hidden: false });
+}
+
+export async function postReport(c: Ctx, id: string) {
+  const b = await readJson(c.req);
+  const reason = clampStr(b.reason, 300).trim();
+  if (!reason) return badReq('Səbəb boş ola bilməz.');
+  const row = await D(c).prepare('SELECT id FROM posts WHERE id = ?').bind(id).first<any>();
+  if (!row) return err('Post tapılmadı.', 404);
+  const ins = await D(c).prepare(
+    `INSERT OR IGNORE INTO post_reports (id, post_id, reporter_id, reporter_name, reason, created_at)
+     VALUES (?,?,?,?,?,?)`,
+  ).bind(uuid(), id, c.user!.id, c.user!.name, reason, now()).run();
+  if (!ins.meta.changes) return err('Bu paylaşımı artıq şikayət etmisən.', 409, 'already_reported');
+  return json({ ok: true });
+}
+
 /* ================= ŞƏRH: REAKSİYA / MODERASİYA / ŞİKAYƏT (0039) ================= */
 
 /**

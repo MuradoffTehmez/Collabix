@@ -1861,3 +1861,25 @@
   .c-react-picker { left: 50%; transform: translateX(-50%); }
   .c-menu { right: auto; left: 0; }
 }
+
+/* ⚠ AÇIQ MENYUNUN KƏSİLMƏSİ (AUDIT-UI)
+   Post kartının "..." menyusu 184px (5 bənd) idi, amma yalnız 3 bənd
+   görünürdü — "Sancaqla" və "Gizlət" kartın kənarında kəsilirdi.
+
+   İKİ AYRI SƏBƏB var idi, ikisi də düzəldilməlidir:
+
+   1) `contain: content` — bu, `paint` containment DAXİL EDİR və törəmələri
+      elementin qutusuna KƏSİR. `overflow: visible` olsa belə işləyir, ona görə
+      overflow axtarışı heç nə tapmırdı. Menyu açıqkən söndürülür.
+
+   2) `.feed-card` `position:relative`-dir, amma `z-index`-i yoxdur → kartlar
+      DOM sırası ilə çəkilir və SONRAKI kart əvvəlkinin menyusunu örtürdü.
+      Menyunun öz `z-index:50`-si kömək etmir: o yalnız ÖZ kartının yığın
+      konteksti daxilində işləyir.
+
+   Containment yalnız menyu AÇIQ olduqda götürülür — performans faydası
+   qalan bütün kartlarda saxlanılır. */
+.feed-card:has(.card-menu-dropdown.open) {
+  contain: none;
+  z-index: 60;
+}

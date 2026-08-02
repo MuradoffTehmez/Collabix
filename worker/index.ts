@@ -166,6 +166,14 @@ const ROUTES: Route[] = [
   { method: 'PUT', pattern: /^\/api\/posts\/([\w-]+)\/comments\/([\w-]+)\/hide$/, handler: R.commentHide, auth: true, rl: 'admin' },
   { method: 'DELETE', pattern: /^\/api\/posts\/([\w-]+)\/comments\/([\w-]+)\/hide$/, handler: R.commentRestore, auth: true, rl: 'admin' },
   { method: 'POST', pattern: /^\/api\/posts\/([\w-]+)\/comments\/([\w-]+)\/report$/, handler: R.commentReport, auth: true, rl: 'write' },
+  // Post reaksiya / moderasiya / şikayət (0040) — şərhlərdəki modelin eynisi.
+  { method: 'PUT', pattern: /^\/api\/posts\/([\w-]+)\/reaction$/, handler: R.postReactionPut, auth: true, rl: 'write' },
+  { method: 'DELETE', pattern: /^\/api\/posts\/([\w-]+)\/reaction$/, handler: R.postReactionDelete, auth: true, rl: 'write' },
+  { method: 'PUT', pattern: /^\/api\/posts\/([\w-]+)\/pin$/, handler: R.postPin, auth: true, rl: 'admin' },
+  { method: 'DELETE', pattern: /^\/api\/posts\/([\w-]+)\/pin$/, handler: R.postUnpin, auth: true, rl: 'admin' },
+  { method: 'PUT', pattern: /^\/api\/posts\/([\w-]+)\/hide$/, handler: R.postHide, auth: true, rl: 'admin' },
+  { method: 'DELETE', pattern: /^\/api\/posts\/([\w-]+)\/hide$/, handler: R.postRestore, auth: true, rl: 'admin' },
+  { method: 'POST', pattern: /^\/api\/posts\/([\w-]+)\/report$/, handler: R.postReport, auth: true, rl: 'write' },
 
   // rooms
   { method: 'GET', pattern: /^\/api\/rooms$/, handler: R.listRooms, auth: true, rl: 'read' },

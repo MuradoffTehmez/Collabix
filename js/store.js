@@ -285,6 +285,30 @@ export async function toggleCommentLike(postId, commentId, currentlyLiked){
   return !currentlyLiked;
 }
 
+/* ---------- post: reaksiya / moderasiya / şikayət (miqrasiya 0040) ---------- */
+// Şərhlərdəki (0039) API-nin eynisi — yalnız yol fərqlidir.
+
+export async function setPostReaction(postId, type){
+  const path = `/posts/${postId}/reaction`;
+  if(!type){ await api(path, { method: 'DELETE' }); return null; }
+  const d = await api(path, { method: 'PUT', body: { type } });
+  return d.type || type;
+}
+
+export async function setPostPinned(postId, pinned){
+  await api(`/posts/${postId}/pin`, { method: pinned ? 'PUT' : 'DELETE' });
+  return pinned;
+}
+
+export async function setPostHidden(postId, hidden){
+  await api(`/posts/${postId}/hide`, { method: hidden ? 'PUT' : 'DELETE' });
+  return hidden;
+}
+
+export async function reportPost(postId, reason){
+  return api(`/posts/${postId}/report`, { method: 'POST', body: { reason } });
+}
+
 /* ---------- şərh: reaksiya / moderasiya / şikayət (miqrasiya 0039) ---------- */
 
 /**
