@@ -34,6 +34,9 @@ import { initProfile, mountProfile } from './profile.js';
 import { initSettings } from './settings.js';
 import { initSessions, loadSessions } from './sessions.js';
 import { initAdmin, mountAdmin } from './admin.js';
+import {
+  initGovernance, mountGovernanceAdmin, mountGovernanceUser,
+} from './governance.js';
 import { initNotifs, mountNotifs, subscribeNotifs } from './notify.js';
 import { initPalette } from './palette.js';
 
@@ -108,9 +111,12 @@ const MOUNTS = {
   users: mountUsers, tasks: mountTasks, teams: mountTeams, team: mountTeam, stats: mountStats, saved: mountSaved,
   // Sessiya siyahısı hər dəfə Parametrlərə girildikdə YENİDƏN çəkilir — başqa
   // cihazdan giriş edildikdə köhnə siyahı qalmasın.
-  profil: mountProfile,
+  // ⚠ Profil mount-u İKİ işi görür: `mountProfile` təmizləyici funksiya
+  //   qaytarır, `mountGovernanceUser` isə yalnız çəkir (abunə yaratmır) —
+  //   ona görə təmizləyici kimi YALNIZ birincinin nəticəsi qaytarılır.
+  profil: () => { const stop = mountProfile(); mountGovernanceUser(); return stop; },
   settings: () => { loadSessions(); loadLinkedAccounts(); loadMfaPanel(); return () => {}; },
-  admin: mountAdmin,
+  admin: () => { const stop = mountAdmin(); mountGovernanceAdmin(); return stop; },
   post: mountPost, u: mountPubProfile,
 };
 const VALID_PAGES = Object.keys(MOUNTS);
@@ -472,6 +478,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initSettings();
   initSessions();
   initAdmin();
+  initGovernance();
   initNotifs();
 
   document.querySelectorAll('.sidebar .nav-item, .bottom-nav button').forEach(btn => {

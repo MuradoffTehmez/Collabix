@@ -27,6 +27,13 @@
 /* Tətbiq qabığı: topbar, sidebar, naviqasiya */
 @import './10-app-shell.css';
 
+/* ── DİZAYN SİSTEMİ ────────────────────────────────────────────────────────
+ * Komponent primitivləri. Səhifə modullarından ƏVVƏL gəlir ki, konkret
+ * səhifə qaydası lazım olanda primitivi basa bilsin (eyni spesifiklikdə
+ * sonuncu qazanır). Yeni ekranlar YALNIZ `c-*` siniflərini işlədir. */
+@import './15-components.css';
+@import './16-data-display.css';
+
 /* Səhifələr */
 @import './20-feed.css';
 @import './30-chat.css';

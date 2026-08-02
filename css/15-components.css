@@ -1,0 +1,401 @@
+/* 15-components.css — DİZAYN SİSTEMİ: komponent primitivləri
+ *
+ * ════════════════════════════════════════════════════════════════════════════
+ * NİYƏ BU QAT VAR
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * `styles.css` 19 modula bölünəndə məlum oldu ki, eyni vizual element
+ * (düymə, nişan, cədvəl) hər səhifədə YENİDƏN yazılıb: `btn-small`,
+ * `btn-mini`, `btn-primary`, `at-icon-btn`, `dismiss` … Nəticə: yeni ekran
+ * yazan developer hansını seçəcəyini bilmir və hər ekran bir az fərqli görünür.
+ *
+ * Bu fayl TƏK VİZUAL DİL verir. Yeni ekranlar YALNIZ buradan istifadə edir.
+ *
+ * ⚠ MÖVCUD SİNİFLƏR SİLİNMİR. Köçürmə tədricidir — `c-*` və köhnə siniflər
+ *   yan-yana yaşayır. Kütləvi əvəzləmə `git blame`-i məhv edər və AUDIT-9-un
+ *   responsive audit nəticələrini etibarsız edərdi.
+ *
+ * ⚠ AD FƏZASI `c-` (component): mövcud siniflərlə də, `u-` utility qatı ilə
+ *   də toqquşmur.
+ *
+ * 🔴 RƏNG SABİTİ YOXDUR — yalnız `var(--…)`. Layihədə DÖRD tema var
+ *   (dark / matrix / light / cyberpunk); sabit rəng üçünün birində sınır.
+ */
+
+:root {
+  /* ── Aralıq şkalası ──────────────────────────────────────────────────────
+   * 4px əsaslı. Əvvəl aralıqlar `10px`, `13px`, `14px`, `18px` kimi təsadüfi
+   * dəyərlərdən ibarət idi — şkala olmadan hər ekran bir az fərqli "ritm"
+   * alırdı. */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+
+  /* ── Tipoqrafiya şkalası ─────────────────────────────────────────────────
+   * ⚠ ƏN KİÇİK ÖLÇÜ 12px-dir. AUDIT-9 responsive auditi 11px-dən kiçik
+   *   mətni P0 "text-clip" qüsuru kimi qeyd etmişdi. */
+  --fs-xs: 12px;
+  --fs-sm: 13px;
+  --fs-md: 15px;
+  --fs-lg: 18px;
+  --fs-xl: 22px;
+  --fs-2xl: 28px;
+
+  --lh-tight: 1.25;
+  --lh-normal: 1.55;
+
+  /* ── Radius ──────────────────────────────────────────────────────────────
+   * `--radius` (16px) onsuz da var; bu ikisi kiçik elementlər üçündür. */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-pill: 999px;
+
+  /* ── Kölgə ───────────────────────────────────────────────────────────────
+   * ⚠ Kölgə rəngi TEMADAN ASILI OLMAMALIDIR: qara kölgə açıq temada da
+   *   düzgün işləyir, çünki alfa aşağıdır. */
+  --sh-1: 0 1px 2px rgba(0, 0, 0, .18);
+  --sh-2: 0 4px 16px rgba(0, 0, 0, .22);
+  --sh-3: 0 12px 40px rgba(0, 0, 0, .32);
+
+  /* ── Hərəkət ─────────────────────────────────────────────────────────────
+   * Tək müddət + tək əyri: fərqli ekranlarda fərqli sürət "yamaq" hissi verir. */
+  --mo-fast: 120ms;
+  --mo-base: 200ms;
+  --mo-ease: cubic-bezier(.4, 0, .2, 1);
+
+  /* Toxunuş hədəfi — AUDIT-9 / P0. Heç bir interaktiv element bundan kiçik
+     olmamalıdır (WCAG 2.5.5 + iOS HIG). */
+  --tap: 44px;
+}
+
+/* Hərəkət tərcihi — AUDIT-9. Sistem "az hərəkət" deyirsə keçidlər söndürülür. */
+@media (prefers-reduced-motion: reduce) {
+  :root { --mo-fast: 0ms; --mo-base: 0ms; }
+}
+
+/* ══════════════════════════ DÜYMƏ ══════════════════════════ */
+
+.c-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  min-height: var(--tap);
+  padding: 0 var(--sp-4);
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: var(--body);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: background var(--mo-fast) var(--mo-ease),
+              border-color var(--mo-fast) var(--mo-ease),
+              opacity var(--mo-fast) var(--mo-ease);
+  /* Uzun etiket düyməni sındırmasın */
+  white-space: nowrap;
+}
+
+.c-btn:hover:not(:disabled) { background: var(--coral-dim); }
+
+/* ⚠ `:focus-visible` — `:focus` DEYİL. `:focus` siçanla klikləyəndə də
+   halqa göstərir və istifadəçilər onu "qüsur" kimi bildirir; klaviatura
+   istifadəçisi üçün isə halqa MƏCBURİDİR (WCAG 2.4.7). */
+.c-btn:focus-visible,
+.c-field input:focus-visible,
+.c-field select:focus-visible,
+.c-field textarea:focus-visible,
+.c-tab:focus-visible {
+  outline: 2px solid var(--coral);
+  outline-offset: 2px;
+}
+
+.c-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.c-btn--primary { background: var(--coral); color: var(--on-accent); }
+.c-btn--primary:hover:not(:disabled) { background: var(--coral2); }
+
+.c-btn--danger { background: var(--danger); color: var(--on-accent); }
+.c-btn--danger:hover:not(:disabled) { filter: brightness(1.1); }
+
+.c-btn--ghost { background: transparent; border-color: var(--border); }
+.c-btn--ghost:hover:not(:disabled) { background: var(--surface-2); }
+
+.c-btn--quiet { background: transparent; color: var(--muted); }
+.c-btn--quiet:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
+
+/* ⚠ Kiçik düymə də `--tap` hündürlüyünü saxlayır — yalnız yazı və yan
+   boşluq kiçilir. Toxunuş hədəfini kiçiltmək AUDIT-9 P0 qüsurudur. */
+.c-btn--sm { padding: 0 var(--sp-3); font-size: var(--fs-xs); }
+
+.c-btn--block { width: 100%; }
+
+/* İkon düyməsi — kvadrat toxunuş sahəsi */
+.c-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap);
+  height: var(--tap);
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background var(--mo-fast) var(--mo-ease), color var(--mo-fast) var(--mo-ease);
+}
+.c-icon-btn:hover { background: var(--surface-2); color: var(--text); }
+
+/* ══════════════════════════ NİŞAN / PILL ══════════════════════════ */
+
+.c-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: 3px var(--sp-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+/* ⚠ `color-mix` fon rəngini temadan törədir — hər tema üçün ayrıca
+   sabit yazmağa ehtiyaç qalmır. Dəstəklənməyən brauzerdə `background`
+   yuxarıdakı `--surface-2` olaraq qalır (graceful degradation). */
+.c-badge--ok      { color: var(--ok);     border-color: var(--ok);     background: color-mix(in srgb, var(--ok) 12%, transparent); }
+.c-badge--warn    { color: var(--coral2); border-color: var(--coral2); background: color-mix(in srgb, var(--coral2) 12%, transparent); }
+.c-badge--danger  { color: var(--danger); border-color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
+.c-badge--info    { color: var(--teal);   border-color: var(--teal);   background: color-mix(in srgb, var(--teal) 12%, transparent); }
+.c-badge--accent  { color: var(--coral);  border-color: var(--coral);  background: color-mix(in srgb, var(--coral) 12%, transparent); }
+
+/* ══════════════════════════ PANEL / KART ══════════════════════════ */
+
+.c-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--sp-5);
+}
+
+.c-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-4);
+}
+
+.c-panel__title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  line-height: var(--lh-tight);
+}
+
+.c-panel__sub {
+  margin: var(--sp-1) 0 0;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
+}
+
+/* ══════════════════════════ FORMA ══════════════════════════ */
+
+.c-field { display: flex; flex-direction: column; gap: var(--sp-2); margin-bottom: var(--sp-4); }
+
+.c-field__label { font-size: var(--fs-sm); font-weight: 600; color: var(--text); }
+
+.c-field input,
+.c-field select,
+.c-field textarea {
+  width: 100%;
+  min-height: var(--tap);
+  padding: var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--body);
+  font-size: var(--fs-md);
+  /* ⚠ 16px-dən kiçik `font-size` iOS Safari-də fokusla birlikdə səhifəni
+     ZUM edir. `--fs-md` = 15px olduğu üçün mobil üçün ayrıca qayda var
+     (aşağıda, 768px altı). */
+}
+
+.c-field textarea { min-height: 96px; resize: vertical; line-height: var(--lh-normal); }
+
+.c-field__hint { font-size: var(--fs-xs); color: var(--muted); line-height: var(--lh-normal); }
+.c-field__error { font-size: var(--fs-xs); color: var(--danger); font-weight: 600; }
+.c-field--invalid input,
+.c-field--invalid textarea { border-color: var(--danger); }
+
+/* ══════════════════════════ TAB ══════════════════════════ */
+
+.c-tabs {
+  display: flex;
+  gap: var(--sp-1);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--sp-5);
+  /* Çox tab olanda kəsilmək əvəzinə sürüşsün — AUDIT-9 overflow qaydası */
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.c-tabs::-webkit-scrollbar { display: none; }
+
+.c-tab {
+  flex: 0 0 auto;
+  min-height: var(--tap);
+  padding: 0 var(--sp-4);
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--body);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color var(--mo-fast) var(--mo-ease), border-color var(--mo-fast) var(--mo-ease);
+}
+.c-tab:hover { color: var(--text); }
+.c-tab.is-active { color: var(--coral); border-bottom-color: var(--coral); }
+
+/* ══════════════════════════ MODAL ══════════════════════════ */
+
+.c-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-4);
+  background: rgba(0, 0, 0, .6);
+  /* ⚠ `-webkit-` prefiksi MƏCBURİDİR: Safari (masaüstü və iOS) prefiksiz
+     `backdrop-filter`-i dəstəkləmir. Onsuz iOS-da modal arxası bulanmır və
+     arxa plan mətni modalın üstündən oxunur. */
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
+.c-modal {
+  width: 100%;
+  max-width: 560px;
+  /* ⚠ `max-height` + daxili sürüşmə: uzun məzmunlu modal mobil ekranda
+     ekrandan çıxıb düymələrini əlçatmaz edirdi. */
+  max-height: min(88vh, 760px);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--sh-3);
+}
+
+.c-modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-4) var(--sp-5);
+  border-bottom: 1px solid var(--border);
+}
+.c-modal__title { margin: 0; font-family: var(--display); font-size: var(--fs-lg); font-weight: 700; }
+.c-modal__body { padding: var(--sp-5); overflow-y: auto; flex: 1; }
+.c-modal__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+  padding: var(--sp-4) var(--sp-5);
+  border-top: 1px solid var(--border);
+}
+
+/* ══════════════════════════ BOŞ VƏZİYYƏT / YÜKLƏNMƏ ══════════════════════════ */
+
+.c-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-7) var(--sp-4);
+  color: var(--muted);
+  text-align: center;
+}
+.c-empty__icon { font-size: var(--fs-2xl); opacity: .6; }
+.c-empty__title { color: var(--text); font-size: var(--fs-md); font-weight: 600; }
+.c-empty__text { font-size: var(--fs-sm); line-height: var(--lh-normal); max-width: 42ch; }
+
+/* Skeleton — məzmun yüklənərkən layout SIÇRAMASIN (CLS).
+   ⚠ Ölçü real məzmuna yaxın olmalıdır, əks halda skeleton problemi həll
+     etmək əvəzinə sıçrayışı gizlədib sonra qaytarır. */
+.c-skeleton {
+  background: linear-gradient(90deg,
+    var(--surface-2) 25%, var(--border) 37%, var(--surface-2) 63%);
+  background-size: 400% 100%;
+  border-radius: var(--r-sm);
+  animation: c-shimmer 1.4s ease infinite;
+}
+.c-skeleton--line { height: 12px; margin-bottom: var(--sp-2); }
+.c-skeleton--title { height: 20px; width: 45%; margin-bottom: var(--sp-3); }
+
+@keyframes c-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .c-skeleton { animation: none; }
+}
+
+/* ══════════════════════════ ALƏT ZOLAĞI ══════════════════════════ */
+
+.c-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-4);
+}
+.c-toolbar__spacer { flex: 1 1 auto; }
+
+/* ══════════════════════════ MOBİL ══════════════════════════
+ * Breakpoint konvensiyası: RESPONSIVE.md (360/480/768/1024/1280). */
+
+@media (max-width: 768px) {
+  /* 🔴 iOS Safari `font-size < 16px` olan sahəyə fokusda SƏHİFƏNİ ZUM EDİR
+     və istifadəçi geri zum edə bilmir. Yalnız mobil üçün 16px. */
+  .c-field input,
+  .c-field select,
+  .c-field textarea { font-size: 16px; }
+
+  .c-panel { padding: var(--sp-4); }
+  .c-modal__head, .c-modal__foot { padding: var(--sp-3) var(--sp-4); }
+  .c-modal__body { padding: var(--sp-4); }
+}
+
+@media (max-width: 480px) {
+  /* Modal ekranın altına yapışır — kiçik ekranda mərkəzləşdirilmiş dialoq
+     klaviatura açılanda yuxarı sıçrayır. */
+  .c-modal-backdrop { align-items: flex-end; padding: 0; }
+  .c-modal {
+    max-width: none;
+    max-height: 92vh;
+    border-radius: var(--radius) var(--radius) 0 0;
+    border-bottom: none;
+  }
+  /* Modal düymələri tam enli — kiçik ekranda yan-yana sıxışırdılar. */
+  .c-modal__foot { flex-direction: column-reverse; }
+  .c-modal__foot .c-btn { width: 100%; }
+}

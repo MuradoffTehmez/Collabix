@@ -1,0 +1,280 @@
+/* 16-data-display.css — DİZAYN SİSTEMİ: data göstərmə primitivləri
+ *
+ * Admin paneli, moderasiya və namizədlik ekranları əsasən CƏDVƏL və
+ * SİYAHIdır. `15-components.css` ümumi primitivləri verir; bu fayl
+ * data-ağır naxışları.
+ *
+ * 🔴 ƏSAS PROBLEM: CƏDVƏL MOBİLDƏ.
+ *   AUDIT-9 responsive auditi cədvəlləri P0 "overflow" mənbəyi kimi
+ *   qeyd etmişdi. İki mümkün həll var:
+ *     (a) yan sürüşmə — sadə, lakin istifadəçi sütunları itirir
+ *     (b) sətir → kart çevrilməsi — oxunaqlı, lakin `data-label` tələb edir
+ *   Burada (b) seçilib, çünki admin cədvəllərində 5-7 sütun var və yan
+ *   sürüşmə ilə "kim/nə vaxt/nə" konteksti itirdi.
+ */
+
+/* ══════════════════════════ CƏDVƏL ══════════════════════════ */
+
+.c-table-wrap {
+  /* Geniş məzmun ÖZ konteynerində sürüşür — səhifə gövdəsi ÜFÜQİ
+     sürüşməməlidir (AUDIT-9 qaydası). */
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.c-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+}
+
+.c-table th,
+.c-table td {
+  padding: var(--sp-3) var(--sp-4);
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border);
+}
+
+.c-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  white-space: nowrap;
+}
+
+.c-table tbody tr:last-child td { border-bottom: none; }
+.c-table tbody tr:hover { background: var(--surface-2); }
+
+.c-table__num { text-align: right; font-variant-numeric: tabular-nums; }
+.c-table__actions { display: flex; gap: var(--sp-2); justify-content: flex-end; }
+
+/* ══════════════════════════ İSTİFADƏÇİ XANASI ══════════════════════════ */
+
+.c-user {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-width: 0;   /* flex uşağının kəsilməsi üçün MƏCBURİDİR */
+}
+
+.c-user__av {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-md);
+  object-fit: cover;
+  background: var(--surface-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.c-user__meta { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+
+.c-user__name {
+  font-weight: 600;
+  color: var(--text);
+  /* Uzun ad cədvəli genişləndirməsin */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.c-user__handle {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ══════════════════════════ STATİSTİKA ══════════════════════════ */
+
+.c-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-5);
+}
+
+.c-stat {
+  padding: var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+.c-stat__label {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.c-stat__value {
+  margin-top: var(--sp-1);
+  font-family: var(--display);
+  font-size: var(--fs-xl);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+/* ══════════════════════════ ŞƏRT SİYAHISI ══════════════════════════
+ * Moderator namizədliyində "hansı şərt ödənir / ödənmir" göstərilir.
+ *
+ * ⚠ RƏNG TƏK SİQNAL DEYİL: ✓/✗ işarəsi də var. Rəng korluğu olan istifadəçi
+ *   yalnız yaşıl/qırmızıya baxa bilməz (WCAG 1.4.1). */
+
+.c-checklist { display: flex; flex-direction: column; gap: var(--sp-2); }
+
+.c-check {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+
+.c-check__icon {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+}
+.c-check--ok   .c-check__icon { background: color-mix(in srgb, var(--ok) 18%, transparent);     color: var(--ok); }
+.c-check--fail .c-check__icon { background: color-mix(in srgb, var(--danger) 18%, transparent); color: var(--danger); }
+.c-check--ok   { border-color: color-mix(in srgb, var(--ok) 35%, var(--border)); }
+.c-check--fail { border-color: color-mix(in srgb, var(--danger) 35%, var(--border)); }
+
+.c-check__label { flex: 1 1 auto; font-size: var(--fs-sm); min-width: 0; }
+.c-check__value {
+  flex: 0 0 auto;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+/* ══════════════════════════ TARİXÇƏ ZOLAĞI ══════════════════════════ */
+
+.c-timeline { display: flex; flex-direction: column; gap: var(--sp-4); position: relative; }
+
+.c-timeline__item {
+  display: flex;
+  gap: var(--sp-3);
+  position: relative;
+  padding-left: var(--sp-5);
+}
+
+/* Şaquli xətt — ::before nöqtəsi ilə birlikdə "zaman oxu" hissi verir. */
+.c-timeline__item::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 18px;
+  bottom: calc(-1 * var(--sp-4));
+  width: 2px;
+  background: var(--border);
+}
+.c-timeline__item:last-child::before { display: none; }
+
+.c-timeline__dot {
+  position: absolute;
+  left: 0;
+  top: 6px;
+  width: 12px;
+  height: 12px;
+  border-radius: var(--r-pill);
+  background: var(--coral);
+  border: 2px solid var(--bg);
+}
+.c-timeline__body { min-width: 0; flex: 1; }
+.c-timeline__meta { font-size: var(--fs-xs); color: var(--muted); margin-top: 2px; }
+
+/* ══════════════════════════ KOD / SİRR ══════════════════════════
+ * Dəvət kodu üçün: seçilə bilən, monospace, oxunaqlı. */
+
+.c-code {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px dashed var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg);
+  font-family: var(--mono);
+  font-size: var(--fs-md);
+  font-weight: 700;
+  letter-spacing: .12em;
+  /* Tək kliklə hamısı seçilsin.
+     ⚠ `-webkit-` prefiksi Safari/iOS üçün MƏCBURİDİR — onsuz istifadəçi
+     kodu hərf-hərf seçməyə məcbur qalır. */
+  -webkit-user-select: all;
+  user-select: all;
+}
+
+/* ══════════════════════════ MOBİL: CƏDVƏL → KART ══════════════════════════ */
+
+@media (max-width: 768px) {
+  .c-table-wrap { border: none; background: transparent; overflow-x: visible; }
+
+  /* ⚠ `thead` GİZLƏDİLİR, çünki sütun adları hər xanada `data-label`
+     atributundan ::before ilə göstərilir. HTML-də `data-label` YAZILMASA
+     mobil görünüş başlıqsız qalır — bu, komponentin müqaviləsidir. */
+  .c-table thead { display: none; }
+
+  .c-table, .c-table tbody, .c-table tr, .c-table td { display: block; width: 100%; }
+
+  .c-table tr {
+    margin-bottom: var(--sp-3);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--surface);
+    padding: var(--sp-2);
+  }
+
+  .c-table td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-3);
+    padding: var(--sp-2) var(--sp-3);
+    border-bottom: 1px solid var(--border);
+    text-align: right;
+  }
+  .c-table tr td:last-child { border-bottom: none; }
+
+  .c-table td::before {
+    content: attr(data-label);
+    flex: 0 0 auto;
+    color: var(--muted);
+    font-size: var(--fs-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    text-align: left;
+  }
+
+  /* İstifadəçi xanası tam enli və sola düzülür — sağa düzülmüş avatar
+     naxışı pozurdu. */
+  .c-table td:has(.c-user) { justify-content: flex-start; text-align: left; }
+  .c-table__actions { justify-content: flex-end; flex: 1; }
+  .c-table__num { justify-content: space-between; }
+}

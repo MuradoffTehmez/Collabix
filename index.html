@@ -858,6 +858,12 @@
       <div class="progress-list" id="progressList"></div>
       <div class="section-title" data-i18n="prof.social"></div>
       <div class="social-row" id="profSocial"></div>
+      <!-- İdarəetmə bölmələri — PRD §12 (moderator namizədliyi) və §6 (dəvət).
+           ⚠ Profil səhifəsindədir, ayrıca səhifə DEYİL: hər ikisi istifadəçinin
+              öz hesabına aiddir və naviqasiyada üçüncü bənd yaratmaq lazım deyil. -->
+      <div id="govModeratorBox" style="margin-top:24px"></div>
+      <div id="govInviteBox" style="margin-top:16px"></div>
+
       <div class="section-title" data-i18n="prof.myposts"></div>
       <div id="myPosts"></div>
     </div>
@@ -924,6 +930,9 @@
           <button class="admin-sidebar-btn" data-tab="tab-content">📁 Məzmun İdarəsi</button>
           <button class="admin-sidebar-btn" data-tab="tab-teams">🏢 Komandalar</button>
           <button class="admin-sidebar-btn" data-tab="tab-users">👥 İstifadəçilər</button>
+          <!-- ⚠ "Platforma" sözü QƏSDƏN yazılıb: komanda rolları ayrı sistemdir
+               və komanda səhifəsindən idarə olunur (bax js/governance.js başlığı). -->
+          <button class="admin-sidebar-btn" data-tab="tab-governance">⚖️ Platforma Rolları</button>
           <button class="admin-sidebar-btn" data-tab="tab-logs">📜 Audit Jurnalı</button>
         </aside>
         
@@ -1070,6 +1079,45 @@
               <div id="adminUserList"></div>
               <div class="dir-sentinel" id="adminUserSentinel" aria-hidden="true"></div>
               <div class="dir-status" id="adminUserStatus" role="status" aria-live="polite"></div>
+            </div>
+          </div>
+
+          <!-- TAB: Platforma rolları və moderator namizədləri -->
+          <div class="admin-tab-pane" id="tab-governance">
+            <div class="c-panel" style="margin-bottom:24px">
+              <div class="c-panel__head">
+                <div>
+                  <h2 class="c-panel__title">Platforma rolları</h2>
+                  <p class="c-panel__sub">
+                    Bu rollar <strong>bütün sayta</strong> şamil olur (OWNER … GUEST).
+                    Komanda daxilindəki rollar ayrı sistemdir — onları hər komandanın
+                    sahibi öz komanda səhifəsindən idarə edir.
+                  </p>
+                </div>
+              </div>
+              <p class="c-field__hint">
+                İstifadəçinin rolunu dəyişmək üçün <strong>İstifadəçilər</strong> tabından
+                həmin hesabı açın. Rol dəyişikliyi audit jurnalına yazılır.
+              </p>
+            </div>
+
+            <div class="c-panel">
+              <div class="c-panel__head">
+                <div>
+                  <h2 class="c-panel__title">Moderator namizədləri</h2>
+                  <p class="c-panel__sub">
+                    Moderatorluq XP ilə avtomatik gəlmir — istifadəçi müraciət edir,
+                    admin qərar verir.
+                  </p>
+                </div>
+              </div>
+              <div class="c-tabs" id="govAppTabs">
+                <button class="c-tab is-active" data-appst="pending">Gözləyən</button>
+                <button class="c-tab" data-appst="approved">Təsdiqlənmiş</button>
+                <button class="c-tab" data-appst="rejected">Rədd edilmiş</button>
+                <button class="c-tab" data-appst="all">Hamısı</button>
+              </div>
+              <div id="govModApps"></div>
             </div>
           </div>
 
