@@ -18,20 +18,13 @@ import { reqInfo, logSecurityEvent } from './security';
 /**
  * PBKDF2 iterasiya köçürməsi — AUDIT M-2 (AUDIT-TASK-6 §C-2).
  *
- * OWASP 2023: SHA-256 üçün 600 000. Köhnə hesablar 100 000 ilə yazılıb və
- * kütləvi yenidən heşləmə MÜMKÜN DEYİL (bazada açıq parol yoxdur) → köçürmə
- * girişdə TƏDRİCƏN baş verir:
- *
- *   1. `users.pass_iter` hər hesabın ÖZ iterasiyasını saxlayır (0023 miqrasiyası).
- *   2. `verifyPassword` sətirdəki dəyərlə yoxlayır — sabitlə YOX.
- *   3. Uğurlu girişdə `pass_iter < PBKDF2_ITER` olarsa parol yeni iterasiya
- *      ilə yenidən heşlənir və sütun yenilənir.
- *   4. Yeni qeydiyyat həmişə `PBKDF2_ITER` işlədir.
- *
- * ⚠ Köhnə hesablar köçürülənə qədər işləməyə DAVAM EDİR — bu, kütləvi
- * kilidlənmənin qarşısını alan yeganə mexanizmdir.
+ * OWASP 2023: SHA-256 üçün 600 000. Köhnə hesablar 100 000 ilə yazılıb.
+ * ⚠ Cloudflare Workers mühitində PBKDF2 üçün maksimum iterasiya limiti
+ * 100 000-dir ("iteration counts above 100000 are not supported").
+ * Ona görə də 600 000 tətbiq etmək canlı mühitdə qeydiyyatın 500 xətası
+ * ilə çökməsinə səbəb olurdu. 100 000 saxlanılır.
  */
-const PBKDF2_ITER = 600_000;
+const PBKDF2_ITER = 100_000;
 
 /** Köçürməmiş hesabların iterasiyası — `pass_iter` sütununun default-u ilə eyni. */
 export const PBKDF2_ITER_LEGACY = 100_000;
