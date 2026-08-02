@@ -122,16 +122,22 @@ function openPostReportModal(p){
 /* Şərh reaksiyaları — ICONS reyestrindəki (icon-set.js) adlar.
  * ⚠ Açarlar SERVERDƏKİ `REACTION_TYPES` (worker/routes/post.ts) və 0039
  *   miqrasiyasındakı CHECK ilə EYNİ olmalıdır — üçü birlikdə dəyişir. */
+// ⚠ RƏNG BURADADIR, CSS-də YOX. Əvvəl `--react-color` custom property ilə
+//   verilirdi, lakin Chrome `data-react` atributu dəyişəndə custom property-ni
+//   YENİDƏN HESABLAMIRDI: `dataset.react` düzgün dəyişir, `--react-color` isə
+//   əvvəlki tipin dəyərində ilişib qalırdı (bütün reaksiyalar eyni rəngdə
+//   görünürdü). Inline `style.color` bu invalidasiya probleminə tabe deyil və
+//   `.like-btn.on { color: danger }` + `:hover` qaydalarını da qəti basır.
 const REACTIONS = {
-  like:  { icon: 'thumbsUp' },
-  love:  { icon: 'heart' },
-  laugh: { icon: 'smile' },
-  wow:   { icon: 'wow' },
-  fire:  { icon: 'flame' },
-  clap:  { icon: 'clap' },
-  tada:  { icon: 'party' },
-  hundred: { icon: 'hundred' },
-  rocket:  { icon: 'rocket' },
+  like:  { icon: 'thumbsUp', color: 'var(--coral)' },
+  love:  { icon: 'heart',    color: 'var(--danger)' },
+  laugh: { icon: 'smile',    color: '#e0a800' },
+  wow:   { icon: 'wow',      color: '#e0a800' },
+  fire:  { icon: 'flame',    color: '#ff6b35' },
+  clap:  { icon: 'clap',     color: 'var(--teal)' },
+  tada:  { icon: 'party',    color: 'var(--violet)' },
+  hundred: { icon: 'hundred', color: 'var(--danger)' },
+  rocket:  { icon: 'rocket',  color: 'var(--primary)' },
 };
 
 // Paylaşma linklərinin bazası — `location.origin`-dən gəlir (AUDIT-TASK-2 / 2.5).
@@ -630,6 +636,59 @@ export function postCard(p, { full = false } = {}){
    * hover/uzun-basış seçicini açır — tək klik hələ də adi "bəyən"dir. */
   const reactWrap = el('div', { class: 'c-react-wrap' });
   const reactPicker = el('div', { class: 'c-react-picker', role: 'menu', hidden: true });
+
+  /**
+   * Düymənin ÜZÜNÜ cari reaksiyaya görə yenidən çəkir.
+   *
+   * 🔴 BU OLMADAN reaksiya seçmək "heç nə etmirdi": əvvəl yalnız
+   *   `p.myReaction` dəyişdirilirdi, DOM isə toxunulmaz qalırdı.
+   *
+   * Sayğac = BÜTÜN tiplərin cəmi. `p.reactions` boşdursa (köhnə data, və ya
+   * `mapPost` reaksiyasız çağırılıb) `likeCount`-a düşür — belədə kart heç
+   * vaxt "0" göstərib istifadəçini çaşdırmır.
+   */
+  const reactionTotal = () => {
+    const r = p.reactions || {};
+    const sum = Object.values(r).reduce((a, b) => a + b, 0);
+    return sum || (p.likeCount || 0);
+  };
+  const setReactionUI = () => {
+    const mineType = p.myReaction;
+    const def = mineType && REACTIONS[mineType];
+    const next = def
+      ? el('span', { class: 'c-react-ic ic', 'data-icon': def.icon, 'data-icon-size': '18' })
+      : iconHeart(!!state.myLikes.has(p.id));
+    likeIcon.replaceWith(next);
+    likeIcon = next;
+    if(def) paintIcons(likeBtn);
+    likeBtn.classList.toggle('on', !!mineType || state.myLikes.has(p.id));
+    if(mineType) likeBtn.dataset.react = mineType; else delete likeBtn.dataset.react;
+    // Rəng inline verilir — səbəb REACTIONS xəritəsinin yanındakı şərhdə.
+    likeBtn.style.color = def ? def.color : '';
+    const faceSvg = likeBtn.querySelector('svg');
+    if(faceSvg) faceSvg.style.fill = (mineType === 'love') ? 'var(--danger)' : (mineType ? 'none' : '');
+    likeBtn.setAttribute('aria-pressed', String(!!mineType));
+    likeBtn.setAttribute('aria-label', mineType ? t('cm.react_' + mineType) : t('feed.like'));
+    likeCountEl.textContent = reactionTotal();
+  };
+
+  /** Optimistik yerli tətbiq — şəbəkə cavabını gözləmədən. */
+  const applyReactionLocally = (type) => {
+    const counts = { ...(p.reactions || {}) };
+    if(p.myReaction) counts[p.myReaction] = Math.max(0, (counts[p.myReaction] || 1) - 1);
+    if(type) counts[type] = (counts[type] || 0) + 1;
+    for(const k of Object.keys(counts)) if(!counts[k]) delete counts[k];
+    p.reactions = counts;
+    p.myReaction = type;
+    // ⚠ `likeCount` da yenilənir: `reactionTotal()` cəm sıfır olanda ona
+    //   düşür (reaksiyasız çağırılan `mapPost` yolları üçün geri-dönüş).
+    //   Yenilənməsə, son reaksiyanı götürəndə sayğac köhnə dəyərdə ilişərdi.
+    p.likeCount = Object.values(counts).reduce((a, b) => a + b, 0);
+    // `like` tipi serverdə köhnə `likes` cədvəli ilə sinxrondur — yerli
+    // `state.myLikes` də uyğunlaşdırılır ki, ürək ikonu ziddiyyət yaratmasın.
+    if(type === 'like') state.myLikes.add(p.id); else state.myLikes.delete(p.id);
+    setReactionUI();
+  };
   const closeReact = () => { reactPicker.hidden = true; };
   const openReact = () => {
     if(!reactPicker.hidden) return;
@@ -641,20 +700,32 @@ export function postCard(p, { full = false } = {}){
         onclick: async () => {
           closeReact();
           const next = p.myReaction === key ? null : key;
-          const prev = p.myReaction;
-          p.myReaction = next;
+          // Tam snapshot — xətada HƏM tip, HƏM sayğaclar geri qaytarılmalıdır.
+          const prevMine = p.myReaction;
+          const prevCounts = { ...(p.reactions || {}) };
+          applyReactionLocally(next);
           try{
             await setPostReaction(p.id, next);
-            emit('refresh-feed');   // sayğaclar serverdən dəqiq gəlsin
-          }catch(err){ p.myReaction = prev; toast(t('dyn.err_generic'), 'err'); }
+          }catch(err){
+            p.myReaction = prevMine;
+            p.reactions = prevCounts;
+            setReactionUI();
+            toast(t('dyn.err_generic'), 'err');
+          }
         },
       }, el('span', { class: 'ic', 'data-icon': def.icon, 'data-icon-size': '18' })));
     }
     paintIcons(reactPicker);
     reactPicker.hidden = false;
   };
-  reactWrap.addEventListener('mouseenter', openReact);
-  reactWrap.addEventListener('mouseleave', closeReact);
+  // ⚠ Bağlanma GECİKMƏLİDİR: siçan düymə ilə seçici arasında bir kadr üçün
+  //   "heç yerdə" ola bilər (CSS `::after` körpüsünə əlavə təhlükəsizlik).
+  //   Dərhal bağlasaq reaksiya seçmək mümkün olmurdu.
+  let reactCloseT = null;
+  const cancelReactClose = () => { clearTimeout(reactCloseT); reactCloseT = null; };
+  const closeReactSoon = () => { cancelReactClose(); reactCloseT = setTimeout(closeReact, 220); };
+  reactWrap.addEventListener('mouseenter', () => { cancelReactClose(); openReact(); });
+  reactWrap.addEventListener('mouseleave', closeReactSoon);
   let lpTimer = null;
   likeBtn.addEventListener('pointerdown', () => { lpTimer = setTimeout(openReact, 450); });
   for(const ev of ['pointerup', 'pointercancel', 'pointerleave']) likeBtn.addEventListener(ev, () => clearTimeout(lpTimer));
@@ -663,6 +734,9 @@ export function postCard(p, { full = false } = {}){
     if(e.key === 'Escape') closeReact();
   });
   reactWrap.append(likeBtn, reactPicker);
+  // İlkin vəziyyət: server `myReaction`/`reactions` qaytarır — kart açılan
+  // kimi düzgün ikon və cəm sayğac görünsün.
+  setReactionUI();
 
   const actions = el('div', { class: 'feed-actions' },
     reactWrap,
@@ -680,6 +754,10 @@ export function postCard(p, { full = false } = {}){
   card._cxPatch = np => {
     p = np;
     setLikeUI(state.myLikes.has(p.id), p.likeCount || 0);
+    // ⚠ `setLikeUI`-dan SONRA: o, ürək ikonunu bərpa edir, `setReactionUI` isə
+    //   seçilmiş reaksiya tipini onun üzərinə yazır. Sıra tərsinə olsa poll
+    //   hər dəfə reaksiya ikonunu ürəklə əvəz edərdi.
+    setReactionUI();
     setBookmarkUI(state.myBookmarks.has(p.id));
     setShareUI(state.myReposts.has(p.sharedPostId || p.id), p.shareCount || 0);
     commentCountEl.textContent = p.commentCount || 0;
@@ -1000,6 +1078,11 @@ function mountComments(box, p){
       );
       face.classList.toggle('on', !!mine);
       if(mine) face.dataset.react = mine; else delete face.dataset.react;
+      // Rəng inline — post kartındakı ilə eyni səbəb (custom property
+      // atribut dəyişəndə yenilənmirdi).
+      face.style.color = (mine && REACTIONS[mine]) ? REACTIONS[mine].color : '';
+      const fsvg = face.querySelector('svg');
+      if(fsvg) fsvg.style.fill = (mine === 'love') ? 'var(--danger)' : (mine ? 'none' : '');
       face.setAttribute('aria-pressed', String(!!mine));
       face.setAttribute('aria-label', mine ? t('cm.react_' + mine) : t('feed.like'));
       paintIcons(face);
@@ -1035,8 +1118,11 @@ function mountComments(box, p){
 
     face.addEventListener('click', () => apply(mine ? null : 'like'));
     // Seçici: hover (siçan) + uzun basış (toxunuş) + klaviatura üçün Alt+Ok.
-    wrap.addEventListener('mouseenter', openPicker);
-    wrap.addEventListener('mouseleave', closePicker);
+    // ⚠ Bağlanma gecikməlidir — bax post kartındakı eyni izah.
+    let closeT = null;
+    const cancelClose = () => { clearTimeout(closeT); closeT = null; };
+    wrap.addEventListener('mouseenter', () => { cancelClose(); openPicker(); });
+    wrap.addEventListener('mouseleave', () => { cancelClose(); closeT = setTimeout(closePicker, 220); });
     face.addEventListener('keydown', e => {
       if(e.key === 'ArrowUp' || (e.altKey && e.key === 'Enter')){ e.preventDefault(); openPicker(); picker.querySelector('button')?.focus(); }
       if(e.key === 'Escape') closePicker();

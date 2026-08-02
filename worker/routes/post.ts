@@ -493,6 +493,17 @@ export async function likePut(c: Ctx, id: string) {
   if (!post) return err('Post tapılmadı.', 404);
   const r = await D(c).prepare('INSERT OR IGNORE INTO likes (post_id, user_id, created_at) VALUES (?,?,?)')
     .bind(id, c.user!.id, now()).run();
+  // 🔴 REAKSİYA CƏDVƏLİ İLƏ SİNXRONLUQ (0040).
+  //   Bu köhnə endpoint YALNIZ `likes`-a yazırdı. Nəticədə tək klik "bəyən"
+  //   `likes`-da sətir yaradır, `post_reactions`-da isə YARATMIRDI → feed
+  //   `reactions: {}` amma `likeCount: 1` qaytarırdı və kart sayğacı ilə
+  //   reaksiya vəziyyəti bir-birinə ZİDD olurdu.
+  //   İki yazı yolu var (bu və `postReactionPut`), ona görə hər ikisi HƏR İKİ
+  //   cədvəli yeniləməlidir.
+  await D(c).prepare(
+    `INSERT INTO post_reactions (post_id, user_id, type, created_at) VALUES (?,?,'like',?)
+       ON CONFLICT(post_id, user_id) DO UPDATE SET type = 'like'`,
+  ).bind(id, c.user!.id, now()).run();
   if (r.meta.changes > 0) {
     await D(c).prepare('UPDATE posts SET like_count = like_count + 1 WHERE id = ?').bind(id).run();
     await notify(c, post.author_id, 'like', 'paylaşımını bəyəndi', id);
@@ -526,6 +537,11 @@ export async function likePut(c: Ctx, id: string) {
 }
 export async function likeDelete(c: Ctx, id: string) {
   const r = await D(c).prepare('DELETE FROM likes WHERE post_id = ? AND user_id = ?').bind(id, c.user!.id).run();
+  // Sinxronluq (0040) — bax `likePut`-dakı izah.
+  // ⚠ Yalnız 'like' tipi silinir: istifadəçinin reaksiyası 'fire' idisə,
+  //   "bəyənməni götür" onu SİLMƏMƏLİDİR (fərqli əməliyyatdır).
+  await D(c).prepare(`DELETE FROM post_reactions WHERE post_id = ? AND user_id = ? AND type = 'like'`)
+    .bind(id, c.user!.id).run();
   if (r.meta.changes > 0) {
     await D(c).prepare('UPDATE posts SET like_count = MAX(0, like_count - 1) WHERE id = ?').bind(id).run();
   }
@@ -763,6 +779,13 @@ export async function commentLikePut(c: Ctx, postId: string, cid: string) {
   if (!row) return err('Şərh tapılmadı.', 404);
   const r = await D(c).prepare('INSERT OR IGNORE INTO comment_likes (comment_id, user_id, created_at) VALUES (?,?,?)')
     .bind(cid, c.user!.id, now()).run();
+  // Sinxronluq (0039) — postlardakı `likePut` ilə eyni səbəb: bu köhnə yol
+  // yalnız `comment_likes`-a yazsaydı, `reactions` boş, `likeCount` isə dolu
+  // qalardı və UI ziddiyyət göstərərdi.
+  await D(c).prepare(
+    `INSERT INTO comment_reactions (comment_id, user_id, type, created_at) VALUES (?,?,'like',?)
+       ON CONFLICT(comment_id, user_id) DO UPDATE SET type = 'like'`,
+  ).bind(cid, c.user!.id, now()).run();
   if (r.meta.changes > 0) {
     await D(c).prepare('UPDATE comments SET like_count = like_count + 1 WHERE id = ?').bind(cid).run();
     await notify(c, row.author_id, 'like', 'şərhini bəyəndi', postId);
@@ -771,6 +794,9 @@ export async function commentLikePut(c: Ctx, postId: string, cid: string) {
 }
 export async function commentLikeDelete(c: Ctx, _postId: string, cid: string) {
   const r = await D(c).prepare('DELETE FROM comment_likes WHERE comment_id = ? AND user_id = ?').bind(cid, c.user!.id).run();
+  // Yalnız 'like' tipi — başqa reaksiya ('fire' və s.) toxunulmaz qalır.
+  await D(c).prepare(`DELETE FROM comment_reactions WHERE comment_id = ? AND user_id = ? AND type = 'like'`)
+    .bind(cid, c.user!.id).run();
   if (r.meta.changes > 0) {
     await D(c).prepare('UPDATE comments SET like_count = MAX(0, like_count - 1) WHERE id = ?').bind(cid).run();
   }

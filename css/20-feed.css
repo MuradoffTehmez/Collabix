@@ -1702,6 +1702,23 @@
   animation: cReactIn 160ms var(--mo-ease);
 }
 
+/* 🔴 HOVER KÖRPÜSÜ — bu olmadan seçici SEÇİLƏ BİLMİRDİ.
+   Seçici `bottom: calc(100% + 6px)` ilə düymədən 6px YUXARIDA dayanır və
+   mütləq mövqelidir, yəni `.c-react-wrap`-ın öz qutusundan kənardadır.
+   Siçan düymədən seçiciyə qalxanda həmin 6px-lik BOŞLUQDAN keçir: orada nə
+   wrap var, nə seçici → `mouseleave` işə düşür və seçici klikdən ƏVVƏL
+   bağlanırdı. `::after` boşluğu görünməz şəkildə örtür, beləliklə göstərici
+   həmişə wrap-ın törəməsi üzərində qalır (mouseleave törəmələr arasında
+   keçiddə işə düşmür). Vizual boşluq olduğu kimi qalır. */
+.c-react-picker::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 10px;
+}
+
 .c-react-picker[hidden] { display: none; }
 
 @keyframes cReactIn {
@@ -1882,4 +1899,20 @@
 .feed-card:has(.card-menu-dropdown.open) {
   contain: none;
   z-index: 60;
+}
+
+/* ── REAKSİYA GÖRÜNÜŞÜ ──────────────────────────────────────────────────────
+ * ⚠ RƏNG BURADA DEYİL — `js/feed.js`-dəki `REACTIONS` xəritəsindədir və
+ *   `setReactionUI` onu INLINE `style.color` kimi tətbiq edir.
+ *
+ *   Niyə: əvvəl hər tip üçün CSS qaydası (`--react-color` custom property)
+ *   var idi, lakin Chrome `data-react` atributu dəyişəndə custom property-ni
+ *   yenidən hesablamırdı — `dataset.react` düzgün dəyişsə də rəng əvvəlki
+ *   tipdə ilişib qalırdı və BÜTÜN reaksiyalar eyni rəngdə görünürdü.
+ *   Inline stil bu invalidasiya problemindən azaddır və `.like-btn.on {
+ *   color: var(--danger) }` + `:hover` qaydalarını da qəti basır.
+ *
+ *   Yeni reaksiya tipi əlavə edərkən rəng `REACTIONS`-a yazılır, buraya YOX. */
+.act-btn.like-btn.on[data-react]:hover {
+  background: color-mix(in srgb, currentColor 12%, transparent);
 }
