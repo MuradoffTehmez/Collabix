@@ -1,0 +1,346 @@
+/* 60-responsive.css — Breakpoint-lər: 768 / 480 / 360 (RESPONSIVE.md)
+   ⚠ styles.css-dən MEXANİKİ olaraq ayrıldı (AUDIT-TASK-10 / Faza 3.4).
+      Sıra DƏYİŞMƏMƏLİDİR: cascade eyni spesifiklikdə fayl sırasından asılıdır. */
+/* ==== Breakpoint: 768 (tablet/mobil) ==== */
+@media (max-width: 768px) {
+  .grid2 {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  body.authed .bottom-nav {
+    display: flex;
+  }
+
+  /* yalnız daxil olmuş istifadəçiyə görünür */
+  .main {
+    padding: 16px 12px 90px;
+  }
+
+  .app-topbar {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+
+  .app-search {
+    max-width: 150px;
+    font-size: .76rem;
+  }
+
+  .lang-switch {
+    display: none;
+  }
+
+  /* mobildə dil parametrlərdədir */
+  .app-topbar .lang-switch {
+    display: none;
+  }
+
+  .auth-wrap {
+    grid-template-columns: 1fr;
+    max-width: 480px;
+  }
+
+  .auth-hero {
+    display: none;
+  }
+
+  .auth-form {
+    max-height: none;
+    padding: 28px 20px;
+  }
+
+  /* TASK-8 mobil düzəlişi — MASTER-DETAIL.
+     Əvvəl siyahı (96px) + mesajlar YAN-YANA sıxılırdı: hər ikisi oxunmaz dar
+     idi və input kəsilirdi. İndi mobildə bir anda YALNIZ BİRİ görünür:
+     əvvəlcə siyahı tam en, otaq/söhbət seçiləndə mesaj sahəsi tam en sürüşür. */
+  .chat-wrap {
+    position: relative;
+    height: calc(100vh - 210px);
+    min-height: 360px;
+  }
+
+  /* Hər iki panel tam eni tutur və üst-üstə yığılır. */
+  .chat-list,
+  .chat-main {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    transition: transform .25s ease;
+  }
+
+  /* Default: siyahı görünür, mesaj sahəsi sağda gözləyir. */
+  .chat-list { transform: translateX(0); z-index: 2; }
+  .chat-main { transform: translateX(100%); z-index: 1; }
+
+  /* Otaq/söhbət seçiləndə (JS `detail-open` qoyur): siyahı sola çıxır,
+     mesaj sahəsi mərkəzə gəlir. */
+  .chat-wrap.detail-open .chat-list { transform: translateX(-100%); }
+  .chat-wrap.detail-open .chat-main { transform: translateX(0); }
+
+  /* Siyahı tam en olduğu üçün sətir NORMAL (avatar + ad yan-yana), ad görünür. */
+  .chat-list .ch-item {
+    flex-direction: row;
+    text-align: left;
+    padding: 13px 14px;
+    min-height: 56px;
+  }
+  .chat-list .ch-item .meta span { display: block; }
+
+  /* Geri düyməsi yalnız mobildə görünür (chat-head-də JS əlavə edir). */
+  .chat-back { display: inline-flex; }
+
+  /* İnput mobildə TAM EN alır, rich-control düymələri (📎 </>) ilə göndər
+     düyməsi ayrı sətrə keçir — əvvəl hamısı bir sətrə sıxışıb input "Mesa..."
+     kimi kəsilirdi. */
+  .chat-input input {
+    flex: 1 1 100%;
+    order: -1;           /* input yuxarı sətrə, düymələr altına */
+  }
+
+  .msg {
+    max-width: 84%;
+  }
+
+  h1.page-title {
+    font-size: 1.3rem;
+  }
+
+  .page-sub {
+    margin-bottom: 14px;
+  }
+
+  /* modallar mobildə full-screen */
+  .modal-bg {
+    padding: 0;
+    align-items: stretch;
+  }
+
+  .modal-card,
+  .modal-card.wide {
+    max-width: 100%;
+    width: 100%;
+    max-height: 100vh;
+    height: 100%;
+    border-radius: 0;
+    padding: 20px 16px;
+  }
+
+  /* toxunma hədəfləri */
+  .btn-mini,
+  .act-btn,
+  .nav-item,
+  .pp,
+  .skill-chip {
+    min-height: 40px;
+  }
+
+  /* Card responsive: tablet */
+  .feed-card {
+    padding: 18px 18px;
+    border-radius: 16px;
+  }
+
+  .feed-head .avatar {
+    width: 36px;
+    height: 36px;
+  }
+
+  .feed-actions {
+    gap: 0;
+  }
+
+  .act-btn {
+    padding: 8px 10px;
+    font-size: .76rem;
+  }
+
+  .btn-small,
+  .btn-primary,
+  .chat-input button {
+    min-height: 44px;
+  }
+
+  .admin-user-row,
+  .report-row,
+  .submission-row {
+    flex-wrap: wrap;
+  }
+
+  .task-cat-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 4px;
+  }
+
+  .task-cat-tabs button {
+    white-space: nowrap;
+    min-height: 38px;
+  }
+
+  .testi-grid {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 12px;
+    padding-bottom: 8px;
+  }
+
+  .testi-card {
+    min-width: 82%;
+    scroll-snap-align: center;
+  }
+
+  .user-filters select {
+    flex: 1;
+    min-height: 44px;
+  }
+}
+
+/* TASK-9 touch qaydaları FAYLIN SONUNA köçürüldü (bax "TOUCH TARGET" bloku) —
+   səbəb: bəzi baza qaydalar (`.md-tb-btn min-width`) media query-dən SONRA
+   gəlirdi və eyni specificity ilə onu override edirdi. Sonda olmaqla cascade
+   qazanır. */
+
+/* ==== Breakpoint: 480 (telefon) ==== */
+@media (max-width: 480px) {
+  /* Card responsive: phone */
+  .feed-card {
+    padding: 14px 14px;
+    border-radius: 14px;
+    margin-bottom: 12px;
+  }
+
+  .feed-head {
+    gap: 10px;
+  }
+
+  .feed-head .avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+  }
+
+  .feed-head .name {
+    font-size: .86rem;
+  }
+
+  .feed-actions {
+    justify-content: space-around;
+    padding-top: 10px;
+    margin-top: 10px;
+  }
+
+  .act-btn {
+    padding: 8px 8px;
+    border-radius: 8px;
+  }
+
+  .act-btn .count {
+    font-size: .72rem;
+  }
+
+  .feed-code code {
+    font-size: .72rem;
+    padding: 12px 14px !important;
+  }
+
+  .code-head {
+    padding: 6px 10px;
+  }
+
+  .card-menu-dropdown {
+    min-width: 160px;
+  }
+
+  .stat-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .stat-card {
+    padding: 13px;
+  }
+
+  .stat-card .num {
+    font-size: 1.3rem;
+  }
+
+  .row2 {
+    grid-template-columns: 1fr;
+  }
+
+  .user-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .composer-foot {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .block-add-row {
+    flex-wrap: wrap;
+  }
+
+  .block-add-row .img-pick-btn {
+    flex: 1;
+    text-align: center;
+    justify-content: center;
+    min-height: 42px;
+  }
+
+  .hm-grid {
+    grid-template-rows: repeat(7, 10px);
+    grid-auto-columns: 10px;
+  }
+
+  .hm-grid .hd,
+  .hm-legend .hd {
+    width: 10px;
+    height: 10px;
+  }
+
+  .app-search {
+    display: none;
+  }
+
+  .profile-card {
+    padding: 18px 14px;
+  }
+
+  .follow-counts {
+    flex-wrap: wrap;
+  }
+
+  .contact-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero h1 {
+    font-size: 1.7rem;
+  }
+}
+
+/* ==== Breakpoint: 360 (kiçik telefon) ==== */
+@media (max-width: 360px) {
+  .bottom-nav button small {
+    font-size: .52rem;
+  }
+
+  h1.page-title {
+    font-size: 1.15rem;
+  }
+
+  .at-icon-btn {
+    min-width: 34px;
+    padding: 6px 7px;
+  }
+}

@@ -411,11 +411,14 @@ function renderSidebar(){
   
   const pDisp = $('activeProjectDisplay');
   if (pDisp) {
+    // ⚠ `style.display` DEYİL, `hidden` sinfi: Faza 3.4-də inline stillər
+    //   utility siniflərinə çevrildi və onlar `!important` daşıyır — CSSOM
+    //   təyinatı onları basa bilməzdi (element heç vaxt görünməzdi).
     if (state.me.activeProjectId) {
-      pDisp.style.display = 'inline-block';
+      pDisp.classList.remove('hidden');
       pDisp.textContent = 'Aktiv Layihə (ID: ' + state.me.activeProjectId.substring(0,6) + ')';
     } else {
-      pDisp.style.display = 'none';
+      pDisp.classList.add('hidden');
     }
   }
 }

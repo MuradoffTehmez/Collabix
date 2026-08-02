@@ -1,0 +1,338 @@
+/* 05-auth-wizard.css — Auth ekranı, qeydiyyat sihirbazı, skill çipləri
+   ⚠ styles.css-dən MEXANİKİ olaraq ayrıldı (AUDIT-TASK-10 / Faza 3.4).
+      Sıra DƏYİŞMƏMƏLİDİR: cascade eyni spesifiklikdə fayl sırasından asılıdır. */
+/* ---------- qeydiyyat sihirbazı ---------- */
+.wizard-progress {
+  height: 6px;
+  background: var(--surface-2);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.wp-fill {
+  height: 100%;
+  width: 25%;
+  background: linear-gradient(90deg, var(--teal), var(--coral));
+  border-radius: 3px;
+  transition: width .4s ease;
+}
+
+.wizard-step-lbl {
+  font-family: var(--mono);
+  font-size: .74rem;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+
+/* Ana#11 — addım etiketləri (tamamlanmış / cari / gözləyən) */
+.wizard-steps {
+  display: flex;
+  gap: 6px;
+  list-style: none;
+  margin: 8px 0 10px;
+  padding: 0;
+}
+
+.wiz-step-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  flex: 1;
+  color: var(--muted);
+  font-size: .68rem;
+  line-height: 1.2;
+}
+
+.wsc-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: .6rem;
+  font-weight: 700;
+  transition: background-color .25s ease, border-color .25s ease, color .25s ease;
+}
+
+.wsc-lbl {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wiz-step-chip.done .wsc-dot {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: var(--bg);
+}
+
+.wiz-step-chip.cur {
+  color: var(--text);
+}
+
+.wiz-step-chip.cur .wsc-dot {
+  background: var(--coral);
+  border-color: var(--coral);
+  color: #fff;
+}
+
+/* dar ekranda yalnız nömrələr — etiketlər sığmır */
+@media (max-width: 420px) {
+  .wsc-lbl {
+    display: none;
+  }
+
+  .wiz-step-chip {
+    flex: 0 0 auto;
+  }
+
+  .wizard-steps {
+    justify-content: space-between;
+  }
+}
+
+.wizard-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.wizard-next {
+  width: auto !important;
+  padding: 11px 26px !important;
+  margin-top: 0 !important;
+}
+
+.wiz-step {
+  animation: wizIn .3s ease;
+}
+
+@keyframes wizIn {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.wiz-step.back {
+  animation: wizInBack .3s ease;
+}
+
+@keyframes wizInBack {
+  from {
+    opacity: 0;
+    transform: translateX(-14px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.pass-wrap {
+  position: relative;
+}
+
+.pass-wrap input {
+  padding-right: 40px !important;
+}
+
+.eye-btn {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 1rem;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.eye-btn:hover {
+  color: var(--text);
+}
+
+.strength-meter {
+  height: 5px;
+  background: var(--surface-2);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+
+.strength-meter .sm-fill {
+  height: 100%;
+  width: 0;
+  border-radius: 3px;
+  transition: width .3s, background-color .3s;
+}
+
+.strength-lbl {
+  font-size: .68rem;
+  color: var(--muted);
+  margin-top: 3px;
+  font-family: var(--mono);
+  min-height: 12px;
+}
+
+.uname-status {
+  font-size: .72rem;
+  margin-top: 4px;
+  font-family: var(--mono);
+  min-height: 14px;
+}
+
+.uname-status.ok {
+  color: var(--ok);
+}
+
+.uname-status.bad {
+  color: var(--danger);
+}
+
+.remember-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: .8rem;
+  color: var(--muted);
+  margin: 4px 0 10px;
+  cursor: pointer;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--teal);
+  font-size: .78rem;
+  margin-top: 10px;
+  display: block;
+  width: 100%;
+  text-align: center;
+}
+
+.link-btn:hover {
+  text-decoration: underline;
+}
+
+.btn-spinner {
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  border: 2px solid rgba(255, 255, 255, .4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* səviyyəli skill çipləri */
+.skill-pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.skill-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: .78rem;
+  font-family: var(--mono);
+  cursor: pointer;
+  transition: .15s;
+  user-select: none;
+}
+
+.skill-chip .lvl {
+  font-size: .62rem;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--surface);
+  display: none;
+}
+
+.skill-chip.l1 {
+  border-color: var(--teal);
+  color: var(--teal);
+  background: var(--teal-dim);
+}
+
+.skill-chip.l2 {
+  border-color: var(--violet);
+  color: var(--violet);
+  background: rgba(140, 157, 255, .12);
+}
+
+.skill-chip.l3 {
+  border-color: var(--coral);
+  color: var(--coral);
+  background: var(--coral-dim);
+}
+
+.skill-chip.l1 .lvl,
+.skill-chip.l2 .lvl,
+.skill-chip.l3 .lvl {
+  display: inline-block;
+}
+
+.skill-chip-view {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--teal);
+  color: var(--teal);
+  background: var(--teal-dim);
+  font-size: .76rem;
+  font-family: var(--mono);
+}
+
+.skill-chip-view .lvl {
+  font-size: .6rem;
+  opacity: .85;
+}
+
+#app {
+  display: none;
+  min-height: 100vh;
+}
+
+#app.active {
+  display: flex;
+  flex-direction: column;
+}
+
+.app-row {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}

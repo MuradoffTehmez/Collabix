@@ -1,0 +1,128 @@
+/* 75-touch.css — TASK-9 — touch hədəfi ≥44px (cascade-də sonda qazanır)
+   ⚠ styles.css-dən MEXANİKİ olaraq ayrıldı (AUDIT-TASK-10 / Faza 3.4).
+      Sıra DƏYİŞMƏMƏLİDİR: cascade eyni spesifiklikdə fayl sırasından asılıdır. */
+/* ============================================================
+   TASK-9 — TOUCH TARGET (faylın SONUNDA: cascade-də qazanır)
+   ============================================================
+   Touch hədəfi ≥44px yalnız touch cihazlarında (mobil + tablet ≤1024px).
+   Desktop-da siçan var — 40px düymə tam əlçatandır.
+   Bu blok QƏSDƏN faylın sonundadır: TASK-8 markdown/composer CSS baza
+   qaydaları (`.md-tb-btn min-width:30`) faylın ortasında media query-dən
+   sonra gəlir və onu override edirdi. Sonda olmaqla cascade problemi həll olur. */
+@media (max-width: 1024px) {
+  /* İkon/əməliyyat düymələri — kvadrat 44×44 hit-area. */
+  .at-icon-btn,
+  .at-avatar-btn,
+  .ph-theme,
+  .ph-burger,
+  .share-btn,
+  .md-tb-btn,
+  .card-menu-btn,
+  .tax-move-up,
+  .tax-move-down,
+  .act-btn,
+  .code-copy,
+  .img-pick-btn,
+  .img-remove-btn,
+  .eye-btn,
+  .modal-close {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* Pill/çip seçicilər — hündürlük 44px, en məzmuna görə. */
+  .pp,
+  .cmp-chip,
+  .testi-dot {
+    min-height: 44px;
+  }
+  .testi-dot { min-width: 44px; }
+
+  /* Logo-lar toxunma hədəfi. */
+  .at-logo,
+  .ph-logo {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  /* Generic düymələr — 40×40 minimum kvadrat hit-area (RESPONSIVE.md kiçik
+     ikonlar üçün icazə verdiyi alt hədd). İkon düymələri (🗑 sil, ✎ redaktə,
+     "+N" nişan) təbii olaraq dardır; `min-width: 40px` onlara barmaq-uyğun
+     hit-area verir. `:not()` istisna: heatmap günü (.hd), sparkline tooltip. */
+  button:not(.hd):not(.spark-tip):not(.testi-dot),
+  [role=button],
+  [role=tab] {
+    min-height: 40px;
+    min-width: 40px;
+  }
+  .btn-mini,
+  .btn-small,
+  .btn-primary,
+  .btn-danger,
+  .logout-btn,
+  .link-btn,
+  .act-btn,
+  .view-toggle button,
+  .lang-switch button {
+    min-height: 44px;
+  }
+
+  /* Form elementləri: 44px + `font-size: 16px` — iOS Safari 16px-dən kiçik
+     input-a fokusda AVTOMATİK ZOOM edir (layout sıçrayışı). TASK-9 §80. */
+  input:not([type=checkbox]):not([type=radio]),
+  select,
+  textarea {
+    min-height: 44px;
+    font-size: 16px;
+  }
+}
+
+/* TASK-9: more menu (mobil "⋯ Daha çox") düymələri — toxunma hədəfi 44px.
+   `.more-menu button` (specificity 0,1,1) generic button qaydasını üstələdiyi
+   üçün birbaşa hədəflənir. */
+@media (max-width: 1024px) {
+  .more-menu button,
+  .avatar-menu button,
+  .card-menu-dropdown button {
+    min-height: 44px;
+  }
+}
+
+/* TASK-9: scroll-konteynerli tab/filtr düymələri — mətn qədər geniş, sıxılmasın.
+   Generic `button min-width:40` onları 40px-ə sıxıb `white-space:nowrap` mətni
+   kəsirdi (text-clip). Konteyner (`.task-cat-tabs`, `.notif-filters`) onsuz da
+   `overflow-x:auto` scroll edir. */
+@media (max-width: 1024px) {
+  .task-cat-tabs button,
+  .notif-filters button,
+  .notif-filters .pp {
+    flex-shrink: 0;
+    min-width: auto;
+    white-space: nowrap;
+  }
+}
+
+/* TASK-9: mətnli btn-mini flex konteynerdə (məs. export JSON/CSV cütü) sıxılıb
+   mətni 6px daşıdırdı. `flex-shrink:0` + `white-space:nowrap` — düymə məzmuna
+   görə qalır, kəsilmir. İkon btn-mini (🗑) generic min-width:40-dan hit-area alır. */
+@media (max-width: 1024px) {
+  .btn-mini {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+}
+/* Cyberpunk Font Overrides */
+[data-theme="cyberpunk"] body,
+[data-theme="cyberpunk"] .card,
+[data-theme="cyberpunk"] .btn,
+[data-theme="cyberpunk"] input {
+  font-family: 'Orbitron', sans-serif !important;
+}
+
+[data-theme="cyberpunk"] h1,
+[data-theme="cyberpunk"] h2,
+[data-theme="cyberpunk"] h3,
+[data-theme="cyberpunk"] .logo {
+  font-family: 'Space Grotesk', sans-serif !important;
+}

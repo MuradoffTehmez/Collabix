@@ -1,0 +1,56 @@
+/* main.css — CSS giriş nöqtəsi (AUDIT-TASK-10 / Faza 3.4).
+ *
+ * Əvvəl tək `styles.css` (182 KB) + istifadəolunmayan `cyberpunk_styles.css`
+ * var idi. Bu fayl onları əvəz edir: 19 modul, hər biri < 30 KB.
+ *
+ * 🔴 SIRA BAĞLAYICIDIR — dəyişdirmə.
+ *   CSS cascade-i eyni spesifiklikdə SON qaydanı seçir. Bölünmə MEXANİKİ idi
+ *   (davranış dəyişikliyi sıfır), yəni modullar `styles.css`-dəki ardıcıllığı
+ *   olduğu kimi saxlayır. Rəqəmli prefikslər həmin ardıcıllığı qoruyur:
+ *   nişanlar → shell → səhifələr → tema → responsive → utility.
+ *
+ * ⚠ `@import` build zamanı Vite (postcss-import) tərəfindən INLINE olunur —
+ *   istehsalda tək `assets/main-<hash>.css` faylı çıxır, 19 sorğu YOX.
+ *   Ona görə şəlalə (waterfall) cəriməsi yoxdur.
+ *
+ * ⚠ `90-utilities.css` ƏN SONDA olmalıdır: onun `!important` atom sinifləri
+ *   silinmiş inline `style="…"` atributlarını əvəz edir və hər komponent
+ *   qaydasından sonra gəlməlidir (bax həmin faylın başlıq şərhi).
+ */
+
+/* Nişanlar, reset, tipoqrafiya, əsas layout */
+@import './00-tokens-base.css';
+
+/* Giriş / qeydiyyat sihirbazı */
+@import './05-auth-wizard.css';
+
+/* Tətbiq qabığı: topbar, sidebar, naviqasiya */
+@import './10-app-shell.css';
+
+/* Səhifələr */
+@import './20-feed.css';
+@import './30-chat.css';
+@import './35-stats-profile.css';
+@import './40-admin.css';
+@import './50-public.css';
+@import './51-home-polish.css';
+@import './52-users.css';
+@import './53-admin-polish.css';
+
+/* Uyğunlaşan görünüş və əlçatanlıq (AUDIT-TASK-9) */
+@import './60-responsive.css';
+@import './65-a11y-seo.css';
+
+/* Təhlükəsizlik panelləri (AUDIT-TASK-8) və toxunuş hədəfləri */
+@import './70-security-panels.css';
+@import './75-touch.css';
+
+/* Tema override-ları */
+@import './80-cyberpunk.css';
+
+/* Sonrakı modullar (AUDIT-TASK-11) */
+@import './85-teams.css';
+@import './86-admin-ui.css';
+
+/* 🔴 HƏMİŞƏ SONUNCU */
+@import './90-utilities.css';

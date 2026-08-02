@@ -1,0 +1,517 @@
+/* 70-security-panels.css — TASK-8 — sessiyalar, Turnstile, təhlükə paneli, 2FA, OAuth
+   ⚠ styles.css-dən MEXANİKİ olaraq ayrıldı (AUDIT-TASK-10 / Faza 3.4).
+      Sıra DƏYİŞMƏMƏLİDİR: cascade eyni spesifiklikdə fayl sırasından asılıdır. */
+/* ============================================================
+   TASK-8 / FAZA 1 — sessiyalar, Turnstile, təhlükə paneli
+   ============================================================ */
+
+/* Turnstile yuvası. Widget `interaction-only` rejimindədir: normal halda
+   heç nə render etmir və boş div yer tutmamalıdır — ona görə `:empty`
+   halında margin da sıfırdır. */
+.turnstile-slot { margin: 0; }
+.turnstile-slot:not(:empty) { margin: 0 0 12px; }
+
+/* ---------- aktiv sessiyalar (Bənd 3) ---------- */
+.session-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+
+.session-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+/* Cari cihaz vurğulanır ki, istifadəçi "hansı mənəm?" sualını verməsin. */
+.session-row.session-current { border-color: var(--accent); }
+
+.session-icon { font-size: 1.3rem; line-height: 1; flex: 0 0 auto; }
+
+/* min-width:0 — uzun UA/IP mətni flex konteyneri dağıtmasın (mobil vacib). */
+.session-info { flex: 1 1 auto; min-width: 0; }
+
+.session-title {
+  font-size: .86rem;
+  font-weight: 600;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.session-badge {
+  font-size: .68rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.session-meta {
+  font-size: .74rem;
+  color: var(--muted);
+  overflow-wrap: anywhere;   /* uzun IPv6 ünvanı sətri daşırmasın */
+}
+
+@media (max-width: 480px) {
+  /* Dar ekranda düymə aşağı düşür, mətn tam eni alır. */
+  .session-row { flex-wrap: wrap; }
+  .session-info { flex: 1 1 100%; order: 2; }
+  .session-row .btn-mini { order: 3; margin-left: auto; }
+}
+
+/* ---------- Təhlükə monitorinqi paneli (Bənd 1) ---------- */
+/* Ton rəngləri `.adm-stat.tone-*` ilə EYNİ dəyərləri işlədir (yuxarıda) —
+   admin panelində bir hadisənin ciddiliyi hər yerdə eyni rənglə oxunsun. */
+.threat-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.threat-trend,
+.threat-ips {
+  grid-column: 1 / -1;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.threat-trend {
+  position: relative;
+  padding-bottom: 35px;
+  margin-bottom: 10px;
+}
+.threat-trend .lbl,
+.threat-ips .lbl {
+  font-size: .74rem;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.threat-ip-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 3px 0;
+  font-size: .78rem;
+}
+
+.threat-ip-meta { color: var(--muted); font-size: .72rem; }
+
+.threat-events { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; max-width: 100%; overflow: hidden; box-sizing: border-box; }
+
+.threat-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 11px;
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: 9px;
+  background: var(--surface-2);
+  font-size: .8rem;
+}
+
+.threat-row.tone-info   { border-left-color: var(--coral); }
+.threat-row.tone-ok     { border-left-color: var(--ok); }
+.threat-row.tone-warn   { border-left-color: #f5b301; }
+.threat-row.tone-danger { border-left-color: var(--danger); }
+
+/* Səviyyə etiketi MƏTNDİR, təkcə rəng deyil — rəng korluğu üçün ikinci siqnal. */
+.threat-sev {
+  flex: 0 0 auto;
+  font-size: .62rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--muted);
+}
+.threat-row.tone-danger .threat-sev { color: var(--danger); }
+.threat-row.tone-warn   .threat-sev { color: #f5b301; }
+
+.threat-body { flex: 1 1 auto; min-width: 0; }
+.threat-line { color: var(--text); overflow-wrap: anywhere; word-break: break-word; }
+.threat-who  { color: var(--muted); font-weight: 500; overflow-wrap: anywhere; }
+
+.threat-meta {
+  font-size: .72rem;
+  color: var(--muted);
+  overflow-wrap: anywhere;    /* uzun meta sətri paneli daşırmasın */
+}
+
+.threat-time { flex: 0 0 auto; font-size: .7rem; color: var(--muted); white-space: nowrap; }
+
+.threat-empty { padding: 14px; color: var(--muted); font-size: .82rem; text-align: center; }
+
+@media (max-width: 560px) {
+  /* Vaxt aşağı sətrə keçir — dar ekranda hadisə mətni sıxılmasın. */
+  .threat-row { flex-wrap: wrap; }
+  .threat-body { flex: 1 1 100%; }
+  .threat-time { margin-left: auto; }
+}
+
+/* ---------- OAuth (Bənd 5) ---------- */
+/* Ayırıcı: "və ya" mətni iki xəttin arasında. */
+.oauth-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0 12px;
+  color: var(--muted);
+  font-size: .74rem;
+}
+.oauth-divider::before,
+.oauth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.oauth-row { display: flex; flex-direction: column; gap: 8px; }
+
+/* `--brand` inline style ilə provayderə görə verilir (js/oauth.js). */
+.oauth-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: .84rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.oauth-btn:hover { border-color: var(--brand); color: var(--brand); }
+.oauth-btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.oauth-btn svg { flex: 0 0 auto; }
+
+/* Sihirbazdakı "hesabın tanındı" qeydi. */
+.oauth-note {
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: .78rem;
+  line-height: 1.5;
+}
+
+/* Parametrlərdəki bağlı hesab sətirləri. */
+.oauth-accounts { display: flex; flex-direction: column; gap: 8px; }
+
+.oauth-acc-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.oauth-acc-icon { display: flex; flex: 0 0 auto; }
+.oauth-acc-info { flex: 1 1 auto; min-width: 0; }
+.oauth-acc-name { font-size: .86rem; font-weight: 600; color: var(--text); }
+.oauth-acc-meta { font-size: .74rem; color: var(--muted); overflow-wrap: anywhere; }
+
+/* Söndürülmüş "Ayır" düyməsi — son giriş üsulu (səbəb `title`-dadır). */
+.oauth-acc-row .btn-mini[disabled] { opacity: .45; cursor: not-allowed; }
+
+/* ---------- 2FA / TOTP (Bənd 2) ---------- */
+.mfa-panel { display: flex; flex-direction: column; gap: 8px; }
+
+.mfa-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.mfa-info { flex: 1 1 auto; min-width: 0; }
+
+.mfa-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: .86rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.mfa-meta { font-size: .74rem; color: var(--muted); }
+/* Ehtiyat kodlar bitmək üzrədirsə vurğula — telefon itəndə yeganə yol budur. */
+.mfa-meta.mfa-low { color: #f5b301; font-weight: 600; }
+
+/* Vəziyyət nişanı: rəngə ƏLAVƏ olaraq mətn ("AKTİV"/"SÖNÜLÜ") daşıyır. */
+.mfa-badge {
+  font-size: .62rem;
+  font-weight: 800;
+  letter-spacing: .05em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+}
+.mfa-badge.on  { color: var(--ok); border-color: var(--ok); }
+.mfa-badge.off { color: var(--muted); }
+
+/* QR ağ fon üzərində — tünd temada şəffaf QR skan olunmur. */
+.mfa-qr {
+  display: flex;
+  justify-content: center;
+  padding: 14px;
+  margin: 14px 0 6px;
+  background: #fff;
+  border-radius: 12px;
+}
+
+.mfa-secret {
+  display: block;
+  font-family: var(--font-mono, monospace);
+  font-size: .82rem;
+  letter-spacing: .08em;
+  word-break: break-all;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.mfa-warn {
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  border: 1px solid var(--danger);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  color: var(--text);
+  font-size: .8rem;
+  line-height: 1.55;
+}
+
+/* Ehtiyat kodlar — iki sütun, monospace (əl ilə köçürmək üçün). */
+.mfa-codes {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+.mfa-codes code {
+  font-family: var(--font-mono, monospace);
+  font-size: .9rem;
+  letter-spacing: .06em;
+  text-align: center;
+  padding: 8px 4px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+@media (max-width: 380px) {
+  .mfa-codes { grid-template-columns: 1fr; }
+}
+
+/* ---------- qlobal axtarış nəticələri (Bənd 11) ---------- */
+/* Snippet palitra sətrində ikinci sətir kimi görünür — nəticənin NİYƏ
+   tapıldığını göstərir. `pal-lbl` flex sütuna çevrilir ki, ad və snippet
+   alt-alta düşsün. */
+.pal-item .pal-lbl {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pal-snip {
+  font-size: .74rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+/* FTS5 `snippet()` uyğun gələn sözü <mark> ilə qaytarır. */
+.pal-snip mark {
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+  color: var(--text);
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+/* ---------- markdown redaktoru (TASK-8 / Bənd 16) ---------- */
+.md-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px 0;
+}
+
+.md-tb-btn {
+  min-width: 30px;
+  padding: 5px 9px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: .82rem;
+  font-weight: 700;
+  cursor: pointer;
+  line-height: 1;
+}
+.md-tb-btn:hover { border-color: var(--accent); color: var(--accent); }
+.md-tb-btn.md-tb-toggle { margin-left: auto; font-weight: 600; }
+.md-tb-btn.active { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+
+/* Redaktə sahəsi: default tək sütun (textarea). Önbaxış açılanda geniş
+   ekranda yan-yana, dar ekranda alt-alta. */
+.c-md-editarea { display: block; }
+.c-block.preview-on .c-md-editarea {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.c-md-preview {
+  display: none;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface-2);
+  padding: 10px 12px;
+  overflow-y: auto;
+  max-height: 420px;
+}
+.c-block.preview-on .c-md-preview { display: block; }
+
+.c-md-empty { color: var(--muted); font-size: .82rem; font-style: italic; }
+
+@media (max-width: 640px) {
+  /* Dar ekranda yan-yana sığmaz → toggle (alt-alta). */
+  .c-block.preview-on .c-md-editarea { grid-template-columns: 1fr; }
+}
+
+/* ---------- Admin "Geri al" toast (TASK-8 / Bənd 17) ---------- */
+/* Düymələr klik qəbul etməlidir — `.toast-wrap` pointer-events:none-dur. */
+.toast-undo {
+  pointer-events: auto;
+  flex-direction: column;
+  gap: 8px;
+  align-items: stretch;
+  min-width: 280px;
+  border-color: var(--accent);
+}
+
+.toast-undo-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  justify-content: space-between;
+}
+
+.toast-undo-btn {
+  flex: 0 0 auto;
+  border: 1px solid var(--accent);
+  background: transparent;
+  color: var(--accent);
+  font-weight: 700;
+  font-size: .8rem;
+  padding: 5px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.toast-undo-btn:hover { background: var(--accent); color: var(--on-accent); }
+
+/* Vaxt sayğacı: dolan zolaq geri sayımı VİZUAL göstərir (mətn sayğacına əlavə). */
+.toast-undo-bar {
+  height: 3px;
+  border-radius: 3px;
+  background: var(--accent);
+  width: 100%;
+  transform-origin: left;
+  transition: transform linear;
+}
+.toast-undo-bar.run { transform: scaleX(0); }
+
+/* prefers-reduced-motion: zolaq animasiyası söndürülür, mətn sayğacı qalır. */
+@media (prefers-reduced-motion: reduce) {
+  .toast-undo-bar { transition: none; }
+}
+
+/* ---------- profil tamlığı + nudge (TASK-8 / Bənd 6) ---------- */
+.cmp-host[hidden] { display: none; }
+
+.cmp-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  margin: 12px 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+/* Dairəvi faiz — conic-gradient `--pct` dəyişəni ilə (0-100). */
+.cmp-ring {
+  flex: 0 0 auto;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: conic-gradient(var(--accent) calc(var(--pct) * 1%), var(--border) 0);
+}
+.cmp-ring-num {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--surface);
+  display: grid;
+  place-items: center;
+  font-size: .74rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.cmp-body { flex: 1 1 auto; min-width: 0; }
+.cmp-title { font-size: .88rem; font-weight: 700; color: var(--text); }
+.cmp-hint { font-size: .76rem; color: var(--muted); margin: 2px 0 8px; }
+
+.cmp-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.cmp-chip {
+  border: 1px dashed var(--accent);
+  background: transparent;
+  color: var(--accent);
+  font-size: .74rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.cmp-chip:hover { background: var(--accent); color: var(--on-accent); border-style: solid; }
+
+/* reduced-motion: conic ring statik qalır (onsuz da animasiyasız). */
+@media (max-width: 480px) {
+  .cmp-card { flex-wrap: wrap; }
+}

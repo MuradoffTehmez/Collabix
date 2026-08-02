@@ -120,7 +120,7 @@ export async function handlePasswordResetReturn() {
       t('reset.new_sub')),
     // Sessiya ləğvi AÇIQ xəbərdarlıqdır — istifadəçi digər cihazlarından
     // çıxarılmasını sürpriz kimi görməməlidir.
-    el('p', { style: 'color:var(--warn, #e0a800); font-size:.8rem; line-height:1.5; margin-bottom:12px;' },
+    el('p', { style: 'color:var(--warn, #f7bf06); font-size:.8rem; line-height:1.5; margin-bottom:12px;' },
       t('reset.revoke_warn')),
     el('div', { style: 'margin-bottom:8px;' }, pass),
     el('div', { style: 'margin-bottom:10px;' }, again),

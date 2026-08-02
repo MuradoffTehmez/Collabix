@@ -1,0 +1,283 @@
+/* 30-chat.css — Otaq çatı və DM — mesaj qrupları, typing göstəricisi
+   ⚠ styles.css-dən MEXANİKİ olaraq ayrıldı (AUDIT-TASK-10 / Faza 3.4).
+      Sıra DƏYİŞMƏMƏLİDİR: cascade eyni spesifiklikdə fayl sırasından asılıdır. */
+/* --- "typing…" göstəricisi (realtime, RoomDO) --- */
+.typing-indicator {
+  display: none;
+  padding: 2px 18px 6px;
+  font-size: .72rem;
+  color: var(--muted);
+  font-style: italic;
+}
+.typing-indicator.show {
+  display: block;
+}
+
+/* --- Mesaj qrupları: avatar + ad(+badge) + vaxt (TASK-7 / Bənd 9, Slack üslubu) --- */
+.msg-group {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  max-width: 84%;
+}
+.msg-group.in {
+  align-self: flex-start;
+}
+.msg-group.out {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+.mg-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  font-size: .72rem;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.mg-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.msg-group.out .mg-body {
+  align-items: flex-end;
+}
+.mg-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 0 2px;
+}
+.msg-group.out .mg-head {
+  flex-direction: row-reverse;
+}
+.mg-name {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--text);
+  font: inherit;
+  font-size: .78rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.mg-name:hover {
+  color: var(--coral);
+}
+.mg-time {
+  font-size: .66rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+/* Qrup daxilində bubble mg-body-nin enini tuta bilər (65% limiti qrupa keçdi). */
+.mg-body .msg {
+  max-width: 100%;
+}
+
+/* Geri düyməsi — DESKTOP-da gizli (yan-yana layout-da lazım deyil),
+   mobil master-detail-də görünür (@media içində). */
+.chat-back {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  margin-right: 4px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+/* "Daha köhnə mesajlar" zolağı — AUDIT-TASK-8 §8.4.
+   Mesaj qutusunun BAŞINDA durur; düymə, spinner, "başlanğıc" və xəta
+   vəziyyətlərinin hamısı eyni yerdə göstərilir ki, layout sıçramasın. */
+.hist-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 10px;
+  font-size: .82rem;
+  color: var(--muted);
+  text-align: center;
+}
+.hist-bar.done { opacity: .7; font-style: italic; }
+.hist-bar.err { color: var(--danger, #e5484d); }
+.hist-btn {
+  /* Toxunma hədəfi ≥ 44×44 — TASK-9 responsive auditinin (`e2e/audit-lib.ts`)
+     `touch-target` qaydası. Müstəqil düymədir, istisnaya düşmür. */
+  min-height: 44px;
+  min-width: 44px;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: .82rem;
+  cursor: pointer;
+}
+.hist-btn:hover { background: var(--surface-3, var(--surface-2)); }
+
+.chat-input {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;   /* rich-control düymələri + input + göndər dar ekranda daşmasın */
+}
+
+.chat-input input {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 10px 12px;
+  color: var(--text);
+  min-width: 0;
+}
+
+.chat-input input:focus {
+  outline: none;
+  border-color: var(--coral);
+}
+
+.chat-input button {
+  background: linear-gradient(100deg, var(--coral), var(--coral2));
+  color: #fff;
+  border: none;
+  border-radius: 9px;
+  padding: 0 16px;
+  font-weight: 700;
+}
+
+.profile-card {
+  background: linear-gradient(135deg, var(--surface), var(--surface-2));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 26px;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.profile-card .avatar {
+  width: 74px;
+  height: 74px;
+  border-radius: 18px;
+  font-size: 1.4rem;
+}
+
+.profile-card h2 {
+  font-family: var(--display);
+  font-size: 1.3rem;
+}
+
+.profile-card .code-tag {
+  margin-top: 6px;
+  display: block;
+}
+
+.profile-bio {
+  color: var(--muted);
+  font-size: .86rem;
+  line-height: 1.55;
+  margin-top: 8px;
+  max-width: 520px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.streak-track {
+  display: flex;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.streak-track .d {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+.streak-track .d.on {
+  background: var(--coral);
+  border-color: var(--coral);
+}
+
+.social-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.social-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 9px 14px;
+  border-radius: 11px;
+  font-size: .83rem;
+  transition: .15s;
+}
+
+.social-chip:hover {
+  border-color: var(--violet);
+}
+
+.social-chip .plat {
+  color: var(--violet);
+  font-family: var(--mono);
+  font-size: .72rem;
+}
+
+.badge-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.badge-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 16px;
+  min-width: 86px;
+}
+
+.badge-chip.locked {
+  opacity: .35;
+  filter: grayscale(1);
+}
+
+.badge-chip .b-ic {
+  font-size: 1.4rem;
+}
+
+.badge-chip .b-name {
+  font-size: .68rem;
+  color: var(--muted);
+  font-family: var(--mono);
+  text-align: center;
+}

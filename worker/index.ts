@@ -339,7 +339,22 @@ const TURNSTILE_ORIGIN = 'https://challenges.cloudflare.com';
 const CSP = [
   "default-src 'self'",
   `script-src 'self' ${TURNSTILE_ORIGIN}`,
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  // AUDIT-2026-07-26 / M-3 — `'unsafe-inline'` ÇIXARILDI (AUDIT-TASK-10 / Faza 3.4).
+  //
+  // Ön şərt ödəndi: `index.html`-də inline `style="…"` atributu və `<style>`
+  // bloku QALMADI (182 KB `styles.css` → `css/` altında 19 modul + `u-*`
+  // utility sinifləri). Server tərəfdən qaytarılan HTML-də də `<style>` yoxdur
+  // (`og.ts` SVG-dir və CSP yalnız `isHtml` üçün qoyulur; `email.ts` e-poçtdur).
+  //
+  // ⚠ İstifadəçi məzmunu risk yaratmır: `js/markdown.js` DOMPurify-ı
+  //   `ALLOWED_ATTR: ['href','title']` ilə çağırır — `style` heç vaxt keçmir.
+  //
+  // ⚠ BİLİNƏN HƏDD (CSP-nin özünün məhdudiyyəti, bizim boşluq DEYİL):
+  //   CSSOM ilə qoyulan stil (`el.style.width`, `el.style.cssText`) CSP-yə
+  //   TABE DEYİL və işləməyə davam edir — `js/util.js`-dəki `el()` builder-i
+  //   və `applyPercentWidths()` məhz bu yoldan istifadə edir. Bloklanan şey
+  //   ƏSL XSS vektorudur: parse olunan HTML-dəki inline stil.
+  "style-src 'self' https://fonts.googleapis.com",
   "font-src https://fonts.gstatic.com",
   "img-src 'self' data: blob:",
   "connect-src 'self'",

@@ -1,0 +1,351 @@
+/* 52-users.css — TASK-6 / Bölmə 2 — istifadəçilər səhifəsi, command palette
+   ⚠ styles.css-dən MEXANİKİ olaraq ayrıldı (AUDIT-TASK-10 / Faza 3.4).
+      Sıra DƏYİŞMƏMƏLİDİR: cascade eyni spesifiklikdə fayl sırasından asılıdır. */
+/* ============================================================
+   TASK-6 / BÖLMƏ 2 — İstifadəçilər səhifəsi
+   ============================================================ */
+
+/* ---------- toolbar: sıralama + görünüş keçidi ---------- */
+.users-searchbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.users-searchbar input {
+  flex: 1;
+  min-width: 180px;
+}
+
+.user-sort {
+  flex: 0 0 auto;
+}
+
+.view-toggle {
+  display: flex;
+  flex: 0 0 auto;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+.view-toggle button {
+  border: 0;
+  background: none;
+  color: var(--muted);
+  padding: 8px 11px;
+  font-size: .95rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color .16s ease, color .16s ease;
+}
+
+.view-toggle button.active {
+  background: var(--coral);
+  color: var(--on-accent);
+}
+
+.view-toggle button:focus-visible {
+  outline: 2px solid var(--coral);
+  outline-offset: -2px;
+}
+
+/* ---------- İstifadəçilər#2: bərabər hündürlük ----------
+   Kartlar grid sətrində eyni hündürlüyü alır; daxildə bacarıq sətri
+   böyüyür, düymələr həmişə aşağıda qalır → siyahı "dişli" görünmür. */
+.user-grid > .user-card {
+  height: 100%;
+}
+
+.user-card {
+  justify-content: flex-start;
+}
+
+.uc-id {
+  flex: 1;
+  min-width: 0;
+}
+
+.uc-id b,
+.uc-id span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  flex: 1;
+  align-content: flex-start;
+}
+
+.user-card-actions {
+  margin-top: auto;
+}
+
+/* ---------- "+N" nişanı + popover ---------- */
+.more-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.more-tag {
+  cursor: pointer;
+  border: 1px dashed var(--border);
+  background: var(--surface-2);
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.more-tag:hover,
+.more-wrap.open .more-tag {
+  color: var(--coral);
+  border-color: var(--coral);
+  border-style: solid;
+}
+
+.more-tag:focus-visible {
+  outline: 2px solid var(--coral);
+  outline-offset: 2px;
+}
+
+.skill-pop {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  z-index: 30;
+  width: max-content;
+  /* TASK-9 P0: gizli halda `max-width: 0` + `overflow: hidden` — əvvəl
+     `visibility: hidden` rect-i (250px `max-content`) SAXLAYIRDI və sağ
+     kartlarda popover viewport-dan çıxıb səhifəni daşıdırdı (users mobil).
+     `max-width: 0` gizli popover-in yer tutmasının qarşısını alır; açıq halda
+     viewport-a bağlı max-width sağ kartda da sığmasını təmin edir. */
+  max-width: 0;
+  overflow: hidden;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+  box-shadow: 0 14px 34px -10px rgba(0, 0, 0, .6);
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(-50%, 4px);
+  transition: opacity .16s ease, transform .16s ease, visibility .16s, max-width .16s ease;
+}
+
+.more-wrap:hover .skill-pop,
+.more-wrap.open .skill-pop,
+.more-wrap:focus-within .skill-pop {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+  /* Açıq halda tam ölçü, amma viewport-a bağlı — sağ kartda da sığır. */
+  max-width: min(250px, calc(100vw - 32px));
+}
+
+.sp-title {
+  font-size: .7rem;
+  color: var(--muted);
+  margin-bottom: 7px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.sp-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+/* ---------- İstifadəçilər#3: siyahı görünüşü ----------
+   Sıx sətir formatı — sürətli tarama üçün. */
+.user-grid.list-view {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.list-view .user-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 10px 14px;
+  padding: 10px 14px;
+  height: auto;
+}
+
+.list-view .user-card-head {
+  grid-column: 1;
+}
+
+.list-view .user-card-tags {
+  grid-column: 1;
+  flex: 0 0 auto;
+}
+
+.list-view .user-card-actions {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  margin-top: 0;
+}
+
+/* dar ekranda siyahı yenidən sətirlənir */
+@media (max-width: 560px) {
+  .list-view .user-card {
+    grid-template-columns: 1fr;
+  }
+
+  .list-view .user-card-actions {
+    grid-column: 1;
+    grid-row: auto;
+  }
+}
+
+/* ---------- infinite scroll sentineli + status ---------- */
+.dir-sentinel {
+  height: 1px;
+}
+
+.dir-status {
+  text-align: center;
+  color: var(--muted);
+  font-size: .78rem;
+  padding: 14px 0 4px;
+  min-height: 20px;
+}
+
+/* ---------- İstifadəçilər#4: command palette ---------- */
+.palette-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 12vh 16px 16px;
+  background: rgba(0, 0, 0, .55);
+  backdrop-filter: blur(3px);
+  opacity: 0;
+  transition: opacity .16s ease;
+}
+
+.palette-bg.in {
+  opacity: 1;
+}
+
+.palette-bg[hidden] {
+  display: none;
+}
+
+.palette {
+  width: min(560px, 100%);
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 26px 70px -18px rgba(0, 0, 0, .75);
+  overflow: hidden;
+}
+
+.palette-input {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: .95rem;
+  padding: 15px 18px;
+}
+
+.palette-input:focus {
+  outline: none;
+}
+
+.palette-list {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.pal-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 9px;
+  cursor: pointer;
+  font-size: .86rem;
+}
+
+.pal-item.active {
+  background: var(--coral-dim);
+}
+
+.pal-ic {
+  width: 26px;
+  text-align: center;
+  color: var(--muted);
+  flex: 0 0 auto;
+}
+
+.pal-lbl {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pal-sub {
+  color: var(--muted);
+  font-size: .74rem;
+  flex: 0 0 auto;
+}
+
+.pal-empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--muted);
+  font-size: .84rem;
+}
+
+.palette-hint {
+  display: flex;
+  gap: 14px;
+  padding: 9px 16px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: .7rem;
+  flex-wrap: wrap;
+}
+
+.palette-hint kbd {
+  display: inline-block;
+  min-width: 17px;
+  padding: 1px 5px;
+  margin-right: 3px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface-2);
+  font-family: var(--mono);
+  font-size: .68rem;
+  text-align: center;
+}
+
+.avatar.sm {
+  width: 26px;
+  height: 26px;
+  font-size: .62rem;
+  flex: 0 0 auto;
+}

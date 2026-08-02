@@ -1,0 +1,176 @@
+/* 65-a11y-seo.css — Skip-link, focus-visible, breadcrumb, paylaş paneli
+   ⚠ styles.css-dən MEXANİKİ olaraq ayrıldı (AUDIT-TASK-10 / Faza 3.4).
+      Sıra DƏYİŞMƏMƏLİDİR: cascade eyni spesifiklikdə fayl sırasından asılıdır. */
+/* ============================================================
+   SEO / SXO / SMO / Accessibility Optimization Components
+   ============================================================ */
+
+/* Accessibility: Skip to Content */
+.skip-to-content {
+  position: fixed;
+  top: -100%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100000;
+  background: var(--coral);
+  color: var(--on-accent);
+  padding: 12px 24px;
+  border-radius: 0 0 var(--radius) var(--radius);
+  font-weight: 600;
+  font-size: .9rem;
+  transition: top .2s;
+  text-decoration: none;
+}
+.skip-to-content:focus {
+  top: 0;
+  outline: 3px solid var(--teal);
+  outline-offset: 2px;
+}
+
+/* Accessibility: Focus Visible */
+:focus-visible {
+  outline: 2px solid var(--coral);
+  outline-offset: 2px;
+}
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--coral);
+  outline-offset: 2px;
+}
+
+/* SXO: Scroll Progress Bar */
+.scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 0;
+  background: linear-gradient(90deg, var(--coral), var(--teal));
+  z-index: 99999;
+  transition: width .1s linear;
+  pointer-events: none;
+}
+
+/* SXO: Breadcrumb Navigation */
+.breadcrumb {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 10px 24px;
+  font-size: .8rem;
+}
+.breadcrumb ol {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.breadcrumb li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+}
+.breadcrumb li:not(:last-child)::after {
+  content: '›';
+  color: var(--muted);
+  margin-left: 4px;
+}
+.breadcrumb a {
+  color: var(--coral);
+  cursor: pointer;
+  transition: opacity .15s;
+}
+.breadcrumb a:hover { opacity: .8; }
+.breadcrumb li:last-child {
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* SXO: Back to Top Button */
+.back-to-top {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  z-index: 9990;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--coral);
+  font-size: 1.2rem;
+  font-weight: 700;
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(10px);
+  transition: opacity .25s, transform .25s, visibility .25s;
+  box-shadow: 0 4px 16px rgba(0,0,0,.2);
+}
+.back-to-top.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+.back-to-top:hover {
+  background: var(--coral);
+  color: var(--on-accent);
+  border-color: var(--coral);
+}
+@media (max-width: 768px) {
+  .back-to-top { bottom: 100px; right: 14px; width: 40px; height: 40px; }
+}
+
+/* SMO: Social Share Panel */
+.social-share-panel {
+  position: fixed;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 9989;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.social-share-panel.hidden { display: none; }
+.share-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: .95rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .2s;
+  box-shadow: 0 2px 10px rgba(0,0,0,.15);
+}
+.share-btn:hover {
+  background: var(--coral);
+  color: var(--on-accent);
+  border-color: var(--coral);
+  transform: scale(1.1);
+}
+@media (max-width: 1024px) {
+  .social-share-panel {
+    position: fixed;
+    bottom: 80px;
+    right: auto;
+    left: 14px;
+    top: auto;
+    transform: none;
+    flex-direction: column;
+  }
+  .share-btn { width: 34px; height: 34px; font-size: .8rem; }
+}
+@media (max-width: 480px) {
+  .social-share-panel { display: none !important; }
+}

@@ -9,7 +9,7 @@
 // `esc()`-dən keçir. Uzun mətnlər (feed postu) `markdownNode()` ilə render
 // olunur — o, DOMPurify ilə sanitizasiya edir.
 import { api } from './api.js';
-import { el, esc, emit } from './util.js';
+import { el, esc, emit, applyPercentWidths } from './util.js';
 import { t } from './i18n.js';
 import { showModal, closeModal, toast, confirmDialog } from './ui.js';
 import { markdownNode } from './markdown.js';
@@ -77,7 +77,7 @@ export function initTeams() {
 
   const btnCreate = document.getElementById('btnCreateTeam');
   if (btnCreate) {
-    btnCreate.style.display = 'inline-block';
+    btnCreate.classList.remove('hidden');   // bax js/app.js — utility siniflər `!important`-dir
     btnCreate.onclick = openCreateTeamModal;
   }
 
@@ -146,7 +146,7 @@ function loading(container, text = 'Yüklənir…') {
 
 function failed(container, e) {
   container.innerHTML =
-    `<div class="empty-state" style="color:var(--danger)"><div class="ic">⚠</div><span>${esc(e.message || e)}</span></div>`;
+    `<div class="empty-state u-color-danger"><div class="ic">⚠</div><span>${esc(e.message || e)}</span></div>`;
 }
 
 /* ================= komanda siyahısı ================= */
@@ -183,7 +183,7 @@ async function renderTeamsList() {
 
       card.innerHTML = `
         <div class="user-card-head">
-          <div class="avatar" style="border-radius:8px;">${initial}</div>
+          <div class="avatar u-border-radius-8px">${initial}</div>
           <div class="info">
             <div class="name">${esc(team.name)} <span title="${esc(team.visibility || '')}">${badge}</span></div>
             <div class="sub">XP: ${Number(team.xp || 0)} · ${Number(team.members_count || 0)} üzv${
@@ -191,7 +191,7 @@ async function renderTeamsList() {
             }</div>
           </div>
         </div>
-        <div style="margin-top:10px; font-size:13px; color:var(--text-sec);">${esc(team.description || '')}</div>
+        <div class="u-margin-top-10px u-font-size-13px u-color-text-sec">${esc(team.description || '')}</div>
       `;
 
       if (scope === 'discover' && !team.is_member) {
@@ -337,7 +337,7 @@ export function mountTeam(slug) {
   const header = document.getElementById('teamHeader');
   if (!container || !header) return null;
 
-  header.innerHTML = `<div class="ic" style="font-size:24px;">⌛</div>`;
+  header.innerHTML = `<div class="ic u-font-size-24px">⌛</div>`;
   container.innerHTML = '';
 
   const state = { tabCleanup: null, popState: null };
@@ -407,7 +407,7 @@ export function mountTeam(slug) {
       };
       window.addEventListener('popstate', state.popState);
     } catch (e) {
-      header.innerHTML = `<div class="name" style="color:var(--danger)">${esc(e.message)}</div>`;
+      header.innerHTML = `<div class="name u-color-danger">${esc(e.message)}</div>`;
     }
   })();
 
@@ -424,11 +424,11 @@ function renderTeamHeader(team) {
   const repIcon = { Bronze: '🥉', Silver: '🥈', Gold: '🥇', Diamond: '💎', Legend: '👑' }[rep] || '🥉';
 
   header.innerHTML = `
-    <div class="avatar" style="border-radius:12px; font-size:32px; width:80px; height:80px; line-height:80px;">
+    <div class="avatar u-border-radius-12px u-font-size-32px u-width-80px u-height-80px u-line-height-80px">
       ${esc((team.name || '?').charAt(0).toUpperCase())}
     </div>
-    <div class="name" style="margin-top:12px;">${esc(team.name)}</div>
-    <div class="sub" style="margin-top:6px;">
+    <div class="name u-margin-top-12px">${esc(team.name)}</div>
+    <div class="sub u-margin-top-6px">
       ${repIcon} ${esc(rep)} · XP: ${Number(team.total_xp || 0)}
       ${team.myRole ? ` · ${esc(team.myRole)}` : ''}
     </div>
@@ -476,19 +476,19 @@ async function renderTeamOverview(container, team) {
   const s = statsRes.stats || {};
 
   container.innerHTML = `
-    <div class="card" style="margin-top:20px;">
-      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;">
-        <h3 style="margin:0;">${esc(t('teams.overview') || 'İcmal')}</h3>
+    <div class="card u-margin-top-20px">
+      <div class="u-display-flex u-justify-content-space-between u-align-items-flex-start u-gap-10px u-flex-wrap-wrap">
+        <h3 class="u-margin-0">${esc(t('teams.overview') || 'İcmal')}</h3>
         ${team.isAdmin ? '<div><button class="btn-text btn-mini edit-team-btn">Redaktə</button></div>' : ''}
       </div>
-      <p style="color:var(--text-sec); font-size:14px; margin:10px 0 0;">${esc(team.description || 'Məlumat yoxdur.')}</p>
-      <p style="margin:8px 0 0; font-size:13px;"><strong>Görünürlük:</strong> ${esc(team.visibility || '')}</p>
+      <p class="u-color-text-sec u-font-size-14px u-margin-10px-0-0">${esc(team.description || 'Məlumat yoxdur.')}</p>
+      <p class="u-margin-8px-0-0 u-font-size-13px"><strong>Görünürlük:</strong> ${esc(team.visibility || '')}</p>
       <div class="team-rep">
-        <div style="font-size:13px; color:var(--text-sec);">
+        <div class="u-font-size-13px u-color-text-sec">
           Reputasiya: <strong>${esc(s.reputation || 'Bronze')}</strong>
           ${s.nextTier ? ` → ${esc(s.nextTier)} (${Number(s.nextAt || 0)} XP)` : ''}
         </div>
-        <div class="team-rep-bar"><i style="width:${Math.round((Number(s.tierProgress) || 0) * 100)}%"></i></div>
+        <div class="team-rep-bar"><i data-pct="${Math.round((Number(s.tierProgress) || 0) * 100)}"></i></div>
       </div>
     </div>
 
@@ -501,22 +501,23 @@ async function renderTeamOverview(container, team) {
     </div>
 
     ${team.isMember ? `
-      <div class="card" style="margin-top:20px;">
-        <input type="search" id="teamWsSearch" class="auth-input" style="width:100%;"
+      <div class="card u-margin-top-20px">
+        <input type="search" id="teamWsSearch" class="auth-input u-width-100"
           placeholder="Komanda daxilində axtar (üzv, layihə, tapşırıq, fayl)…">
-        <div id="teamWsResults" style="margin-top:10px;"></div>
+        <div id="teamWsResults" class="u-margin-top-10px"></div>
       </div>
-      <div class="card" id="teamAiCard" style="margin-top:20px;" hidden>
-        <h4 style="margin:0 0 8px;">🤖 AI xülasəsi</h4>
-        <div id="teamAiSummary" style="font-size:14px; color:var(--text-sec);"></div>
+      <div class="card u-margin-top-20px" id="teamAiCard" hidden>
+        <h4 class="u-margin-0-0-8px">🤖 AI xülasəsi</h4>
+        <div id="teamAiSummary" class="u-font-size-14px u-color-text-sec"></div>
       </div>` : ''}
 
-    <div style="margin-top:20px;">
-      <h3 style="margin-bottom:12px;">Son Aktivliklər</h3>
-      <div id="teamActivityList" style="display:flex; flex-direction:column; gap:10px;"></div>
+    <div class="u-margin-top-20px">
+      <h3 class="u-margin-bottom-12px">Son Aktivliklər</h3>
+      <div id="teamActivityList" class="u-display-flex u-flex-direction-column u-gap-10px"></div>
     </div>
   `;
 
+  applyPercentWidths(container);   // reputasiya zolağı — bax js/util.js
   container.querySelector('.edit-team-btn')?.addEventListener('click', () => openEditTeamModal(team));
   fillActivity(document.getElementById('teamActivityList'), actRes.activities || []);
 
@@ -550,19 +551,19 @@ function attachWorkspaceSearch(team) {
         if (!groups.length) { out.innerHTML = '<div class="empty-state">Nəticə tapılmadı.</div>'; return; }
 
         out.innerHTML = groups.map(([label, items]) => `
-          <div style="margin-bottom:10px;">
-            <div style="font-size:12px; color:var(--text-sec); text-transform:uppercase;">${esc(label)}</div>
-            ${items.map(i => `<div style="padding:4px 0; font-size:14px;">${esc(i)}</div>`).join('')}
+          <div class="u-margin-bottom-10px">
+            <div class="u-font-size-12px u-color-text-sec u-text-transform-uppercase">${esc(label)}</div>
+            ${items.map(i => `<div class="u-padding-4px-0 u-font-size-14px">${esc(i)}</div>`).join('')}
           </div>`).join('');
 
         // Semantik nəticələr yalnız Vectorize qurulduqda gəlir.
         if (res.semantic?.length) {
-          out.innerHTML += `<div style="margin-top:6px;">
-            <div style="font-size:12px; color:var(--text-sec); text-transform:uppercase;">🔎 Mənaca yaxın</div>
-            ${res.semantic.map(s => `<div style="padding:4px 0; font-size:14px;">${esc(String(s.text).slice(0, 80))}</div>`).join('')}
+          out.innerHTML += `<div class="u-margin-top-6px">
+            <div class="u-font-size-12px u-color-text-sec u-text-transform-uppercase">🔎 Mənaca yaxın</div>
+            ${res.semantic.map(s => `<div class="u-padding-4px-0 u-font-size-14px">${esc(String(s.text).slice(0, 80))}</div>`).join('')}
           </div>`;
         }
-      } catch (e) { out.innerHTML = `<div class="empty-state" style="color:var(--danger)">${esc(e.message)}</div>`; }
+      } catch (e) { out.innerHTML = `<div class="empty-state u-color-danger">${esc(e.message)}</div>`; }
     }, 350);
   };
 }
@@ -604,8 +605,8 @@ async function renderTeamActivity(container, team) {
   loading(container);
   const res = await api(`/teams/${team.slug}/activity?limit=100`);
   container.innerHTML = `
-    <h3 style="margin:20px 0 12px;">Fəaliyyət tarixçəsi</h3>
-    <div id="teamActivityFull" style="display:flex; flex-direction:column; gap:10px;"></div>
+    <h3 class="u-margin-20px-0-12px">Fəaliyyət tarixçəsi</h3>
+    <div id="teamActivityFull" class="u-display-flex u-flex-direction-column u-gap-10px"></div>
   `;
   fillActivity(document.getElementById('teamActivityFull'), res.activities || []);
 }
@@ -618,7 +619,7 @@ async function renderTeamStats(container, team) {
   const s = res.stats || {};
 
   container.innerHTML = `
-    <h3 style="margin:20px 0 4px;">Statistika</h3>
+    <h3 class="u-margin-20px-0-4px">Statistika</h3>
     <div class="team-stat-grid">
       ${statCard(s.membersCount, 'Üzv')}
       ${statCard(s.newMembers30d, 'Yeni üzv (30g)')}
@@ -634,24 +635,26 @@ async function renderTeamStats(container, team) {
       ${statCard(s.growth30d, 'Aktivlik (30g)')}
     </div>
 
-    <div class="card" style="margin-top:20px;">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
+    <div class="card u-margin-top-20px">
+      <div class="u-display-flex u-justify-content-space-between u-align-items-center">
         <strong>Reputasiya: ${esc(s.reputation || 'Bronze')}</strong>
-        <span style="font-size:13px; color:var(--text-sec);">Fayl həcmi: ${esc(fmtBytes(s.filesBytes))}</span>
+        <span class="u-font-size-13px u-color-text-sec">Fayl həcmi: ${esc(fmtBytes(s.filesBytes))}</span>
       </div>
-      <div class="team-rep-bar" style="margin-top:8px;"><i style="width:${Math.round((Number(s.tierProgress) || 0) * 100)}%"></i></div>
+      <div class="team-rep-bar u-margin-top-8px"><i data-pct="${Math.round((Number(s.tierProgress) || 0) * 100)}"></i></div>
     </div>
 
-    <div class="card" style="margin-top:20px;">
-      <h4 style="margin:0 0 12px;">Son 30 günün aktivliyi</h4>
+    <div class="card u-margin-top-20px">
+      <h4 class="u-margin-0-0-12px">Son 30 günün aktivliyi</h4>
       <div id="teamSpark"></div>
     </div>
 
-    <div class="card" style="margin-top:20px;">
-      <h4 style="margin:0 0 12px;">Ən çox tapşırıq bitirənlər</h4>
+    <div class="card u-margin-top-20px">
+      <h4 class="u-margin-0-0-12px">Ən çox tapşırıq bitirənlər</h4>
       <div id="teamTop"></div>
     </div>
   `;
+
+  applyPercentWidths(container);   // reputasiya zolağı — bax js/util.js
 
   // Sparkline — layihədə artıq mövcud olan komponent (əvvəl istifadə olunmurdu).
   // 2 nöqtədən az məlumatda trend çıxmır, ona görə orada sadə mətn göstərilir.
@@ -669,7 +672,7 @@ async function renderTeamStats(container, team) {
   const topBox = document.getElementById('teamTop');
   const top = s.topContributors || [];
   topBox.innerHTML = top.length
-    ? top.map(u => `<div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--border);">
+    ? top.map(u => `<div class="u-display-flex u-justify-content-space-between u-padding-6px-0 u-border-bottom-1px-solid-border">
          <span>${esc(u.name || u.username)}</span><strong>${Number(u.done)}</strong></div>`).join('')
     : `<div class="empty-state">Hələ tamamlanmış tapşırıq yoxdur.</div>`;
 }
@@ -691,12 +694,12 @@ async function renderTeamMembers(container, team) {
   const canInvite = team.permissions?.includes('*') || team.permissions?.includes('manage_invites');
 
   container.innerHTML = `
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px; gap:10px; flex-wrap:wrap;">
-      <h3 style="margin:0;">Üzvlər (${members.length})</h3>
+    <div class="u-display-flex u-justify-content-space-between u-align-items-center u-margin-top-20px u-gap-10px u-flex-wrap-wrap">
+      <h3 class="u-margin-0">Üzvlər (${members.length})</h3>
       ${canInvite ? '<button class="btn-primary btn-mini" id="btnInviteMember">Dəvət Et</button>' : ''}
     </div>
     <div id="pendingInvites"></div>
-    <div id="membersGrid" class="user-grid" style="margin-top:20px;"></div>
+    <div id="membersGrid" class="user-grid u-margin-top-20px"></div>
   `;
 
   document.getElementById('btnInviteMember')?.addEventListener('click', () => openInviteModal(team, roles));
@@ -705,13 +708,13 @@ async function renderTeamMembers(container, team) {
     const box = document.getElementById('pendingInvites');
     box.className = 'card';
     box.style.marginTop = '15px';
-    box.innerHTML = `<h4 style="margin:0 0 10px; color:var(--text-sec);">Gözləyən Dəvətlər</h4>`;
+    box.innerHTML = `<h4 class="u-margin-0-0-10px u-color-text-sec">Gözləyən Dəvətlər</h4>`;
     invites.forEach(i => {
       const row = el('div', {
         style: 'display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:6px; font-size:14px;',
       });
       row.innerHTML = `<span>${esc(i.email || 'Link')} · ${esc(i.role_name || 'Developer')}
-        <span style="color:var(--text-sec);">(${esc(i.invited_by_name || '—')})</span></span>`;
+        <span class="u-color-text-sec">(${esc(i.invited_by_name || '—')})</span></span>`;
       const cancel = el('button', { class: 'btn-text btn-mini', style: 'color:var(--danger);' }, 'Ləğv et');
       cancel.onclick = async () => {
         if (!(await confirmDialog('Dəvəti ləğv etmək istəyirsiniz?'))) return;
@@ -736,12 +739,12 @@ async function renderTeamMembers(container, team) {
     const card = el('div', { class: 'user-card' });
     card.innerHTML = `
       <div class="user-card-head">
-        <div class="avatar" style="border-radius:8px;">${esc(displayName(m).charAt(0).toUpperCase())}</div>
+        <div class="avatar u-border-radius-8px">${esc(displayName(m).charAt(0).toUpperCase())}</div>
         <div class="info">
           <div class="name">${esc(displayName(m))} ${isOwner ? '👑' : ''}</div>
           <div class="sub role-slot"></div>
         </div>
-        <div style="margin-left:auto;" class="act-slot"></div>
+        <div class="act-slot u-margin-left-auto"></div>
       </div>
     `;
 
@@ -826,17 +829,17 @@ function openInviteModal(team, roles = []) {
   const renderUsers = (users, target) => {
     target.innerHTML = '';
     if (!users.length) {
-      target.innerHTML = '<div style="padding:10px; color:var(--muted); text-align:center;">İstifadəçi tapılmadı</div>';
+      target.innerHTML = '<div class="u-padding-10px u-color-muted u-text-align-center">İstifadəçi tapılmadı</div>';
       return;
     }
     users.forEach(u => {
       const row = el('div', {
         style: 'padding:10px; cursor:pointer; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px;',
       });
-      row.innerHTML = `<div class="avatar" style="width:30px; height:30px; font-size:14px;">${
+      row.innerHTML = `<div class="avatar u-width-30px u-height-30px u-font-size-14px">${
         esc(displayName(u).charAt(0).toUpperCase())
-      }</div><div><div style="font-weight:500;">${esc(displayName(u))}</div>
-        <div style="font-size:12px; color:var(--muted);">@${esc(u.username || '')}</div></div>`;
+      }</div><div><div class="u-font-weight-500">${esc(displayName(u))}</div>
+        <div class="u-font-size-12px u-color-muted">@${esc(u.username || '')}</div></div>`;
       row.onclick = () => {
         selectedUserId = u.id;
         searchInput.value = displayName(u);
@@ -864,7 +867,7 @@ function openInviteModal(team, roles = []) {
 
   api(`/users/suggestions?teamId=${encodeURIComponent(team.id)}`).then(res => {
     if (!res.users?.length) return;
-    suggestionsDiv.innerHTML = '<div style="font-size:12px; color:var(--muted); margin-bottom:5px;">Tövsiyə olunanlar:</div>';
+    suggestionsDiv.innerHTML = '<div class="u-font-size-12px u-color-muted u-margin-bottom-5px">Tövsiyə olunanlar:</div>';
     const list = el('div', { style: 'border:1px solid var(--border); border-radius:6px;' });
     renderUsers(res.users, list);
     suggestionsDiv.appendChild(list);
@@ -905,11 +908,11 @@ async function renderTeamProjects(container, team) {
   const canManage = team.permissions?.includes('*') || team.permissions?.includes('manage_projects');
 
   container.innerHTML = `
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px; gap:10px; flex-wrap:wrap;">
-      <h3 style="margin:0;">Layihələr</h3>
+    <div class="u-display-flex u-justify-content-space-between u-align-items-center u-margin-top-20px u-gap-10px u-flex-wrap-wrap">
+      <h3 class="u-margin-0">Layihələr</h3>
       ${canManage ? '<button class="btn-primary btn-mini" id="btnCreateProject">Yeni Layihə</button>' : ''}
     </div>
-    <div id="projectsList" style="margin-top:15px;"></div>
+    <div id="projectsList" class="u-margin-top-15px"></div>
   `;
   document.getElementById('btnCreateProject')?.addEventListener('click', () => openProjectModal(team));
 
@@ -925,14 +928,14 @@ async function renderTeamProjects(container, team) {
     const done = Number(p.tasks_done || 0);
     const total = Number(p.tasks_count || 0);
     card.innerHTML = `
-      <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+      <div class="u-display-flex u-justify-content-space-between u-gap-10px u-flex-wrap-wrap">
         <div class="post-title">${esc(p.name)} ${p.visibility === 'Private' ? '🔒' : '🌍'}</div>
-        <div class="act" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
+        <div class="act u-display-flex u-gap-6px u-flex-wrap-wrap"></div>
       </div>
       <div class="post-content">${esc(p.description || '')}</div>
       <div class="post-meta">
         Status: ${esc(p.status)} · ${done}/${total} tapşırıq · ${Number(p.members_count || 0)} üzv
-        ${p.isMember ? ' · <span style="color:var(--primary);">Üzvsünüz</span>' : ''}
+        ${p.isMember ? ' · <span class="u-color-primary">Üzvsünüz</span>' : ''}
       </div>
     `;
 
@@ -1068,8 +1071,8 @@ async function openProjectRequestsModal(team, project) {
         class: 'post-card',
         style: 'display:flex; justify-content:space-between; align-items:center; gap:10px;',
       });
-      item.innerHTML = `<div><div style="font-weight:bold;">${esc(displayName(req))}</div>
-        <div style="font-size:12px; color:var(--text-sec);">@${esc(req.username || '')}</div></div>`;
+      item.innerHTML = `<div><div class="u-font-weight-bold">${esc(displayName(req))}</div>
+        <div class="u-font-size-12px u-color-text-sec">@${esc(req.username || '')}</div></div>`;
 
       const actions = el('div', { style: 'display:flex; gap:6px;' });
       const acc = el('button', { class: 'btn-primary btn-mini' }, 'Qəbul');
@@ -1093,7 +1096,7 @@ async function openProjectRequestsModal(team, project) {
       box.appendChild(item);
     });
   } catch (e) {
-    box.innerHTML = `<div class="empty-state" style="color:var(--danger);">${esc(e.message)}</div>`;
+    box.innerHTML = `<div class="empty-state u-color-danger">${esc(e.message)}</div>`;
   }
 }
 
@@ -1109,8 +1112,8 @@ async function renderTeamTasks(container, team) {
   const members = membersRes.members || [];
 
   container.innerHTML = `
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px; gap:10px; flex-wrap:wrap;">
-      <h3 style="margin:0;">Tapşırıqlar</h3>
+    <div class="u-display-flex u-justify-content-space-between u-align-items-center u-margin-top-20px u-gap-10px u-flex-wrap-wrap">
+      <h3 class="u-margin-0">Tapşırıqlar</h3>
       ${canManage ? '<button class="btn-primary btn-mini" id="btnCreateTask">Yeni Tapşırıq</button>' : ''}
     </div>
     <div class="team-chips" id="taskFilters">
@@ -1153,15 +1156,15 @@ function taskCard(task, team, members, canManage, container) {
   const prio = { Low: '🟢', Medium: '🟡', High: '🟠', Critical: '🔴' }[task.priority] || '⚪';
 
   card.innerHTML = `
-    <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+    <div class="u-display-flex u-justify-content-space-between u-gap-10px u-flex-wrap-wrap">
       <div class="post-title">${esc(task.title)}</div>
-      <div class="act" style="display:flex; gap:6px;"></div>
+      <div class="act u-display-flex u-gap-6px"></div>
     </div>
     <div class="post-content">${esc(task.description || '')}</div>
-    <div class="post-meta" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+    <div class="post-meta u-display-flex u-align-items-center u-gap-10px u-flex-wrap-wrap">
       <span class="status-slot"></span>
       <span>${prio} ${esc(task.priority || '')}</span>
-      ${task.project_name ? `<span style="color:var(--primary);">📁 ${esc(task.project_name)}</span>` : ''}
+      ${task.project_name ? `<span class="u-color-primary">📁 ${esc(task.project_name)}</span>` : ''}
       ${task.assignee_name || task.assignee_username
         ? `<span>👤 ${esc(task.assignee_name || task.assignee_username)}</span>` : '<span>👤 —</span>'}
     </div>
@@ -1297,21 +1300,21 @@ async function renderTeamFeed(container, team) {
   const canAnnounce = team.permissions?.includes('*') || team.permissions?.includes('manage_feed');
 
   container.innerHTML = `
-    <div class="card" style="margin-top:20px;">
-      <textarea id="feedInput" class="auth-input" rows="3" style="width:100%; resize:vertical;"
+    <div class="card u-margin-top-20px">
+      <textarea id="feedInput" class="auth-input u-width-100 u-resize-vertical" rows="3"
         placeholder="Komanda ilə nəsə paylaşın… (Markdown dəstəklənir)"></textarea>
-      <div style="display:flex; gap:10px; margin-top:10px; align-items:center; flex-wrap:wrap;">
-        <select id="feedKind" class="auth-input" style="flex:0 0 auto;">
+      <div class="u-display-flex u-gap-10px u-margin-top-10px u-align-items-center u-flex-wrap-wrap">
+        <select id="feedKind" class="auth-input u-flex-0-0-auto">
           <option value="post">💬 Paylaşım</option>
           <option value="update">🔄 Yenilik</option>
           <option value="progress">📈 İrəliləyiş</option>
           <option value="release">🚀 Buraxılış</option>
           ${canAnnounce ? '<option value="announcement">📢 Elan</option>' : ''}
         </select>
-        <button class="btn-primary btn-mini" id="btnPostFeed" style="margin-left:auto;">Paylaş</button>
+        <button class="btn-primary btn-mini u-margin-left-auto" id="btnPostFeed">Paylaş</button>
       </div>
     </div>
-    <div id="feedList" style="margin-top:20px;"></div>
+    <div id="feedList" class="u-margin-top-20px"></div>
   `;
 
   document.getElementById('btnPostFeed').onclick = async () => {
@@ -1339,13 +1342,13 @@ async function renderTeamFeed(container, team) {
     const card = el('div', { class: 'post-card' });
     const head = el('div', { style: 'display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap;' });
     head.innerHTML = `
-      <div style="display:flex; align-items:center; gap:10px;">
-        <div class="avatar" style="width:30px; height:30px; line-height:30px; font-size:14px; border-radius:50%;">
+      <div class="u-display-flex u-align-items-center u-gap-10px">
+        <div class="avatar u-width-30px u-height-30px u-line-height-30px u-font-size-14px u-border-radius-50">
           ${esc(displayName(p).charAt(0).toUpperCase())}
         </div>
         <strong>${esc(displayName(p))}</strong>
-        <span style="color:var(--text-sec); font-size:12px;">${esc(fmtDate(p.created_at))}</span>
-        <span style="font-size:12px;">${esc(POST_KIND_LABELS[p.kind] || POST_KIND_LABELS.post)}</span>
+        <span class="u-color-text-sec u-font-size-12px">${esc(fmtDate(p.created_at))}</span>
+        <span class="u-font-size-12px">${esc(POST_KIND_LABELS[p.kind] || POST_KIND_LABELS.post)}</span>
       </div>
     `;
     if (p.canDelete) {
@@ -1382,14 +1385,14 @@ async function renderTeamFiles(container, team) {
     const cats = res.categories || Object.keys(FILE_CATEGORY_LABELS);
 
     container.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px; gap:10px; flex-wrap:wrap;">
-        <h3 style="margin:0;">Fayllar</h3>
-        <div style="display:flex; align-items:center; gap:10px;">
-          <span style="font-size:12px; color:var(--text-sec);">
+      <div class="u-display-flex u-justify-content-space-between u-align-items-center u-margin-top-20px u-gap-10px u-flex-wrap-wrap">
+        <h3 class="u-margin-0">Fayllar</h3>
+        <div class="u-display-flex u-align-items-center u-gap-10px">
+          <span class="u-font-size-12px u-color-text-sec">
             ${Number(res.usage?.files || 0)} fayl · ${esc(fmtBytes(res.usage?.bytes))}
           </span>
-          ${canUpload ? `<label class="btn-primary btn-mini" style="cursor:pointer;">Fayl Yüklə
-            <input type="file" id="teamFileInput" style="display:none;"></label>` : ''}
+          ${canUpload ? `<label class="btn-primary btn-mini u-cursor-pointer">Fayl Yüklə
+            <input type="file" id="teamFileInput" class="u-display-none"></label>` : ''}
         </div>
       </div>
       <div class="team-chips" id="fileCats">
@@ -1427,7 +1430,7 @@ async function renderTeamFiles(container, team) {
     const list = document.getElementById('teamFileList');
     const files = res.files || [];
     if (!files.length) {
-      list.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">Bu bölmədə fayl yoxdur.</div>`;
+      list.innerHTML = `<div class="empty-state u-grid-column-1-1">Bu bölmədə fayl yoxdur.</div>`;
       return;
     }
 
@@ -1436,7 +1439,7 @@ async function renderTeamFiles(container, team) {
       const name = String(f.path).split('/').pop() || f.path;
       const row = el('div', { style: 'display:flex; justify-content:space-between; align-items:flex-start; gap:10px;' });
       row.innerHTML = `
-        <div style="overflow:hidden;">
+        <div class="u-overflow-hidden">
           <a href="${esc(f.url || '/files/' + f.path)}" target="_blank" rel="noopener">${esc(name)}</a>
           <div class="team-file-meta">${esc(fmtBytes(f.size))} · ${esc(FILE_CATEGORY_LABELS[f.category] || f.category || '')}
             · ${esc(displayName(f))}</div>
@@ -1490,21 +1493,21 @@ async function renderTeamChat(container, team) {
       ${res.canManage ? '<button class="team-chip" id="btnNewRoom" title="Yeni otaq">＋</button>' : ''}
     </div>
     <div class="team-chat-box">
-      <div style="padding:12px 16px; border-bottom:1px solid var(--border); font-weight:bold; background:var(--surface-1); display:flex; justify-content:space-between; align-items:center; gap:10px;">
+      <div class="u-padding-12px-16px u-border-bottom-1px-solid-border u-font-weight-bold u-background-surface-1 u-display-flex u-justify-content-space-between u-align-items-center u-gap-10px">
         <span id="teamRoomTitle">💬 #${esc(currentRoom.name)}</span>
-        <span id="teamChatStatus" style="font-size:11px; color:var(--text-sec);">bağlanır…</span>
+        <span id="teamChatStatus" class="u-font-size-11px u-color-text-sec">bağlanır…</span>
       </div>
       <div id="teamChatMessages" class="team-chat-msgs"></div>
-      <div style="padding:12px; border-top:1px solid var(--border); background:var(--surface-1);">
-        <div style="display:flex; flex-direction:column; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; padding:10px;">
-          <input type="text" id="teamChatInput" style="border:none; background:transparent; color:var(--text); padding:5px; outline:none;" placeholder="Mesaj yazın…">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+      <div class="u-padding-12px u-border-top-1px-solid-border u-background-surface-1">
+        <div class="u-display-flex u-flex-direction-column u-background-bg-input u-border-1px-solid-border u-border-radius-8px u-padding-10px">
+          <input type="text" id="teamChatInput" class="u-border-none u-background-transparent u-color-text u-padding-5px u-outline-none" placeholder="Mesaj yazın…">
+          <div class="u-display-flex u-justify-content-space-between u-align-items-center u-margin-top-10px">
             <div>
-              <input type="file" id="teamChatFile" style="display:none;">
-              <button class="btn-text btn-mini" id="btnUploadFile" style="font-size:16px;">📎</button>
-              <span id="uploadFileName" style="font-size:12px; color:var(--muted); margin-left:8px;"></span>
+              <input type="file" id="teamChatFile" class="u-display-none">
+              <button class="btn-text btn-mini u-font-size-16px" id="btnUploadFile">📎</button>
+              <span id="uploadFileName" class="u-font-size-12px u-color-muted u-margin-left-8px"></span>
             </div>
-            <button class="btn-primary btn-mini" id="btnSendTeamMessage" style="padding:6px 15px;">Göndər</button>
+            <button class="btn-primary btn-mini u-padding-6px-15px" id="btnSendTeamMessage">Göndər</button>
           </div>
         </div>
       </div>
@@ -1708,40 +1711,40 @@ async function renderTeamSettings(container, team) {
   const canDelete = team.permissions?.includes('*') || team.permissions?.includes('manage_team');
 
   container.innerHTML = `
-    <div class="card" style="margin-top:20px;">
-      <h3 style="margin-bottom:15px">Komanda Parametrləri</h3>
+    <div class="card u-margin-top-20px">
+      <h3 class="u-margin-bottom-15px">Komanda Parametrləri</h3>
       <div class="form-group">
         <label for="teamNameInput">Komanda Adı</label>
-        <input type="text" id="teamNameInput" class="auth-input" style="width:100%;" />
+        <input type="text" id="teamNameInput" class="auth-input u-width-100" />
       </div>
-      <div class="form-group" style="margin-top:15px">
+      <div class="form-group u-margin-top-15px">
         <label for="teamDescInput">Açıqlama</label>
-        <textarea id="teamDescInput" class="auth-input" rows="3" style="width:100%;"></textarea>
+        <textarea id="teamDescInput" class="auth-input u-width-100" rows="3"></textarea>
       </div>
-      <div class="form-group" style="margin-top:15px">
+      <div class="form-group u-margin-top-15px">
         <label for="teamVisInput">Görünürlük</label>
-        <select id="teamVisInput" class="auth-input" style="width:100%;">
+        <select id="teamVisInput" class="auth-input u-width-100">
           <option value="Public">🌍 Public</option>
           <option value="Private">🔒 Private</option>
           <option value="Invite">✉️ Invite Only</option>
         </select>
       </div>
-      <button id="saveTeamSettings" class="btn-primary" style="margin-top:20px; width:100%;">Yadda Saxla</button>
+      <button id="saveTeamSettings" class="btn-primary u-margin-top-20px u-width-100">Yadda Saxla</button>
     </div>
 
-    <div class="card" style="margin-top:20px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
-        <h3 style="margin:0;">Rollar və icazələr</h3>
+    <div class="card u-margin-top-20px">
+      <div class="u-display-flex u-justify-content-space-between u-align-items-center u-gap-10px u-flex-wrap-wrap">
+        <h3 class="u-margin-0">Rollar və icazələr</h3>
         ${canRoles ? '<button class="btn-primary btn-mini" id="btnNewRole">Yeni rol</button>' : ''}
       </div>
-      <div id="rolesList" style="margin-top:12px;"></div>
+      <div id="rolesList" class="u-margin-top-12px"></div>
     </div>
 
-    ${canDelete ? `<div class="card" style="margin-top:20px; border:1px solid var(--danger);">
-      <h3 style="color:var(--danger); margin-bottom:15px">Təhlükəli Zona</h3>
-      <p style="color:var(--muted); font-size:14px; margin-bottom:15px">
+    ${canDelete ? `<div class="card u-margin-top-20px u-border-1px-solid-danger">
+      <h3 class="u-color-danger u-margin-bottom-15px">Təhlükəli Zona</h3>
+      <p class="u-color-muted u-font-size-14px u-margin-bottom-15px">
         Komandanı silsəniz bütün layihələr və tapşırıqlar arxivə düşəcək.</p>
-      <button id="deleteTeamBtn" class="btn" style="background:var(--danger); color:#fff; width:100%;">Komandanı Sil</button>
+      <button id="deleteTeamBtn" class="btn u-background-danger u-color-fff u-width-100">Komandanı Sil</button>
     </div>` : ''}
   `;
 
@@ -1784,7 +1787,7 @@ async function renderTeamSettings(container, team) {
       });
       const perms = r.permissions?.includes('*') ? 'bütün icazələr' : (r.permissions || []).join(', ') || 'icazə yoxdur';
       row.innerHTML = `<div><strong>${esc(r.name)}</strong>
-        <div style="font-size:12px; color:var(--text-sec);">${esc(perms)}</div></div>`;
+        <div class="u-font-size-12px u-color-text-sec">${esc(perms)}</div></div>`;
       if (canRoles && r.name !== 'Owner') {
         const act = el('div', { style: 'display:flex; gap:6px;' });
         const edit = el('button', { class: 'btn-text btn-mini' }, 'Redaktə');

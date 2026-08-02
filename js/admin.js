@@ -869,11 +869,11 @@ async function loadAdminTeams() {
       const owner = team.owner_name || team.username || team.owner_id;
       const info = el('div');
       info.innerHTML = `
-        <div style="font-weight:bold;">${escHtml(team.name)}
-          <span style="color:var(--text-sec); font-size:12px;">(@${escHtml(team.slug)})</span>
-          ${team.status !== 'active' ? '<span style="color:var(--danger); font-size:12px;">· silinib</span>' : ''}
+        <div class="u-font-weight-bold">${escHtml(team.name)}
+          <span class="u-color-text-sec u-font-size-12px">(@${escHtml(team.slug)})</span>
+          ${team.status !== 'active' ? '<span class="u-color-danger u-font-size-12px">· silinib</span>' : ''}
         </div>
-        <div style="font-size:12px; color:var(--text-sec); margin-top:4px;">
+        <div class="u-font-size-12px u-color-text-sec u-margin-top-4px">
           Qurucu: ${escHtml(owner)} · ${Number(team.members_count || 0)} üzv ·
           ${Number(team.projects_count || 0)} layihə · ${Number(team.tasks_count || 0)} tapşırıq ·
           XP: ${Number(team.xp || 0)} · ${escHtml(team.visibility || '')}
@@ -912,7 +912,7 @@ async function loadAdminTeams() {
       container.appendChild(row);
     });
   } catch(e) {
-    container.innerHTML = `<div class="empty-state" style="color:var(--danger);">Xəta: ${escHtml(e.message)}</div>`;
+    container.innerHTML = `<div class="empty-state u-color-danger">Xəta: ${escHtml(e.message)}</div>`;
   }
 }
 
@@ -925,13 +925,13 @@ async function openAdminTeamDetail(teamId) {
     const res = await api(`/admin/teams/${teamId}`);
     const { team, members = [], projects = [], stats = {} } = res;
     box.innerHTML = `
-      <div style="margin-bottom:14px;">
-        <div style="font-size:18px; font-weight:700;">${escHtml(team.name)}</div>
-        <div style="font-size:13px; color:var(--text-sec);">@${escHtml(team.slug)} ·
+      <div class="u-margin-bottom-14px">
+        <div class="u-font-size-18px u-font-weight-700">${escHtml(team.name)}</div>
+        <div class="u-font-size-13px u-color-text-sec">@${escHtml(team.slug)} ·
           ${escHtml(team.visibility || '')} · ${escHtml(team.status)}</div>
-        <div style="font-size:13px; margin-top:6px;">${escHtml(team.description || '')}</div>
+        <div class="u-font-size-13px u-margin-top-6px">${escHtml(team.description || '')}</div>
       </div>
-      <div style="display:flex; gap:14px; flex-wrap:wrap; font-size:13px; margin-bottom:14px;">
+      <div class="u-display-flex u-gap-14px u-flex-wrap-wrap u-font-size-13px u-margin-bottom-14px">
         <span><strong>${Number(stats.membersCount || 0)}</strong> üzv</span>
         <span><strong>${Number(stats.projectsCount || 0)}</strong> layihə</span>
         <span><strong>${Number(stats.tasksCount || 0)}</strong> tapşırıq</span>
@@ -939,21 +939,21 @@ async function openAdminTeamDetail(teamId) {
         <span><strong>${Number(stats.xp || 0)}</strong> XP (${escHtml(stats.reputation || '')})</span>
         <span><strong>${Number(stats.filesCount || 0)}</strong> fayl</span>
       </div>
-      <h4 style="margin:0 0 8px;">Üzvlər</h4>
-      <div style="max-height:180px; overflow:auto; font-size:13px;">
-        ${members.map(m => `<div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid var(--border);">
-          <span>${escHtml(m.name || m.username)}</span><span style="color:var(--text-sec);">${escHtml(m.role_name || '')}</span>
+      <h4 class="u-margin-0-0-8px">Üzvlər</h4>
+      <div class="u-max-height-180px u-overflow-auto u-font-size-13px">
+        ${members.map(m => `<div class="u-display-flex u-justify-content-space-between u-padding-4px-0 u-border-bottom-1px-solid-border">
+          <span>${escHtml(m.name || m.username)}</span><span class="u-color-text-sec">${escHtml(m.role_name || '')}</span>
         </div>`).join('') || '<div class="empty-state">Üzv yoxdur.</div>'}
       </div>
-      <h4 style="margin:14px 0 8px;">Layihələr</h4>
-      <div style="max-height:180px; overflow:auto; font-size:13px;">
-        ${projects.map(p => `<div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid var(--border);">
-          <span>${escHtml(p.name)}</span><span style="color:var(--text-sec);">${escHtml(p.status)}</span>
+      <h4 class="u-margin-14px-0-8px">Layihələr</h4>
+      <div class="u-max-height-180px u-overflow-auto u-font-size-13px">
+        ${projects.map(p => `<div class="u-display-flex u-justify-content-space-between u-padding-4px-0 u-border-bottom-1px-solid-border">
+          <span>${escHtml(p.name)}</span><span class="u-color-text-sec">${escHtml(p.status)}</span>
         </div>`).join('') || '<div class="empty-state">Layihə yoxdur.</div>'}
       </div>
     `;
   } catch (e) {
-    box.innerHTML = `<div class="empty-state" style="color:var(--danger);">Xəta: ${escHtml(e.message)}</div>`;
+    box.innerHTML = `<div class="empty-state u-color-danger">Xəta: ${escHtml(e.message)}</div>`;
   }
 }
 

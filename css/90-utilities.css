@@ -1,0 +1,123 @@
+/* 90-utilities.css — inline `style` atributlarını əvəz edən atom siniflər.
+   AUDIT-TASK-10 / Faza 3.4 + M-3.
+
+   ⚠ NİYƏ `!important`: bu siniflər `style="…"` atributlarını əvəz edir.
+     Inline stil cascade-də HƏR selektordan yuxarıdadır; adi sinif kimi
+     yazsaydıq daha spesifik komponent qaydası onları basar və çevirmə
+     GÖRÜNMƏZ ŞƏKİLDƏ görünüşü dəyişərdi. `!important` çevrilməni 1:1 saxlayır.
+     (Bootstrap/Tailwind utility qatları da eyni səbəbdən belədir.)
+
+   ⚠ ƏL İLƏ REDAKTƏ ETMƏ — mənbə inline stillərdən generasiya olunub.
+     Yeni utility lazımdırsa komponent faylında adlandırılmış sinif yaz.
+
+   ⚠ FAYL SIRASINDA SONUNCUDUR: eyni spesifiklikdə sonuncu qazanır. */
+
+.u-align-items-center{align-items: center !important}
+.u-align-items-flex-start{align-items: flex-start !important}
+.u-background-bg-input{background: var(--bg-input) !important}
+.u-background-danger{background: var(--danger) !important}
+.u-background-primary{background: var(--primary) !important}
+.u-background-surface-1{background: var(--surface-1) !important}
+.u-background-transparent{background: transparent !important}
+.u-border-1px-solid-border{border: 1px solid var(--border) !important}
+.u-border-1px-solid-danger{border: 1px solid var(--danger) !important}
+.u-border-bottom-1px-solid-border{border-bottom: 1px solid var(--border) !important}
+.u-border-none{border: none !important}
+.u-border-radius-12px{border-radius: 12px !important}
+.u-border-radius-18px{border-radius: 18px !important}
+.u-border-radius-4px{border-radius: 4px !important}
+.u-border-radius-50{border-radius: 50% !important}
+.u-border-radius-8px{border-radius: 8px !important}
+.u-border-top-1px-solid-border{border-top: 1px solid var(--border) !important}
+.u-color-danger{color: var(--danger) !important}
+.u-color-fff{color: #fff !important}
+.u-color-muted{color: var(--muted) !important}
+.u-color-primary{color: var(--primary) !important}
+.u-color-text{color: var(--text) !important}
+.u-color-text-sec{color: var(--text-sec) !important}
+.u-color-white{color: white !important}
+.u-cursor-pointer{cursor: pointer !important}
+.u-display-flex{display: flex !important}
+.u-display-none{display: none !important}
+.u-flex-0-0-auto{flex: 0 0 auto !important}
+.u-flex-1{flex: 1 !important}
+.u-flex-direction-column{flex-direction: column !important}
+.u-flex-wrap-wrap{flex-wrap: wrap !important}
+.u-font-size-1-2rem{font-size: 1.2rem !important}
+.u-font-size-1-4rem{font-size: 1.4rem !important}
+.u-font-size-11px{font-size: 11px !important}
+.u-font-size-12px{font-size: 12px !important}
+.u-font-size-13px{font-size: 13px !important}
+.u-font-size-14px{font-size: 14px !important}
+.u-font-size-16px{font-size: 16px !important}
+.u-font-size-18px{font-size: 18px !important}
+.u-font-size-24px{font-size: 24px !important}
+.u-font-size-32px{font-size: 32px !important}
+.u-font-size-86rem{font-size: .86rem !important}
+.u-font-size-8rem{font-size: .8rem !important}
+.u-font-weight-500{font-weight: 500 !important}
+.u-font-weight-700{font-weight: 700 !important}
+.u-font-weight-bold{font-weight: bold !important}
+.u-font-weight-normal{font-weight: normal !important}
+.u-gap-10px{gap: 10px !important}
+.u-gap-14px{gap: 14px !important}
+.u-gap-6px{gap: 6px !important}
+.u-gap-8px{gap: 8px !important}
+.u-grid-column-1-1{grid-column: 1/-1 !important}
+.u-grid-template-columns-repeat-auto-fit-minmax-150px-1fr{grid-template-columns: repeat(auto-fit,minmax(150px,1fr)) !important}
+.u-height-120px{height: 120px !important}
+.u-height-30px{height: 30px !important}
+.u-height-74px{height: 74px !important}
+.u-height-80px{height: 80px !important}
+.u-justify-content-space-between{justify-content: space-between !important}
+.u-line-height-30px{line-height: 30px !important}
+.u-line-height-80px{line-height: 80px !important}
+.u-margin-0{margin: 0 !important}
+.u-margin-0-0-10px{margin: 0 0 10px !important}
+.u-margin-0-0-12px{margin: 0 0 12px !important}
+.u-margin-0-0-8px{margin: 0 0 8px !important}
+.u-margin-10px-0-0{margin: 10px 0 0 !important}
+.u-margin-12px-0{margin: 12px 0 !important}
+.u-margin-14px-0-8px{margin: 14px 0 8px !important}
+.u-margin-20px-0-12px{margin: 20px 0 12px !important}
+.u-margin-20px-0-4px{margin: 20px 0 4px !important}
+.u-margin-8px-0-0{margin: 8px 0 0 !important}
+.u-margin-bottom-10px{margin-bottom: 10px !important}
+.u-margin-bottom-12px{margin-bottom: 12px !important}
+.u-margin-bottom-14px{margin-bottom: 14px !important}
+.u-margin-bottom-15px{margin-bottom: 15px !important}
+.u-margin-bottom-16px{margin-bottom: 16px !important}
+.u-margin-bottom-5px{margin-bottom: 5px !important}
+.u-margin-left-10px{margin-left: 10px !important}
+.u-margin-left-8px{margin-left: 8px !important}
+.u-margin-left-auto{margin-left: auto !important}
+.u-margin-top-10px{margin-top: 10px !important}
+.u-margin-top-12px{margin-top: 12px !important}
+.u-margin-top-15px{margin-top: 15px !important}
+.u-margin-top-20px{margin-top: 20px !important}
+.u-margin-top-24px{margin-top: 24px !important}
+.u-margin-top-4px{margin-top: 4px !important}
+.u-margin-top-6px{margin-top: 6px !important}
+.u-margin-top-8px{margin-top: 8px !important}
+.u-max-height-180px{max-height: 180px !important}
+.u-max-width-420px{max-width: 420px !important}
+.u-min-height-70px{min-height: 70px !important}
+.u-min-width-220px{min-width: 220px !important}
+.u-outline-none{outline: none !important}
+.u-overflow-auto{overflow: auto !important}
+.u-overflow-hidden{overflow: hidden !important}
+.u-padding-10px{padding: 10px !important}
+.u-padding-12px{padding: 12px !important}
+.u-padding-12px-16px{padding: 12px 16px !important}
+.u-padding-2px-6px{padding: 2px 6px !important}
+.u-padding-4px-0{padding: 4px 0 !important}
+.u-padding-5px{padding: 5px !important}
+.u-padding-6px-0{padding: 6px 0 !important}
+.u-padding-6px-15px{padding: 6px 15px !important}
+.u-resize-vertical{resize: vertical !important}
+.u-text-align-center{text-align: center !important}
+.u-text-transform-uppercase{text-transform: uppercase !important}
+.u-width-100{width: 100% !important}
+.u-width-30px{width: 30px !important}
+.u-width-74px{width: 74px !important}
+.u-width-80px{width: 80px !important}

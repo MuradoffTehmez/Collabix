@@ -1,0 +1,629 @@
+/* 00-tokens-base.css — Dizayn nişanları (:root), reset, tipoqrafiya, əsas layout
+   ⚠ styles.css-dən MEXANİKİ olaraq ayrıldı (AUDIT-TASK-10 / Faza 3.4).
+      Sıra DƏYİŞMƏMƏLİDİR: cascade eyni spesifiklikdə fayl sırasından asılıdır. */
+:root {
+  --bg: #0b1020;
+  --surface: #151b2e;
+  --surface-2: #1c2440;
+  --border: #2a3358;
+  --text: #eef1fb;
+  --muted: #8d97b8;
+  --coral: #4a8fff;
+  --coral2: #7ab8ff;
+  --coral-dim: #1c2c52;
+  --teal: #5eeaea;
+  --teal-dim: #0f3033;
+  --violet: #8c9dff;
+  --danger: #ff5470;
+  --ok: #3dd68c;
+  --radius: 16px;
+  /* Aksent (--coral) fonunun ÜSTÜNDƏ oxunan mətn rəngi.
+     Sabit #fff işlətmək olmaz — ölçülmüş WCAG nisbətləri:
+       dark   #4a8fff:  ağ 3.15 ✗  ·  tünd 6.01 ✓
+       matrix #00e676:  ağ 1.67 ✗  ·  tünd 12.01 ✓
+       light  #2f6fe0:  ağ 4.70 ✓  ·  tünd 4.30 ✗
+     Nişan/tab düymələri kiçik və qalın mətndir → AA həddi 4.5-dir. */
+  --on-accent: #0b1020;
+  --display: 'Space Grotesk', sans-serif;
+  --body: 'Inter', sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+
+  /* Post Card Design System */
+  --card-bg: rgba(21, 27, 46, .72);
+  --card-border: rgba(42, 51, 88, .45);
+  --card-glow: rgba(74, 143, 255, .04);
+  --card-hover-glow: rgba(74, 143, 255, .08);
+  --card-radius: 20px;
+  --code-radius: 16px;
+  --code-bg: rgba(11, 16, 32, .65);
+  --primary: #4a8fff;
+  --accent: #5eeaea;
+}
+
+/* Breakpoint konvensiyası (RESPONSIVE.md): 360 / 480 / 768 / 1024 / 1280.
+   Media query-lərdə bu dəyərlər istifadə olunur; yeni komponentlər 480 və 768-də yoxlanmalıdır. */
+:root[data-theme="matrix"] {
+  --bg: #020a04;
+  --surface: #04140a;
+  --surface-2: #07200f;
+  --border: #0e3a1c;
+  --text: #b6ffd0;
+  --muted: #4e9c68;
+  --coral: #00e676;
+  --coral2: #69f0ae;
+  --coral-dim: #062d14;
+  --teal: #00e5ff;
+  --teal-dim: #03252b;
+  --violet: #76ff03;
+  --danger: #ff5252;
+  --ok: #00e676;
+  /* Parlaq neon-yaşıl fonda tünd mətn — ağ ilə kontrast 2.2:1 idi. */
+  --on-accent: #020a04;
+  --body: 'JetBrains Mono', monospace;
+  --display: 'JetBrains Mono', monospace;
+
+  /* Post Card Design System — Matrix */
+  --card-bg: rgba(4, 20, 10, .78);
+  --card-border: rgba(0, 230, 118, .15);
+  --card-glow: rgba(0, 230, 118, .04);
+  --card-hover-glow: rgba(0, 230, 118, .08);
+  --card-radius: 20px;
+  --code-radius: 16px;
+  --code-bg: rgba(2, 10, 4, .7);
+  --primary: #00e676;
+  --accent: #00e5ff;
+}
+
+:root[data-theme="light"] {
+  --bg: #f2f5fc;
+  --surface: #ffffff;
+  --surface-2: #e8edf9;
+  --border: #c9d3ec;
+  --text: #141a2e;
+  --muted: #5b678c;
+  --coral: #2f6fe0;
+  --coral2: #5a95f0;
+  --coral-dim: #dce8ff;
+  /* Açıq temada aksent kifayət qədər tünddür → ağ mətn 4.70 ilə keçir. */
+  --on-accent: #ffffff;
+  --teal: #0d9d9d;
+  --teal-dim: #d6f3f3;
+  --violet: #5a6cd8;
+  --danger: #d63455;
+
+  /* Post Card Design System — Light */
+  --card-bg: rgba(255, 255, 255, .88);
+  --card-border: rgba(201, 211, 236, .6);
+  --card-glow: rgba(47, 111, 224, .03);
+  --card-hover-glow: rgba(47, 111, 224, .06);
+  --card-radius: 20px;
+  --code-radius: 16px;
+  --code-bg: rgba(232, 237, 249, .7);
+  --primary: #2f6fe0;
+  --accent: #0d9d9d;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--body);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--surface-2);
+  border-radius: 4px;
+}
+
+.avatar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.avatar:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+#landing {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
+  position: relative;
+  overflow: hidden;
+}
+
+.bg-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: .35;
+  pointer-events: none;
+}
+
+.bg-glow.g1 {
+  width: 480px;
+  height: 480px;
+  background: var(--coral);
+  top: -160px;
+  left: -120px;
+  animation: float1 14s ease-in-out infinite;
+}
+
+.bg-glow.g2 {
+  width: 420px;
+  height: 420px;
+  background: var(--violet);
+  bottom: -160px;
+  right: -100px;
+  animation: float2 16s ease-in-out infinite;
+}
+
+.bg-glow.g3 {
+  width: 300px;
+  height: 300px;
+  background: var(--teal);
+  top: 40%;
+  right: 10%;
+  animation: float1 12s ease-in-out infinite reverse;
+}
+
+@keyframes float1 {
+
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+
+  50% {
+    transform: translate(40px, 30px);
+  }
+}
+
+@keyframes float2 {
+
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+
+  50% {
+    transform: translate(-30px, -40px);
+  }
+}
+
+@keyframes cardPop {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes dotPulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 6px var(--coral);
+  }
+
+  50% {
+    box-shadow: 0 0 16px 4px var(--coral);
+  }
+}
+
+.stat-card,
+.feed-card,
+.user-card,
+.leader-row,
+.composer,
+.profile-card,
+.chat-list .ch-item {
+  animation: cardPop .4s ease both;
+}
+
+.brand .dot {
+  animation: dotPulse 2.2s ease-in-out infinite;
+}
+
+.btn-primary,
+.btn-small {
+  background-size: 220% 100%;
+  background-image: linear-gradient(100deg, var(--coral), var(--coral2), var(--coral));
+  transition: filter .15s, transform .15s, background-position .6s ease;
+}
+
+.btn-primary:hover,
+.btn-small:hover {
+  background-position: 100% 0;
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active,
+.btn-small:active,
+.btn-mini:active,
+.act-btn:active,
+.oauth-btn:active {
+  transform: translateY(1px) scale(0.97);
+  filter: brightness(0.95);
+}
+
+.stat-card,
+.feed-card,
+.user-card,
+.leader-row,
+.nav-item,
+.social-chip,
+.tag {
+  transition: transform .18s ease, border-color .18s ease, background-color .18s ease;
+}
+
+.nav-item:hover {
+  transform: translateX(2px);
+}
+
+.auth-wrap {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 960px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: var(--surface);
+  backdrop-filter: blur(18px);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .45);
+}
+
+.auth-hero {
+  padding: 46px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border-right: 1px solid var(--border);
+  position: relative;
+}
+
+.auth-hero h1 {
+  font-family: var(--display);
+  font-size: 2.3rem;
+  font-weight: 800;
+  line-height: 1.12;
+  margin-bottom: 14px;
+  letter-spacing: -.02em;
+}
+
+.auth-hero h1 .grad {
+  background: linear-gradient(100deg, var(--coral), var(--coral2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.auth-hero p {
+  color: var(--muted);
+  font-size: .92rem;
+  line-height: 1.6;
+}
+
+.lang-orbit {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 22px;
+}
+
+.lang-orbit span {
+  font-family: var(--mono);
+  font-size: .72rem;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.term-line {
+  font-family: var(--mono);
+  font-size: .78rem;
+  color: var(--teal);
+  margin-top: 26px;
+}
+
+.term-line::before {
+  content: "$ ";
+  color: var(--muted);
+}
+
+.term-line .blink {
+  display: inline-block;
+  width: 7px;
+  height: 14px;
+  background: var(--teal);
+  margin-left: 4px;
+  animation: blink 1s step-end infinite;
+  vertical-align: middle;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.storage-note {
+  font-size: .7rem;
+  color: var(--muted);
+  margin-top: 18px;
+  line-height: 1.5;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+
+.auth-form {
+  padding: 40px 34px;
+  max-height: 88vh;
+  overflow-y: auto;
+}
+
+.tabs-switch {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 22px;
+  background: var(--surface-2);
+  padding: 4px;
+  border-radius: 11px;
+}
+
+.tabs-switch button {
+  flex: 1;
+  padding: 9px 4px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: .8rem;
+  transition: .15s;
+}
+
+.tabs-switch button.active {
+  background: var(--coral);
+  color: var(--on-accent);
+}
+
+.field {
+  margin-bottom: 14px;
+}
+
+.field label {
+  display: block;
+  font-size: .78rem;
+  color: var(--muted);
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 9px;
+  font-size: .9rem;
+  font-family: inherit;
+  transition: .15s;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  outline: none;
+  border-color: var(--coral);
+  box-shadow: 0 0 0 3px var(--coral-dim);
+}
+
+.row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.gender-pick {
+  display: flex;
+  gap: 8px;
+}
+
+.gender-pick button {
+  flex: 1;
+  padding: 10px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--muted);
+  font-weight: 600;
+  font-size: .85rem;
+  transition: .15s;
+}
+
+.gender-pick button.sel {
+  border-color: var(--coral);
+  color: var(--coral);
+  background: var(--coral-dim);
+}
+
+.pill-pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.pill-pick button {
+  padding: 6px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: .78rem;
+  font-family: var(--mono);
+  transition: .15s;
+}
+
+.pill-pick button.sel {
+  border-color: var(--teal);
+  color: var(--teal);
+  background: var(--teal-dim);
+}
+
+.photo-pick {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--surface-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: .8rem;
+  color: var(--coral);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+  position: relative;
+}
+
+/* Sitat gətirilən postun müəllif avatarı — AUDIT-TASK-10 / Faza 1.4.
+ *
+ * Əvvəl ölçü `avatarNode(...)`-a inline stil OBYEKTİ kimi ötürülürdü, lakin
+ * həmin parametr `online` bayrağıdır: obyekt truthy sayılıb HƏMİŞƏ yanlış
+ * "onlayn" nöqtəsi çıxarırdı, stillər isə heç vaxt tətbiq olunmurdu.
+ * `checkJs` bunu TS2345 kimi tutdu. İndi ölçü sinifdən gəlir. */
+.avatar.avatar-mini {
+  width: 24px;
+  height: 24px;
+  font-size: 12px;
+  margin-right: 4px;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar .online-dot {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ok);
+  border: 2px solid var(--surface);
+}
+
+.photo-pick .avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  font-size: 1.1rem;
+}
+
+.photo-pick label {
+  font-size: .8rem;
+  color: var(--teal);
+  border: 1px dashed var(--teal);
+  padding: 7px 12px;
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+.photo-pick input[type=file] {
+  display: none;
+}
+
+.btn-primary {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(100deg, var(--coral), var(--coral2));
+  color: #fff;
+  font-weight: 700;
+  font-size: .92rem;
+  margin-top: 4px;
+  transition: .15s;
+}
+
+.btn-primary:hover {
+  /* yuxarıda birləşdirildi */
+}
+
+.btn-primary:disabled {
+  opacity: .6;
+  cursor: default;
+  transform: none;
+}
+
+.form-note {
+  font-size: .74rem;
+  color: var(--muted);
+  margin-top: 10px;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.form-note b {
+  color: var(--text);
+}
+
+.form-err {
+  font-size: .78rem;
+  color: var(--danger);
+  margin-top: 8px;
+  text-align: center;
+  min-height: 14px;
+}

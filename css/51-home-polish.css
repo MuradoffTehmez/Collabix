@@ -1,0 +1,416 @@
+/* 51-home-polish.css — TASK-6 / Bölmə 1 — ana səhifə animasiyaları
+   ⚠ styles.css-dən MEXANİKİ olaraq ayrıldı (AUDIT-TASK-10 / Faza 3.4).
+      Sıra DƏYİŞMƏMƏLİDİR: cascade eyni spesifiklikdə fayl sırasından asılıdır. */
+/* ============================================================
+   TASK-6 / BÖLMƏ 1 — Ana səhifə polish
+   Bütün animasiyalar yalnız transform/opacity (GPU-kompozit).
+   Reduced-motion fallback-ları faylın sonundakı blokdadır.
+   ============================================================ */
+
+/* ---------- Ana#1: hero fade-in-up + stagger ---------- */
+@keyframes heroIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero-inner>h1,
+.hero-inner>.hero-tagline,
+.hero-inner>.hero-sub,
+.hero-inner>.hero-cta,
+.hero-inner>.term-line {
+  animation: heroIn .5s cubic-bezier(.22, .61, .36, 1) both;
+}
+
+/* başlıq → şüar → alt-mətn → düymələr → terminal sətri */
+.hero-inner>h1 { animation-delay: 0ms; }
+.hero-inner>.hero-tagline { animation-delay: 80ms; }
+.hero-inner>.hero-sub { animation-delay: 160ms; }
+.hero-inner>.hero-cta { animation-delay: 240ms; }
+.hero-inner>.term-line { animation-delay: 320ms; }
+
+/* düymə hover — arxa plan keçidi + qabarma + kölgə */
+.hero-btn,
+.hero-btn2 {
+  transition: transform .18s ease, box-shadow .18s ease, background-color .18s ease, border-color .18s ease;
+}
+
+.hero-btn:hover,
+.hero-btn2:hover {
+  transform: scale(1.03);
+  box-shadow: 0 10px 26px -6px color-mix(in srgb, var(--coral) 45%, transparent);
+}
+
+.hero-btn2:hover {
+  background: var(--surface-2);
+  border-color: var(--coral);
+}
+
+.hero-btn:active,
+.hero-btn2:active {
+  transform: scale(.99);
+}
+
+/* ---------- Ana#3: kart mikro-interaksiyaları ---------- */
+.feat-card {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .12);
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+
+.feat-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--coral);
+  box-shadow: 0 14px 34px -10px rgba(0, 0, 0, .5);
+}
+
+/* ---------- Ana#6: sticky nav + backdrop blur ---------- */
+.pub-header {
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(6px);
+  transition: background-color .25s ease, box-shadow .25s ease, backdrop-filter .25s ease;
+}
+
+.pub-header.scrolled {
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  backdrop-filter: blur(16px) saturate(140%);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, .35);
+}
+
+/* aktiv naviqasiya linki — alt xətt vurğusu */
+.ph-nav a {
+  position: relative;
+}
+
+.ph-nav a.active {
+  color: var(--text);
+}
+
+.ph-nav a.active::after {
+  content: '';
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 2px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--coral);
+}
+
+/* ---------- Ana#7: texnologiya nişanları (loqolu badge) ---------- */
+.tech-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px 5px 7px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: .78rem;
+  line-height: 1;
+  font-family: inherit;
+  max-width: 100%;
+}
+
+.tech-badge.tb-sm {
+  padding: 4px 9px 4px 6px;
+  font-size: .74rem;
+}
+
+.tech-badge svg {
+  flex: 0 0 auto;
+}
+
+.tl-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tl-flag {
+  font-size: .95rem;
+  line-height: 1;
+}
+
+/* loqosu olmayanlar üçün rəngli initial (C#, Java, SQL) */
+.tl-initial {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  font-size: .58rem;
+  font-weight: 800;
+  letter-spacing: -.02em;
+  font-family: var(--display);
+}
+
+/* klik edilə bilən nişan (Ana#10) */
+.tech-badge.tb-click {
+  cursor: pointer;
+  transition: transform .16s ease, border-color .16s ease, background-color .16s ease;
+}
+
+.tech-badge.tb-click:hover {
+  transform: translateY(-2px);
+  border-color: var(--teal);
+  background: var(--surface);
+}
+
+.tech-badge.tb-click:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+
+.sb-trends-hint {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: .72rem;
+  line-height: 1.5;
+}
+
+/* ---------- Ana#8: addım ikonları ---------- */
+.hs-num {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hs-ic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--coral) 14%, transparent);
+  color: var(--coral);
+  flex: 0 0 auto;
+}
+
+/* ---------- Ana#9: kod paylaşımı vitrini ---------- */
+.pub-lead {
+  color: var(--muted);
+  font-size: .9rem;
+  line-height: 1.6;
+  margin: -6px 0 16px;
+  max-width: 620px;
+}
+
+.code-showcase {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+/* ---------- Ana#5: rəylər karuseli ---------- */
+.testi-carousel {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas: 'prev view next' 'dots dots dots';
+  align-items: center;
+  gap: 10px;
+}
+
+.testi-viewport {
+  grid-area: view;
+  overflow: hidden;
+  border-radius: var(--radius);
+}
+
+.testi-track {
+  display: flex;
+  transition: transform .45s cubic-bezier(.22, .61, .36, 1);
+  will-change: transform;
+}
+
+/* karuseldə kartlar tam eni tutur və bərabər hündürlükdədir */
+.testi-carousel .testi-card {
+  flex: 0 0 100%;
+  min-width: 100%;
+  animation: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.testi-carousel .testi-card:hover {
+  transform: none;
+}
+
+.testi-carousel .testi-text {
+  flex: 1;
+}
+
+.testi-arrow {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform .16s ease, border-color .16s ease, background-color .16s ease;
+}
+
+.testi-arrow.prev { grid-area: prev; }
+.testi-arrow.next { grid-area: next; }
+
+.testi-arrow:hover {
+  border-color: var(--coral);
+  background: var(--surface);
+  transform: scale(1.08);
+}
+
+.testi-arrow:focus-visible {
+  outline: 2px solid var(--coral);
+  outline-offset: 2px;
+}
+
+.testi-dots {
+  grid-area: dots;
+  display: flex;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 4px;
+}
+
+.testi-dot {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--border);
+  cursor: pointer;
+  transition: transform .16s ease, background-color .16s ease;
+}
+
+.testi-dot.on {
+  background: var(--coral);
+  transform: scale(1.35);
+}
+
+.testi-dot:focus-visible {
+  outline: 2px solid var(--coral);
+  outline-offset: 3px;
+}
+
+/* ---------- Ana#12: sosial ikonlar ---------- */
+.pf-soc-ic svg {
+  display: block;
+}
+
+.pf-soc-mark {
+  font-size: .85rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.pf-soc-ic.soc-discord:hover { color: #5865f2; border-color: #5865f2; }
+.pf-soc-ic.soc-github:hover  { color: var(--text); border-color: var(--text); }
+.pf-soc-ic.soc-linkedin:hover { color: #0a66c2; border-color: #0a66c2; }
+
+/* ---------- Ana#13: cookie razılıq banneri ---------- */
+.cookie-banner {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  z-index: 120;
+  width: min(720px, calc(100vw - 24px));
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 18px 50px -12px rgba(0, 0, 0, .6);
+  /* başlanğıc vəziyyət — .in ilə yerinə sürüşür */
+  transform: translate(-50%, calc(100% + 24px));
+  opacity: 0;
+  transition: transform .35s cubic-bezier(.22, .61, .36, 1), opacity .35s ease;
+  /* Sürüşmə bitənə qədər klik qəbul etmir: hərəkət edən düymə barmağın altından
+     "qaçdığı" üçün istifadəçi səhv düyməyə toxuna bilər. `.ready` transitionend-də
+     əlavə olunur (cookies.js). */
+  pointer-events: none;
+}
+
+.cookie-banner.in {
+  transform: translate(-50%, 0);
+  opacity: 1;
+}
+
+.cookie-banner.ready {
+  pointer-events: auto;
+}
+
+.cookie-banner.out {
+  transform: translate(-50%, calc(100% + 24px));
+  opacity: 0;
+}
+
+.cb-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.cb-text b {
+  display: block;
+  font-family: var(--display);
+  font-size: .9rem;
+  margin-bottom: 3px;
+}
+
+.cb-text p {
+  color: var(--muted);
+  font-size: .78rem;
+  line-height: 1.55;
+}
+
+.cb-more {
+  color: var(--coral);
+  text-decoration: underline;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.cb-actions {
+  display: flex;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+@media (max-width: 560px) {
+  .cookie-banner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .cb-actions button {
+    flex: 1;
+  }
+
+  .testi-carousel {
+    grid-template-columns: 1fr;
+    grid-template-areas: 'view' 'dots';
+  }
+
+  /* mobildə oxlar gizlənir — swipe + nöqtələr kifayətdir */
+  .testi-arrow {
+    display: none;
+  }
+}

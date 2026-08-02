@@ -74,8 +74,10 @@
 <!-- Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Orbitron:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
-<!-- Styles -->
-<link rel="stylesheet" href="styles.css">
+<!-- Styles — AUDIT-TASK-10 / Faza 3.4: monolit `styles.css` (182 KB) 19 modula
+     bölündü. `css/main.css` yalnız sıralı `@import` barrel-idir; Vite onları
+     build zamanı tək fayla inline edir (sorğu sayı dəyişmir). -->
+<link rel="stylesheet" href="css/main.css">
 
 <!-- Analytics: Verification (replace placeholders with real values) -->
 <!-- google-site-verification: real kod alınana qədər QOYULMUR (AUDIT-TASK-2).
@@ -545,7 +547,7 @@
 <div id="app">
   <header class="app-topbar">
     <a class="brand at-logo" id="appLogo"><span class="dot"></span>Collabix</a>
-    <span id="activeProjectDisplay" style="font-size:12px; background:var(--primary); color:white; padding:2px 6px; border-radius:4px; margin-left:10px; display:none;"></span>
+    <span id="activeProjectDisplay" class="u-font-size-12px u-background-primary u-color-white u-padding-2px-6px u-border-radius-4px u-margin-left-10px hidden"></span>
     <input class="app-search" id="appSearch" data-i18n-ph="app.searchPh">
     <div class="at-actions">
       <button class="at-icon-btn" id="bellBtn" data-i18n-aria="nav.notifs">🔔<span class="nav-badge" id="notifBadgeTop"></span></button>
@@ -654,7 +656,7 @@
     <div class="page" id="page-notifs">
       <h1 class="page-title" data-i18n="nav.notifs"></h1>
       <p class="page-sub" data-i18n="notifs.sub"></p>
-      <button class="btn-mini dismiss" id="markAllReadBtn" style="margin-bottom:14px;" data-i18n="notifs.mark_all"></button>
+      <button class="btn-mini dismiss u-margin-bottom-14px" id="markAllReadBtn" data-i18n="notifs.mark_all"></button>
       <div class="task-cat-tabs notif-filters" id="notifFilters"></div>
       <div id="notifList"></div>
     </div>
@@ -702,12 +704,12 @@
     <div class="page" id="page-tasks">
       <h1 class="page-title" data-i18n="nav.tasks"></h1>
       <p class="page-sub" data-i18n="tasks.sub"></p>
-      <button class="btn-small" id="proposeTaskBtn" style="margin-bottom:14px;" data-i18n="task.propose"></button>
+      <button class="btn-small u-margin-bottom-14px" id="proposeTaskBtn" data-i18n="task.propose"></button>
       <div class="task-form hidden" id="taskForm">
         <div class="ttl" id="taskFormTtl" data-i18n="tasks.new_title"></div>
         <select id="taskCat"></select>
         <input id="taskTitle" data-i18n-ph="tasks.lbl_title" maxlength="120">
-        <textarea id="taskDesc" data-i18n-ph="tasks.lbl_desc" style="min-height:70px;" maxlength="3000"></textarea>
+        <textarea id="taskDesc" data-i18n-ph="tasks.lbl_desc" class="u-min-height-70px" maxlength="3000"></textarea>
         <button class="btn-small" id="taskCreateBtn" data-i18n="chat.send"></button>
       </div>
       <div id="pendingTasksWrap" class="hidden">
@@ -723,12 +725,12 @@
     </div>
 
     <div class="page" id="page-teams">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div class="u-display-flex u-justify-content-space-between u-align-items-center">
         <div>
           <h1 class="page-title" data-i18n="nav.teams"></h1>
           <p class="page-sub" data-i18n="teams.sub"></p>
         </div>
-        <button class="btn-primary" id="btnCreateTeam" style="display:none;" data-i18n="teams.create"></button>
+        <button class="btn-primary hidden" id="btnCreateTeam" data-i18n="teams.create"></button>
       </div>
       
       <div class="task-cat-tabs" id="teamsScopeTabs">
@@ -738,15 +740,15 @@
       </div>
 
       <div id="teamsDashboard">
-        <div id="teamsSearchWrap" style="margin:12px 0;" hidden>
-          <input type="search" id="teamsSearchInput" class="auth-input" style="width:100%;" data-i18n-ph="teams.search_ph" placeholder="Komanda axtar…">
+        <div id="teamsSearchWrap" class="u-margin-12px-0" hidden>
+          <input type="search" id="teamsSearchInput" class="auth-input u-width-100" data-i18n-ph="teams.search_ph" placeholder="Komanda axtar…">
         </div>
         <div id="teamsList"></div>
       </div>
     </div>
 
     <div class="page" id="page-team">
-      <button class="btn-mini" id="teamBackBtn" style="margin-bottom:14px;" data-i18n="auth.btn_back"></button>
+      <button class="btn-mini u-margin-bottom-14px" id="teamBackBtn" data-i18n="auth.btn_back"></button>
       <div class="profile-header" id="teamHeader"></div>
       <div class="task-cat-tabs" id="teamTabs">
         <button class="active" data-tab="overview" data-i18n="teams.overview">Overview</button>
@@ -764,12 +766,12 @@
     </div>
 
     <div class="page" id="page-post">
-      <button class="btn-mini" id="postBackBtn" style="margin-bottom:14px;" data-i18n="auth.btn_back"></button>
+      <button class="btn-mini u-margin-bottom-14px" id="postBackBtn" data-i18n="auth.btn_back"></button>
       <div id="postDetail"></div>
     </div>
 
     <div class="page" id="page-u">
-      <button class="btn-mini" id="pubBackBtn" style="margin-bottom:14px;" data-i18n="auth.btn_back"></button>
+      <button class="btn-mini u-margin-bottom-14px" id="pubBackBtn" data-i18n="auth.btn_back"></button>
       <div id="pubProfile"></div>
     </div>
 
@@ -789,7 +791,7 @@
         <button data-range="30" data-i18n="stats.r30"></button>
         <button data-range="custom" data-i18n="stats.rc"></button>
       </div>
-      <div class="search-bar hidden" id="statCustomRange" style="max-width:420px;">
+      <div class="search-bar hidden u-max-width-420px" id="statCustomRange">
         <input type="date" id="statFrom"><input type="date" id="statTo">
         <button class="btn-mini dismiss" id="statApplyBtn" data-i18n="stats.apply"></button>
       </div>
@@ -797,7 +799,7 @@
       <div class="bars" id="statBars"></div>
       <div id="adminStatsWrap" class="hidden">
         <div class="section-title" data-i18n="stats.adm_title"></div>
-        <div class="stat-row" id="adminStatsCards" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));"></div>
+        <div class="stat-row u-grid-template-columns-repeat-auto-fit-minmax-150px-1fr" id="adminStatsCards"></div>
         <div class="grid2">
           <div>
             <div class="section-title" data-i18n="stats.top_contrib"></div>
@@ -805,7 +807,7 @@
           </div>
           <div>
             <div class="section-title" data-i18n="stats.growth"></div>
-            <div class="bars" id="adminGrowthBars" style="height:120px;"></div>
+            <div class="bars u-height-120px" id="adminGrowthBars"></div>
           </div>
         </div>
       </div>
@@ -830,12 +832,12 @@
       <h1 class="page-title" data-i18n="nav.profile"></h1>
       <p class="page-sub" data-i18n="prof.sub"></p>
       <div class="profile-card">
-        <div class="avatar" id="profAvatar" style="width:74px;height:74px;border-radius:18px;font-size:1.4rem;">?</div>
-        <div style="flex:1; min-width:220px;">
+        <div class="avatar u-width-74px u-height-74px u-border-radius-18px u-font-size-1-4rem" id="profAvatar">?</div>
+        <div class="u-flex-1 u-min-width-220px">
           <h2 id="profName" data-i18n="app.guest"></h2>
           <span class="code-tag" id="profTag"></span>
           <div class="profile-bio" id="profBio"></div>
-          <div class="skill-pick" id="profSkillChips" style="margin-top:10px;"></div>
+          <div class="skill-pick u-margin-top-10px" id="profSkillChips"></div>
           <div class="follow-counts" id="profFollowCounts"></div>
           <div class="streak-track" id="profStreakTrack"></div>
         </div>
@@ -866,7 +868,7 @@
       <div class="settings-block">
         <h3 data-i18n="set.appr"></h3>
         <div class="theme-toggle-row">
-          <span style="font-size:.86rem; color:var(--muted);" data-i18n="set.theme"></span>
+          <span class="u-font-size-86rem u-color-muted" data-i18n="set.theme"></span>
           <button class="btn-mini" id="themeToggleBtn" data-i18n="set.theme.dark"></button>
         </div>
       </div>
@@ -880,33 +882,33 @@
       <!-- TASK-8 / Bənd 2 — iki mərhələli təsdiq (TOTP) -->
       <div class="settings-block">
         <h3 data-i18n="mfa.title"></h3>
-        <p style="font-size:.8rem; color:var(--muted); margin-bottom:12px;" data-i18n="mfa.sub"></p>
+        <p class="u-font-size-8rem u-color-muted u-margin-bottom-12px" data-i18n="mfa.sub"></p>
         <div id="mfaPanel" class="mfa-panel" aria-live="polite"></div>
       </div>
       <!-- TASK-8 / Bənd 5 — bağlı OAuth hesabları -->
       <div class="settings-block">
         <h3 data-i18n="oauth.title"></h3>
-        <p style="font-size:.8rem; color:var(--muted); margin-bottom:12px;" data-i18n="oauth.sub"></p>
+        <p class="u-font-size-8rem u-color-muted u-margin-bottom-12px" data-i18n="oauth.sub"></p>
         <div id="oauthAccounts" class="oauth-accounts" aria-live="polite"></div>
       </div>
       <!-- TASK-8 / Bənd 3 — aktiv sessiyalar və cihazlar -->
       <div class="settings-block">
         <h3 data-i18n="set.sessions"></h3>
-        <p style="font-size:.8rem; color:var(--muted); margin-bottom:12px;" data-i18n="set.sessions_sub"></p>
+        <p class="u-font-size-8rem u-color-muted u-margin-bottom-12px" data-i18n="set.sessions_sub"></p>
         <div id="sessionList" class="session-list" aria-live="polite"></div>
         <button class="btn-small" id="revokeOthersBtn" data-i18n="set.sess_revoke_all"></button>
       </div>
       <div class="settings-block">
         <h3 data-i18n="set.export"></h3>
-        <p style="font-size:.8rem; color:var(--muted); margin-bottom:12px;" data-i18n="set.export_sub"></p>
-        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <p class="u-font-size-8rem u-color-muted u-margin-bottom-12px" data-i18n="set.export_sub"></p>
+        <div class="u-display-flex u-gap-8px u-flex-wrap-wrap">
           <button class="btn-small" id="exportDataBtn" data-i18n="set.export_btn"></button>
           <button class="btn-mini" id="exportCsvBtn" data-i18n="set.export_csv"></button>
         </div>
       </div>
       <div class="settings-block danger-zone">
         <h3 data-i18n="set.danger"></h3>
-        <p style="font-size:.8rem; color:var(--muted); margin-bottom:12px;" data-i18n="set.danger_sub"></p>
+        <p class="u-font-size-8rem u-color-muted u-margin-bottom-12px" data-i18n="set.danger_sub"></p>
         <button class="btn-danger" id="deleteAccountBtn" data-i18n="set.danger_btn"></button>
       </div>
     </div>
@@ -946,7 +948,7 @@
           <div class="admin-tab-pane" id="tab-threats">
             <div class="admin-card">
               <h2 class="section-title" data-i18n="thr.title"></h2>
-              <p style="color:var(--muted); font-size:.8rem; margin-bottom:10px;" data-i18n="thr.sub"></p>
+              <p class="u-color-muted u-font-size-8rem u-margin-bottom-10px" data-i18n="thr.sub"></p>
               <div id="threatSummary" class="threat-summary" aria-live="polite"></div>
               <div class="admin-toolbar search-bar">
                 <select id="threatType">
@@ -980,15 +982,15 @@
                   <tbody id="threatEvents"></tbody>
                 </table>
               </div>
-              <button class="btn-default hidden" id="threatMore" data-i18n="thr.more" style="margin-top: 12px;"></button>
+              <button class="btn-default hidden u-margin-top-12px" id="threatMore" data-i18n="thr.more"></button>
             </div>
           </div>
 
           <!-- TAB 3: Məzmun İdarəsi -->
           <div class="admin-tab-pane" id="tab-content">
             <div class="admin-card">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                <h2 class="section-title" style="margin:0;" data-i18n="adm.room_new">Otaqlar</h2>
+              <div class="u-display-flex u-justify-content-space-between u-align-items-center u-margin-bottom-16px">
+                <h2 class="section-title u-margin-0" data-i18n="adm.room_new">Otaqlar</h2>
                 <button class="btn-primary" id="btnShowCreateRoomModal">+ Yeni Otaq</button>
               </div>
             </div>
@@ -996,37 +998,37 @@
             <details class="admin-accordion">
               <summary>
                 <div>
-                  <span data-i18n="adm.tax" style="font-size:1.2rem;"></span>
-                  <div style="color:var(--text-sec); font-size:.8rem; font-weight:normal;" data-i18n="adm.tax_sub"></div>
+                  <span data-i18n="adm.tax" class="u-font-size-1-2rem"></span>
+                  <div class="u-color-text-sec u-font-size-8rem u-font-weight-normal" data-i18n="adm.tax_sub"></div>
                 </div>
               </summary>
               <div class="accordion-body">
-                <button class="btn-danger" id="seedTaxBtn" style="margin-bottom:12px;" data-i18n="adm.tax_seed"></button>
+                <button class="btn-danger u-margin-bottom-12px" id="seedTaxBtn" data-i18n="adm.tax_seed"></button>
                 <div class="task-cat-tabs" id="taxTypeTabs">
                   <button class="active" data-tax="prog" data-i18n="adm.tax_prog"></button>
                   <button data-tax="spoken" data-i18n="adm.tax_spoken"></button>
                 </div>
                 <div id="taxList"></div>
-                <button class="btn-primary" id="taxAddBtn" style="margin-top:12px;" data-i18n="adm.btn_add"></button>
+                <button class="btn-primary u-margin-top-12px" id="taxAddBtn" data-i18n="adm.btn_add"></button>
               </div>
             </details>
 
             <details class="admin-accordion">
               <summary>
                 <div>
-                  <span data-i18n="adm.pub" style="font-size:1.2rem;"></span>
-                  <div style="color:var(--text-sec); font-size:.8rem; font-weight:normal;">Sayt məzmunu (FAQ, Testimonial)</div>
+                  <span data-i18n="adm.pub" class="u-font-size-1-2rem"></span>
+                  <div class="u-color-text-sec u-font-size-8rem u-font-weight-normal">Sayt məzmunu (FAQ, Testimonial)</div>
                 </div>
               </summary>
               <div class="accordion-body">
-                <button class="btn-danger" id="seedPubBtn" style="margin-bottom:12px;" data-i18n="adm.pub_seed"></button>
+                <button class="btn-danger u-margin-bottom-12px" id="seedPubBtn" data-i18n="adm.pub_seed"></button>
                 <div class="task-cat-tabs" id="pubContentTabs">
                   <button class="active" data-pc="faq" data-i18n="adm.pub_faq"></button>
                   <button data-pc="testi" data-i18n="adm.pub_testi"></button>
                   <button data-pc="contact" data-i18n="adm.pub_msg"></button>
                 </div>
                 <div id="pubContentList"></div>
-                <button class="btn-primary" id="pubContentAddBtn" style="margin-top:12px;" data-i18n="adm.btn_add"></button>
+                <button class="btn-primary u-margin-top-12px" id="pubContentAddBtn" data-i18n="adm.btn_add"></button>
               </div>
             </details>
           </div>
@@ -1034,12 +1036,12 @@
           <!-- TAB 4: Komandalar (Yeni ayrılmış) -->
           <div class="admin-tab-pane" id="tab-teams">
             <div class="admin-card">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                <h2 class="section-title" style="margin:0;">Admin İdarəetməsi</h2>
+              <div class="u-display-flex u-justify-content-space-between u-align-items-center u-margin-bottom-16px">
+                <h2 class="section-title u-margin-0">Admin İdarəetməsi</h2>
                 <button class="btn-primary" id="btnShowAddAdminModal">+ Admin Əlavə Et</button>
               </div>
-              <h3 style="margin-top:24px; font-size:1.2rem;">Komandalar İdarəsi</h3>
-              <div id="adminTeamsList" style="display:flex; flex-direction:column; gap:10px; margin-top:10px;"></div>
+              <h3 class="u-margin-top-24px u-font-size-1-2rem">Komandalar İdarəsi</h3>
+              <div id="adminTeamsList" class="u-display-flex u-flex-direction-column u-gap-10px u-margin-top-10px"></div>
             </div>
           </div>
 
@@ -1083,7 +1085,7 @@
                   <option value="success">success</option>
                   <option value="info">info</option>
                 </select>
-                <label class="log-autoscroll" style="display:flex; align-items:center; gap:8px;">
+                <label class="log-autoscroll u-display-flex u-align-items-center u-gap-8px">
                   <input type="checkbox" id="adminLogAuto" checked> <span data-i18n="adm.autoscroll"></span>
                 </label>
                 <button class="btn-default" id="adminLogCopy" data-i18n="adm.log_copy"></button>
@@ -1104,7 +1106,7 @@
                   <tbody id="adminLogList"></tbody>
                 </table>
               </div>
-              <button class="btn-default hidden" id="adminLogMore" data-i18n="adm.log_more" style="margin-top: 12px;"></button>
+              <button class="btn-default hidden u-margin-top-12px" id="adminLogMore" data-i18n="adm.log_more"></button>
             </div>
           </div>
         </div>

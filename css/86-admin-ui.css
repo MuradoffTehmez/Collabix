@@ -1,0 +1,543 @@
+/* 86-admin-ui.css — TASK-12 — admin panel UI/UX
+   ⚠ styles.css-dən MEXANİKİ olaraq ayrıldı (AUDIT-TASK-10 / Faza 3.4).
+      Sıra DƏYİŞMƏMƏLİDİR: cascade eyni spesifiklikdə fayl sırasından asılıdır. */
+/* =========================================================
+   TASK-12: ADMIN PANEL UI/UX OPTIMIZATION
+   ========================================================= */
+
+/* 1. Global Layout & Spacing */
+.admin-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+#page-admin .page-title {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+#page-admin .page-sub {
+  font-size: 1.1rem;
+  color: var(--text-sec);
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+#page-admin .section-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+  margin-top: 0;
+}
+
+/* 2. Form Elements Standardisation */
+.admin-card input:not([type="checkbox"]):not([type="radio"]),
+.admin-card select,
+.admin-card textarea {
+  width: 100%;
+  height: 40px;
+  padding: 8px 12px;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  box-sizing: border-box;
+}
+
+.admin-card textarea {
+  height: auto;
+  min-height: 80px;
+}
+
+.admin-card input:not([type="checkbox"]):not([type="radio"]):focus,
+.admin-card select:focus,
+.admin-card textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(47, 111, 224, 0.2);
+}
+
+.admin-card .search-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.admin-card .search-bar input {
+  flex: 1;
+}
+
+/* 3. Button Systematisation */
+.admin-card .btn-primary {
+  height: 40px;
+  padding: 0 20px;
+  border-radius: 6px;
+  font-weight: 600;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: filter 0.2s;
+}
+
+.admin-card .btn-primary:hover {
+  filter: brightness(1.1);
+}
+
+.admin-card .btn-default,
+.admin-card .btn-secondary {
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 6px;
+  font-weight: 500;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.admin-card .btn-default:hover {
+  background: var(--bg-hover);
+}
+
+.admin-card .btn-danger {
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 6px;
+  font-weight: 500;
+  background: #fef2f2;
+  color: #ef4444;
+  border: 1px solid #fca5a5;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.admin-card .btn-danger:hover {
+  background: #fee2e2;
+  border-color: #f87171;
+}
+
+[data-theme="dark"] .admin-card .btn-danger {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+[data-theme="dark"] .admin-card .btn-danger:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.admin-card .btn-ghost,
+.admin-card .btn-icon {
+  background: transparent;
+  border: none;
+  color: var(--text-sec);
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.admin-card .btn-ghost:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+/* 4. Tables and Data Lists */
+.admin-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 14px;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.admin-table th {
+  background: var(--bg);
+  font-weight: 600;
+  color: var(--text-sec);
+  white-space: nowrap;
+}
+
+.admin-table tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-table tr:hover td {
+  background: var(--bg-hover);
+}
+
+/* Status Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.badge-success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.badge-warning {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.badge-error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.badge-info {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+[data-theme="dark"] .badge-success {
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ade80;
+}
+
+[data-theme="dark"] .badge-warning {
+  background: rgba(234, 179, 8, 0.2);
+  color: #facc15;
+}
+
+[data-theme="dark"] .badge-error {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
+[data-theme="dark"] .badge-info {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+}
+
+/* Truncation & Copy */
+.uuid-truncate {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-sec);
+}
+
+.uuid-truncate button {
+  padding: 2px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  border-radius: 4px;
+}
+
+.uuid-truncate button:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+/* Action Menu Dropdown */
+.action-menu-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.action-menu-dropdown {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 4px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  min-width: 120px;
+  z-index: 10;
+  display: none;
+  flex-direction: column;
+  padding: 4px;
+}
+
+.action-menu-wrap:focus-within .action-menu-dropdown,
+.action-menu-wrap:hover .action-menu-dropdown {
+  display: flex;
+}
+
+.action-menu-dropdown button {
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.action-menu-dropdown button:hover {
+  background: var(--bg-hover);
+}
+
+.action-menu-dropdown button.danger {
+  color: #ef4444;
+}
+
+/* 5. Accordion (details/summary) */
+.admin-accordion {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.admin-accordion summary {
+  padding: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.admin-accordion summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-accordion summary::after {
+  content: '▼';
+  font-size: 12px;
+  transition: transform 0.2s;
+}
+
+.admin-accordion[open] summary::after {
+  transform: rotate(180deg);
+}
+
+.admin-accordion .accordion-body {
+  padding: 0 16px 16px 16px;
+  border-top: 1px solid var(--border);
+  margin-top: 16px;
+  padding-top: 16px;
+}
+
+/* 6. Legacy Button Mapping for Admin Panel */
+.admin-card .btn-small,
+.admin-card .btn-mini,
+.admin-accordion .btn-small,
+.admin-accordion .btn-mini {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 6px;
+  font-weight: 500;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 13px;
+}
+
+.admin-card .btn-small:hover,
+.admin-card .btn-mini:hover,
+.admin-accordion .btn-small:hover,
+.admin-accordion .btn-mini:hover {
+  background: var(--bg-hover);
+}
+
+.admin-card .btn-small.block,
+.admin-card .btn-mini.block,
+.admin-card .btn-small.danger,
+.admin-card .btn-mini.danger,
+.admin-accordion .btn-small.block,
+.admin-accordion .btn-mini.block,
+.admin-accordion .btn-small.danger,
+.admin-accordion .btn-mini.danger {
+  background: #fef2f2;
+  color: #ef4444;
+  border: 1px solid #fca5a5;
+}
+
+.admin-card .btn-small.block:hover,
+.admin-card .btn-mini.block:hover,
+.admin-accordion .btn-small.block:hover,
+.admin-accordion .btn-mini.block:hover {
+  background: #fee2e2;
+  border-color: #f87171;
+}
+
+[data-theme="dark"] .admin-card .btn-small.block,
+[data-theme="dark"] .admin-accordion .btn-small.block,
+[data-theme="dark"] .admin-card .btn-mini.block,
+[data-theme="dark"] .admin-accordion .btn-mini.block {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+[data-theme="dark"] .admin-card .btn-small.block:hover,
+[data-theme="dark"] .admin-accordion .btn-small.block:hover,
+[data-theme="dark"] .admin-card .btn-mini.block:hover,
+[data-theme="dark"] .admin-accordion .btn-mini.block:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.admin-card .admin-user-row,
+.admin-accordion .admin-user-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  background: var(--bg);
+}
+
+.admin-card .admin-user-row:hover,
+.admin-accordion .admin-user-row:hover {
+  background: var(--bg-hover);
+}
+
+.admin-card .admin-user-row .name,
+.admin-accordion .admin-user-row .name {
+  flex: 1;
+}
+
+/* 7. Tabbed Navigation Layout */
+.admin-layout {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  margin-top: 16px;
+}
+
+.admin-sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: sticky;
+  top: 80px;
+}
+
+.admin-sidebar-btn {
+  width: 100%;
+  text-align: left;
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-sec);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-sidebar-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.admin-sidebar-btn.active {
+  background: var(--primary);
+  color: #fff;
+  font-weight: 600;
+}
+
+.admin-content {
+  flex: 1;
+  min-width: 0;
+  /* Prevents flex items from overflowing */
+}
+
+.admin-tab-pane {
+  display: none;
+  animation: cardPop 0.3s ease;
+}
+
+.admin-tab-pane.active {
+  display: block;
+}
+
+/* Mobile responsive sidebar */
+@media (max-width: 768px) {
+  .admin-layout {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .admin-sidebar {
+    width: 100%;
+    position: relative;
+    top: 0;
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 12px;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .admin-sidebar-btn {
+    width: auto;
+    padding: 10px 16px;
+    /* ⚠ TASK-9 responsive auditi (`text-clip`): sidebar mobildə üfüqi sürüşən
+       zolağa çevrilir, lakin flex uşaqları default olaraq SIXILIR
+       (`flex-shrink: 1`). 6 düymə 360 px-ə sığmadığı üçün hər birinin mətni
+       kəsilirdi (scrollW 127 > clientW 47). Sürüşən zolaqda düymələr öz təbii
+       enini saxlamalıdır — sıxılma yox, sürüşmə olmalıdır. */
+    flex: 0 0 auto;
+  }
+}
