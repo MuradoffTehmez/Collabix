@@ -42,6 +42,13 @@ export const iconX = () => SVG(
   { w: '14', h: '14' },
 );
 
+/* AUDIT-UI: admin panelindəki "müvəqqəti şifrə" düyməsi '🔑' emojisi idi,
+ * halbuki bir sətir yuxarıdakı redaktə düyməsi artıq SVG işlədirdi. */
+export const iconLock = () => SVG(
+  '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  { w: '14', h: '14' },
+);
+
 
 /* ---------- addım ikonları (Ana#8) — vahid Lucide üslubu ---------- */
 export const STEP_ICONS = [

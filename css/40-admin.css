@@ -146,7 +146,9 @@
 
 .btn-danger:hover {
   background: var(--danger);
-  color: #fff;
+  /* AUDIT-UI: ağ mətn qırmızı fonda dark/matrix temada 3.11:1 verirdi (AA 4.5 tələb).
+     Destruktiv əməliyyat düyməsidir — məhz burada oxunaqlılıq kritikdir. */
+  color: var(--on-danger);
 }
 
 .toast-wrap {

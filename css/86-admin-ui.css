@@ -82,7 +82,8 @@
   border-radius: 6px;
   font-weight: 600;
   background: var(--primary);
-  color: #fff;
+  /* AUDIT-UI: `--primary` = `--coral` — ağ mətn dark 3.15:1 / matrix 1.67:1. */
+  color: var(--on-accent);
   border: none;
   display: inline-flex;
   align-items: center;
@@ -493,7 +494,8 @@
 
 .admin-sidebar-btn.active {
   background: var(--primary);
-  color: #fff;
+  /* AUDIT-UI: aktiv naviqasiya elementi — bax `--on-accent`. */
+  color: var(--on-accent);
   font-weight: 600;
 }
 

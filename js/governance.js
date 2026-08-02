@@ -245,10 +245,12 @@ export async function renderModApps() {
 
   host.append(el('div', { class: 'c-table-wrap' },
     el('table', { class: 'c-table' },
+      // AUDIT-UI: `scope="col"` əlavə olundu — başlıq/xana əlaqəsi ekran
+      // oxuyucusu üçün. (Mətnlər hələ sabitdir; bu faylın i18n köçürməsi ayrıca iş.)
       el('thead', {}, el('tr', {},
-        el('th', {}, 'İstifadəçi'), el('th', {}, 'Səviyyə'),
-        el('th', {}, 'Reputasiya'), el('th', {}, 'Xəbərdarlıq'),
-        el('th', {}, 'Müraciət'), el('th', {}, 'Əməliyyat'))),
+        el('th', { scope: 'col' }, 'İstifadəçi'), el('th', { scope: 'col' }, 'Səviyyə'),
+        el('th', { scope: 'col' }, 'Reputasiya'), el('th', { scope: 'col' }, 'Xəbərdarlıq'),
+        el('th', { scope: 'col' }, 'Müraciət'), el('th', { scope: 'col' }, 'Əməliyyat'))),
       body)));
 }
 

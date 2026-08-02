@@ -215,7 +215,9 @@
   top: 50%;
   transform: translateY(-50%);
   background: var(--danger);
-  color: #fff;
+  /* AUDIT-UI: oxunmamış sayğac — .66rem/700 ≈ 10.6px kiçik mətndir, ağ ilə
+     dark temada 3.11:1 verirdi. `--on-danger` bax 00-tokens-base.css. */
+  color: var(--on-danger);
   font-size: .66rem;
   font-weight: 700;
   min-width: 17px;
@@ -496,7 +498,7 @@ h1.page-title {
   height: 22px;
   border-radius: 50%;
   background: var(--danger);
-  color: #fff;
+  color: var(--on-danger);   /* AUDIT-UI: bax `--on-danger` ölçmələri. */
   border: none;
   font-size: .7rem;
   line-height: 1;

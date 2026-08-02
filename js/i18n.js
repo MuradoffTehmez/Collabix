@@ -640,6 +640,19 @@ const D = {
   'adm.log_more':   { az: '↓ Daha çox yüklə', en: '↓ Load more', ru: '↓ Загрузить ещё' },
   'adm.log_empty':  { az: 'Jurnal boşdur.', en: 'Log is empty.', ru: 'Лог пуст.' },
   'adm.log_copied': { az: 'Jurnal kopyalandı', en: 'Log copied', ru: 'Лог скопирован' },
+  /* AUDIT-UI: admin cədvəllərinin başlıqları SABİT AZƏRBAYCANCA idi — ətrafdakı
+     bütün filtr/düymələr tərcümə olunurdu, yalnız `<th>`-lər qalmışdı. */
+  'adm.col_date':     { az: 'Tarix', en: 'Date', ru: 'Дата' },
+  'adm.col_severity': { az: 'Səviyyə', en: 'Severity', ru: 'Уровень' },
+  'adm.col_type':     { az: 'Növ', en: 'Type', ru: 'Тип' },
+  'adm.col_user':     { az: 'İstifadəçi', en: 'User', ru: 'Пользователь' },
+  'adm.col_action':   { az: 'Əməliyyat', en: 'Action', ru: 'Действие' },
+  'adm.col_event':    { az: 'Hadisə', en: 'Event', ru: 'Событие' },
+  'adm.col_user_id':  { az: 'İstifadəçi/ID', en: 'User/ID', ru: 'Пользователь/ID' },
+  'adm.col_status':   { az: 'Status', en: 'Status', ru: 'Статус' },
+  /* AUDIT-UI: ikon-yalnız düymələrin əlçatan adı (emojidən köçürülüb). */
+  'adm.temp_pass':    { az: 'Müvəqqəti şifrə', en: 'Temporary password', ru: 'Временный пароль' },
+  'adm.copy_id':      { az: 'ID-ni kopyala', en: 'Copy ID', ru: 'Скопировать ID' },
 
   // taksonomiya DnD (Admin#3)
   'adm.tax_drag':   { az: 'Sürüşdürüb sırala', en: 'Drag to reorder', ru: 'Перетащите для сортировки' },

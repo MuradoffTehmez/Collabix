@@ -1067,12 +1067,14 @@
               <div class="admin-table-wrap">
                 <table class="admin-table">
                   <thead>
+                    <!-- AUDIT-UI: `scope="col"` YOX idi — ekran oxuyucusu xana ilə
+                         başlığı əlaqələndirə bilmirdi; başlıqlar tərcümə də olunmurdu. -->
                     <tr>
-                      <th>Tarix</th>
-                      <th>Səviyyə</th>
-                      <th>Növ</th>
-                      <th>İstifadəçi</th>
-                      <th>Əməliyyat</th>
+                      <th scope="col" data-i18n="adm.col_date"></th>
+                      <th scope="col" data-i18n="adm.col_severity"></th>
+                      <th scope="col" data-i18n="adm.col_type"></th>
+                      <th scope="col" data-i18n="adm.col_user"></th>
+                      <th scope="col" data-i18n="adm.col_action"></th>
                     </tr>
                   </thead>
                   <tbody id="threatEvents"></tbody>
@@ -1230,11 +1232,11 @@
                 <table class="admin-table">
                   <thead>
                     <tr>
-                      <th>Səviyyə</th>
-                      <th>Tarix</th>
-                      <th>Hadisə</th>
-                      <th>İstifadəçi/ID</th>
-                      <th>Status</th>
+                      <th scope="col" data-i18n="adm.col_severity"></th>
+                      <th scope="col" data-i18n="adm.col_date"></th>
+                      <th scope="col" data-i18n="adm.col_event"></th>
+                      <th scope="col" data-i18n="adm.col_user_id"></th>
+                      <th scope="col" data-i18n="adm.col_status"></th>
                     </tr>
                   </thead>
                   <tbody id="adminLogList"></tbody>

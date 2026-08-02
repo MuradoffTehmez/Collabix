@@ -21,7 +21,7 @@ import { tax, saveTaxItem, deactivateTaxItem, seedTaxonomies } from './taxonomy.
 import { sparklineBlock } from './sparkline.js';
 import { mountThreatPanel } from './threat.js';
 import { t } from './i18n.js';
-import { iconTrash, iconEdit } from './icons.js';
+import { iconTrash, iconEdit, iconLock, iconCopy } from './icons.js';
 
 let unsubReports = null, unsubAdmins = null;
 let adminSet = new Set();
@@ -228,7 +228,12 @@ function adminUserRow(u){
         + (u.blocked ? ' · ⛔ bloklu' : ''))),
     el('button', { class: 'btn-mini', title: t('a11y.edit'), 'aria-label': t('a11y.edit') + ' — @' + u.username,
       onclick: () => openUserEditor(u) }, iconEdit()),
-    el('button', { class: 'btn-mini', title: 'Müvəqqəti şifrə', onclick: () => openTempPassword(u) }, '🔑'),
+    /* AUDIT-UI: bir sətir YUXARIDAKI redaktə düyməsi artıq SVG ikon + `t()` +
+     * `aria-label` işlədir — bu düymə köçürmədən kənarda qalmışdı: '🔑' emoji,
+     * sabit azərbaycanca `title`, əlçatan ad isə emojidən gəlirdi. */
+    el('button', { class: 'btn-mini', title: t('adm.temp_pass'),
+      'aria-label': t('adm.temp_pass') + ' — @' + u.username,
+      onclick: () => openTempPassword(u) }, iconLock()),
   );
 
   if(!self){
@@ -571,13 +576,22 @@ function logLine(lg){
     const truncated = detailTxt.substring(0, 4) + '...' + detailTxt.substring(detailTxt.length - 4);
     detailEl = el('span', { class: 'uuid-truncate' },
       truncated,
+      /* AUDIT-UI: '📋' emoji + sabit azərbaycanca `title` + əlçatan ad yox idi.
+       * Həm də `writeText` PROMİSDİR: `await` olmadan çağırılırdı, ona görə
+       * icazə rədd edilsə belə "Kopyalandı" yazılırdı (yalançı uğur bildirişi).
+       * `window.toast` yoxlaması da mənasız idi — `toast` onsuz da import olunub. */
       el('button', {
-        title: 'Kopyala',
-        onclick: () => {
-          navigator.clipboard.writeText(detailTxt);
-          if (window.toast) toast('Kopyalandı');
+        title: t('adm.copy_id'),
+        'aria-label': t('adm.copy_id'),
+        onclick: async () => {
+          try{
+            await navigator.clipboard.writeText(detailTxt);
+            toast(t('dyn.copied'));
+          }catch(e){
+            toast(t('dyn.copy_fail'), 'err');
+          }
         }
-      }, '📋')
+      }, iconCopy())
     );
   } else {
     detailEl = detailTxt || '—';

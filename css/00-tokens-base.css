@@ -57,6 +57,13 @@
   --bg-card: var(--surface);
   --bg-hover: var(--surface-2);
   --text-sec: var(--muted);
+
+  /* Təhlükə (`--danger`) fonunun ÜSTÜNDƏ oxunan mətn — `--on-accent`-in eyni
+     məntiqi. Ölçülmüş WCAG nisbətləri:
+       dark/matrix #ff5470 / #ff5252:  ağ 3.11 ✗  ·  tünd 6.09 ✓
+       light       #d63455:            ağ 4.69 ✓  ·  tünd 4.04 ✗
+     Sil/xəbərdarlıq düymələri və nişan sayğacları kiçik qalın mətndir → 4.5:1. */
+  --on-danger: #0b1020;
 }
 
 /* Breakpoint konvensiyası (RESPONSIVE.md): 360 / 480 / 768 / 1024 / 1280.
@@ -105,6 +112,8 @@
   --coral-dim: #dce8ff;
   /* Açıq temada aksent kifayət qədər tünddür → ağ mətn 4.70 ilə keçir. */
   --on-accent: #ffffff;
+  /* Açıq temada `--danger` #d63455-dir: ağ 4.69 ✓, tünd isə 4.04 ✗ — tərsinə. */
+  --on-danger: #ffffff;
   --teal: #0d9d9d;
   --teal-dim: #d6f3f3;
   --violet: #5a6cd8;
