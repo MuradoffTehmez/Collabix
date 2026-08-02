@@ -168,9 +168,40 @@ export async function feed(c: Ctx) {
     if (i > 0 && Number.isFinite(ts)) after = { ts, id: cursor.slice(i + 1) };
   }
 
-  const where = after
-    ? 'WHERE u.blocked = 0 AND (p.created_at < ?1 OR (p.created_at = ?1 AND p.id < ?2))'
-    : 'WHERE u.blocked = 0';
+  /* ── Sıralama ──────────────────────────────────────────────────────────
+   * ⚠ `new` xronolojidir və KEYSET paginasiya işlədir (cursor = son sətrin
+   *   `created_at`_`id`-si). Digər sıralamalarda keyset İŞLƏMİR: sıra
+   *   `created_at`-a görə deyil, ona görə cursor mənasız olur və sətirlər
+   *   təkrarlana/atlana bilər. Onlarda OFFSET işlədilir (cursor = offset).
+   *
+   * `trending` düsturu: (bəyənmə + 2×şərh + 3×paylaşım) yaşa görə azalır.
+   *   ⚠ `pow()` İŞLƏDİLMİR — D1/SQLite qurulmasında riyazi funksiyaların
+   *     mövcudluğuna arxalanmaq olmaz. Kvadratik azalma sadə vurma ilə
+   *     alınır: `(saat + 2) * (saat + 2)`.
+   *   `+2` sıfıra bölünmənin qarşısını alır və yeni postun sonsuz bal
+   *   almasının qarşısını alır. */
+  const sortRaw = c.url.searchParams.get('sort') || 'new';
+  const SORTS = ['new', 'top', 'commented', 'trending'];
+  const sort = SORTS.includes(sortRaw) ? sortRaw : 'new';
+  const chrono = sort === 'new';
+
+  const AGE_H = '((?3 - p.created_at) / 3600000.0)';
+  const ORDER: Record<string, string> = {
+    new: 'p.created_at DESC, p.id DESC',
+    top: 'p.like_count DESC, p.created_at DESC',
+    commented: 'p.comment_count DESC, p.created_at DESC',
+    trending: `((p.like_count + p.comment_count * 2 + COALESCE(p.share_count,0) * 3) * 1.0
+                / ((${AGE_H} + 2) * (${AGE_H} + 2))) DESC, p.created_at DESC`,
+  };
+
+  // Sancaqlanmış post HƏMİŞƏ başda; gizlədilmiş yalnız adminə.
+  const pinFirst = '(p.pinned_at IS NULL), p.pinned_at DESC, ';
+  const hiddenFilter = c.isAdmin ? '' : ' AND p.hidden_at IS NULL';
+
+  const offset = !chrono && cursor && /^\d+$/.test(cursor) ? Number(cursor) : 0;
+  const where = (chrono && after)
+    ? `WHERE u.blocked = 0${hiddenFilter} AND (p.created_at < ?1 OR (p.created_at = ?1 AND p.id < ?2))`
+    : `WHERE u.blocked = 0${hiddenFilter}`;
   const query = `
     SELECT p.*,
            s.id AS s_id, s.author_id AS s_author_id, s.author_name AS s_author_name,
@@ -180,11 +211,16 @@ export async function feed(c: Ctx) {
     JOIN users u ON p.author_id = u.id
     LEFT JOIN posts s ON p.shared_post_id = s.id
     ${where}
-    ORDER BY p.created_at DESC, p.id DESC LIMIT ${limit + 1}
+    ORDER BY ${pinFirst}${ORDER[sort]}
+    LIMIT ${limit + 1}${chrono ? '' : ` OFFSET ${offset}`}
   `;
-  const stmt = after
-    ? D(c).prepare(query).bind(after.ts, after.id)
-    : D(c).prepare(query);
+  // ⚠ Yer tutucu nömrələri budaqdan asılıdır: keyset yolunda ?1/?2 cursor
+  //   üçündür, `trending` isə ?3-də `now()` gözləyir. Uyğunsuzluq D1-də
+  //   "bağlanmamış parametr" xətası verər.
+  const binds: any[] = chrono && after ? [after.ts, after.id] : [null, null];
+  const stmt = sort === 'trending'
+    ? D(c).prepare(query).bind(binds[0], binds[1], now())
+    : (chrono && after ? D(c).prepare(query).bind(after.ts, after.id) : D(c).prepare(query));
   const rows = await stmt.all<any>();
 
   // `limit + 1` çəkilir ki, "daha var?" sualı ƏLAVƏ SORĞU olmadan cavablansın.
@@ -195,7 +231,10 @@ export async function feed(c: Ctx) {
   return json({
     posts: page.map(r => mapPost(r, reactMine, reactAgg)),
     hasMore,
-    nextCursor: hasMore && last ? `${last.created_at}_${last.id}` : null,
+    // Xronoloji sırada keyset açarı, digərlərində növbəti OFFSET.
+    nextCursor: !hasMore || !last ? null
+      : (chrono ? `${last.created_at}_${last.id}` : String(offset + limit)),
+    sort,
   });
 }
 

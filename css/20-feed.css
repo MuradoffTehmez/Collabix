@@ -1959,3 +1959,23 @@
   .c-replies { margin-left: 10px; padding-left: var(--sp-3); }
   .c-thread-toggle { margin-left: 12px; }
 }
+
+/* Feed alət sətri: tablar solda, sıralama sağda; dar ekranda alt-alta. */
+.feed-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-3);
+}
+
+@media (max-width: 640px) {
+  .feed-toolbar { align-items: stretch; }
+  /* Sıralama dar ekranda üfüqi sürüşür — sətri qırıb düzəni pozmasın. */
+  .feed-toolbar .csort-group {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .feed-toolbar .csort-group::-webkit-scrollbar { display: none; }
+}

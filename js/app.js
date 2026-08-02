@@ -9,6 +9,7 @@ import { loadMfaPanel } from './mfa.js';
 import { applyOAuthTicket } from './wizard.js';
 import {
   state, watchUsers, watchMyLikes, watchMyBookmarks, watchMyFollowing, watchMyFollowers,
+  setFeedSort,
   watchPendingSubmissions, touchActivity, updateMySettings,
 } from './store.js';
 import { changePassword } from './auth.js';
@@ -553,6 +554,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if(!btn) return;
     document.querySelectorAll('#feedTabs button').forEach(b => b.classList.toggle('active', b === btn));
     setFeedTab(btn.dataset.ftab);
+  });
+
+  // Sıralama seçicisi. ⚠ Tab-dan FƏRQLİ qat: tab klientdə filtrləyir
+  // (`setFeedTab` → renderFeed), sıralama isə SERVERƏ gedir, ona görə
+  // `refresh-feed` ilə poll dərhal yenidən sorğu atmalıdır.
+  $('feedSort').addEventListener('click', e => {
+    const btn = e.target.closest('button[data-fsort]');
+    if(!btn || btn.classList.contains('active')) return;
+    document.querySelectorAll('#feedSort button').forEach(b => b.classList.toggle('active', b === btn));
+    setFeedSort(btn.dataset.fsort);
+    emit('refresh-feed');
   });
   bus.addEventListener('dm-unread', e => setBadge(['dmBadge', 'dmBadgeM'], e.detail.count));
   bus.addEventListener('notif-unread', e => setBadge(['notifBadge', 'notifBadgeM', 'notifBadgeTop'], e.detail.count));

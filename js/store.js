@@ -117,9 +117,16 @@ export function watchMySocial(cb){
 }
 
 /* ================= posts ================= */
+// Cari feed sıralaması — `setFeedSort` dəyişir, poll onu oxuyur.
+// ⚠ Modul səviyyəsində saxlanılır ki, `watchFeed` yenidən abunə olmadan
+//   sıralamanı dəyişə bilsin (abunə yenidən qurulsa poll sayğacları sıfırlanar).
+let feedSort = 'new';
+export function setFeedSort(v){ feedSort = v || 'new'; }
+export function getFeedSort(){ return feedSort; }
+
 export function watchFeed(cb){
   return startPoll({
-    fetcher: () => api('/feed'),
+    fetcher: () => api('/feed?sort=' + encodeURIComponent(feedSort)),
     interval: 10000,
     events: ['refresh-feed'],
     onData: d => cb(d.posts),

@@ -766,6 +766,9 @@ const D = {
   'feed.sort_new': { az: 'Ən yeni', en: 'Newest', ru: 'Новые' },
   'feed.sort_top': { az: 'Ən çox bəyənilən', en: 'Top', ru: 'Популярные' },
   'feed.sort_old': { az: 'Ən köhnə', en: 'Oldest', ru: 'Старые' },
+  'feed.sort_commented': { az: 'Ən çox şərh', en: 'Most commented', ru: 'Обсуждаемые' },
+  'feed.sort_trending': { az: 'Trenddə', en: 'Trending', ru: 'В тренде' },
+  'feed.sort_label': { az: 'Sıralama', en: 'Sort by', ru: 'Сортировка' },
   'feed.sort_replies': { az: 'Ən çox cavab', en: 'Most replies', ru: 'Больше ответов' },
   /* şərh sistemi — AUDIT-UI yenidən dizayn */
   'cm.author': { az: 'Müəllif', en: 'Author', ru: 'Автор' },

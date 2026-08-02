@@ -614,9 +614,18 @@
       </div>
 
       <div class="search-bar c-search"><span class="ic" data-icon="search" data-icon-size="15"></span><input id="feedSearch" data-i18n-ph="home.search_feed"></div>
-      <div class="task-cat-tabs" id="feedTabs">
-        <button class="active" data-ftab="all" data-i18n="home.tab_all"></button>
-        <button data-ftab="following" data-i18n="home.tab_following"></button>
+      <div class="feed-toolbar">
+        <div class="task-cat-tabs" id="feedTabs">
+          <button class="active" data-ftab="all" data-i18n="home.tab_all"></button>
+          <button data-ftab="following" data-i18n="home.tab_following"></button>
+        </div>
+        <!-- Sıralama: server tərəfli (ORDER BY), tab isə klient filtridir. -->
+        <div class="csort-group" id="feedSort" role="group" data-i18n-aria="feed.sort_label">
+          <button class="csort active" data-fsort="new" data-i18n="feed.sort_new"></button>
+          <button class="csort" data-fsort="top" data-i18n="feed.sort_top"></button>
+          <button class="csort" data-fsort="commented" data-i18n="feed.sort_commented"></button>
+          <button class="csort" data-fsort="trending" data-i18n="feed.sort_trending"></button>
+        </div>
       </div>
       <div id="homeFeed"></div>
     </div>
