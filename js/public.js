@@ -10,7 +10,7 @@ import { t, tf, setLang, getLang, applyI18n, initI18n } from './i18n.js';
 import { markdownNode } from './markdown.js';
 import { LEGAL, SITE, DEFAULT_FAQS, DEFAULT_TESTIMONIALS, EEAT_CONTENT } from './legal.js';
 import { DEFAULT_PROG, DEFAULT_SPOKEN } from './taxonomy.js';
-import { STEP_ICONS, copyButton } from './icons.js';
+import { STEP_ICONS, copyButton, paintIcons } from './icons.js';
 import { initCookieBanner } from './cookies.js';
 
 // Loqo dəsti (~18 KB path datası) yalnız PUBLIC qatda lazımdır — daxil olmuş
@@ -80,9 +80,12 @@ function renderMd(elId, contentObj){
 }
 
 /* ---------- homepage ---------- */
+// AUDIT-UI: əvvəl rəngli emoji idi (🤝 💻 ☑️ 🔥 💬 🌍). Emoji platformadan
+// asılıdır, `currentColor`-a tabe olmur və dörd temanın heç birinə uyğunlaşmır.
+// ICONS reyestrindəki adlar — `f-ic` yuvası SVG ilə doldurulur.
 const FEATURES = [
-  ['🤝', 'feat.1t', 'feat.1d'], ['💻', 'feat.2t', 'feat.2d'], ['☑️', 'feat.3t', 'feat.3d'],
-  ['🔥', 'feat.4t', 'feat.4d'], ['💬', 'feat.5t', 'feat.5d'], ['🌍', 'feat.6t', 'feat.6d'],
+  ['users', 'feat.1t', 'feat.1d'], ['code', 'feat.2t', 'feat.2d'], ['tasks', 'feat.3t', 'feat.3d'],
+  ['flame', 'feat.4t', 'feat.4d'], ['message', 'feat.5t', 'feat.5d'], ['globe', 'feat.6t', 'feat.6d'],
 ];
 
 function renderWelcome(){
@@ -90,11 +93,12 @@ function renderWelcome(){
   clear(grid);
   FEATURES.forEach(([ic, tt, dd], i) => {
     grid.append(el('div', { class: 'feat-card', style: `animation-delay:${i * 70}ms;` },
-      el('div', { class: 'f-ic' }, ic),
+      el('div', { class: 'f-ic', 'data-icon': ic, 'data-icon-size': '26' }),
       el('h3', {}, t(tt)),
       el('p', {}, t(dd)),
     ));
   });
+  paintIcons(grid);
 
   // Ana#8 — hər mərhələyə vahid üslublu SVG ikon (nömrə ilə yanaşı).
   const steps = document.getElementById('howSteps');

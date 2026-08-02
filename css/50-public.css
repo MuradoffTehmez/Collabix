@@ -290,8 +290,15 @@
   border-color: var(--coral);
 }
 
+/* AUDIT-UI: əvvəl 1.6rem rəngli emoji (🤝 💻 ☑️ …) idi. İndi Lucide SVG —
+   `font-size: 0` qlif qalığını gizlədir, `color` isə SVG-yə `currentColor`
+   vasitəsilə keçir (emoji ilə mümkün deyildi). */
 .feat-card .f-ic {
-  font-size: 1.6rem;
+  display: inline-flex;
+  width: 26px;
+  height: 26px;
+  font-size: 0;
+  color: var(--coral);
   margin-bottom: 10px;
 }
 

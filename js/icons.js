@@ -3,24 +3,12 @@
 // feed.js-i import edə bilmir (o, store.js/auth zəncirini bundle-a dartır).
 // Buraya çıxarıldı → feed.js və public.js EYNİ implementasiyanı işlədir.
 import { el, clear } from './util.js';
+// SVG/ICONS/paintIcons ayrıca saf modulda (dövr qırıldı) — buradan yenidən ixrac.
+import { SVG } from './icon-set.js';
+export { SVG, ICONS, paintIcons } from './icon-set.js';
 import { toast } from './ui.js';
 import { t } from './i18n.js';
 
-/* ========== Lucide SVG (MIT, inline — sıfır asılılıq) ========== */
-export const SVG = (d, opts = {}) => {
-  const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  s.setAttribute('viewBox', '0 0 24 24');
-  s.setAttribute('width', opts.w || '18');
-  s.setAttribute('height', opts.h || '18');
-  s.setAttribute('fill', opts.fill || 'none');
-  s.setAttribute('stroke', 'currentColor');
-  s.setAttribute('stroke-width', opts.sw || '2');
-  s.setAttribute('stroke-linecap', 'round');
-  s.setAttribute('stroke-linejoin', 'round');
-  if(opts.cls) s.setAttribute('class', opts.cls);
-  s.innerHTML = d;
-  return s;
-};
 
 export const iconCopy = () => SVG(
   '<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
@@ -53,6 +41,7 @@ export const iconX = () => SVG(
   '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
   { w: '14', h: '14' },
 );
+
 
 /* ---------- addım ikonları (Ana#8) — vahid Lucide üslubu ---------- */
 export const STEP_ICONS = [

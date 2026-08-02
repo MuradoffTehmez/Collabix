@@ -75,7 +75,7 @@ async function loadStatsSummary(){
 function renderReports(){
   const box = document.getElementById('reportList');
   clear(box);
-  if(!reports.length){ box.append(emptyState('⚑', 'Açıq şikayət yoxdur')); return; }
+  if(!reports.length){ box.append(emptyState('shield', 'Açıq şikayət yoxdur')); return; }
   reports.forEach(r => {
     box.append(el('div', { class: 'report-row' },
       avatarNode(state.users.get(r.targetUid) || { name: r.targetUsername }, 'avatar'),
@@ -290,7 +290,7 @@ async function loadAdminUsers({ reset = false } = {}){
     //  qaytaran ölü ifadə; status sahəsi heç vaxt məlumat vermirdi.)
     if(au.done && !au.count){
       clear(box);
-      box.append(emptyState('◎', t('adm.u_none')));
+      box.append(emptyState('userSearch', t('adm.u_none')));
       status.textContent = '';
     } else {
       status.textContent = au.done ? t('users.end') : '';
@@ -647,7 +647,7 @@ async function openRoomsModal(){
   try{
     const rooms = await listRooms();
     clear(list);
-    if(!rooms.length){ list.append(emptyState('#', t('adm.rooms_none'))); return; }
+    if(!rooms.length){ list.append(emptyState('hash', t('adm.rooms_none'))); return; }
     rooms.forEach(r => list.append(el('div', { class: 'admin-user-row' },
       el('span', { style: 'width:26px; text-align:center; color:var(--muted);' }, '#'),
       el('div', { class: 'name' }, r.name || r.id),
@@ -656,7 +656,7 @@ async function openRoomsModal(){
     )));
   }catch(e){
     clear(list);
-    list.append(emptyState('#', t('users.err')));
+    list.append(emptyState('hash', t('users.err')));
   }
 }
 

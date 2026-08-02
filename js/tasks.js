@@ -60,7 +60,7 @@ function renderTasks(){
   const listEl = document.getElementById('taskList');
   const filtered = currentCat === 'all' ? tasks : tasks.filter(t => t.category === currentCat);
   clear(listEl);
-  if(!filtered.length){ listEl.append(emptyState('☑', 'Bu sahə üzrə hələ tapşırıq yoxdur')); return; }
+  if(!filtered.length){ listEl.append(emptyState('tasks', 'Bu sahə üzrə hələ tapşırıq yoxdur')); return; }
   filtered.forEach(t => listEl.append(taskCard(t)));
 }
 

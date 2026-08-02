@@ -250,7 +250,7 @@ function selectRoom(roomId, openDetail = false){
     // "söhbətin başlanğıcı" və ya xəta — dördü də eyni yerdə.
     box.append(historyBar(hist, doLoad));
     const all = [...hist.older, ...liveMsgs];
-    if(!all.length){ box.append(emptyState('#', t('chat.empty_chat'))); return; }
+    if(!all.length){ box.append(emptyState('hash', t('chat.empty_chat'))); return; }
     renderGroupedMessages(box, all, {
       uidOf: m => m.authorUid,
       mineOf: m => m.authorUid === state.authUser.uid,

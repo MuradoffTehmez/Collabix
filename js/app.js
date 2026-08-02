@@ -16,6 +16,7 @@ import { el, clear, avatarNode, authErrMessage, bus, emit } from './util.js';
 import { initWizard } from './wizard.js';
 import { initTheme, toast, showModal, closeModal, toggleTheme, onThemeChange } from './ui.js';
 import { initErrorBoundary } from './error-boundary.js';
+import { paintIcons } from './icons.js';
 import { startPresence, stopPresence } from './presence.js';
 import { t, setLang, getLang, applyI18n } from './i18n.js';
 import { attachParticles } from './particles.js';
@@ -408,7 +409,17 @@ function renderSidebar(){
   fresh.id = 'sideAvatar';
   av.replaceWith(fresh);
   $('sideName').textContent = state.me.name;
-  $('sideStreak').textContent = '🔥 ' + (state.me.streak || 0) + ' · ⚡' + (state.me.xp || 0);
+  // AUDIT-UI: əvvəl '🔥 N · ⚡M' tək mətn idi. İndi ikon yuvaları + rəqəm.
+  const streak = $('sideStreak');
+  clear(streak);
+  streak.append(
+    el('span', { class: 'ic', 'data-icon': 'flame', 'data-icon-size': '13' }),
+    el('span', {}, String(state.me.streak || 0)),
+    el('span', { class: 'streak-sep' }, '·'),
+    el('span', { class: 'ic', 'data-icon': 'zap', 'data-icon-size': '13' }),
+    el('span', {}, String(state.me.xp || 0)),
+  );
+  paintIcons(streak);
   $('adminNavBtn').classList.toggle('hidden', !state.isAdmin);
   // topbar avatarı
   const btn = $('avatarMenuBtn');
@@ -445,6 +456,11 @@ function setBadge(ids, count){
 initErrorBoundary();
 initTheme();
 document.addEventListener('DOMContentLoaded', () => {
+  // Statik markup-dakı `[data-icon]` yuvalarını SVG ilə doldur (AUDIT-UI).
+  // `icons-dirty` — tema dəyişəndə ui.js göndərir (ora import etmək dövr yaradardı).
+  paintIcons();
+  document.addEventListener('icons-dirty', () => paintIcons());
+
   // SSR locale prefix (/en/..., /ru/...) → dili tətbiq et, sonra path-dan təmizlə.
   // Crawler prefiksli URL-i görür; insan təmiz path-da qalır (dil localStorage-da).
   const lm = location.pathname.match(/^\/(en|ru)(\/|$)/);

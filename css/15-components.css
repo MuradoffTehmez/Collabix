@@ -22,6 +22,142 @@
  *   (dark / matrix / light / cyberpunk); sabit rəng üçünün birində sınır.
  */
 
+/* ── İKON YUVASI (AUDIT-UI) ──────────────────────────────────────────────
+ * `[data-icon]` yuvaları `paintIcons()` (js/icons.js) tərəfindən Lucide SVG
+ * ilə doldurulur. Əvvəl bunlar MƏTN qlifləri idi (⌂ ◎ 🔔 …), ona görə köhnə
+ * qaydalar `font-size` ilə ölçülürdü — SVG-yə keçəndə sabit qutu lazımdır.
+ *
+ * ⚠ Bu fayl `10-app-shell.css`-dən SONRA yüklənir: `.nav-item .ic` eyni
+ *   spesifiklikdədir (0,2,0) və buradakı qayda qazanır. Sıra dəyişməməlidir.
+ *
+ * `currentColor`: SVG-lər `stroke="currentColor"` ilə çıxır, yəni aktiv/hover
+ * rəngi ikona da işləyir — emoji qliflərində bu mümkün deyildi. */
+.ic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  line-height: 0;
+}
+
+.ic svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.nav-item .ic {
+  width: 18px;
+  height: 18px;
+  /* font-size: 0 — qlif qalığı qalsa belə görünməsin. */
+  font-size: 0;
+}
+
+.at-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.at-icon-btn .ic {
+  width: 18px;
+  height: 18px;
+}
+
+.bottom-nav button .ic {
+  width: 21px;
+  height: 21px;
+}
+
+.more-menu button .ic {
+  width: 16px;
+  height: 16px;
+}
+
+.empty-state .ic {
+  width: 28px;
+  height: 28px;
+  margin-inline: auto;
+}
+
+/* ── c-search: ikonlu axtarış sahəsi ─────────────────────────────────────
+ * Əvvəl axtarış ikonu placeholder MƏTNİNİN içində `⌕` qlifi kimi idi
+ * (`'⌕ Axtar: istifadəçi, post...'`). Problemlər: mətn yazılan kimi ikon
+ * yox olurdu, ekran oxuyucusu onu placeholder-in bir hissəsi kimi oxuyurdu,
+ * ölçüsü/rəngi yeni SVG dili ilə uyuşmurdu.
+ * İndi ikon ayrıca yuvadadır — mətn yazılanda YERİNDƏ QALIR. */
+.c-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.c-search > .ic {
+  position: absolute;
+  left: 11px;
+  width: 15px;
+  height: 15px;
+  color: var(--muted);
+  /* Klik input-a keçsin — ikon hədəfi oğurlamasın. */
+  pointer-events: none;
+}
+
+/* ⚠ SPESİFİKLİK: `.search-bar input` (35-…) və `.app-search` (10-…) bu fayldan
+ *   SONRA/EYNİ çəkidə gəlir. Ona görə sadə `.c-search > input` (0,1,1) uduzur
+ *   və padding tətbiq olunmurdu — ikon mətnin üstünə düşürdü.
+ *   Aşağıdakı seçicilər qəsdən daha spesifikdir. */
+.c-search > .app-search,          /* (0,2,0) > .app-search (0,1,0) */
+.c-search.search-bar > input,     /* (0,2,1) > .search-bar input (0,1,1) */
+.c-search > #userSearch {         /* (1,1,0) */
+  width: 100%;
+  min-width: 0;
+  padding-left: 34px;
+}
+
+/* Topbar: `flex`/`max-width` əvvəl İNPUT-un üzərində idi; input indi wrapper-in
+   içindədir, ona görə ölçü qaydası wrapper-ə köçürülür — yoxsa sahə daralır. */
+.c-search--topbar {
+  flex: 1;
+  max-width: 340px;
+}
+
+.c-search--topbar > .app-search {
+  max-width: none;
+}
+
+/* Yan panel altbilgisi: "🔥 1 · ⚡55" tək mətn idi → ikon + rəqəm cütləri. */
+.user-chip .streak {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+.user-chip .streak .ic {
+  width: 13px;
+  height: 13px;
+}
+
+.user-chip .streak .streak-sep {
+  opacity: .45;
+  margin-inline: 1px;
+}
+
+/* Statistika kartının etiketi: ikon + mətn bir sətirdə, mətnin optik mərkəzinə
+   hizalanır. Əvvəl etiket "🔥 gündəlik seriya" kimi TƏK mətn idi. */
+.stat-card .lbl {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+.stat-card .lbl .ic {
+  width: 14px;
+  height: 14px;
+  /* Alov/şimşək ikonu rəqəmlə eyni aksent rəngində — etiket mətni sönükdür. */
+  color: var(--coral);
+}
+
 :root {
   /* ── Aralıq şkalası ──────────────────────────────────────────────────────
    * 4px əsaslı. Əvvəl aralıqlar `10px`, `13px`, `14px`, `18px` kimi təsadüfi

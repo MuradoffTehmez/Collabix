@@ -6,7 +6,7 @@ import { toast } from './ui.js';
 import { allCategoryLabels, highlightOptions } from './taxonomy.js';
 import { markdownNode } from './markdown.js';
 import { t } from './i18n.js';
-import { iconX } from './icons.js';
+import { iconX, paintIcons } from './icons.js';
 
 let blocks = []; // { id, type:'text'|'code'|'image', content, language, images:[{blob,previewURL,caption}] }
 let idSeq = 0;
@@ -98,13 +98,16 @@ function blockNode(b){
         previewBtn.classList.toggle('active', b.showPreview);
         if(b.showPreview) renderPreview();
       },
-    }, '👁 ' + t('comp.md_preview'));
+    }, el('span', { class: 'ic', 'data-icon': 'eye', 'data-icon-size': '14' }), ' ' + t('comp.md_preview'));
 
     const toolbar = el('div', { class: 'md-toolbar' },
       tbBtn('B', t('comp.md_bold'), () => wrapSel('**', '**', t('comp.md_bold_ph'))),
       tbBtn('I', t('comp.md_italic'), () => wrapSel('*', '*', t('comp.md_italic_ph'))),
       tbBtn('</>', t('comp.md_code'), () => wrapSel('`', '`', 'code')),
-      tbBtn('🔗', t('comp.md_link'), () => wrapSel('[', '](https://)', t('comp.md_link_ph'))),
+      // B / I / • / “ QƏSDƏN tipoqrafik qalır — mətn panelində konvensiyadır.
+      // Yalnız emoji olan 🔗 SVG-yə keçirilib (`currentColor`-a tabe olmurdu).
+      tbBtn(el('span', { class: 'ic', 'data-icon': 'link', 'data-icon-size': '14' }),
+        t('comp.md_link'), () => wrapSel('[', '](https://)', t('comp.md_link_ph'))),
       tbBtn('•', t('comp.md_list'), () => prefixLines('- ')),
       tbBtn('“', t('comp.md_quote'), () => prefixLines('> ')),
       previewBtn,
@@ -163,6 +166,9 @@ function blockNode(b){
       capIn,
     );
   }
+  // Blok dinamik qurulur → statik boot-dakı paintIcons() ona çatmır.
+  // Panel ikonları (link, göz) burada boyanır.
+  paintIcons(wrap);
   return wrap;
 }
 

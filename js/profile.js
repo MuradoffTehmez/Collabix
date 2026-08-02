@@ -155,7 +155,7 @@ function renderMyPosts(){
   const box = document.getElementById('myPosts');
   clear(box);
   const mine = getPosts().filter(p => p.authorUid === state.authUser.uid);
-  if(!mine.length){ box.append(emptyState('✎', t('usr.no_posts'))); return; }
+  if(!mine.length){ box.append(emptyState('message', t('usr.no_posts'))); return; }
 
   // Paylaşım statistikası: orijinal / re-post / sitat sayı + alınan ümumi paylaşım (shareCount).
   const orig = mine.filter(p => (p.postType || 'original') === 'original').length;

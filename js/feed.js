@@ -674,7 +674,7 @@ function renderFeed(){
   const feed = document.getElementById('homeFeed');
   if(!document.getElementById('page-home').classList.contains('active')) return;
   reconcilePosts(feed, filteredPosts(),
-    emptyState('✎', feedTab === 'following' ? t('feed.empty_following') : t('feed.empty_all')));
+    emptyState('message', feedTab === 'following' ? t('feed.empty_following') : t('feed.empty_all')));
 }
 
 function renderHomeStats(){
@@ -733,14 +733,14 @@ let detailUnsub = null;
 export function mountPost(postId){
   const box = document.getElementById('postDetail');
   clear(box);
-  if(!postId){ box.append(emptyState('✎', t('feed.not_found'))); return () => {}; }
+  if(!postId){ box.append(emptyState('message', t('feed.not_found'))); return () => {}; }
   skeletons(box, 2);
 
   (async () => {
     let p = posts.find(x => x.id === postId);
     if(!p) p = await getPostById(postId).catch(() => null);
     clear(box);
-    if(!p){ box.append(emptyState('✎', t('feed.not_found_del'))); return; }
+    if(!p){ box.append(emptyState('message', t('feed.not_found_del'))); return; }
 
     const postText = (p.text || p.code || '').substring(0, 150).replace(/\n/g, ' ') + '...';
     updateDynamicSEO({
@@ -986,7 +986,7 @@ async function renderSaved(){
   if(!document.getElementById('page-saved').classList.contains('active')) return;
   const run = ++savedRun;
   const ids = [...state.myBookmarks];
-  if(!ids.length){ reconcilePosts(box, [], emptyState('★', t('feed.empty_saved'))); return; }
+  if(!ids.length){ reconcilePosts(box, [], emptyState('bookmark', t('feed.empty_saved'))); return; }
   const cached = new Map(posts.map(p => [p.id, p]));
   const items = [];
   for(const id of ids){
@@ -1001,7 +1001,7 @@ async function renderSaved(){
   // `createdAt?.toMillis?.()` çağırılırdı — həmişə undefined olduğu üçün
   // müqayisə 0-0 olur və sıralama heç işləmirdi.
   items.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-  reconcilePosts(box, items, emptyState('★', t('feed.empty_del')));
+  reconcilePosts(box, items, emptyState('bookmark', t('feed.empty_del')));
 }
 
 export function mountSaved(){

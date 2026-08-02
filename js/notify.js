@@ -103,7 +103,7 @@ function renderList(){
   if(filter === 'unread') list = list.filter(n => !n.read);
   else if(filter === 'team') list = list.filter(n => String(n.type || '').startsWith('team_'));
   else if(filter !== 'all') list = list.filter(n => n.type === filter);
-  if(!list.length){ box.append(emptyState('🔔', 'Bildiriş yoxdur')); return; }
+  if(!list.length){ box.append(emptyState('bell', 'Bildiriş yoxdur')); return; }
   let lastGroup = '';
   list.forEach(n => {
     const g = groupLabel(tsToMillis(n.createdAt));

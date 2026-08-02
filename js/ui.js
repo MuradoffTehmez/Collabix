@@ -1,6 +1,8 @@
 // UI yardımçıları: toast, təsdiq dialoqu, modal, skeleton, tema.
 import { el, clear } from './util.js';
 import { t } from './i18n.js';
+// Saf ikon qatı — `icons.js` DEYİL: o, buradan `toast` alır və dövr yaranardı.
+import { paintIcons } from './icon-set.js';
 
 /* ---------- toast ---------- */
 export function toast(msg, type = 'ok'){
@@ -205,14 +207,28 @@ export function skeletons(container, count = 3, small = false){
   clear(container);
   for(let i = 0; i < count; i++) container.append(el('div', { class: 'skeleton' + (small ? ' sm' : '') }));
 }
+/**
+ * Boş vəziyyət bloku.
+ *
+ * @param {string} icon ICONS reyestrindəki ad (icon-set.js). Əvvəl bura xam
+ *   qlif verilirdi ('⚑' '◎' '#' '✉' '✎' '★') — hər ekran fərqli simvol
+ *   ailəsindən idi. Tanınmayan ad verilsə `paintIcons` onu ötürür və blok
+ *   ikonsuz (amma pozulmadan) render olunur.
+ * @param {string} text izah mətni
+ */
 export function emptyState(icon, text){
-  return el('div', { class: 'empty-state' }, el('div', { class: 'ic' }, icon), text);
+  const node = el('div', { class: 'empty-state' },
+    el('div', { class: 'ic', 'data-icon': icon, 'data-icon-size': '28' }), text);
+  // Blok hələ DOM-da deyil → dərhal, yerində boyanır (hadisə gözlənilmir).
+  paintIcons(node);
+  return node;
 }
 
 /* ---------- tema (dark → light → matrix) ---------- */
 const THEME_KEY = 'collabix_theme';
 export const THEMES = ['dark', 'light', 'matrix', 'cyberpunk'];
-const THEME_ICONS = { dark: '🌙', light: '☀', matrix: '🖥', cyberpunk: '🤖' };
+// Qliflər deyil, ICONS reyestrindəki (icons.js) SVG adları.
+const THEME_ICONS = { dark: 'moon', light: 'sun', matrix: 'monitor', cyberpunk: 'bot' };
 let onThemeChangeCb = null;
 export function onThemeChange(fn){ onThemeChangeCb = fn; }
 export function getTheme(){ return document.documentElement.dataset.theme || 'dark'; }
@@ -232,10 +248,22 @@ export function toggleTheme(){
 }
 function applyTheme(t){
   document.documentElement.dataset.theme = t;
-  ['themeToggleBtn', 'appThemeBtn', 'pubThemeBtn'].forEach(id => {
-    const btn = document.getElementById(id);
-    if(btn) btn.textContent = THEME_ICONS[t] || '🌙';
-  });
+  // İkonu SVG-yə keçirmək: `data-icon`-u yenilə, köhnə <svg>-ni at, sonra
+  // yenidən boyanmasını istə.
+  // ⚠ paintIcons BURADA İMPORT EDİLMİR — icons.js ui.js-dən `toast` alır,
+  //   birbaşa import qarşılıqlı dövr yaradardı. Hadisə ilə ayrılıb.
+  let dirty = false;
+  for(const id of ['appThemeBtn', 'pubThemeBtn']){
+    // ⚠ Yalnız HƏQİQİ `.ic` yuvası olanlar. `themeToggleBtn` (Parametrlər)
+    //   QƏSDƏN siyahıda deyil: o, mətnli düymədir və etiketini `data-i18n`
+    //   yazır — ora SVG yeritsək, dil tətbiqi onu dərhal silərdi.
+    const slot = document.getElementById(id)?.querySelector('.ic');
+    if(!slot) continue;
+    slot.dataset.icon = THEME_ICONS[t] || 'moon';
+    slot.querySelector('svg')?.remove();
+    dirty = true;
+  }
+  if(dirty) document.dispatchEvent(new CustomEvent('icons-dirty'));
 
   // Ümumi animasiya keçidi (bütün temalar üçün)
   document.body.classList.remove('theme-transitioning');

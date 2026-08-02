@@ -57,7 +57,7 @@ function renderThreadList(){
     .forEach(u => items.push({ u, t: null, at: 0 }));
   items.sort((a, b) => b.at - a.at);
 
-  if(!items.length){ list.append(emptyState('✉', t('chat.empty_dm_users'))); return; }
+  if(!items.length){ list.append(emptyState('mail', t('chat.empty_dm_users'))); return; }
   items.forEach(({ u, t }) => {
     const item = el('div', { class: 'ch-item' + (currentPeerUid === u.uid ? ' active' : ''), onclick: () => selectPeer(u.uid, true) },
       avatarNode(u, 'avatar', isOnline(u)),
@@ -139,7 +139,7 @@ function selectPeer(uid, openDetail = false){  // openDetail: yalnız klikdən (
     clear(box);
     box.append(historyBar(hist, doLoad));
     const all = [...hist.older, ...liveMsgs];
-    if(!all.length){ box.append(emptyState('✉', t('chat.empty_dm_msgs'))); return; }
+    if(!all.length){ box.append(emptyState('mail', t('chat.empty_dm_msgs'))); return; }
     renderGroupedMessages(box, all, {
       uidOf: m => m.fromUid,
       mineOf: m => m.fromUid === state.authUser.uid,

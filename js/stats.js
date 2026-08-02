@@ -61,14 +61,14 @@ function renderBars(){
 function renderLeaders(){
   const users = [...state.users.values()].filter(u => !u.blocked);
   const cfg = {
-    xp:     { key: u => u.xp || 0,             val: u => '⚡ ' + (u.xp || 0) + ' XP' },
-    tasks:  { key: u => u.tasksCompleted || 0, val: u => '☑ ' + (u.tasksCompleted || 0) },
+    xp:     { key: u => u.xp || 0,             val: u => (u.xp || 0) + ' XP' },
+    tasks:  { key: u => u.tasksCompleted || 0, val: u => String(u.tasksCompleted || 0) },
     streak: { key: u => u.streak || 0,         val: u => '🔥 ' + (u.streak || 0) + ' gün' },
   }[leaderMode];
   const sorted = users.sort((a, b) => cfg.key(b) - cfg.key(a)).slice(0, 7);
   const leaderEl = document.getElementById('leaderList');
   clear(leaderEl);
-  if(!sorted.length){ leaderEl.append(emptyState('🏆', 'Hələ istifadəçi yoxdur')); return; }
+  if(!sorted.length){ leaderEl.append(emptyState('trophy', 'Hələ istifadəçi yoxdur')); return; }
   sorted.forEach((u, i) => {
     leaderEl.append(el('div', { class: 'leader-row' },
       el('div', { class: 'rank' }, i + 1),
@@ -87,7 +87,7 @@ function renderDist(){
   const distEl = document.getElementById('langDist');
   clear(distEl);
   const entries = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]);
-  if(!entries.length){ distEl.append(emptyState('▤', 'Hələ məlumat yoxdur')); return; }
+  if(!entries.length){ distEl.append(emptyState('chart', 'Hələ məlumat yoxdur')); return; }
   entries.forEach(([name, cnt]) => {
     const pct = total ? Math.round(cnt / total * 100) : 0;
     distEl.append(el('div', { class: 'row' },
@@ -121,7 +121,7 @@ function renderAdminStats(){
     card(mau, 'MAU (30 gün)'),
     card(newWeek, 'yeni (7 gün)'),
     card(users.filter(u => u.blocked).length, 'bloklanmış'),
-    card(users.filter(u => u.verified).length, '✓ təsdiqlənmiş'),
+    card(users.filter(u => u.verified).length, 'təsdiqlənmiş'),
   );
 
   const top = users.sort((a, b) => (b.xp || 0) - (a.xp || 0)).slice(0, 5);
@@ -130,7 +130,7 @@ function renderAdminStats(){
   top.forEach((u, i) => topEl.append(el('div', { class: 'leader-row' },
     el('div', { class: 'rank' }, i + 1),
     el('div', { class: 'name' }, u.name + ' (@' + u.username + ')'),
-    el('div', { class: 'val' }, '⚡' + (u.xp || 0) + ' · ☑' + (u.tasksCompleted || 0)),
+    el('div', { class: 'val' }, (u.xp || 0) + ' XP · ' + (u.tasksCompleted || 0)),
   )));
 
   // artım: son 30 gündə qeydiyyat (həftəlik qruplar)

@@ -272,7 +272,7 @@
         <div class="lang-switch" id="langSwitch">
           <button data-lang="az">AZ</button><button data-lang="en">EN</button><button data-lang="ru">RU</button>
         </div>
-        <button class="ph-theme" id="pubThemeBtn" aria-label="Tema">🌙</button>
+        <button class="ph-theme" id="pubThemeBtn" aria-label="Tema"><span class="ic" data-icon="moon"></span></button>
         <button class="btn-mini ph-guest" id="pubLoginBtn" data-i18n="cta.login"></button>
         <button class="btn-small ph-guest" id="pubRegBtn" data-i18n="cta.register"></button>
         <button class="btn-small hidden" id="pubAppBtn" data-i18n="cta.goapp"></button>
@@ -548,41 +548,41 @@
   <header class="app-topbar">
     <a class="brand at-logo" id="appLogo"><span class="dot"></span>Collabix</a>
     <span id="activeProjectDisplay" class="u-font-size-12px u-background-primary u-color-white u-padding-2px-6px u-border-radius-4px u-margin-left-10px hidden"></span>
-    <input class="app-search" id="appSearch" data-i18n-ph="app.searchPh">
+    <span class="c-search c-search--topbar"><span class="ic" data-icon="search" data-icon-size="15"></span><input class="app-search" id="appSearch" data-i18n-ph="app.searchPh"></span>
     <div class="at-actions">
-      <button class="at-icon-btn" id="bellBtn" data-i18n-aria="nav.notifs">🔔<span class="nav-badge" id="notifBadgeTop"></span></button>
+      <button class="at-icon-btn" id="bellBtn" data-i18n-aria="nav.notifs"><span class="ic" data-icon="bell"></span><span class="nav-badge" id="notifBadgeTop"></span></button>
       <div class="lang-switch" id="appLangSwitch">
         <button data-lang="az">AZ</button><button data-lang="en">EN</button><button data-lang="ru">RU</button>
       </div>
-      <button class="at-icon-btn" id="appThemeBtn" data-i18n-aria="set.theme">🌙</button>
+      <button class="at-icon-btn" id="appThemeBtn" data-i18n-aria="set.theme"><span class="ic" data-icon="moon"></span></button>
       <button class="at-avatar-btn" id="avatarMenuBtn" aria-label="Menu"></button>
       <div class="avatar-menu" id="avatarMenu">
-        <button data-page="profil"><span class="ic">◈</span> <span data-i18n="nav.profile"></span></button>
-        <button data-page="settings"><span class="ic">⚙</span> <span data-i18n="nav.settings"></span></button>
-        <button id="menuLogoutBtn" class="danger"><span class="ic">⏻</span> <span data-i18n="app.logout"></span></button>
+        <button data-page="profil"><span class="ic" data-icon="profile"></span> <span data-i18n="nav.profile"></span></button>
+        <button data-page="settings"><span class="ic" data-icon="settings"></span> <span data-i18n="nav.settings"></span></button>
+        <button id="menuLogoutBtn" class="danger"><span class="ic" data-icon="logout"></span> <span data-i18n="app.logout"></span></button>
       </div>
     </div>
   </header>
   <div class="app-row">
   <div class="sidebar">
-    <button class="nav-item active" data-page="home"><span class="ic">⌂</span> <span data-i18n="nav.feed"></span></button>
-    <button class="nav-item" data-page="chat"><span class="ic">#</span> <span data-i18n="nav.rooms"></span></button>
-    <button class="nav-item" data-page="dm"><span class="ic">✉</span> <span data-i18n="nav.dm"></span><span class="nav-badge" id="dmBadge"></span></button>
-    <button class="nav-item" data-page="notifs"><span class="ic">🔔</span> <span data-i18n="nav.notifs"></span><span class="nav-badge" id="notifBadge"></span></button>
-    <button class="nav-item" data-page="users"><span class="ic">◎</span> <span data-i18n="nav.users"></span></button>
-    <button class="nav-item" data-page="tasks"><span class="ic">☑</span> <span data-i18n="nav.tasks"></span></button>
-    <button class="nav-item" data-page="teams"><span class="ic">👥</span> <span data-i18n="nav.teams"></span></button>
-    <button class="nav-item" data-page="stats"><span class="ic">▤</span> <span data-i18n="nav.stats"></span></button>
-    <button class="nav-item" data-page="saved"><span class="ic">★</span> <span data-i18n="nav.saved"></span></button>
-    <button class="nav-item" data-page="profil"><span class="ic">◈</span> <span data-i18n="nav.profile"></span></button>
-    <button class="nav-item" data-page="settings"><span class="ic">⚙</span> <span data-i18n="nav.settings"></span></button>
-    <button class="nav-item admin-item hidden" id="adminNavBtn" data-page="admin"><span class="ic">⚑</span> <span data-i18n="nav.admin"></span><span class="nav-badge" id="adminBadge"></span></button>
+    <button class="nav-item active" data-page="home"><span class="ic" data-icon="home"></span> <span data-i18n="nav.feed"></span></button>
+    <button class="nav-item" data-page="chat"><span class="ic" data-icon="hash"></span> <span data-i18n="nav.rooms"></span></button>
+    <button class="nav-item" data-page="dm"><span class="ic" data-icon="mail"></span> <span data-i18n="nav.dm"></span><span class="nav-badge" id="dmBadge"></span></button>
+    <button class="nav-item" data-page="notifs"><span class="ic" data-icon="bell"></span> <span data-i18n="nav.notifs"></span><span class="nav-badge" id="notifBadge"></span></button>
+    <button class="nav-item" data-page="users"><span class="ic" data-icon="userSearch"></span> <span data-i18n="nav.users"></span></button>
+    <button class="nav-item" data-page="tasks"><span class="ic" data-icon="tasks"></span> <span data-i18n="nav.tasks"></span></button>
+    <button class="nav-item" data-page="teams"><span class="ic" data-icon="users"></span> <span data-i18n="nav.teams"></span></button>
+    <button class="nav-item" data-page="stats"><span class="ic" data-icon="chart"></span> <span data-i18n="nav.stats"></span></button>
+    <button class="nav-item" data-page="saved"><span class="ic" data-icon="bookmark"></span> <span data-i18n="nav.saved"></span></button>
+    <button class="nav-item" data-page="profil"><span class="ic" data-icon="profile"></span> <span data-i18n="nav.profile"></span></button>
+    <button class="nav-item" data-page="settings"><span class="ic" data-icon="settings"></span> <span data-i18n="nav.settings"></span></button>
+    <button class="nav-item admin-item hidden" id="adminNavBtn" data-page="admin"><span class="ic" data-icon="shield"></span> <span data-i18n="nav.admin"></span><span class="nav-badge" id="adminBadge"></span></button>
     <div class="sidebar-bottom">
       <div class="user-chip" id="sideUserChip">
         <div class="avatar" id="sideAvatar">?</div>
         <div>
           <div class="name" id="sideName">Guest</div>
-          <div class="streak" id="sideStreak">🔥 0</div>
+          <div class="streak" id="sideStreak"></div>
         </div>
       </div>
       <button class="logout-btn" id="logoutBtn" data-i18n="app.logout"></button>
@@ -595,17 +595,17 @@
       <h1 class="page-title" data-i18n="nav.feed"></h1>
       <p class="page-sub" id="homeGreeting" data-i18n="home.welcome"></p>
       <div class="stat-row">
-        <div class="stat-card flame"><div class="num" id="homeStreakNum">0</div><div class="lbl" data-i18n="home.lbl_streak"></div></div>
-        <div class="stat-card"><div class="num" id="homeXPNum">0</div><div class="lbl" data-i18n="home.lbl_xp"></div></div>
-        <div class="stat-card"><div class="num" id="homeUserCount">0</div><div class="lbl" data-i18n="home.lbl_users"></div></div>
+        <div class="stat-card flame"><div class="num" id="homeStreakNum">0</div><div class="lbl"><span class="ic" data-icon="flame" data-icon-size="14"></span><span data-i18n="home.lbl_streak"></span></div></div>
+        <div class="stat-card"><div class="num" id="homeXPNum">0</div><div class="lbl"><span class="ic" data-icon="zap" data-icon-size="14"></span><span data-i18n="home.lbl_xp"></span></div></div>
+        <div class="stat-card"><div class="num" id="homeUserCount">0</div><div class="lbl"><span class="ic" data-icon="users" data-icon-size="14"></span><span data-i18n="home.lbl_users"></span></div></div>
       </div>
 
       <div class="composer">
         <div id="blockList"></div>
         <div class="block-add-row">
-          <button type="button" class="img-pick-btn" id="addTextBlockBtn" data-i18n="home.add_text"></button>
-          <button type="button" class="img-pick-btn" id="addCodeBlockBtn" data-i18n="home.add_code"></button>
-          <button type="button" class="img-pick-btn" id="addImageBlockBtn" data-i18n="home.add_img"></button>
+          <button type="button" class="img-pick-btn" id="addTextBlockBtn"><span class="ic" data-icon="type" data-icon-size="14"></span><span data-i18n="home.add_text"></span></button>
+          <button type="button" class="img-pick-btn" id="addCodeBlockBtn"><span class="ic" data-icon="code" data-icon-size="14"></span><span data-i18n="home.add_code"></span></button>
+          <button type="button" class="img-pick-btn" id="addImageBlockBtn"><span class="ic" data-icon="image" data-icon-size="14"></span><span data-i18n="home.add_img"></span></button>
         </div>
         <div class="composer-foot">
           <div class="pill-pick" id="composerTags"></div>
@@ -613,7 +613,7 @@
         </div>
       </div>
 
-      <div class="search-bar"><input id="feedSearch" data-i18n-ph="home.search_feed"></div>
+      <div class="search-bar c-search"><span class="ic" data-icon="search" data-icon-size="15"></span><input id="feedSearch" data-i18n-ph="home.search_feed"></div>
       <div class="task-cat-tabs" id="feedTabs">
         <button class="active" data-ftab="all" data-i18n="home.tab_all"></button>
         <button data-ftab="following" data-i18n="home.tab_following"></button>
@@ -644,7 +644,7 @@
         <div class="chat-list" id="dmList"></div>
         <div class="chat-main">
           <div class="chat-head" id="dmHead" data-i18n="dm.head"></div>
-          <div class="chat-messages" id="dmMessages"><div class="empty-state"><div class="ic">✉</div><span data-i18n="dm.empty"></span></div></div>
+          <div class="chat-messages" id="dmMessages"><div class="empty-state"><div class="ic" data-icon="mail" data-icon-size="28"></div><span data-i18n="dm.empty"></span></div></div>
           <div class="chat-input">
             <input id="dmInput" data-i18n-ph="chat.ph" maxlength="2000">
             <button id="dmSendBtn" data-i18n="chat.send"></button>
@@ -665,7 +665,7 @@
       <h1 class="page-title" data-i18n="nav.users"></h1>
       <p class="page-sub" data-i18n="users.sub"></p>
       <div class="search-bar users-searchbar">
-        <input id="userSearch" data-i18n-ph="users.search">
+        <span class="c-search"><span class="ic" data-icon="search" data-icon-size="15"></span><input id="userSearch" data-i18n-ph="users.search"></span>
         <!-- İstifadəçilər#5: sıralama · #3: grid/list keçidi -->
         <select id="userSortSelect" class="user-sort" data-i18n-aria="users.sort">
           <option value="recent" data-i18n="users.sort_recent"></option>
@@ -846,8 +846,8 @@
       <!-- TASK-8 / Bənd 6 — profil tamlığı + XP nudge (100%-də gizlənir) -->
       <div id="profCompleteness" class="cmp-host"></div>
       <div class="stat-row">
-        <div class="stat-card flame"><div class="num" id="profStreakNum">0</div><div class="lbl" data-i18n="home.lbl_streak"></div></div>
-        <div class="stat-card"><div class="num" id="profXPNum">0</div><div class="lbl"><span data-i18n="home.lbl_xp"></span> · <span id="profLevel">Lv 1</span></div></div>
+        <div class="stat-card flame"><div class="num" id="profStreakNum">0</div><div class="lbl"><span class="ic" data-icon="flame" data-icon-size="14"></span><span data-i18n="home.lbl_streak"></span></div></div>
+        <div class="stat-card"><div class="num" id="profXPNum">0</div><div class="lbl"><span class="ic" data-icon="zap" data-icon-size="14"></span><span data-i18n="home.lbl_xp"></span> · <span id="profLevel">Lv 1</span></div></div>
         <div class="stat-card"><div class="num" id="profTaskNum">0</div><div class="lbl" data-i18n="prof.tasks_done"></div></div>
       </div>
       <div class="section-title" data-i18n="prof.badges"></div>
@@ -1198,11 +1198,11 @@
 <div class="toast-wrap" id="toastWrap" role="status" aria-live="polite" aria-atomic="false"></div>
 
 <nav class="bottom-nav" id="bottomNav">
-  <button data-page="home">⌂<small data-i18n="nav.feed"></small></button>
-  <button data-page="chat">#<small data-i18n="nav.rooms"></small></button>
-  <button data-page="dm">✉<small data-i18n="nav.dm"></small><span class="nav-badge" id="dmBadgeM"></span></button>
-  <button data-page="notifs">🔔<small data-i18n="nav.notifs"></small><span class="nav-badge" id="notifBadgeM"></span></button>
-  <button data-page="profil">◈<small data-i18n="nav.profile"></small></button>
+  <button data-page="home"><span class="ic" data-icon="home"></span><small data-i18n="nav.feed"></small></button>
+  <button data-page="chat"><span class="ic" data-icon="hash"></span><small data-i18n="nav.rooms"></small></button>
+  <button data-page="dm"><span class="ic" data-icon="mail"></span><small data-i18n="nav.dm"></small><span class="nav-badge" id="dmBadgeM"></span></button>
+  <button data-page="notifs"><span class="ic" data-icon="bell"></span><small data-i18n="nav.notifs"></small><span class="nav-badge" id="notifBadgeM"></span></button>
+  <button data-page="profil"><span class="ic" data-icon="profile"></span><small data-i18n="nav.profile"></small></button>
   <button id="moreNavBtn">⋯<small data-i18n="app.more"></small><span class="nav-badge" id="adminBadgeM"></span></button>
 </nav>
 <!-- SXO: Back to Top Button -->

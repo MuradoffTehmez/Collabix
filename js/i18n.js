@@ -123,7 +123,7 @@ const D = {
   'ft.madeby':     { az: 'Collabix komandası tərəfindən 💙 ilə hazırlanıb', en: 'Made with 💙 by the Collabix team', ru: 'Сделано с 💙 командой Collabix' },
 
   /* ---------- app chrome ---------- */
-  'app.searchPh':  { az: '⌕ Axtar: istifadəçi, post...', en: '⌕ Search users, posts...', ru: '⌕ Поиск...' },
+  'app.searchPh':  { az: 'Axtar: istifadəçi, post...', en: 'Search users, posts...', ru: 'Поиск...' },
   'app.logout':    { az: 'Çıxış et', en: 'Log out', ru: 'Выйти' },
   'nav.feed':      { az: 'Ana səhifə', en: 'Feed', ru: 'Лента' },
   'nav.rooms':     { az: 'Otaqlar', en: 'Rooms', ru: 'Комнаты' },
@@ -252,14 +252,14 @@ const D = {
 
   /* ---------- Page: Home ---------- */
   'home.welcome': { az: 'Xoş gəldin!', en: 'Welcome!', ru: 'Добро пожаловать!' },
-  'home.lbl_streak': { az: '🔥 gündəlik seriya', en: '🔥 daily streak', ru: '🔥 серия дней' },
-  'home.lbl_xp': { az: '⚡ XP', en: '⚡ XP', ru: '⚡ XP' },
+  'home.lbl_streak': { az: 'gündəlik seriya', en: 'daily streak', ru: 'серия дней' },
+  'home.lbl_xp': { az: 'XP', en: 'XP', ru: 'XP' },
   'home.lbl_users': { az: 'qeydiyyatlı istifadəçi', en: 'registered users', ru: 'зарегистрированных' },
-  'home.add_text': { az: '＋ Mətn', en: '＋ Text', ru: '＋ Текст' },
-  'home.add_code': { az: '</> Kod', en: '</> Code', ru: '</> Код' },
-  'home.add_img': { az: '🖼 Şəkil', en: '🖼 Image', ru: '🖼 Изображение' },
+  'home.add_text': { az: 'Mətn', en: 'Text', ru: 'Текст' },
+  'home.add_code': { az: 'Kod', en: 'Code', ru: 'Код' },
+  'home.add_img': { az: 'Şəkil', en: 'Image', ru: 'Изображение' },
   'home.btn_share': { az: 'Paylaş', en: 'Share', ru: 'Поделиться' },
-  'home.search_feed': { az: '⌕ Paylaşımlarda axtar (mətn, müəllif, tag)...', en: '⌕ Search posts...', ru: '⌕ Поиск по постами...' },
+  'home.search_feed': { az: 'Paylaşımlarda axtar (mətn, müəllif, tag)...', en: 'Search posts...', ru: 'Поиск по постами...' },
   'home.tab_all': { az: 'Hamısı', en: 'All', ru: 'Все' },
   'home.tab_following': { az: 'İzlədiklərim', en: 'Following', ru: 'Подписки' },
 
@@ -277,7 +277,7 @@ const D = {
 
   /* ---------- Page: Users ---------- */
   'users.sub': { az: 'Platformadakı bütün üzvlər — profilə bax, birbaşa mesaj yaz', en: 'All platform members — view profiles, send direct messages', ru: 'Все участники платформы — смотрите профили, отправляйте ЛС' },
-  'users.search': { az: '⌕ Ad, istifadəçi adı və ya tag üzrə axtar...', en: '⌕ Search by name, username or tag...', ru: '⌕ Поиск по имени, юзернейму или тегу...' },
+  'users.search': { az: 'Ad, istifadəçi adı və ya tag üzrə axtar...', en: 'Search by name, username or tag...', ru: 'Поиск по имени, юзернейму или тегу...' },
   'users.flt_skill': { az: 'Bütün skill-lər', en: 'All skills', ru: 'Все навыки' },
   'users.flt_level': { az: 'Bütün səviyyələr', en: 'All levels', ru: 'Все уровни' },
   'users.flt_beg': { az: 'Başlanğıc', en: 'Beginner', ru: 'Новичок' },
@@ -338,13 +338,13 @@ const D = {
   'stats.rc': { az: 'Tarix aralığı', en: 'Date range', ru: 'Диапазон дат' },
   'stats.apply': { az: 'Tətbiq et', en: 'Apply', ru: 'Применить' },
   'stats.post_count': { az: 'Paylaşım sayı', en: 'Post count', ru: 'Количество постов' },
-  'stats.adm_title': { az: '⚑ Platforma statistikası (yalnız admin)', en: '⚑ Platform stats (admin only)', ru: '⚑ Статистика платформы (только админ)' },
+  'stats.adm_title': { az: 'Platforma statistikası (yalnız admin)', en: 'Platform stats (admin only)', ru: 'Статистика платформы (только админ)' },
   'stats.top_contrib': { az: 'Top töhfəçilər (XP)', en: 'Top contributors (XP)', ru: 'Топ участников (XP)' },
   'stats.growth': { az: 'Artım (son 30 gün qeydiyyat)', en: 'Growth (last 30 days signups)', ru: 'Рост (регистрации за 30 дней)' },
-  'stats.lb': { az: '🏆 Liderlər lövhəsi', en: '🏆 Leaderboard', ru: '🏆 Таблица лидеров' },
-  'stats.lb_xp': { az: '⚡ XP', en: '⚡ XP', ru: '⚡ XP' },
-  'stats.lb_tasks': { az: '☑ Tapşırıq', en: '☑ Task', ru: '☑ Задание' },
-  'stats.lb_streak': { az: '🔥 Seriya', en: '🔥 Streak', ru: '🔥 Серия' },
+  'stats.lb': { az: 'Liderlər lövhəsi', en: 'Leaderboard', ru: 'Таблица лидеров' },
+  'stats.lb_xp': { az: 'XP', en: 'XP', ru: 'XP' },
+  'stats.lb_tasks': { az: 'Tapşırıq', en: 'Task', ru: 'Задание' },
+  'stats.lb_streak': { az: 'Seriya', en: 'Streak', ru: 'Серия' },
   'stats.lang_dist': { az: 'Dil / sahə bölgüsü', en: 'Language / field distribution', ru: 'Распределение языков / сфер' },
 
   /* ---------- Page: Profil ---------- */
@@ -613,7 +613,7 @@ const D = {
   'adm.spark_days': { az: 'son 30 gün', en: 'last 30 days', ru: 'последние 30 дней' },
 
   // istifadəçi siyahısı (Admin#4/#5/#10/#11)
-  'adm.u_search':      { az: '⌕ Ad və ya istifadəçi adı...', en: '⌕ Name or username...', ru: '⌕ Имя или юзернейм...' },
+  'adm.u_search':      { az: 'Ad və ya istifadəçi adı...', en: 'Name or username...', ru: 'Имя или юзернейм...' },
   'adm.f_all':         { az: 'Hamısı', en: 'All', ru: 'Все' },
   'adm.f_blocked':     { az: 'Yalnız bloklanmış', en: 'Blocked only', ru: 'Только заблокированные' },
   'adm.f_admin':       { az: 'Yalnız adminlər', en: 'Admins only', ru: 'Только админы' },

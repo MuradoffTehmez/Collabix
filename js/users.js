@@ -115,7 +115,7 @@ export async function openFollowList(uid, kind){
     const uids = kind === 'followers' ? await fetchFollowersOf(uid) : await fetchFollowingOf(uid);
     clear(listBox);
     const users = uids.map(x => state.users.get(x)).filter(Boolean);
-    if(!users.length){ listBox.append(emptyState('◎', '—')); return; }
+    if(!users.length){ listBox.append(emptyState('userSearch', '—')); return; }
     users.forEach(u => {
       listBox.append(el('div', { class: 'admin-user-row' },
         avatarNode(u, 'avatar', isOnline(u)),
@@ -127,7 +127,7 @@ export async function openFollowList(uid, kind){
     });
   }catch(e){
     clear(listBox);
-    listBox.append(emptyState('◎', t('soc.hidden')));
+    listBox.append(emptyState('userSearch', t('soc.hidden')));
   }
 }
 
@@ -209,7 +209,7 @@ async function loadDirectory({ reset = false } = {}){
 
     if(dir.done){
       setStatus(dir.count ? t('users.end') : '');
-      if(!dir.count){ clear(grid); grid.append(emptyState('◎', t('users.none'))); }
+      if(!dir.count){ clear(grid); grid.append(emptyState('userSearch', t('users.none'))); }
     } else {
       setStatus('');
       // Server səhifəsi client süzgəcindən (online/mutual) sonra tam boşala
@@ -343,7 +343,7 @@ export function mountPubProfile(username){
   const render = () => {
     const u = [...state.users.values()].find(x => x.username === username);
     clear(box);
-    if(!u){ box.append(emptyState('◎', '@' + (username || '?') + ' tapılmadı')); return; }
+    if(!u){ box.append(emptyState('userSearch', '@' + (username || '?') + ' tapılmadı')); return; }
 
     updateDynamicSEO({
       title: u.name + ' (@' + u.username + ')',
@@ -420,7 +420,7 @@ export function mountPubProfile(username){
       el('div', { class: 'section-title' }, t('usr.act_map')),
       heatBox,
       el('div', { class: 'section-title' }, t('usr.posts')),
-      posts.length ? null : emptyState('✎', t('usr.no_posts')),
+      posts.length ? null : emptyState('message', t('usr.no_posts')),
     );
     // Keşdən ani render, sonra normalized cədvəldən dəqiq data (Bənd 9).
     renderHeatmapInto(heatBox, u.activityDays || {});
