@@ -17,7 +17,8 @@ import { grantReputation, evaluateProgression } from '../progression';
 import { QueueService } from '../services/queue';
 import {
   D, badReq, notify, notifyMentions, bumpActivity, bumpProgress, deleteR2Keys,
-  POST_BLOCKS_MAX_BYTES, POST_XP, COMMENT_XP, REPOST_XP, LIKE_RECEIVED_XP,
+  POST_BLOCKS_MAX_BYTES, POST_XP, ORIGINAL_POST_XP, COMMENT_XP,
+  REPOST_XP, LIKE_RECEIVED_XP,
 } from './shared';
 
 /* ================= POSTS ================= */
@@ -260,7 +261,18 @@ export async function createPost(c: Ctx) {
     buildSearchText(blocks)).run();
   // H-5: XP idempotent + gündəlik tavanlı verilir. Tavana çatanda post YENƏ DƏ
   // yaradılır — yalnız XP verilmir (audit §B-3: "əməliyyat uğurlu olsun").
-  const xpGrant = await grantXp(c.env, c.user!.id, 'post', id, POST_XP);
+  //
+  // AUDIT-TASK-10 / D-6.b — PRD §6 İKİ AYRI SƏTİR sayır:
+  //   "Paylaşım +10"          → sitat/paylaşım (başqasının məzmununa söykənir)
+  //   "Orijinal paylaşım +15" → istifadəçinin öz məzmunu
+  // Ayrım `sharedPostId`-dədir: dolu olsa post başqa posta istinad edir.
+  //
+  // ⚠ Mənbə hər iki halda `post`-dur (ayrı `XpSource` DEYİL) — əks halda
+  //   gündəlik tavan ikiyə bölünər və istifadəçi 10 orijinal + 10 sitat
+  //   yazmaqla büdcəni iki qat aşardı.
+  const isOriginal = !sharedPostId;
+  const xpGrant = await grantXp(
+    c.env, c.user!.id, 'post', id, isOriginal ? ORIGINAL_POST_XP : POST_XP);
   // FAZA A2 — nişan/nailiyyət mühərriki. `waitUntil`: qiymətləndirmə post
   // yaratma cavabını GECİKDİRMƏMƏLİDİR.
   c.ctx.waitUntil(evaluateProgression(c.env, c.user!.id).then(() => {}));

@@ -1,6 +1,7 @@
 # Collabix 2026 Optimizasiya Auditi
 
-Bu sənəd layihənin 2026-cı il standartlarına uyğun optimizasiya (SEO, GEO, AEO, E-E-A-T, SXO, SMO, Core Web Vitals) auditini əhatə edir. Layihədə heç bir mövcud funksionallıq pozulmadan bütün optimallaşdırmalar tətbiq edilmişdir.
+Bu sənəd layihənin 2026-cı il standartlarına uyğun optimizasiya (SEO, GEO, AEO, E-E-A-T, SXO, SMO, Core Web Vitals) auditini əhatə edir. 
+> ⚠️ **QEYD:** Bu sənəddəki 100/100 özünü-qiymətləndirmə nəticələri şişirdilmişdir. İstehsal reallığına əsaslanan faktiki qiymət ≈85%-dir (legal səhifələrdə placeholder-lər, domen uyğunsuzluqları və s.). Tam detallar üçün `AUDIT-2026-07-26.md` sənədinə baxın.
 
 ## Ümumi Cədvəl
 

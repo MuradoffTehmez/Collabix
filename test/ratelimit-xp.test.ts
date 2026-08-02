@@ -10,7 +10,8 @@ import { describe, it, expect } from 'vitest';
 import { RL, normalizeIp } from '../worker/auth';
 import { XP_RULES, XP_DAILY_TOTAL, utcDayStart } from '../worker/xp';
 import {
-  POST_XP, COMMENT_XP, REPOST_XP, LIKE_RECEIVED_XP, DAILY_LOGIN_XP,
+  POST_XP, ORIGINAL_POST_XP, COMMENT_XP, REPOST_XP, LIKE_RECEIVED_XP,
+  DAILY_LOGIN_XP,
 } from '../worker/routes/shared';
 
 describe('RL taksonomiyası — Task 4 §4.1 / Task 9 Faza A', () => {
@@ -101,7 +102,14 @@ describe('XP qaydaları — H-5 (Task 9 Faza B)', () => {
 
   it('🔴 əməliyyat büdcəsi XP dəyəri ilə uyğundur (sürüşmə mühafizəsi)', () => {
     // Bu test XP dəyəri dəyişəndə tavanın da yenilənməsini MƏCBUR EDİR.
+    //
+    // ⚠ `post` tavanı BAZA dəyərə (`POST_XP`) görə ifadə olunur. Orijinal
+    //   paylaşım (`ORIGINAL_POST_XP = 15`) büdcəni daha sürətli yeyir:
+    //   100 / 15 ≈ 6 orijinal post/gün. Bu, QƏSDƏNDİR — PRD orijinal məzmuna
+    //   daha yüksək dəyər verir, tavan isə ümumi XP həcmini saxlayır.
     expect(XP_RULES.post.daily! / POST_XP).toBe(10);
+    expect(ORIGINAL_POST_XP).toBeGreaterThan(POST_XP);
+    expect(Math.floor(XP_RULES.post.daily! / ORIGINAL_POST_XP)).toBe(6);
     expect(XP_RULES.comment.daily! / COMMENT_XP).toBe(20);
     expect(XP_RULES.repost.daily! / REPOST_XP).toBe(10);
     expect(XP_RULES.like_received.daily! / LIKE_RECEIVED_XP).toBe(50);

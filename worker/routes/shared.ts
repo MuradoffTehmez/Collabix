@@ -126,7 +126,8 @@ export const POST_BLOCKS_MAX_BYTES = 64 * 1024;
 // ⚠ `COMMENT_XP` 5-dən 2-yə ENDİ. Bu, GÖRÜNƏN məhsul dəyişikliyidir və
 //   `xp.ts`-dəki `comment` tavanı da eyni commit-də 100 → 40 edildi ki,
 //   əməliyyat büdcəsi (20 rəy/gün) dəyişməsin.
-export const POST_XP = 10;          // PRD: Paylaşım +10
+export const POST_XP = 10;          // PRD: Paylaşım +10 (sitat/paylaşım)
+export const ORIGINAL_POST_XP = 15; // PRD: Orijinal paylaşım +15 (öz məzmunu)
 export const COMMENT_XP = 2;        // PRD: Şərh +2   (əvvəl 5)
 export const SOLUTION_XP = 50;      // Layihəyə xas (PRD "Faydalı cavab +10"-dan yuxarı)
 
