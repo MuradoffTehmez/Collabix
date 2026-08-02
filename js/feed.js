@@ -1339,20 +1339,73 @@ function mountComments(box, p){
     return node;
   };
 
+  /* ── Thread render (rekursiv) ────────────────────────────────────────────
+   * Əvvəl YALNIZ bir səviyyə çəkilirdi (`kids.map(...)`), çünki server hər
+   * şeyi kökə düzləndirirdi. İndi yuvalanma sərbəstdir.
+   *
+   * `MAX_INDENT`: girinti müəyyən dərinlikdən sonra ARTMIR. Sonsuz girinti
+   * dar ekranda mətni bir neçə simvol enində sütuna sıxardı; Reddit/GitHub
+   * eyni yanaşmanı işlədir. Data dərinliyi qorunur, yalnız vizual sürüşmə
+   * dayanır (spec: "maximum nesting with graceful overflow").
+   *
+   * `COLLAPSE_AT`: bu qədərdən çox birbaşa cavabı olan qol AVTOMATİK yığılır —
+   * uzun mübahisə bütün səhifəni doldurmasın. */
+  const MAX_INDENT = 4;
+  const COLLAPSE_AT = 5;
+  const collapsed = new Set();     // yığılmış qolların şərh id-ləri (render arası qalır)
+
+  const countSubtree = (id) => {
+    const kids = cData.replies[id] || [];
+    return kids.reduce((n, k) => n + 1 + countSubtree(k.id), 0);
+  };
+
+  const renderNode = (c, depth) => {
+    const kids = cData.replies[c.id] || [];
+    const node = el('div', { class: 'comment-thread' + (depth ? ' is-nested' : '') },
+      commentRow(c, depth > 0),
+      el('div', { class: 'c-reply-holder', id: 'creply-' + c.id }),
+    );
+
+    if(kids.length){
+      const total = countSubtree(c.id);
+      // İlk renderdə qərar: çox qollu budaq yığılı başlayır.
+      if(!collapsed.has(c.id) && kids.length > COLLAPSE_AT && !collapsed.has('!' + c.id)){
+        collapsed.add(c.id);
+        collapsed.add('!' + c.id);   // "avtomatik qərar bir dəfə verildi" nişanı
+      }
+      const isOpen = !collapsed.has(c.id);
+
+      const kidsBox = el('div', {
+        class: 'c-replies' + (depth + 1 >= MAX_INDENT ? ' no-indent' : ''),
+        hidden: !isOpen,
+      });
+      if(isOpen) kids.forEach(k => kidsBox.append(renderNode(k, depth + 1)));
+
+      const toggle = el('button', {
+        type: 'button', class: 'c-thread-toggle',
+        'aria-expanded': String(isOpen),
+        onclick: () => {
+          if(collapsed.has(c.id)) collapsed.delete(c.id); else collapsed.add(c.id);
+          renderComments();
+        },
+      },
+        el('span', { class: 'ic', 'data-icon': 'chevron', 'data-icon-size': '14' }),
+        isOpen ? t('cm.hide_replies') : t('cm.show_replies').replace('{n}', String(total)),
+      );
+      toggle.classList.toggle('open', isOpen);
+      paintIcons(toggle);
+      node.append(toggle, kidsBox);
+    }
+    return node;
+  };
+
   const renderComments = () => {
     renderSortBar();
     clear(commentsBox);
     if(!cData.comments.length){
       commentsBox.append(el('p', { class: 'c-empty' }, t('feed.no_comments')));
     } else {
-      cData.comments.forEach(c => {
-        const kids = cData.replies[c.id] || [];
-        commentsBox.append(el('div', { class: 'comment-thread' },
-          commentRow(c, false),
-          el('div', { class: 'c-reply-holder', id: 'creply-' + c.id }),
-          kids.length ? el('div', { class: 'c-replies' }, ...kids.map(k => commentRow(k, true))) : null,
-        ));
-      });
+      cData.comments.forEach(c => commentsBox.append(renderNode(c, 0)));
     }
     clear(moreWrap);
     if(cData.hasMore){

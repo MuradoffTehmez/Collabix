@@ -627,12 +627,29 @@ export async function listComments(c: Ctx, postId: string) {
   // (100) aşırdı. Hissələmə SIRALAMANI POZMUR: bölgü VALİDEYN id-ləri üzrədir,
   // yəni bir valideynin bütün cavabları eyni hissədədir və aşağıdakı
   // `replies[parent]` qruplaşdırması xronoloji sıranı olduğu kimi saxlayır.
+  // ⚠ REKURSİV: əvvəl yalnız BİR səviyyə cavab çəkilirdi
+  //   (`parent_comment_id IN (topIds)`), çünki server onsuz da hər şeyi kökə
+  //   düzləndirirdi. İndi yuvalanma sərbəstdir, ona görə bütün alt ağac
+  //   `WITH RECURSIVE` ilə gətirilir.
+  //
+  //   `LIMIT 2000` sonsuz döngəyə qarşı QORUYUCUDUR: data düzgündürsə ağac
+  //   onsuz da sonludur, lakin zədələnmiş sətir (özünə istinad edən valideyn)
+  //   sorğunu əbədi işlədərdi. Bir postda 2000-dən çox cavab praktik həddin
+  //   xaricindədir.
   const replyRows: any[] = [];
   for (const chunk of chunkForD1(topIds)) {
     const rr = await D(c).prepare(
-      `SELECT cm.* FROM comments cm JOIN users u ON cm.author_id = u.id
-        WHERE cm.parent_comment_id IN (${placeholders(chunk.length)}) AND u.blocked = 0
-        ORDER BY cm.created_at ASC`,
+      `WITH RECURSIVE tree(id) AS (
+         SELECT id FROM comments WHERE parent_comment_id IN (${placeholders(chunk.length)})
+         UNION
+         SELECT c2.id FROM comments c2 JOIN tree t ON c2.parent_comment_id = t.id
+       )
+       SELECT cm.* FROM comments cm
+         JOIN tree ON tree.id = cm.id
+         JOIN users u ON cm.author_id = u.id
+        WHERE u.blocked = 0${c.isAdmin ? '' : ' AND cm.hidden_at IS NULL'}
+        ORDER BY cm.created_at ASC
+        LIMIT 2000`,
     ).bind(...chunk).all<any>();
     replyRows.push(...rr.results);
   }
@@ -689,15 +706,21 @@ export async function addComment(c: Ctx, postId: string) {
   const post = await D(c).prepare('SELECT author_id FROM posts WHERE id = ?').bind(postId).first<any>();
   if (!post) return err('Post tapılmadı.', 404);
 
-  // Bir səviyyə qaydası: cavaba cavab yazılırsa, kök üst rəyə düzlənir
-  // (dərin cavablar eyni thread-də @mention ilə). replyToAuthor → cavab bildirişi.
+  // ⚠ ƏVVƏL BİR SƏVİYYƏ QAYDASI VAR İDİ: `parentId = parent.parent_comment_id
+  //   || parent.id` — yəni cavaba cavab kök şərhə DÜZLƏNİRDİ və söhbət
+  //   yastılaşırdı ("A-ya cavab" ilə "A-nın cavabına cavab" fərqlənmirdi).
+  //   İndi valideyn olduğu kimi saxlanılır → sərbəst dərinlik.
+  //
+  //   Dərinlik SERVERDƏ məhdudlaşdırılmır: `listComments` bütün alt ağacı
+  //   rekursiv çəkir, UI isə girintini müəyyən səviyyədən sonra artırmır
+  //   (vizual "graceful overflow"). Beləliklə data itmir, düzən pozulmur.
   let parentId: string | null = null;
   let replyToAuthor: string | null = null;
   if (b.parentId) {
-    const parent = await D(c).prepare('SELECT id, author_id, parent_comment_id FROM comments WHERE id = ? AND post_id = ?')
+    const parent = await D(c).prepare('SELECT id, author_id FROM comments WHERE id = ? AND post_id = ?')
       .bind(clampStr(b.parentId, 40), postId).first<any>();
     if (parent) {
-      parentId = parent.parent_comment_id || parent.id;   // flatten-to-root
+      parentId = parent.id;
       replyToAuthor = parent.author_id;
     }
   }

@@ -1916,3 +1916,46 @@
 .act-btn.like-btn.on[data-react]:hover {
   background: color-mix(in srgb, currentColor 12%, transparent);
 }
+
+/* ── Yuvalanmış thread (limitsiz dərinlik) ──────────────────────────────── */
+.c-thread-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  margin: var(--sp-1) 0 var(--sp-1) 34px;
+  padding: var(--sp-1) var(--sp-2);
+  border: none;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--mo-fast) var(--mo-ease), color var(--mo-fast) var(--mo-ease);
+}
+
+.c-thread-toggle:hover { background: var(--surface-2); color: var(--text); }
+
+/* Şevron açıq vəziyyətdə yuxarı baxır — vəziyyət RƏNGDƏN asılı deyil. */
+.c-thread-toggle .ic { transition: transform var(--mo-base) var(--mo-ease); }
+.c-thread-toggle.open .ic { transform: rotate(180deg); }
+
+/* Girinti MAX_INDENT-dən sonra dayanır: dar ekranda mətn bir neçə simvol
+   enində sütuna sıxılmasın (graceful overflow). */
+.c-replies.no-indent {
+  margin-left: 0;
+  padding-left: var(--sp-3);
+}
+
+.comment-thread.is-nested { margin-top: var(--sp-1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .c-thread-toggle .ic { transition: none; }
+}
+
+/* Dar ekranda girinti daha tez dayanır — 375px-də dörd səviyyə çox yer yeyir. */
+@media (max-width: 480px) {
+  .c-replies { margin-left: 10px; padding-left: var(--sp-3); }
+  .c-thread-toggle { margin-left: 12px; }
+}
