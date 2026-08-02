@@ -71,6 +71,10 @@ export const ICONS = {
   type: '<polyline points="4 7 4 4 20 4 20 7"/><line x1="9" x2="15" y1="20" y2="20"/><line x1="12" x2="12" y1="4" y2="20"/>',
   trash: '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
   lock: '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  /* AUDIT-UI: fayl əlavəsi üçün ikon YOX idi, ona görə `richmsg.js` sabit '📎'
+     emojisi işlədirdi — platformadan asılı görünüş, `currentColor`-a tabe olmur.
+     Lucide "paperclip" (24×24 sətir üslubu, dəstin qalanı ilə eyni). */
+  paperclip: '<path d="M13.234 20.252 21 12.3"/><path d="m16 6-8.414 8.586a2 2 0 0 0 0 2.828 2 2 0 0 0 2.828 0l8.414-8.586a4 4 0 0 0 0-5.656 4 4 0 0 0-5.656 0l-8.415 8.585a6 6 0 1 0 8.486 8.486"/>',
 
   /* Şərh reaksiyaları (0039). Emoji YOX: `currentColor` ilə rənglənir, ona
      görə aktiv reaksiya tipinin öz rəngini ala bilir və dörd temada işləyir. */

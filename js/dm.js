@@ -10,6 +10,7 @@ import { openProfileModal } from './users.js';
 import { mentionify, attachMentionAutocomplete } from './mention.js';
 import { richContent, attachRichControls, renderGroupedMessages } from './richmsg.js';
 import { t } from './i18n.js';
+import { iconEdit, iconTrash } from './icons.js';
 
 let threads = [];
 let currentPeerUid = null;
@@ -79,13 +80,24 @@ function msgBubble(m, pairId){
     m.editedAt ? el('span', { class: 'edited-mark' }, ' ' + t('feed.edited')) : null,
   );
   if(mine){
+    /* AUDIT-UI: üç qüsur bir yerdə idi —
+     *   1) '✎' / '🗑' EMOJİ ikon kimi (`no-emoji-icons`): platformadan asılı
+     *      görünür, `currentColor`-a tabe olmur, tema ilə dəyişmir.
+     *      Layihədə onsuz da SVG ikon qatı var (`icons.js` §21 şərhi məhz bu
+     *      köçürmədən danışır — DM bölməsi qaçırılmışdı).
+     *   2) `title` SABİT AZƏRBAYCANCA idi — rus/ingilis dildə tərcümə olunmurdu.
+     *   3) Əlçatan ad məzmundan (emoji) gəlirdi → oxucu "✎" deyirdi.
+     *      `aria-label` hər üçünü həll edir. */
     node.append(el('div', { class: 'msg-tools' },
-      (!m.type || m.type === 'text') ? el('button', { type: 'button', title: 'Redaktə et', onclick: () => openDMEdit(pairId, m) }, '✎') : null,
-      el('button', { type: 'button', title: 'Sil', onclick: async () => {
+      (!m.type || m.type === 'text')
+        ? el('button', { type: 'button', title: t('a11y.edit'), 'aria-label': t('a11y.edit'),
+            onclick: () => openDMEdit(pairId, m) }, iconEdit())
+        : null,
+      el('button', { type: 'button', title: t('a11y.delete'), 'aria-label': t('a11y.delete'), onclick: async () => {
         if(await confirmDialog(t('dyn.msg_del_conf'))){
           try{ await deleteDM(pairId, m.id); }catch(e){ toast(t('dyn.del_fail'), 'err'); }
         }
-      } }, '🗑'),
+      } }, iconTrash()),
     ));
   }
   return node;
@@ -162,14 +174,24 @@ function selectPeer(uid, openDetail = false){  // openDetail: yalnız klikdən (
   });
 }
 
+/* AUDIT-UI: `chat.js`-dəki ilə eyni qüsur — gedişdə qorunma yox idi, sürətli
+ * Enter/klik mesajı iki dəfə göndərirdi (`loading-buttons`). */
+let sending = false;
 async function send(){
-  if(!currentPeerUid) return;
+  if(sending || !currentPeerUid) return;
   const input = document.getElementById('dmInput');
+  const btn = document.getElementById('dmSendBtn');
   const text = input.value.trim();
   if(!text) return;
+  sending = true;
+  if(btn) btn.disabled = true;
   input.value = '';
   try{ await sendDM(currentPeerUid, text); }
   catch(e){ console.error(e); toast(t('dyn.msg_send_fail'), 'err'); input.value = text; }
+  finally{
+    sending = false;
+    if(btn) btn.disabled = false;
+  }
 }
 
 export function initDM(){

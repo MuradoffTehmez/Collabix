@@ -271,10 +271,32 @@ function selectRoom(roomId, openDetail = false){
     // istifadəçi mövcud olmayan tarixçəni axtarmasın.
     if(!hist.older.length && meta && meta.hasMore === false) hist.hasMore = false;
     paint();
+    announceLatest(msgs);
     // Avtomatik dibə sürüşmə YALNIZ istifadəçi onsuz da dibdə idisə —
     // köhnə mesaj oxuyarkən yeni mesaj gəlsə yeri itirməsin.
     if(wasAtBottom) box.scrollTop = box.scrollHeight;
   });
+}
+
+/* ── AUDIT-UI: yeni mesajın ekran oxuyucusuna elanı ───────────────────────
+ * Real-time çat vizual olaraq yenilənir, amma ekran oxuyucusu üçün TAM SƏSSİZ
+ * idi: istifadəçi mesaj gəldiyini yalnız siyahını yenidən oxuyaraq bilirdi.
+ *
+ * ⚠ Niyə `#chatMessages`-in ÖZÜNƏ `aria-live` qoyulmadı: `paint()` hər
+ *   yeniləmədə `clear(box)` edib bütün siyahını yenidən qurur. Canlı region
+ *   olsaydı, hər mesajda BÜTÜN tarixçə təkrar səsləndirilərdi.
+ * ⚠ Yalnız BAŞQASININ mesajı elan olunur — öz göndərdiyini istifadəçi onsuz da bilir.
+ * ⚠ Son elan olunan id yadda saxlanılır: `paint()` təkrar çağırılanda
+ *   (məs. tarixçə yüklənəndə) eyni mesaj iki dəfə oxunmasın. */
+let lastAnnouncedId = null;
+function announceLatest(msgs){
+  const live = document.getElementById('chatLive');
+  if(!live || !msgs || !msgs.length) return;
+  const m = msgs[msgs.length - 1];
+  if(!m || m.id === lastAnnouncedId) return;
+  lastAnnouncedId = m.id;
+  if(m.authorUid === state.authUser.uid) return;
+  live.textContent = `${m.authorName || ''}: ${m.text || ''}`.trim();
 }
 
 // Vahid göndərmə yolu: əvvəlcə WS (sürətli), cavab gəlməzsə REST (etibarlı).
@@ -285,13 +307,27 @@ async function deliver(payload){
   await sendRoomMessage(currentRoomId, payload);
 }
 
+/* AUDIT-UI: `send()` heç bir "gedişdə" qoruması OLMADAN çağırılırdı — Enter-i
+ * sürətlə basmaq və ya düyməyə iki dəfə klikləmək eyni mətni İKİ DƏFƏ
+ * göndərirdi (`loading-buttons`: async əməliyyat boyu düymə söndürülməlidir).
+ * Bayraq + düymənin `disabled` vəziyyəti birlikdə işləyir: bayraq klaviatura
+ * yolunu, `disabled` isə siçan yolunu bağlayır və görünən əks-əlaqə verir. */
+let sending = false;
 async function send(){
+  if(sending) return;
   const input = document.getElementById('chatInput');
+  const btn = document.getElementById('chatSendBtn');
   const text = input.value.trim();
   if(!text) return;
+  sending = true;
+  if(btn) btn.disabled = true;
   input.value = '';
   try{ await deliver(text); }
   catch(e){ toast(t('dyn.msg_send_fail'), 'err'); input.value = text; }
+  finally{
+    sending = false;
+    if(btn) btn.disabled = false;
+  }
 }
 
 export function initChat(){

@@ -6,6 +6,7 @@ import { t, fmtRelTime } from './i18n.js';
 import { highlightOptions } from './taxonomy.js';
 import { mentionify } from './mention.js';
 import { openImageModal } from './feed.js';
+import { paintIcons } from './icons.js';
 
 const fmtSize = b => b > 1024 * 1024 ? (b / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB';
 
@@ -17,12 +18,27 @@ export function richContent(m){
   if(m.type === 'image' && isSafeFileURL(m.fileUrl)){
     const img = document.createElement('img');
     img.className = 'msg-img'; img.src = m.fileUrl; img.alt = m.fileName || '';
-    img.addEventListener('click', () => openImageModal(m.fileUrl));
+    /* AUDIT-UI: feed qalereyası ilə eyni qüsur — lightbox YALNIZ siçanla
+     * açılırdı (`keyboard-nav`) və şəkil həvəslə (eager) yüklənirdi. */
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    img.tabIndex = 0;
+    img.setAttribute('role', 'button');
+    img.setAttribute('aria-label', t('a11y.openImage').replace('{n}', '1'));
+    const openImg = () => openImageModal(m.fileUrl);
+    img.addEventListener('click', openImg);
+    img.addEventListener('keydown', e => {
+      if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); openImg(); }
+    });
     frag.append(img);
   } else if(m.type === 'file' && isSafeFileURL(m.fileUrl)){
-    frag.append(el('a', { class: 'msg-file', href: m.fileUrl, target: '_blank', rel: 'noopener noreferrer' },
-      '📎 ', el('span', {}, m.fileName || 'fayl'),
-      el('span', { class: 'mf-size' }, m.fileSize ? fmtSize(m.fileSize) : '')));
+    // AUDIT-UI: '📎' emoji → SVG ikon qatı (`no-emoji-icons`).
+    const link = el('a', { class: 'msg-file', href: m.fileUrl, target: '_blank', rel: 'noopener noreferrer' },
+      el('span', { class: 'ic', 'data-icon': 'paperclip', 'data-icon-size': '14' }),
+      el('span', {}, m.fileName || 'fayl'),
+      el('span', { class: 'mf-size' }, m.fileSize ? fmtSize(m.fileSize) : ''));
+    paintIcons(link);
+    frag.append(link);
   } else if(m.type === 'code' && m.text){
     const code = document.createElement('code');
     code.textContent = m.text;
