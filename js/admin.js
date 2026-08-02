@@ -21,6 +21,7 @@ import { tax, saveTaxItem, deactivateTaxItem, seedTaxonomies } from './taxonomy.
 import { sparklineBlock } from './sparkline.js';
 import { mountThreatPanel } from './threat.js';
 import { t } from './i18n.js';
+import { iconTrash, iconEdit } from './icons.js';
 
 let unsubReports = null, unsubAdmins = null;
 let adminSet = new Set();
@@ -225,7 +226,8 @@ function adminUserRow(u){
       el('span', { class: 'sub' }, '@' + u.username
         + (isAdminUser ? ' · ⚑ admin' : '')
         + (u.blocked ? ' · ⛔ bloklu' : ''))),
-    el('button', { class: 'btn-mini', title: 'Redaktə et', onclick: () => openUserEditor(u) }, '✎'),
+    el('button', { class: 'btn-mini', title: t('a11y.edit'), 'aria-label': t('a11y.edit') + ' — @' + u.username,
+      onclick: () => openUserEditor(u) }, iconEdit()),
     el('button', { class: 'btn-mini', title: 'Müvəqqəti şifrə', onclick: () => openTempPassword(u) }, '🔑'),
   );
 
@@ -394,7 +396,8 @@ function renderTaxList(){
         onclick: e => moveRow(e.currentTarget.closest('.tax-row'), -1) }, '↑'),
       el('button', { class: 'btn-mini tax-move-down', 'aria-label': t('adm.tax_down') + ' — ' + item.label,
         onclick: e => moveRow(e.currentTarget.closest('.tax-row'), 1) }, '↓'),
-      el('button', { class: 'btn-mini', onclick: () => openTaxEditor(item) }, '✎'),
+      el('button', { class: 'btn-mini', 'aria-label': t('a11y.edit') + ' — ' + item.label,
+        onclick: () => openTaxEditor(item) }, iconEdit()),
       el('button', { class: 'btn-mini block', onclick: async () => {
         if(await confirmDialog(`"${item.label}" deaktiv ediləcək — yeni seçimlərdə görünməyəcək (mövcud istifadəçilərdə qalır).`)){
           try{ await deactivateTaxItem(taxType, item.id); toast('Deaktiv edildi'); }catch(e){ toast('Alınmadı', 'err'); }
@@ -465,10 +468,11 @@ async function renderPubContent(){
     if(!faqs.length){ box.append(el('p', { style: 'color:var(--muted); font-size:.8rem;' }, 'Boşdur — seed düyməsini bas.')); return; }
     faqs.forEach(f => box.append(el('div', { class: 'admin-user-row' },
       el('div', { class: 'name' }, (f.q?.az || '—') + ' ', el('span', { class: 'sub' }, (f.category || '') + ' · sıra ' + (f.order ?? '—') + (f.active === false ? ' · qeyri-aktiv' : ''))),
-      el('button', { class: 'btn-mini', onclick: () => openFaqEditor(f) }, '✎'),
-      el('button', { class: 'btn-mini block', onclick: async () => {
+      el('button', { class: 'btn-mini', 'aria-label': t('a11y.edit') + ' — FAQ',
+        onclick: () => openFaqEditor(f) }, iconEdit()),
+      el('button', { class: 'btn-mini block', 'aria-label': t('a11y.delete') + ' — FAQ', onclick: async () => {
         if(await confirmDialog('FAQ silinsin?')){ await deleteFaq(f.id).catch(() => toast('Alınmadı', 'err')); renderPubContent(); }
-      } }, '🗑'),
+      } }, iconTrash()),
     )));
   } else if(pcTab === 'testi'){
     const items = await fetchAllTestimonials().catch(() => []);
@@ -476,10 +480,12 @@ async function renderPubContent(){
     items.forEach(x => box.append(el('div', { class: 'admin-user-row' },
       el('div', { class: 'name' }, (x.authorName || '—') + ' ',
         el('span', { class: 'sub' }, '★' + (x.rating || 5) + (x.approved ? ' · təsdiqli' : ' · gözləyir') + (x.featured ? ' · seçilmiş' : ''))),
-      el('button', { class: 'btn-mini', onclick: () => openTestiEditor(x) }, '✎'),
-      el('button', { class: 'btn-mini block', onclick: async () => {
-        if(await confirmDialog('Rəy silinsin?')){ await deleteTestimonial(x.id).catch(() => toast('Alınmadı', 'err')); renderPubContent(); }
-      } }, '🗑'),
+      el('button', { class: 'btn-mini', 'aria-label': t('a11y.edit') + ' — ' + (x.authorName || ''),
+        onclick: () => openTestiEditor(x) }, iconEdit()),
+      el('button', { class: 'btn-mini block', 'aria-label': t('a11y.delete') + ' — ' + (x.authorName || ''),
+        onclick: async () => {
+          if(await confirmDialog('Rəy silinsin?')){ await deleteTestimonial(x.id).catch(() => toast('Alınmadı', 'err')); renderPubContent(); }
+        } }, iconTrash()),
     )));
   } else {
     if(!contactCache.length){ box.append(el('p', { style: 'color:var(--muted); font-size:.8rem;' }, 'Əlaqə mesajı yoxdur.')); return; }

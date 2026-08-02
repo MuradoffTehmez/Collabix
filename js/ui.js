@@ -1,5 +1,6 @@
 // UI yardımçıları: toast, təsdiq dialoqu, modal, skeleton, tema.
 import { el, clear } from './util.js';
+import { t } from './i18n.js';
 
 /* ---------- toast ---------- */
 export function toast(msg, type = 'ok'){
@@ -88,21 +89,69 @@ const modalCard = () => document.getElementById('modalCard');
 // kod istəyi) əbədi asılı qalar.
 let onCloseCb = null;
 
-export function showModal(nodes, { wide = false, onClose = null } = {}){
+/* Modalı açmazdan ƏVVƏL fokusda olan element (AUDIT-UI / §1 escape-routes).
+   Modal bağlananda fokus BURAYA qaytarılır — klaviatura istifadəçisi
+   siyahının başına atılmır, işlədiyi yerdə qalır. */
+let lastFocused = null;
+
+// Fokus tələsi üçün: modalın içindəki fokuslana bilən elementlər.
+const FOCUSABLE = [
+  'a[href]', 'button:not([disabled])', 'input:not([disabled])',
+  'select:not([disabled])', 'textarea:not([disabled])', '[tabindex]:not([tabindex="-1"])',
+].join(',');
+
+const focusables = card =>
+  [...card.querySelectorAll(FOCUSABLE)].filter(n => n.offsetParent !== null || n === document.activeElement);
+
+export function showModal(nodes, { wide = false, onClose = null, label = null } = {}){
   // Əvvəlki modal açıqdırsa onun callback-i indi işə düşür — üstünə yeni modal
   // açmaq da "bağlandı" sayılır, yoxsa köhnə promise itərdi.
   if(onCloseCb){ const cb = onCloseCb; onCloseCb = null; cb(); }
+  const bg = modalBg();
   const card = modalCard();
+  // ZƏNCİRVARİ MODAL: artıq açıqdırsa `lastFocused` ÜSTÜNƏ YAZILMIR — köhnə
+  // dəyər modalın içindəki (indi silinən) elementi göstərərdi və fokus
+  // qaytarma detached node-a düşüb itərdi.
+  if(!bg.classList.contains('active')) lastFocused = document.activeElement;
+
   clear(card);
   card.classList.toggle('wide', wide);
-  card.append(el('button', { class: 'modal-close', onclick: closeModal }, '✕'));
+  card.append(el('button', {
+    class: 'modal-close', 'aria-label': t('a11y.closeModal'), onclick: closeModal,
+  }, '✕'));
   for(const n of [].concat(nodes)) if(n) card.append(n);
-  modalBg().classList.add('active');
+
+  // Əlçatan ad: ilk başlıq/section-title `aria-labelledby` hədəfi olur.
+  // Başlıq yoxdursa geri-dönüş kimi `aria-label` qoyulur — əks halda
+  // `aria-labelledby` mövcud olmayan id-yə işarə edib adı TAMAM itirərdi.
+  const heading = card.querySelector('.section-title, h1, h2, h3');
+  if(heading){
+    heading.id = 'modalTitle';
+    card.setAttribute('aria-labelledby', 'modalTitle');
+    card.removeAttribute('aria-label');
+  } else {
+    card.removeAttribute('aria-labelledby');
+    card.setAttribute('aria-label', label || t('a11y.dialog'));
+  }
+
+  bg.classList.add('active');
   onCloseCb = onClose;
+
+  // Fokus modalın İÇİNƏ keçir: ilk interaktiv element, yoxdursa kartın özü
+  // (`tabindex="-1"` index.html-də var).
+  const first = focusables(card).find(n => !n.classList.contains('modal-close'));
+  (first || card).focus();
 }
 
 export function closeModal(){
+  const wasActive = modalBg().classList.contains('active');
   modalBg().classList.remove('active');
+  // Fokus çağıran düyməyə qayıdır. Element artıq DOM-da yoxdursa (səhifə
+  // dəyişib) sükutla ötürülür.
+  if(wasActive && lastFocused && document.contains(lastFocused)){
+    try{ lastFocused.focus(); }catch{ /* fokuslana bilməyən node — əhəmiyyətsiz */ }
+  }
+  lastFocused = null;
   // Callback ƏVVƏLCƏ sıfırlanır, sonra çağırılır: callback-in özü showModal
   // çağırsa (zəncirvari modallar) sonsuz döngü yaranmasın.
   if(onCloseCb){ const cb = onCloseCb; onCloseCb = null; cb(); }
@@ -111,6 +160,32 @@ export function closeModal(){
 document.addEventListener('DOMContentLoaded', () => {
   modalBg().addEventListener('click', e => { if(e.target.id === 'modalBg') closeModal(); });
 });
+
+/* Escape = bağla, Tab = modalın içində dövr et (fokus tələsi).
+   Sənəd səviyyəsində, `capture` fazasında: modal açıqkən altdakı səhifənin
+   Tab sırasına düşmək mümkün olmamalıdır. */
+document.addEventListener('keydown', e => {
+  const bg = modalBg();
+  if(!bg || !bg.classList.contains('active')) return;
+
+  // Command palette (Ctrl+K) modalın üstündədir və Escape-i ÖZÜ idarə edir.
+  // Guard olmasa bir Escape hər ikisini bağlayardı.
+  const pal = document.getElementById('paletteBg');
+  if(pal && !pal.hidden) return;
+
+  if(e.key === 'Escape'){ e.preventDefault(); closeModal(); return; }
+  if(e.key !== 'Tab') return;
+
+  const items = focusables(modalCard());
+  if(!items.length){ e.preventDefault(); return; }
+  const first = items[0], last = items[items.length - 1];
+  // Kənara çıxmaq istəyəndə əks uca sarı.
+  if(e.shiftKey && (document.activeElement === first || !modalCard().contains(document.activeElement))){
+    e.preventDefault(); last.focus();
+  } else if(!e.shiftKey && document.activeElement === last){
+    e.preventDefault(); first.focus();
+  }
+}, true);
 
 /* ---------- təsdiq dialoqu ---------- */
 export function confirmDialog(message, { okLabel = 'Bəli, davam et', danger = true } = {}){

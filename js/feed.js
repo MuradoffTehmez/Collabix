@@ -18,7 +18,7 @@ import { mentionify, attachMentionAutocomplete } from './mention.js';
 import { t, fmtRelTime } from './i18n.js';
 import { attachQuotedPost } from './composer.js';
 // Ortaq ikon fabriki + kopyala komponenti (public qat da eynisini işlədir).
-import { SVG, iconCopy, iconCheck, copyButton } from './icons.js';
+import { SVG, iconCopy, iconCheck, iconSend, iconX, copyButton } from './icons.js';
 
 // Heart (like)
 const iconHeart = (filled) => SVG(
@@ -836,8 +836,9 @@ function mountComments(box, p){
     };
     rin.addEventListener('keydown', e => { if(e.key === 'Enter' && !e.defaultPrevented) rsend(); });
     holder.append(el('div', { class: 'c-reply-row' }, rin,
-      el('button', { type: 'button', class: 'btn-small', onclick: rsend }, '➤'),
-      el('button', { type: 'button', class: 'btn-mini', onclick: () => { clear(holder); composerOpen = false; } }, '✕')));
+      el('button', { type: 'button', class: 'btn-small', 'aria-label': t('a11y.send'), onclick: rsend }, iconSend()),
+      el('button', { type: 'button', class: 'btn-mini', 'aria-label': t('a11y.cancel'),
+        onclick: () => { clear(holder); composerOpen = false; } }, iconX())));
     attachMentionAutocomplete(rin);
     rin.focus();
     rin.setSelectionRange(rin.value.length, rin.value.length);
@@ -919,7 +920,8 @@ function mountComments(box, p){
 
   box.append(
     el('div', { class: 'comment-head' }, sortBar),
-    el('div', { class: 'comment-input-row' }, input, el('button', { type: 'button', class: 'btn-small', onclick: send }, '➤')),
+    el('div', { class: 'comment-input-row' }, input,
+      el('button', { type: 'button', class: 'btn-small', 'aria-label': t('a11y.send'), onclick: send }, iconSend())),
     commentsBox,
     moreWrap,
   );

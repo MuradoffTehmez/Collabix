@@ -266,8 +266,17 @@
   padding: 15px 18px;
 }
 
+/* AUDIT-UI: əvvəl burada YALNIZ `outline:none` var idi — palitra tamamilə
+   klaviatura ilə idarə olunur, fokus göstəricisiz qalması P0 idi.
+   Sistem konturu əvəzinə alt-sərhəd + halqa (dizaynı pozmadan görünür). */
 .palette-input:focus {
   outline: none;
+  border-bottom-color: var(--coral);
+  box-shadow: inset 0 -2px 0 0 var(--coral);
+}
+
+.palette-input:focus-visible {
+  box-shadow: inset 0 -2px 0 0 var(--coral), 0 0 0 3px var(--coral-dim);
 }
 
 .palette-list {

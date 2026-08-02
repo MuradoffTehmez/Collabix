@@ -10,6 +10,7 @@ import { openProfileModal } from './users.js';
 import { mentionify, attachMentionAutocomplete } from './mention.js';
 import { richContent, attachRichControls, renderGroupedMessages } from './richmsg.js';
 import { t } from './i18n.js';
+import { iconTrash, iconEdit } from './icons.js';
 
 let rooms = [];
 let currentRoomId = 'general';
@@ -163,12 +164,13 @@ function renderRoomList(){
       el('div', { class: 'meta' }, el('b', {}, r.name)),
     );
     if(state.isAdmin && r.id !== 'general'){
-      item.append(el('button', { class: 'btn-mini block', style: 'padding:3px 7px; font-size:.62rem;', onclick: async e => {
-        e.stopPropagation();
-        if(await confirmDialog(t('dyn.room_del_conf').replace('"${r.name}"', `"${r.name}"`))){
-          try{ await deleteRoom(r.id); toast(t('dyn.room_del')); }catch(err){ toast(t('dyn.del_fail'), 'err'); }
-        }
-      } }, '🗑'));
+      item.append(el('button', { class: 'btn-mini block', style: 'padding:3px 7px; font-size:.62rem;',
+        'aria-label': t('a11y.delete') + ' — ' + r.name, onclick: async e => {
+          e.stopPropagation();
+          if(await confirmDialog(t('dyn.room_del_conf').replace('"${r.name}"', `"${r.name}"`))){
+            try{ await deleteRoom(r.id); toast(t('dyn.room_del')); }catch(err){ toast(t('dyn.del_fail'), 'err'); }
+          }
+        } }, iconTrash()));
     }
     list.append(item);
   });
@@ -184,12 +186,15 @@ function msgBubble(m){
   );
   if(mine || state.isAdmin){
     const tools = el('div', { class: 'msg-tools' });
-    if(mine && (!m.type || m.type === 'text')) tools.append(el('button', { type: 'button', title: 'Redaktə et', onclick: () => openMsgEdit(m) }, '✎'));
-    tools.append(el('button', { type: 'button', title: 'Sil', onclick: async () => {
+    if(mine && (!m.type || m.type === 'text')) tools.append(el('button', {
+      type: 'button', title: t('a11y.edit'), 'aria-label': t('a11y.edit'),
+      onclick: () => openMsgEdit(m),
+    }, iconEdit()));
+    tools.append(el('button', { type: 'button', title: t('a11y.delete'), 'aria-label': t('a11y.delete'), onclick: async () => {
       if(await confirmDialog(t('dyn.msg_del_conf'))){
         try{ await deleteRoomMessage(currentRoomId, m.id); }catch(e){ toast(t('dyn.del_fail'), 'err'); }
       }
-    } }, '🗑'));
+    } }, iconTrash()));
     node.append(tools);
   }
   return node;

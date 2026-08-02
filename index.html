@@ -1174,7 +1174,8 @@
 </div>
 
 <div class="modal-bg" id="modalBg">
-  <div class="modal-card" id="modalCard"></div>
+  <div class="modal-card" id="modalCard" role="dialog" aria-modal="true"
+       aria-labelledby="modalTitle" tabindex="-1"></div>
 </div>
 
 <!-- İstifadəçilər#4: command palette (Ctrl/Cmd+K) — klaviatura ilə idarə olunur -->
@@ -1192,7 +1193,9 @@
   </div>
 </div>
 
-<div class="toast-wrap" id="toastWrap"></div>
+<!-- role=status + aria-live=polite: toast mətni ekran oxuyucusuna elan olunur,
+     amma fokusu OĞURLAMIR (WCAG — toast-accessibility). -->
+<div class="toast-wrap" id="toastWrap" role="status" aria-live="polite" aria-atomic="false"></div>
 
 <nav class="bottom-nav" id="bottomNav">
   <button data-page="home">⌂<small data-i18n="nav.feed"></small></button>

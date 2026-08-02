@@ -219,6 +219,15 @@ const D = {
   'a11y.scrollProgress': { az: 'Oxuma irəliləyişi', en: 'Reading progress', ru: 'Прогресс чтения' },
   'a11y.sharePanel':    { az: 'Sosial paylaşım', en: 'Social sharing', ru: 'Поделиться' },
   'a11y.copyLink':      { az: 'Link kopyalandı!', en: 'Link copied!', ru: 'Ссылка скопирована!' },
+  'a11y.closeModal':    { az: 'Pəncərəni bağla', en: 'Close dialog', ru: 'Закрыть окно' },
+  'a11y.dialog':        { az: 'Dialoq pəncərəsi', en: 'Dialog', ru: 'Диалоговое окно' },
+  'a11y.edit':          { az: 'Redaktə et', en: 'Edit', ru: 'Редактировать' },
+  'a11y.delete':        { az: 'Sil', en: 'Delete', ru: 'Удалить' },
+  'a11y.send':          { az: 'Göndər', en: 'Send', ru: 'Отправить' },
+  'a11y.cancel':        { az: 'Ləğv et', en: 'Cancel', ru: 'Отмена' },
+  'a11y.more':          { az: 'Daha çox', en: 'More', ru: 'Ещё' },
+  'a11y.collapse':      { az: 'Yığ', en: 'Collapse', ru: 'Свернуть' },
+  'a11y.removeImage':   { az: 'Şəkli sil', en: 'Remove image', ru: 'Удалить изображение' },
 
   /* ---------- Auth & Landing ---------- */
   'auth.landing_h1': { az: 'Kod yaz.<br><span class="grad">Dil öyrən.</span><br>Yoldaş tap.', en: 'Write code.<br><span class="grad">Learn langs.</span><br>Find peers.', ru: 'Пиши код.<br><span class="grad">Учи языки.</span><br>Находи друзей.' },

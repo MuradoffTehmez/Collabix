@@ -6,6 +6,7 @@ import { toast } from './ui.js';
 import { allCategoryLabels, highlightOptions } from './taxonomy.js';
 import { markdownNode } from './markdown.js';
 import { t } from './i18n.js';
+import { iconX } from './icons.js';
 
 let blocks = []; // { id, type:'text'|'code'|'image', content, language, images:[{blob,previewURL,caption}] }
 let idSeq = 0;
@@ -26,7 +27,8 @@ function blockNode(b){
   const tools = el('div', { class: 'c-block-tools' },
     el('button', { title: t('comp.up'), onclick: () => moveBlock(b.id, -1) }, '↑'),
     el('button', { title: t('comp.down'), onclick: () => moveBlock(b.id, +1) }, '↓'),
-    el('button', { title: t('comp.del'), class: 'del', onclick: () => removeBlock(b.id) }, '✕'),
+    el('button', { title: t('comp.del'), 'aria-label': t('comp.del'), class: 'del',
+      onclick: () => removeBlock(b.id) }, iconX()),
   );
 
   if(b.type === 'text'){
@@ -136,7 +138,8 @@ function blockNode(b){
         const img = document.createElement('img');
         img.src = im.previewURL;
         grid.append(el('div', { class: 'c-img-item' }, img,
-          el('button', { class: 'img-remove-btn', onclick: () => { b.images.splice(i, 1); renderImgs(); } }, '✕')));
+          el('button', { class: 'img-remove-btn', 'aria-label': t('a11y.removeImage') + ' ' + (i + 1),
+            onclick: () => { b.images.splice(i, 1); renderImgs(); } }, iconX())));
       });
     };
     const fileIn = el('input', { type: 'file', accept: 'image/*', multiple: true, style: 'display:none;' });

@@ -27,6 +27,25 @@
   outline-offset: 2px;
 }
 
+/* ── AUDIT-UI: SPESİFİKLİK BƏRPASI ────────────────────────────────────────
+ * Səhifə modulları girişlərdə `…:focus { outline: none }` yazır (0,2,0 / 0,2,1)
+ * və bu, aşağıdakı qlobal `input:focus-visible` qaydasını (0,1,1) BASIR.
+ * Nəticə: klaviatura fokusu yalnız 1px sərhəd RƏNGİ ilə bildirilirdi —
+ * rəng-yeganə siqnal (WCAG 2.4.11 + `color-not-only`).
+ * Aşağıdakı bloklar eyni spesifikliklə, amma SONRAKI faylda gəlir → qazanır.
+ * ⚠ `:focus-visible` işlədilir: siçanla klik edəndə halqa görünmür, dizayn pozulmur. */
+.app-search:focus-visible,
+.c-text:focus-visible,
+.ph-search:focus-visible {
+  outline: 2px solid var(--coral);
+  outline-offset: 2px;
+}
+
+.chat-input input:focus-visible {
+  outline: 2px solid var(--coral);
+  outline-offset: 2px;
+}
+
 /* Accessibility: Focus Visible */
 :focus-visible {
   outline: 2px solid var(--coral);

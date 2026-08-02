@@ -29,6 +29,31 @@ export const iconCopy = () => SVG(
 
 export const iconCheck = () => SVG('<polyline points="20 6 9 17 4 12"/>', { w: '14', h: '14' });
 
+/* ---------- əməliyyat ikonları (AUDIT-UI) ----------
+ * Əvvəl bu yerlərdə emoji/simvol qlifləri idi ('🗑' '✎' '➤' '✕'). Emoji
+ * platformadan-platformaya dəyişir, `currentColor` ilə rənglənmir və ekran
+ * oxuyucusunda "wastebasket" kimi oxunur. Lucide SVG-yə keçirildi. */
+export const iconTrash = () => SVG(
+  '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>'
+  + '<path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  { w: '14', h: '14' },
+);
+
+export const iconEdit = () => SVG(
+  '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+  { w: '14', h: '14' },
+);
+
+export const iconSend = () => SVG(
+  '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
+  { w: '14', h: '14' },
+);
+
+export const iconX = () => SVG(
+  '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  { w: '14', h: '14' },
+);
+
 /* ---------- addım ikonları (Ana#8) — vahid Lucide üslubu ---------- */
 export const STEP_ICONS = [
   // Qeydiyyatdan keç (user-plus)
