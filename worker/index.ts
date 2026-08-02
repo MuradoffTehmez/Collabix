@@ -13,7 +13,7 @@ import { handleSearchSemantic } from './services/search';
 import { noteSocket } from './ws-kick';
 import { runWithRequestContext, newRequestContext, log } from './request-context';
 import { alert } from './alerts';
-import { moderationState } from './rbac';
+import { moderationState, requirePermission } from './rbac';
 
 // Durable Object-lar (realtime) — binding class_name-ləri burdan export olunmalıdır.
 export { RoomDO } from './room-do';
@@ -33,7 +33,22 @@ interface Route {
   pattern: RegExp;
   handler: Handler;
   auth?: boolean;      // giriş tələb olunur
-  admin?: boolean;     // admin tələb olunur
+  admin?: boolean;     // ⚠ KÖHNƏ binar qapı — bax `perm`
+  /**
+   * PRD §5 icazə qapısı — `admin: true`-nun yerini tutur.
+   *
+   * ⚠ NİYƏ `admin` SAXLANILIR: iki qapı fərqli suala cavab verir.
+   *   `admin: true` → "bu hesab `admins` cədvəlindədir?" (binar, rolsuz)
+   *   `perm: 'X'`   → "bu hesabın X icazəsi var?" (rol matrisi + fərdi istisna)
+   *
+   *   Yeni marşrutlar YALNIZ `perm` işlətməlidir. `admin` yalnız o marşrutlar
+   *   üçün qalır ki, konkret icazəyə bağlanması mənasız olsun (hazırda: yoxdur
+   *   — hamısı köçürülüb; sahə fövqəladə bootstrap üçün saxlanılır).
+   *
+   * ⚠ İkisi birlikdə verilsə HƏR İKİSİ tələb olunur (VƏ məntiqi), çünki
+   *   qapıların zəifləməsi sükutla baş verməməlidir.
+   */
+  perm?: string;
   /**
    * Rate-limit səbəti (auth.ts-dəki `RL` cədvəli tək mənbədir).
    *
@@ -142,8 +157,8 @@ const ROUTES: Route[] = [
 
   // rooms
   { method: 'GET', pattern: /^\/api\/rooms$/, handler: R.listRooms, auth: true, rl: 'read' },
-  { method: 'POST', pattern: /^\/api\/rooms$/, handler: R.createRoom, auth: true, admin: true, rl: 'write' },
-  { method: 'DELETE', pattern: /^\/api\/rooms\/([\w-]+)$/, handler: R.deleteRoom, auth: true, admin: true, rl: 'write' },
+  { method: 'POST', pattern: /^\/api\/rooms$/, handler: R.createRoom, auth: true, perm: 'MANAGE_ROOMS', rl: 'write' },
+  { method: 'DELETE', pattern: /^\/api\/rooms\/([\w-]+)$/, handler: R.deleteRoom, auth: true, perm: 'MANAGE_ROOMS', rl: 'write' },
   { method: 'GET', pattern: /^\/api\/rooms\/([\w-]+)\/messages$/, handler: R.roomMessages, auth: true, rl: 'read' },
   { method: 'POST', pattern: /^\/api\/rooms\/([\w-]+)\/messages$/, handler: R.sendRoomMessage, auth: true, rl: 'write' },
   { method: 'PATCH', pattern: /^\/api\/rooms\/([\w-]+)\/messages\/([\w-]+)$/, handler: R.editRoomMessage, auth: true, rl: 'write' },
@@ -167,21 +182,21 @@ const ROUTES: Route[] = [
   // tasks + submissions
   { method: 'GET', pattern: /^\/api\/tasks$/, handler: R.listTasks, auth: true, rl: 'read' },
   { method: 'POST', pattern: /^\/api\/tasks$/, handler: R.createTask, auth: true, rl: 'write' },
-  { method: 'POST', pattern: /^\/api\/tasks\/([\w-]+)\/review$/, handler: R.reviewTask, auth: true, admin: true, rl: 'write' },
-  { method: 'DELETE', pattern: /^\/api\/tasks\/([\w-]+)$/, handler: R.deleteTask, auth: true, admin: true, rl: 'write' },
+  { method: 'POST', pattern: /^\/api\/tasks\/([\w-]+)\/review$/, handler: R.reviewTask, auth: true, perm: 'MANAGE_TASKS', rl: 'write' },
+  { method: 'DELETE', pattern: /^\/api\/tasks\/([\w-]+)$/, handler: R.deleteTask, auth: true, perm: 'MANAGE_TASKS', rl: 'write' },
   { method: 'PUT', pattern: /^\/api\/tasks\/([\w-]+)\/submission$/, handler: R.submitSolution, auth: true, rl: 'write' },
   { method: 'GET', pattern: /^\/api\/submissions$/, handler: R.listSubmissions, auth: true, rl: 'read' },
-  { method: 'POST', pattern: /^\/api\/submissions\/([\w-]+)\/([\w-]+)\/review$/, handler: R.reviewSubmission, auth: true, admin: true, rl: 'write' },
+  { method: 'POST', pattern: /^\/api\/submissions\/([\w-]+)\/([\w-]+)\/review$/, handler: R.reviewSubmission, auth: true, perm: 'MANAGE_TASKS', rl: 'write' },
 
   // reports
   { method: 'POST', pattern: /^\/api\/reports$/, handler: R.createReport, auth: true, rl: 'write' },
-  { method: 'GET', pattern: /^\/api\/reports$/, handler: R.listReports, auth: true, admin: true, rl: 'read' },
-  { method: 'PATCH', pattern: /^\/api\/reports\/([\w-]+)$/, handler: R.resolveReport, auth: true, admin: true, rl: 'write' },
+  { method: 'GET', pattern: /^\/api\/reports$/, handler: R.listReports, auth: true, perm: 'VIEW_REPORTS', rl: 'read' },
+  { method: 'PATCH', pattern: /^\/api\/reports\/([\w-]+)$/, handler: R.resolveReport, auth: true, perm: 'MANAGE_REPORTS', rl: 'write' },
 
   // taxonomy
   { method: 'GET', pattern: /^\/api\/taxonomies$/, handler: R.listTaxonomies, rl: 'read' },
-  { method: 'POST', pattern: /^\/api\/taxonomies\/(prog|spoken)$/, handler: R.saveTaxItem, auth: true, admin: true, rl: 'write' },
-  { method: 'DELETE', pattern: /^\/api\/taxonomies\/(prog|spoken)\/([\w-]+)$/, handler: R.deactivateTaxItem, auth: true, admin: true, rl: 'write' },
+  { method: 'POST', pattern: /^\/api\/taxonomies\/(prog|spoken)$/, handler: R.saveTaxItem, auth: true, perm: 'MANAGE_CATEGORIES', rl: 'write' },
+  { method: 'DELETE', pattern: /^\/api\/taxonomies\/(prog|spoken)\/([\w-]+)$/, handler: R.deactivateTaxItem, auth: true, perm: 'MANAGE_CATEGORIES', rl: 'write' },
 
   // public
   // Frontend boot-da çağırır (Turnstile site key) — giriş tələb etmir.
@@ -198,23 +213,23 @@ const ROUTES: Route[] = [
   { method: 'POST', pattern: /^\/api\/public\/contact$/, handler: R.contactSubmit, rl: 'form' },
 
   // admin
-  { method: 'GET', pattern: /^\/api\/admin\/faqs$/, handler: R.adminListFaqs, auth: true, admin: true, rl: 'admin' },
-  { method: 'POST', pattern: /^\/api\/admin\/faqs$/, handler: R.adminSaveFaq, auth: true, admin: true, rl: 'admin' },
-  { method: 'DELETE', pattern: /^\/api\/admin\/faqs\/([\w-]+)$/, handler: R.adminDeleteFaq, auth: true, admin: true, rl: 'admin' },
-  { method: 'GET', pattern: /^\/api\/admin\/testimonials$/, handler: R.adminListTestimonials, auth: true, admin: true, rl: 'admin' },
-  { method: 'POST', pattern: /^\/api\/admin\/testimonials$/, handler: R.adminSaveTestimonial, auth: true, admin: true, rl: 'admin' },
-  { method: 'DELETE', pattern: /^\/api\/admin\/testimonials\/([\w-]+)$/, handler: R.adminDeleteTestimonial, auth: true, admin: true, rl: 'admin' },
-  { method: 'GET', pattern: /^\/api\/admin\/contacts$/, handler: R.adminContacts, auth: true, admin: true, rl: 'admin' },
-  { method: 'POST', pattern: /^\/api\/admin\/contacts\/([\w-]+)\/read$/, handler: R.adminContactRead, auth: true, admin: true, rl: 'admin' },
-  { method: 'PATCH', pattern: /^\/api\/admin\/users\/([\w-]+)$/, handler: R.adminPatchUser, auth: true, admin: true, rl: 'admin' },
-  { method: 'POST', pattern: /^\/api\/admin\/users\/([\w-]+)\/temp-password$/, handler: R.adminTempPassword, auth: true, admin: true, rl: 'admin' },
-  { method: 'GET', pattern: /^\/api\/admin\/admins$/, handler: R.adminListAdmins, auth: true, admin: true, rl: 'admin' },
-  { method: 'PUT', pattern: /^\/api\/admin\/admins\/([\w-]+)$/, handler: R.adminAddAdmin, auth: true, admin: true, rl: 'admin' },
-  { method: 'DELETE', pattern: /^\/api\/admin\/admins\/([\w-]+)$/, handler: R.adminRemoveAdmin, auth: true, admin: true, rl: 'admin' },
-  { method: 'GET', pattern: /^\/api\/admin\/logs$/, handler: R.adminLogs, auth: true, admin: true, rl: 'admin' },
+  { method: 'GET', pattern: /^\/api\/admin\/faqs$/, handler: R.adminListFaqs, auth: true, perm: 'MANAGE_CONTENT', rl: 'admin' },
+  { method: 'POST', pattern: /^\/api\/admin\/faqs$/, handler: R.adminSaveFaq, auth: true, perm: 'MANAGE_CONTENT', rl: 'admin' },
+  { method: 'DELETE', pattern: /^\/api\/admin\/faqs\/([\w-]+)$/, handler: R.adminDeleteFaq, auth: true, perm: 'MANAGE_CONTENT', rl: 'admin' },
+  { method: 'GET', pattern: /^\/api\/admin\/testimonials$/, handler: R.adminListTestimonials, auth: true, perm: 'MANAGE_CONTENT', rl: 'admin' },
+  { method: 'POST', pattern: /^\/api\/admin\/testimonials$/, handler: R.adminSaveTestimonial, auth: true, perm: 'MANAGE_CONTENT', rl: 'admin' },
+  { method: 'DELETE', pattern: /^\/api\/admin\/testimonials\/([\w-]+)$/, handler: R.adminDeleteTestimonial, auth: true, perm: 'MANAGE_CONTENT', rl: 'admin' },
+  { method: 'GET', pattern: /^\/api\/admin\/contacts$/, handler: R.adminContacts, auth: true, perm: 'MANAGE_CONTACTS', rl: 'admin' },
+  { method: 'POST', pattern: /^\/api\/admin\/contacts\/([\w-]+)\/read$/, handler: R.adminContactRead, auth: true, perm: 'MANAGE_CONTACTS', rl: 'admin' },
+  { method: 'PATCH', pattern: /^\/api\/admin\/users\/([\w-]+)$/, handler: R.adminPatchUser, auth: true, perm: 'MANAGE_USERS', rl: 'admin' },
+  { method: 'POST', pattern: /^\/api\/admin\/users\/([\w-]+)\/temp-password$/, handler: R.adminTempPassword, auth: true, perm: 'MANAGE_USERS', rl: 'admin' },
+  { method: 'GET', pattern: /^\/api\/admin\/admins$/, handler: R.adminListAdmins, auth: true, perm: 'MANAGE_ROLES', rl: 'admin' },
+  { method: 'PUT', pattern: /^\/api\/admin\/admins\/([\w-]+)$/, handler: R.adminAddAdmin, auth: true, perm: 'MANAGE_ROLES', rl: 'admin' },
+  { method: 'DELETE', pattern: /^\/api\/admin\/admins\/([\w-]+)$/, handler: R.adminRemoveAdmin, auth: true, perm: 'MANAGE_ROLES', rl: 'admin' },
+  { method: 'GET', pattern: /^\/api\/admin\/logs$/, handler: R.adminLogs, auth: true, perm: 'VIEW_AUDIT_LOG', rl: 'admin' },
   // TASK-6 / BÖLMƏ 3
-  { method: 'GET', pattern: /^\/api\/admin\/users$/, handler: R.adminUsersList, auth: true, admin: true, rl: 'admin' },
-  { method: 'POST', pattern: /^\/api\/admin\/users\/bulk$/, handler: R.adminBulkUsers, auth: true, admin: true, rl: 'admin' },
+  { method: 'GET', pattern: /^\/api\/admin\/users$/, handler: R.adminUsersList, auth: true, perm: 'MANAGE_USERS', rl: 'admin' },
+  { method: 'POST', pattern: /^\/api\/admin\/users\/bulk$/, handler: R.adminBulkUsers, auth: true, perm: 'MANAGE_USERS', rl: 'admin' },
 
   // ═══ FAZA A2 — PRD §4-6: moderasiya, rol və icazə (AUDIT-TASK-10) ═══
   //
@@ -232,16 +247,16 @@ const ROUTES: Route[] = [
   { method: 'POST', pattern: /^\/api\/users\/([\w-]+)\/ban$/, handler: R.banUser, auth: true, rl: 'write' },
   { method: 'POST', pattern: /^\/api\/users\/([\w-]+)\/mute$/, handler: R.muteUser, auth: true, rl: 'write' },
   { method: 'POST', pattern: /^\/api\/users\/([\w-]+)\/restore$/, handler: R.restoreUser, auth: true, rl: 'write' },
-  { method: 'GET', pattern: /^\/api\/admin\/stats-daily$/, handler: R.adminStatsDaily, auth: true, admin: true, rl: 'heavy' },
-  { method: 'GET', pattern: /^\/api\/admin\/teams$/, handler: async (c) => TR(c, m => m.listAllTeams(c)), auth: true, admin: true, rl: 'admin' },
-  { method: 'GET', pattern: /^\/api\/admin\/teams\/([\w-]+)$/, handler: async (c, id) => TR(c, m => m.adminTeamDetail(c, id)), auth: true, admin: true, rl: 'admin' },
-  { method: 'POST', pattern: /^\/api\/admin\/teams\/([\w-]+)\/action$/, handler: async (c, id) => TR(c, m => m.adminTeamAction(c, id)), auth: true, admin: true, rl: 'admin' },
-  { method: 'GET', pattern: /^\/api\/admin\/export\/(users|logs)\.csv$/, handler: R.adminExportCsv, auth: true, admin: true, rl: 'heavy' },
-  { method: 'POST', pattern: /^\/api\/taxonomies\/(prog|spoken)\/reorder$/, handler: R.reorderTaxonomy, auth: true, admin: true, rl: 'write' },
-  { method: 'POST', pattern: /^\/api\/admin\/log$/, handler: R.adminLogAction, auth: true, admin: true, rl: 'admin' },
+  { method: 'GET', pattern: /^\/api\/admin\/stats-daily$/, handler: R.adminStatsDaily, auth: true, perm: 'VIEW_ANALYTICS', rl: 'heavy' },
+  { method: 'GET', pattern: /^\/api\/admin\/teams$/, handler: async (c) => TR(c, m => m.listAllTeams(c)), auth: true, perm: 'MANAGE_TEAMS', rl: 'admin' },
+  { method: 'GET', pattern: /^\/api\/admin\/teams\/([\w-]+)$/, handler: async (c, id) => TR(c, m => m.adminTeamDetail(c, id)), auth: true, perm: 'MANAGE_TEAMS', rl: 'admin' },
+  { method: 'POST', pattern: /^\/api\/admin\/teams\/([\w-]+)\/action$/, handler: async (c, id) => TR(c, m => m.adminTeamAction(c, id)), auth: true, perm: 'MANAGE_TEAMS', rl: 'admin' },
+  { method: 'GET', pattern: /^\/api\/admin\/export\/(users|logs)\.csv$/, handler: R.adminExportCsv, auth: true, perm: 'SYSTEM_BACKUP', rl: 'heavy' },
+  { method: 'POST', pattern: /^\/api\/taxonomies\/(prog|spoken)\/reorder$/, handler: R.reorderTaxonomy, auth: true, perm: 'MANAGE_CATEGORIES', rl: 'write' },
+  { method: 'POST', pattern: /^\/api\/admin\/log$/, handler: R.adminLogAction, auth: true, perm: 'VIEW_AUDIT_LOG', rl: 'admin' },
   // TASK-8 / Bənd 1 — Threat Dashboard
-  { method: 'GET', pattern: /^\/api\/admin\/security\/events$/, handler: R.securityEvents, auth: true, admin: true, rl: 'admin' },
-  { method: 'GET', pattern: /^\/api\/admin\/security\/summary$/, handler: R.securitySummary, auth: true, admin: true, rl: 'admin' },
+  { method: 'GET', pattern: /^\/api\/admin\/security\/events$/, handler: R.securityEvents, auth: true, perm: 'VIEW_AUDIT_LOG', rl: 'admin' },
+  { method: 'GET', pattern: /^\/api\/admin\/security\/summary$/, handler: R.securitySummary, auth: true, perm: 'VIEW_AUDIT_LOG', rl: 'admin' },
 
   // TASK-8 / Yeni Xidmətlər (AI, Vectorize)
   { method: 'POST', pattern: /^\/api\/ai\/chat$/, handler: handleChat, auth: true, rl: 'ai' },
@@ -686,6 +701,19 @@ async function handleRequest(
           // maşın kodunu oxuyur (util.ts-dəki `code` fəlsəfəsi).
           if (route.admin && !c.isAdmin) {
             return withSecurityHeaders(err('Yalnız admin.', 403, 'forbidden'), false);
+          }
+          // 🔴 PRD §5 icazə qapısı — "Backend HƏR əməliyyatda Permission
+          // yoxlamalıdır". Bu sətir 35 marşrutun binar `admins` yoxlamasını
+          // əvəz edir: artıq "admin olmaq" deyil, KONKRET İCAZƏ tələb olunur.
+          //
+          // ⚠ Miqrasiya 0035 bunu təhlükəsiz edir: `admins` cədvəlindəki hər
+          //   kəs ən azı `ADMIN` rolundadır və `ADMIN` bu icazələri daşıyır.
+          //   Yeganə istisna `MANAGE_ROLES`/`MANAGE_PERMISSIONS`-dır (yalnız
+          //   SUPER_ADMIN+) — məhz auditin "hər admin = tam səlahiyyət"
+          //   tapıntısının bağlanması budur.
+          if (route.perm) {
+            const denied = await requirePermission(c, route.perm);
+            if (denied) return withSecurityHeaders(denied, false);
           }
           // 🔴 SUSDURMA TƏTBİQİ — PRD §4.
           //

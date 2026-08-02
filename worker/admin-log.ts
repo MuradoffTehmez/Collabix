@@ -32,6 +32,23 @@ export const ADMIN_LOG_ACTIONS = [
   'faq-add', 'faq-remove', 'testimonial-add', 'testimonial-remove',
   'contact-read', 'export-users', 'export-logs',
   'team-delete', 'team-restore', 'team-visibility',
+
+  // ── PRD §14 tələbi: Role/Permission/Ban dəyişiklikləri ────────────────────
+  //
+  // 🔴 BUNLAR ARTIQ YAZILIRDI, LAKİN SİYAHIDA YOX İDİ. `logAdmin` server
+  //   daxili çağırışdır və sətri olduğu kimi qəbul edir — yəni jurnal düzgün
+  //   dolurdu, amma bu massiv "jurnalda hansı əməliyyatlar ola bilər"
+  //   sualına YANLIŞ cavab verirdi. Admin panelinin filtri məhz bu massivi
+  //   oxuduğu üçün həmin sətirlər filtrdə GÖRÜNMÜRDÜ.
+  //
+  // ⚠ `user-level-edit` `level-edit`-dən AYRIDIR: birincisi admin panelindəki
+  //   XP redaktəsinin törəməsidir (`routes/admin.ts`), ikincisi isə köhnə ad.
+  //   İkisi də saxlanılır — köhnə jurnal sətirləri hələ bazadadır.
+  'user-role-change', 'user-permission', 'user-level-edit',
+  'user-warn', 'user-ban', 'user-mute', 'user-restore',
+
+  // Moderator namizədliyi — PRD §12.
+  'mod-apply', 'mod-approve', 'mod-reject',
 ] as const;
 
 export type AdminLogAction = (typeof ADMIN_LOG_ACTIONS)[number];
