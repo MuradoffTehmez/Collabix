@@ -16,6 +16,7 @@ import {
 } from '../util';
 import { sessionCookies, type TokenPair } from '../auth';
 import { NotificationService } from '../services/notification';
+import { grantXp } from '../xp';
 
 /** D1 qısayolu — bütün domen modulları bunu işlədir. */
 export const D = (c: Ctx) => c.env.DB;
@@ -120,9 +121,49 @@ export const POST_BLOCKS_MAX_BYTES = 64 * 1024;
 
 // XP dəyərləri tək yerdə — əvvəl `xp + 10` / `xp + 5` kimi sətirlərə
 // yayılmışdı və tavan hesabı ilə uyğunluğu gözlə yoxlanmalı olurdu (bax xp.ts).
-export const POST_XP = 10;
-export const COMMENT_XP = 5;
-export const SOLUTION_XP = 50;
+//
+// AUDIT-TASK-10 / D-6.b — dəyərlər PRD §6 cədvəlinə uyğunlaşdırıldı.
+// ⚠ `COMMENT_XP` 5-dən 2-yə ENDİ. Bu, GÖRÜNƏN məhsul dəyişikliyidir və
+//   `xp.ts`-dəki `comment` tavanı da eyni commit-də 100 → 40 edildi ki,
+//   əməliyyat büdcəsi (20 rəy/gün) dəyişməsin.
+export const POST_XP = 10;          // PRD: Paylaşım +10
+export const COMMENT_XP = 2;        // PRD: Şərh +2   (əvvəl 5)
+export const SOLUTION_XP = 50;      // Layihəyə xas (PRD "Faydalı cavab +10"-dan yuxarı)
+
+// PRD §6-nın icra olunmamış qalan hadisələri (AUDIT-TASK-10 / D-6.b).
+export const SIGNUP_XP = 50;        // PRD: İlk qeydiyyat  +50
+export const DAILY_LOGIN_XP = 5;    // PRD: Gündəlik giriş  +5
+export const REPOST_XP = 3;         // PRD: Repost          +3
+export const LIKE_RECEIVED_XP = 1;  // PRD: Like almaq      +1
+export const INVITE_XP = 50;        // PRD: Dost dəvəti    +50
+export const VERIFIED_XP = 100;     // PRD: Hesabın təsdiqi +100
+
+/**
+ * PRD §6 "Gündəlik giriş +5" — AUDIT-TASK-10 / D-6.b.
+ *
+ * ⚠ NİYƏ AYRICA KÖMƏKÇİ: sessiya yaradan BEŞ ayrı yol var (parol girişi,
+ *   2FA təsdiqi, sehrli link, OAuth callback, parol bərpasından sonra
+ *   avtomatik giriş). Eyni səkkiz sətri beş yerə köçürsək biri unudulanda
+ *   həmin yolla girən istifadəçi XP almazdı və səbəbi tapmaq çətin olardı.
+ *
+ * 🔴 İDEMPOTENTLİK `refId`-dədir: `todayStr()` = `YYYY-MM-DD` (UTC).
+ *   `ux_xp_logs_source` UNIQUE indeksi (`uid, source, ref_id`) sayəsində
+ *   istifadəçi gün ərzində NEÇƏ DƏFƏ giriş etsə də XP BİR DƏFƏ verilir —
+ *   yəni funksiyanı bütün yollardan çağırmaq təhlükəsizdir.
+ *
+ * ⚠ Gün sərhədi UTC-dir (`xp.ts` `utcDayStart` ilə eyni səbəb): istifadəçinin
+ *   elan etdiyi saat qurşağına güvənsək, qurşağı dəyişməklə eyni gündə iki
+ *   dəfə bonus almaq olardı.
+ *
+ * ⚠ Uğursuzluq SƏSSİZ udulur: XP bonusu girişi BLOKLAMAMALIDIR.
+ */
+export async function grantDailyLogin(c: Ctx, uid: string): Promise<void> {
+  try {
+    await grantXp(c.env, uid, 'daily_login', todayStr(), DAILY_LOGIN_XP);
+  } catch (e) {
+    console.error('daily_login XP verilmədi', e);
+  }
+}
 
 /**
  * AUDIT-TASK-9 / D-2 — silinmiş hesabın mesajlarındakı əvəzləyici kimlik.

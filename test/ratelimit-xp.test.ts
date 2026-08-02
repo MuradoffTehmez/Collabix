@@ -9,6 +9,9 @@
 import { describe, it, expect } from 'vitest';
 import { RL, normalizeIp } from '../worker/auth';
 import { XP_RULES, XP_DAILY_TOTAL, utcDayStart } from '../worker/xp';
+import {
+  POST_XP, COMMENT_XP, REPOST_XP, LIKE_RECEIVED_XP, DAILY_LOGIN_XP,
+} from '../worker/routes/shared';
 
 describe('RL taksonomiyası — Task 4 §4.1 / Task 9 Faza A', () => {
   it('🔴 TƏHLÜKƏSİZLİK səbətləri `critical` işarəlidir (→ atomik DO)', () => {
@@ -82,9 +85,35 @@ describe('normalizeIp — IPv6 /64 qruplaşdırması', () => {
 });
 
 describe('XP qaydaları — H-5 (Task 9 Faza B)', () => {
-  it('tavanlı mənbələr: post və comment', () => {
-    expect(XP_RULES.post.daily).toBe(100);
-    expect(XP_RULES.comment.daily).toBe(100);
+  // AUDIT-TASK-10 / D-6.b — tavanlar PRD §6 dəyərlərinə görə yenidən hesablandı.
+  //
+  // 🔴 TAVANIN ƏSL MƏNASI XP DEYİL, ƏMƏLİYYAT BÜDCƏSİDİR. Şərh XP-si 5 → 2
+  //   endiyi üçün köhnə `comment: 100` tavanı 20 rəy əvəzinə 50 rəyə icazə
+  //   verərdi — yəni dəyər azalanda tavan SÜKUTLA gevşəyir. Aşağıdakı testlər
+  //   məhz həmin sükutlu sürüşməni tutur.
+  it('tavanlı mənbələr eyni ƏMƏLİYYAT büdcəsini saxlayır', () => {
+    expect(XP_RULES.post.daily).toBe(100);      // 10 post × 10 XP
+    expect(XP_RULES.comment.daily).toBe(40);    // 20 rəy  ×  2 XP
+    expect(XP_RULES.repost.daily).toBe(30);     // 10 repost × 3 XP
+    expect(XP_RULES.like_received.daily).toBe(50);
+    expect(XP_RULES.daily_login.daily).toBe(5); // gündə DƏQİQ bir giriş
+  });
+
+  it('🔴 əməliyyat büdcəsi XP dəyəri ilə uyğundur (sürüşmə mühafizəsi)', () => {
+    // Bu test XP dəyəri dəyişəndə tavanın da yenilənməsini MƏCBUR EDİR.
+    expect(XP_RULES.post.daily! / POST_XP).toBe(10);
+    expect(XP_RULES.comment.daily! / COMMENT_XP).toBe(20);
+    expect(XP_RULES.repost.daily! / REPOST_XP).toBe(10);
+    expect(XP_RULES.like_received.daily! / LIKE_RECEIVED_XP).toBe(50);
+    expect(XP_RULES.daily_login.daily! / DAILY_LOGIN_XP).toBe(1);
+  });
+
+  it('birdəfəlik PRD bonusları tavansızdır', () => {
+    // `signup` və `verified` hesab başına bir dəfədir; idempotentliyi tavan
+    // deyil, `ux_xp_logs_source` UNIQUE indeksi (`refId = uid`) təmin edir.
+    expect(XP_RULES.signup.daily).toBeNull();
+    expect(XP_RULES.verified.daily).toBeNull();
+    expect(XP_RULES.profile_bonus.daily).toBeNull();
   });
 
   it('🔴 imtiyazlı təsdiq tələb edən mənbələr TAVANSIZDIR', () => {
@@ -99,16 +128,28 @@ describe('XP qaydaları — H-5 (Task 9 Faza B)', () => {
     expect(XP_RULES.compensation.daily).toBeNull();
   });
 
-  it('ümumi gündəlik tavan mənbə tavanlarından böyükdür (son müdafiə xətti)', () => {
+  it('ümumi gündəlik tavan hər tək mənbədən böyükdür (son müdafiə xətti)', () => {
     const capped = Object.values(XP_RULES)
       .map(r => r.daily).filter((d): d is number => d !== null);
     expect(capped.length).toBeGreaterThan(0);
+    // Tək mənbə ümumi tavanı təkbaşına doldura BİLMƏMƏLİDİR — əks halda
+    // ümumi tavan həmin mənbə üçün mənasız olardı.
     expect(XP_DAILY_TOTAL).toBeGreaterThanOrEqual(Math.max(...capped));
+  });
+
+  it('🔴 ümumi tavan tək-tək tavanların CƏMİNDƏN kiçikdir — yəni bağlayıcıdır', () => {
+    // D-6.b-yə qədər cəm 200, ümumi tavan 300 idi → ümumi tavan HEÇ VAXT
+    // işə düşmürdü. İndi cəm 325 > 300, yəni o, ilk dəfə real funksiya daşıyır.
+    const sum = Object.values(XP_RULES)
+      .map(r => r.daily).filter((d): d is number => d !== null)
+      .reduce((a, b) => a + b, 0);
+    expect(sum).toBeGreaterThan(XP_DAILY_TOTAL);
   });
 
   it('hər mənbə üçün qayda mövcuddur (yeni mənbə sükutla tavansız qalmasın)', () => {
     for (const src of ['post', 'comment', 'solution', 'team_task',
-      'profile_bonus', 'admin', 'compensation'] as const) {
+      'profile_bonus', 'admin', 'compensation',
+      'signup', 'daily_login', 'repost', 'like_received', 'invite', 'verified'] as const) {
       expect(XP_RULES[src], src).toBeDefined();
     }
   });

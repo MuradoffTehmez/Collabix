@@ -17,7 +17,7 @@ import { grantReputation, evaluateProgression } from '../progression';
 import { QueueService } from '../services/queue';
 import {
   D, badReq, notify, notifyMentions, bumpActivity, bumpProgress, deleteR2Keys,
-  POST_BLOCKS_MAX_BYTES, POST_XP, COMMENT_XP,
+  POST_BLOCKS_MAX_BYTES, POST_XP, COMMENT_XP, REPOST_XP, LIKE_RECEIVED_XP,
 } from './shared';
 
 /* ================= POSTS ================= */
@@ -429,6 +429,15 @@ export async function toggleRepost(c: Ctx, id: string) {
     D(c).prepare('UPDATE posts SET share_count = share_count + 1 WHERE id = ?').bind(rootId),
   ]);
   await notify(c, root.author_id, 'repost', 'paylaşımını re-post etdi', rootId);
+  // AUDIT-TASK-10 / D-6.b — PRD §6: "Repost +3". XP RE-POST EDƏNƏ verilir.
+  //
+  // ⚠ `refId = rootId` (kök post) — `newId` DEYİL. Səbəb: `newId` hər toggle-da
+  //   yenidir, yəni repost→undo→repost dövrəsi hər dəfə yeni açar yaradar və
+  //   UNIQUE indeksi keçərdi → sonsuz XP fabriki. Kök id sabitdir, ona görə
+  //   eyni postu neçə dəfə re-post etsən də XP BİR DƏFƏ verilir.
+  //
+  // ⚠ Öz postunu re-post etmək yuxarıda (satır 410) onsuz da qadağandır.
+  await grantXp(c.env, c.user!.id, 'repost', rootId, REPOST_XP);
   return json({ reposted: true, id: newId });
 }
 
@@ -448,6 +457,21 @@ export async function likePut(c: Ctx, id: string) {
     //   XP üçün bağladığı eyni istismar sinfi).
     c.ctx.waitUntil((async () => {
       await grantReputation(c.env, String(post.author_id), 'like', `${id}:${c.user!.id}`);
+      // AUDIT-TASK-10 / D-6.b — PRD §6: "Like almaq +1". XP MÜƏLLİFƏ verilir.
+      //
+      // 🔴 BU, ƏN RİSKLİ XP MƏNBƏYİDİR: dəyəri istifadəçi özü deyil, BAŞQALARI
+      //   yaradır. Üç müdafiə eyni anda işləyir:
+      //     1. `refId` reputasiya ilə EYNİ açardır (`post:bəyənən`) → hər
+      //        bəyənən bir dəfə sayılır, bəyən/geri-al dövrəsi XP vermir;
+      //     2. `XP_RULES.like_received.daily = 50`;
+      //     3. ümumi gündəlik tavan (`XP_DAILY_TOTAL`).
+      //
+      // ⚠ Öz postunu bəyənmək XP verməməlidir — `likePut` bunu qadağan etmir,
+      //   ona görə burada açıq yoxlanılır.
+      if (String(post.author_id) !== c.user!.id) {
+        await grantXp(c.env, String(post.author_id), 'like_received',
+          `${id}:${c.user!.id}`, LIKE_RECEIVED_XP);
+      }
       await evaluateProgression(c.env, String(post.author_id));
     })());
   }

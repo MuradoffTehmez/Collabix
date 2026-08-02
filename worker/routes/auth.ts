@@ -41,8 +41,9 @@ import { kickEverywhere } from '../ws-kick';
 import { markUidDeleted } from '../archive';
 import {
   D, badReq, deleteR2Keys, withSession, checkPasswordStrength,
-  DELETED_UID, DELETED_NAME,
+  DELETED_UID, DELETED_NAME, SIGNUP_XP, grantDailyLogin,
 } from './shared';
+import { grantXp } from '../xp';
 import {
   CAPTCHA_SOFT_AT, CAPTCHA_HARD_AT, turnstileGate, alertAccountOwner,
 } from './auth-guard';
@@ -129,6 +130,17 @@ export async function register(c: Ctx) {
     })
   );
 
+  // AUDIT-TASK-10 / D-6.b — PRD §6: "İlk qeydiyyat +50".
+  //
+  // ⚠ `refId = id` (uid) — hesab başına BİR DƏFƏ. `ux_xp_logs_source` UNIQUE
+  //   indeksi (`uid, source, ref_id`) onsuz da təkrarı bağlayır, lakin uid-i
+  //   açar kimi vermək niyyəti açıq edir: "bu, hesabın öz birdəfəlik bonusudur".
+  //
+  // ⚠ `await` QƏSDƏNDİR (waitUntil deyil): XP `mapUser` ilə qaytarılan sətrə
+  //   düşməlidir, əks halda istifadəçi qeydiyyatdan dərhal sonra 0 XP görər və
+  //   yalnız növbəti yükləmədə 50 XP peyda olar.
+  await grantXp(c.env, id, 'signup', id, SIGNUP_XP);
+
   const pair = await createSession(c.env, c.req, id);
   const row = await D(c).prepare('SELECT * FROM users WHERE id = ?').bind(id).first();
   return withSession({ user: mapUser(row, true) }, pair);
@@ -207,6 +219,9 @@ export async function login(c: Ctx) {
     upgradePasswordHash(c.env, row.id, String(b.pass || ''), Number(row.pass_iter) || PBKDF2_ITER_LEGACY)
       .catch(e => console.error('pass_iter köçürməsi alınmadı', e)),
   );
+
+  // PRD §6 "Gündəlik giriş +5" — gün ərzində bir dəfə (bax `grantDailyLogin`).
+  await grantDailyLogin(c, String(row.id));
 
   const pair = await createSession(c.env, c.req, row.id);
   const fresh = await D(c).prepare('SELECT * FROM users WHERE id = ?').bind(row.id).first();

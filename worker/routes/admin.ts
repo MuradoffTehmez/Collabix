@@ -13,7 +13,9 @@ import {
 import { hashPassword, destroyAllSessions } from '../auth';
 import { logAdmin, isAdminLogAction, invalidAdminAction } from '../admin-log';
 import { kickEverywhere } from '../ws-kick';
-import { D, badReq, csvRow } from './shared';
+import { D, badReq, csvRow, VERIFIED_XP } from './shared';
+import { grantXp } from '../xp';
+import { levelFromXp } from '../level';
 
 /* ================= TAXONOMY ================= */
 export async function listTaxonomies(c: Ctx) {
@@ -149,6 +151,18 @@ export async function adminPatchUser(c: Ctx, uid: string) {
        VALUES (?, ?, 'admin', NULL, ?, ?)`,
     ).bind(uuid(), uid, xpDelta, now()).run();
   }
+  // AUDIT-TASK-10 / D-6.b — PRD §6: "Hesabın təsdiqi +100".
+  //
+  // ⚠ `refId = uid` → hesab başına BİR DƏFƏ. Admin təsdiqi geri alıb yenidən
+  //   versə XP TƏKRAR VERİLMİR: əks halda bu, admin əlində sonsuz XP düyməsi
+  //   olardı (H-5-in bağladığı istismar sinfi).
+  //
+  // ⚠ `xpDelta` yolundan AYRIDIR: ora admin-in ƏL İLƏ yazdığı mütləq dəyəri
+  //   loglayır və `ref_id` NULL-dur (qəsdən təkrarlana bilən). Bu isə qaydaya
+  //   bağlı birdəfəlik bonusdur.
+  if ('verified' in b && b.verified) {
+    await grantXp(c.env, uid, 'verified', uid, VERIFIED_XP);
+  }
   if ('blocked' in b && b.blocked) {
     await destroyAllSessions(c.env, uid);
     c.ctx.waitUntil(kickEverywhere(c.env, uid));   // H-6 / C-2 — bloklanan istifadəçi
@@ -169,7 +183,11 @@ export async function adminPatchUser(c: Ctx, uid: string) {
       changed.join(','), b.verified ? 'success' : 'warning');
   } else if ('xp' in b) {
     const xpVal = Math.max(0, parseInt(String(b.xp), 10) || 0);
-    const lvl = Math.max(1, Math.floor(Math.sqrt(xpVal / 100)) + 1);
+    // AUDIT-TASK-10 / D-6.a — əvvəl burada `sqrt(xp/100)+1` SABİT KOPYASI var idi.
+    // `levels` cədvəli dolduqdan sonra o kopya jurnalda YANLIŞ səviyyə yazardı
+    // (admin paneli bir rəqəm, profil başqa rəqəm göstərərdi). İndi tək mənbə
+    // `level.ts`-dir: cədvəl boşdursa o da köhnə formulaya qayıdır.
+    const lvl = await levelFromXp(c.env, xpVal);
     await logAdmin(c, 'user-level-edit', uid, `Lv${lvl} · ${xpVal} XP`, 'warning');
   } else {
     await logAdmin(c, 'user-edit', uid, changed.join(','), 'warning');

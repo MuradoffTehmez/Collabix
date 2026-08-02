@@ -260,8 +260,35 @@ export function countUp(node, target, { duration = 1000 } = {}){
   requestAnimationFrame(step);
 }
 
-// XP → level (kvadratik əyri: Lv2=100, Lv3=400, Lv4=900 ...)
-export function levelFromXP(xp){ return Math.max(1, Math.floor(Math.sqrt((xp || 0) / 100)) + 1); }
+/**
+ * XP → level. PRD §7 astanaları (AUDIT-TASK-10 / D-6.a).
+ *
+ * ⚠ Əvvəl burada kvadratik əyri var idi (`sqrt(xp/100)+1` → Lv2=100, Lv3=400).
+ *   PRD §7 cədvəli fərqlidir və `migrations/0034_prd_level_thresholds.sql`
+ *   serveri həmin cədvələ keçirdi.
+ *
+ * 🔴 BU MASSİV SERVERLƏ SİNXRON QALMALIDIR.
+ *   Server tərəf: `levels` cədvəli (mənbə) → `worker/level.ts`.
+ *   Client burada hesablayır, çünki admin panelində istifadəçi XP-ni YAZARKƏN
+ *   canlı "Lv N" önizləməsi göstərilir (`js/admin.js`) — hələ saxlanılmamış
+ *   dəyər üçün serverdən soruşmaq mümkün deyil.
+ *
+ *   Astanalar dəyişəndə HƏR İKİ tərəf eyni commit-də dəyişməlidir; əks halda
+ *   istifadəçi profilində bir səviyyə, admin panelində başqa səviyyə görər —
+ *   `worker/level.ts` başlığı məhz bu tələni izah edir.
+ */
+const LEVEL_THRESHOLDS = [0, 500, 1500, 3500, 7000, 12000, 18000, 26000, 36000, 50000];
+
+export function levelFromXP(xp){
+  const x = Math.max(0, xp || 0);
+  // Ən yüksək keçilmiş astana. Massiv artan sıradadır, sondan axtarmaq
+  // ən sürətli yoldur (ən çox istifadəçi aşağı səviyyələrdədir, amma
+  // massiv 10 elementlidir — fərq ölçüləcək qədər deyil).
+  for (let i = LEVEL_THRESHOLDS.length - 1; i >= 0; i--) {
+    if (x >= LEVEL_THRESHOLDS[i]) return i + 1;
+  }
+  return 1;
+}
 
 export const BADGES = [
   { id:'first-post',  ic:'✎',  nameKey:'badge.first_post',  test: s => s.posts >= 1 },
@@ -307,5 +334,20 @@ export function updateDynamicSEO(meta) {
       document.head.appendChild(script);
     }
     script.textContent = JSON.stringify(meta.schema);
+  }
+}
+
+/**
+ * `data-pct="NN"` daşıyan elementlərə en verir — AUDIT-TASK-10 / M-3.
+ *
+ * ⚠ NİYƏ ATRİBUT DEYİL: CSP `style-src-attr`-dan `'unsafe-inline'` çıxarıldı,
+ *   yəni `<i style="width:42%">` BLOKLANIR. CSSOM təyinatı (`el.style.width`)
+ *   isə CSP-yə tabe deyil — dinamik ölçülər buradan verilir.
+ */
+export function applyPercentWidths(root){
+  const scope = root || document;
+  for(const n of scope.querySelectorAll('[data-pct]')){
+    const pct = Math.max(0, Math.min(100, Number(n.dataset.pct) || 0));
+    n.style.width = pct + '%';
   }
 }

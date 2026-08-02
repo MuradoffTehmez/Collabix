@@ -25,10 +25,16 @@
 import type { Env } from './util';
 
 /**
- * Köhnə (mövcud) formula — `js/util.js`-dəki `levelFromXP` ilə EYNİ.
+ * Köhnə kvadratik formula — YALNIZ `levels` cədvəli BOŞ olduqda işləyir.
+ *
+ * ⚠ AUDIT-TASK-10 / D-6.a-dan sonra istehsalda bu yol AKTİV DEYİL:
+ *   `0034_prd_level_thresholds.sql` cədvəli PRD §7 astanaları ilə doldurdu,
+ *   `js/util.js`-dəki `levelFromXP` isə eyni astanalara keçirildi.
+ *   Bu funksiya geri qaytarma yolu kimi qalır (`DELETE FROM levels;`).
  *
  * ⚠ Client və server EYNİ nəticəni verməlidir: fərq olsa istifadəçi profilində
- *   bir səviyyə, admin panelində başqa səviyyə görünərdi.
+ *   bir səviyyə, admin panelində başqa səviyyə görünərdi. Astanalar dəyişəndə
+ *   `js/util.js` → `LEVEL_THRESHOLDS` EYNİ commit-də yenilənməlidir.
  */
 export const legacyLevelFromXp = (xp: number): number =>
   Math.max(1, Math.floor(Math.sqrt((xp || 0) / 100)) + 1);

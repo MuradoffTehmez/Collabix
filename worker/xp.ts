@@ -15,8 +15,11 @@
 import { Env, uuid, now } from './util';
 
 export type XpSource =
-  | 'post' | 'comment' | 'solution' | 'team_task' | 'profile_bonus'
-  | 'admin' | 'compensation';
+  // PRD §6 hadisələri
+  | 'post' | 'comment' | 'solution' | 'profile_bonus'
+  | 'signup' | 'daily_login' | 'repost' | 'like_received' | 'invite' | 'verified'
+  // Layihəyə xas (PRD-də yoxdur, saxlanılır)
+  | 'team_task' | 'admin' | 'compensation';
 
 interface XpRule {
   /**
@@ -45,18 +48,60 @@ interface XpRule {
  * 🔴 ÖHDƏLİK: real trafik yığıldıqdan sonra bu dəyərlər ÖLÇÜLMƏLİ və
  *    lazım gələrsə artırılmalıdır. Task 4 §4.2-də auditin `presence` limiti
  *    məhz ölçülmədiyi üçün səhv çıxmışdı.
+ *
+ * ════════════════════════════════════════════════════════════════════════════
+ * AUDIT-TASK-10 / D-6.b — TAVANLAR PRD DƏYƏRLƏRİNƏ GÖRƏ YENİDƏN HESABLANDI
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * ⚠ Tavan XP-də ölçülür, ƏMƏLİYYAT sayında yox. Şərh XP-si +5 → +2 endiyi üçün
+ *   köhnə `comment: 100` tavanı 20 rəy əvəzinə **50 rəyə** icazə verərdi — yəni
+ *   dəyər azalanda tavan səssizcə GEVŞƏYİR. Ona görə hər tavan eyni ƏMƏLİYYAT
+ *   büdcəsini saxlamaq üçün yenidən yazılıb:
+ *
+ *   post          10 post/gün  × 10 = 100   (dəyişmədi)
+ *   comment       20 rəy/gün   ×  2 =  40   (100-dən endi — büdcə eynidir)
+ *   repost        10 repost    ×  3 =  30
+ *   like_received 50 bəyənmə   ×  1 =  50   (bax aşağıdakı xəbərdarlıq)
+ *   daily_login    1 giriş     ×  5 =   5   (gündə DƏQİQ bir dəfə)
+ *   invite         2 dəvət     × 50 = 100
+ *
+ * 🔴 `like_received` ƏN RİSKLİ MƏNBƏDİR: XP-ni istifadəçi ÖZÜ deyil, BAŞQALARI
+ *   yaradır. Sockpuppet hesabları ilə fermalama mümkündür. Üç müdafiə:
+ *     1. tavan 50/gün,
+ *     2. `ux_xp_logs_source` UNIQUE — hər bəyənən yalnız BİR dəfə sayılır
+ *        (`refId = '<postId>:<likerUid>'`),
+ *     3. ümumi gündəlik tavan (aşağıda).
  */
 export const XP_RULES: Record<XpSource, XpRule> = {
+  // — PRD §6, tavanlı (istifadəçi özü tetikləyir) —
   post:          { daily: 100 },
-  comment:       { daily: 100 },
+  comment:       { daily:  40 },
+  repost:        { daily:  30 },
+  like_received: { daily:  50 },
+  daily_login:   { daily:   5 },
+  invite:        { daily: 100 },
+  // — PRD §6, birdəfəlik və ya imtiyazlı təsdiq tələb edən —
+  signup:        { daily: null },   // hesab başına bir dəfə (`refId = uid`)
+  verified:      { daily: null },   // admin təsdiqi tələb edir
   solution:      { daily: null },   // admin təsdiqi tələb edir
-  team_task:     { daily: null },   // komanda iş axını təsdiqi tələb edir
   profile_bonus: { daily: null },   // birdəfəlik (settings bayrağı ilə qorunur)
+  // — Layihəyə xas —
+  team_task:     { daily: null },   // komanda iş axını təsdiqi tələb edir
   admin:         { daily: null },   // admin əl ilə düzəlişi — audit izi üçün loglanır
   compensation:  { daily: null },   // mənfi məbləğ; tavana ONSUZ DA daxil deyil
 };
 
-/** Ümumi gündəlik tavan — yalnız tavanlı (`daily !== null`) mənbələri sayır. */
+/**
+ * Ümumi gündəlik tavan — yalnız tavanlı (`daily !== null`) mənbələri sayır.
+ *
+ * ⚠ Tək-tək tavanların cəmi **325**-dir, yəni bu dəyərdən BÖYÜKDÜR — və bu,
+ *   QƏSDƏNDİR: 300 "son müdafiə xətti"dir, büdcə bölgüsü deyil. Real aktiv
+ *   istifadəçi bir gündə bütün mənbələri eyni anda maksimuma çatdırmır
+ *   (10 post + 20 rəy + giriş ≈ 145); hücumçu isə çatdırsa burada dayanır.
+ *
+ * ⚠ Əvvəl bu dəyər heç vaxt BAĞLAYICI DEYİLDİ (iki mənbənin cəmi 200 < 300).
+ *   İndi bağlayıcıdır — yəni ilk dəfə real funksiya daşıyır.
+ */
 export const XP_DAILY_TOTAL = 300;
 
 /**

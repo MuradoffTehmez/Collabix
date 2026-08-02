@@ -183,7 +183,9 @@ export async function patchMe(c: Ctx) {
   return json({ user: mapUser(fresh, true), bonusGiven: gaveBonus });
 }
 
-const PROFILE_BONUS_XP = 20;
+// AUDIT-TASK-10 / D-6.b — PRD §6: "Profili tamamlamaq +100" (əvvəl 20).
+// Tavana daxil deyil (`daily: null`), çünki birdəfəlikdir.
+const PROFILE_BONUS_XP = 100;
 // Bənd 6-dakı tamlıq sahələri — `js/completeness.js` ilə EYNİ məntiq.
 // İki tərəf ayrılsa client bir faiz, server başqa faiz göstərər.
 function isProfileComplete(u: any): boolean {

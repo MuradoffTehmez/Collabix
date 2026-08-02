@@ -21,7 +21,7 @@ import {
   hashBackupCode, mfaEnabled,
 } from '../totp';
 import { emailEnabled, sendEmail, magicLinkMail, passwordResetMail, mailLang } from '../email';
-import { D, badReq, withSession, checkPasswordStrength } from './shared';
+import { D, badReq, withSession, checkPasswordStrength, grantDailyLogin } from './shared';
 import { kickEverywhere } from '../ws-kick';
 import { CAPTCHA_SOFT_AT, CAPTCHA_HARD_AT, turnstileGate, alertAccountOwner } from './auth-guard';
 
@@ -113,6 +113,7 @@ export async function mfaVerify(c: Ctx) {
   if (!row || row.blocked) return err('Hesabınız bloklanıb.', 403, 'account_blocked');
 
   await logSecurityEvent(c.env, c.req, { type: 'login_ok', uid, username: row.username, meta: { flow: 'mfa' } });
+  await grantDailyLogin(c, uid);   // PRD §6 (D-6.b) — 2FA yolu da girişdir
   const pair = await createSession(c.env, c.req, uid);
   return withSession({ user: mapUser(row, true) }, pair);
 }
@@ -292,6 +293,7 @@ export async function magicLinkConsume(c: Ctx, token: string) {
   await D(c).prepare('UPDATE users SET email = ?, email_verified = 1 WHERE id = ?').bind(email, uid).run();
   await logSecurityEvent(c.env, c.req, { type: 'login_ok', uid, meta: { flow: 'magic_link' } });
 
+  await grantDailyLogin(c, uid);   // PRD §6 (D-6.b) — sehrli link də girişdir
   const pair = await createSession(c.env, c.req, uid);
   return appRedirect(c, '/?magic=ok#home', sessionCookies(pair));
 }
@@ -382,6 +384,7 @@ export async function oauthCallback(c: Ctx, provider: string) {
   await logSecurityEvent(c.env, c.req, {
     type: 'login_ok', uid, severity: 'info', meta: { flow: 'oauth', provider, linked: outcome.kind === 'linked' },
   });
+  await grantDailyLogin(c, uid);   // PRD §6 (D-6.b) — OAuth callback də girişdir
   const pair = await createSession(c.env, c.req, uid);
   return appRedirect(c, st.returnTo, sessionCookies(pair));
 }
@@ -543,6 +546,7 @@ export async function passwordResetConfirm(c: Ctx) {
   });
 
   // Yeni sessiya DƏRHAL verilir: istifadəçi bir də əl ilə giriş etməməlidir.
+  await grantDailyLogin(c, uid);   // PRD §6 (D-6.b) — bərpadan sonrakı avtomatik giriş
   const pair = await createSession(c.env, c.req, uid);
   return withSession({ ok: true }, pair);
 }
