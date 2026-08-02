@@ -477,6 +477,28 @@ export function postCard(p, { full = false } = {}){
       el('span', { class: 'when', title: fmtTime(p.createdAt) }, fmtRelTime(p.createdAt)),
       p.editedAt ? el('span', { class: 'dot-sep' }, '•') : null,
       p.editedAt ? el('span', { class: 'edited-mark' }, t('feed.edited')) : null,
+      // Görünürlük göstəricisi — HƏR ÜÇ vəziyyətdə (hamı / izləyicilər / gizli).
+      // ⚠ MƏTN yalnız istisna hallarda göstərilir: hər postda "Hamı" sözünü
+      //   təkrarlamaq sətri doldurar. İkon həmişə var, `title` isə hər üçünü
+      //   izah edir — yəni məlumat itmir, səs-küy yaranmır.
+      el('span', { class: 'dot-sep' }, '•'),
+      el('span', {
+        class: 'vis-badge vis-' + (p.visibility || 'public'),
+        title: t('cx.vis_' + (p.visibility || 'public')),
+        'aria-label': t('cx.vis_aria') + ': ' + t('cx.vis_' + (p.visibility || 'public')),
+      },
+        el('span', { class: 'ic', 'data-icon':
+          p.visibility === 'private' ? 'lock' : p.visibility === 'followers' ? 'users' : 'globe',
+          'data-icon-size': '12' }),
+        p.visibility && p.visibility !== 'public' ? t('cx.vis_' + p.visibility) : null,
+      ),
+      // Planlaşdırılmış post yalnız müəllifə görünür — ona xatırladıcı lazımdır.
+      p.scheduledAt ? el('span', { class: 'dot-sep' }, '•') : null,
+      p.scheduledAt
+        ? el('span', { class: 'vis-badge sched' },
+            el('span', { class: 'ic', 'data-icon': 'monitor', 'data-icon-size': '12' }),
+            t('cx.scheduled_for').replace('{t}', fmtRelTime(p.scheduledAt)))
+        : null,
       p.postType === 'quote' ? el('span', { class: 'dot-sep' }, '•') : null,
       p.postType === 'quote' ? el('span', { class: 'quote-mark', style: 'font-size:.7rem; color:var(--primary);' }, '❝') : null,
     )
@@ -873,6 +895,10 @@ export function postCard(p, { full = false } = {}){
     }
   };
 
+  // Kartdakı bütün `[data-icon]` yuvaları (görünürlük göstəricisi, rol
+  // nişanları) burada doldurulur — kart dinamikdir, boot-dakı çağırış ona
+  // çatmır.
+  paintIcons(card);
   return card;
 }
 

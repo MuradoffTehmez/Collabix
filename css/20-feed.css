@@ -2205,3 +2205,276 @@
   font: inherit;
   font-size: var(--fs-xs);
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   KOMPOZİTOR — yenidən dizayn (üç bölmə)
+   ══════════════════════════════════════════════════════════════════════════
+   Əvvəl blok siyahısı, dörd əlavə düyməsi, 25+ tag çipi və "Paylaş" EYNİ
+   vizual çəkidə bir yığın idi. İndi üç aydın zona var:
+     1) MƏZMUN  — başlıq + bloklar
+     2) ALƏTLƏR — nə əlavə edim + sayğac + sorğu + tag-lar
+     3) YAYIM   — kim görsün + necə yayımlansın
+   Zonalar arasındakı ayırıcı xətlər iyerarxiyanı gözlə oxunan edir. */
+.cx {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--sh-1);
+  overflow: visible;             /* yayım menyusu kənara çıxa bilsin */
+  margin-bottom: var(--sp-5);
+}
+
+/* ── 1) Məzmun ──────────────────────────────────────────────────────────── */
+.cx-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.cx-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  font-size: .78rem;
+}
+
+.cx-title {
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  color: var(--text);
+}
+
+/* Qaralama statusu — sağda, sönük. Görünəndə diqqət çəkməməlidir. */
+.cx-save {
+  margin-left: auto;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  font-family: var(--mono);
+}
+
+/* ── 2) Alətlər ─────────────────────────────────────────────────────────── */
+.cx-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.cx-tool-row {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.cx-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 36px;
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color var(--mo-fast) var(--mo-ease),
+              background var(--mo-fast) var(--mo-ease),
+              transform var(--mo-fast) var(--mo-ease);
+}
+
+.cx-tool:hover { border-color: var(--coral); color: var(--coral); }
+.cx-tool:active { transform: scale(.96); }
+.cx-tool .ic { color: var(--muted); }
+.cx-tool:hover .ic { color: var(--coral); }
+
+.cx-counter {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+
+/* Hədd aşılıbsa sayğac xəbərdarlıq rənginə keçir — rəng TƏK siqnal deyil,
+   rəqəm onsuz da limiti göstərir. */
+.cx-counter.over { color: var(--danger); font-weight: 700; }
+
+/* ── Tag seçimi ─────────────────────────────────────────────────────────── */
+.cx-tagbox {
+  padding: 0 var(--sp-4) var(--sp-3);
+}
+
+.cx-tagsearch { max-width: 280px; margin-bottom: var(--sp-2); }
+
+.cx-tagsearch > input {
+  width: 100%;
+  min-height: 36px;
+  padding: var(--sp-2) var(--sp-3) var(--sp-2) 32px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-xs);
+}
+
+.cx-tagsearch > input:focus {
+  outline: none;
+  border-color: var(--coral);
+  box-shadow: 0 0 0 3px var(--coral-dim);
+}
+
+.cx-tag-empty {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+
+/* ── 3) Yayım ───────────────────────────────────────────────────────────── */
+.cx-publish {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-2) 40%, transparent);
+  border-radius: 0 0 var(--radius) var(--radius);
+  flex-wrap: wrap;
+}
+
+.cx-vis {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--muted);
+}
+
+.cx-vis select {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-xs);
+  cursor: pointer;
+}
+
+.cx-vis select:focus { outline: none; border-color: var(--coral); box-shadow: 0 0 0 3px var(--coral-dim); }
+
+/* Paylaş + "▾" bitişik cütlük (split button) — Vercel/Linear naxışı.
+   ⚠ `align-items: stretch` İŞLƏMİRDİ: `.btn-primary` öz sabit hündürlüyünü
+      saxlayır (38px), `.cx-more` isə sətrin hündürlüyünə (42px) uzanırdı və
+      düymənin yanından 4px ÇIXINTI kimi görünürdü.
+      İkisinə də EYNİ sabit hündürlük verilir. */
+.cx-actions { display: flex; align-items: center; }
+
+.cx-share {
+  border-radius: var(--r-md) 0 0 var(--r-md);
+  height: 38px;
+  min-height: 38px;
+  padding: 0 var(--sp-5);
+}
+
+.cx-more-wrap { position: relative; display: flex; }
+
+.cx-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 38px;      /* `.cx-share` ilə EYNİ — bax yuxarıdakı izah */
+  min-height: 38px;
+  border: none;
+  border-left: 1px solid color-mix(in srgb, var(--on-accent) 25%, transparent);
+  border-radius: 0 var(--r-md) var(--r-md) 0;
+  background: var(--coral);
+  color: var(--on-accent);
+  cursor: pointer;
+}
+
+.cx-more:hover { filter: brightness(1.08); }
+
+.cx-menu {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  right: 0;
+  z-index: 60;
+  min-width: 190px;
+  display: flex;
+  flex-direction: column;
+  padding: var(--sp-1);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  box-shadow: var(--sh-2);
+  animation: cxMenuIn 150ms var(--mo-ease);
+}
+
+.cx-menu[hidden] { display: none; }
+
+@keyframes cxMenuIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.cx-menu button {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  padding: var(--sp-2) var(--sp-3);
+  border: none;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-xs);
+  text-align: left;
+  cursor: pointer;
+}
+
+.cx-menu button:hover { background: var(--surface-2); }
+.cx-menu .ic { color: var(--muted); }
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .cx-tools, .cx-publish, .cx-head { padding-inline: var(--sp-3); }
+  .cx-tagbox { padding-inline: var(--sp-3); }
+  /* Yayım sətri dar ekranda alt-alta: split düymə sıxılıb kəsilməsin. */
+  .cx-publish { align-items: stretch; }
+  .cx-actions { width: 100%; }
+  .cx-share { flex: 1; }
+  .cx-tagsearch { max-width: none; }
+  /* Alət düymələrində mətn gizlənir, ikon qalır — dörd düymə bir sətrə sığsın. */
+  .cx-tool span:not(.ic) { display: none; }
+  .cx-tool { padding: 0 var(--sp-3); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cx-tool, .cx-menu { transition: none; animation: none; }
+  .cx-tool:active { transform: none; }
+}
+
+/* Görünürlük / planlaşdırma göstəricisi — yalnız istisna hallarda görünür. */
+.vis-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+
+.vis-badge.sched { color: var(--coral); }
+
+/* Görünürlük ikonu hər postda var; rəng vəziyyəti ayırır (mətn də title-da). */
+.vis-badge.vis-public   { color: var(--muted); }
+.vis-badge.vis-followers { color: var(--teal); }
+.vis-badge.vis-private  { color: var(--coral); }

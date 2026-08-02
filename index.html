@@ -600,20 +600,78 @@
         <div class="stat-card"><div class="num" id="homeUserCount">0</div><div class="lbl"><span class="ic" data-icon="users" data-icon-size="14"></span><span data-i18n="home.lbl_users"></span></div></div>
       </div>
 
-      <div class="composer">
+      <!-- ══ KOMPOZİTOR ═══════════════════════════════════════════════════
+           ÜÇ BÖLMƏ (yenidən dizayn): məzmun → alətlər → yayım.
+           Əvvəl hamısı bir yığın idi: blok siyahısı, dörd düymə, tag-lar və
+           "Paylaş" eyni vizual çəkidə idi, ona görə "indi nə etməliyəm?"
+           sualı hər dəfə yenidən yaranırdı. -->
+      <section class="cx" id="composer" data-i18n-aria="cx.aria">
+        <!-- ── 1) MƏZMUN ───────────────────────────────────────────────── -->
+        <header class="cx-head">
+          <span class="avatar cx-avatar" id="cxAvatar"></span>
+          <span class="cx-title" data-i18n="cx.title"></span>
+          <!-- Qaralama statusu: `aria-live=polite` — ekran oxuyucusu fokusu
+               itirmədən "saxlanıldı" xəbərini alır. -->
+          <span class="cx-save" id="cxSave" aria-live="polite"></span>
+        </header>
+
         <div id="blockList"></div>
-        <div class="block-add-row">
-          <button type="button" class="img-pick-btn" id="addTextBlockBtn"><span class="ic" data-icon="type" data-icon-size="14"></span><span data-i18n="home.add_text"></span></button>
-          <button type="button" class="img-pick-btn" id="addCodeBlockBtn"><span class="ic" data-icon="code" data-icon-size="14"></span><span data-i18n="home.add_code"></span></button>
-          <button type="button" class="img-pick-btn" id="addImageBlockBtn"><span class="ic" data-icon="image" data-icon-size="14"></span><span data-i18n="home.add_img"></span></button><button type="button" class="img-pick-btn" id="addPollBtn"><span class="ic" data-icon="poll" data-icon-size="14"></span><span data-i18n="poll.add"></span></button>
+
+        <!-- ── 2) ALƏTLƏR ──────────────────────────────────────────────── -->
+        <div class="cx-tools">
+          <div class="cx-tool-row" role="toolbar" data-i18n-aria="cx.tools_aria">
+            <button type="button" class="cx-tool" id="addTextBlockBtn" data-i18n-title="cx.tip_text">
+              <span class="ic" data-icon="type" data-icon-size="15"></span><span data-i18n="home.add_text"></span></button>
+            <button type="button" class="cx-tool" id="addCodeBlockBtn" data-i18n-title="cx.tip_code">
+              <span class="ic" data-icon="code" data-icon-size="15"></span><span data-i18n="home.add_code"></span></button>
+            <button type="button" class="cx-tool" id="addImageBlockBtn" data-i18n-title="cx.tip_img">
+              <span class="ic" data-icon="image" data-icon-size="15"></span><span data-i18n="home.add_img"></span></button>
+            <button type="button" class="cx-tool" id="addPollBtn" data-i18n-title="cx.tip_poll">
+              <span class="ic" data-icon="poll" data-icon-size="15"></span><span data-i18n="poll.add"></span></button>
+          </div>
+          <span class="cx-counter" id="cxCount" aria-live="polite"></span>
         </div>
-        <div class="composer-foot">
-          <!-- Sorğu paneli — `addPollBtn` açır/bağlayır, `renderPoll()` doldurur. -->
-          <div class="composer-poll hidden" id="composerPoll"></div>
+
+        <!-- Sorğu paneli — `addPollBtn` açır/bağlayır, `renderPoll()` doldurur. -->
+        <div class="composer-poll hidden" id="composerPoll"></div>
+
+        <!-- Axtarıla bilən çoxlu seçim: əvvəl 25+ statik çip birdən görünürdü
+             və lazımlısını tapmaq gözlə skan tələb edirdi. -->
+        <div class="cx-tagbox">
+          <div class="c-search cx-tagsearch">
+            <span class="ic" data-icon="search" data-icon-size="14"></span>
+            <input id="cxTagSearch" data-i18n-ph="cx.tag_search" autocomplete="off">
+          </div>
           <div class="pill-pick" id="composerTags"></div>
-          <button class="btn-small" id="shareBtn" data-i18n="home.btn_share"></button>
         </div>
-      </div>
+
+        <!-- ── 3) YAYIM ────────────────────────────────────────────────── -->
+        <footer class="cx-publish">
+          <label class="cx-vis">
+            <span class="ic" data-icon="globe" data-icon-size="14"></span>
+            <select id="cxVisibility" data-i18n-aria="cx.vis_aria">
+              <option value="public" data-i18n="cx.vis_public"></option>
+              <option value="followers" data-i18n="cx.vis_followers"></option>
+              <option value="private" data-i18n="cx.vis_private"></option>
+            </select>
+          </label>
+          <div class="cx-actions">
+            <button class="btn-primary cx-share" id="shareBtn" data-i18n="home.btn_share"></button>
+            <div class="cx-more-wrap">
+              <button type="button" class="cx-more" id="cxMoreBtn"
+                      aria-haspopup="true" aria-expanded="false" data-i18n-aria="cx.more_aria">
+                <span class="ic" data-icon="chevron" data-icon-size="14"></span>
+              </button>
+              <div class="cx-menu" id="cxPublishMenu" role="menu" hidden>
+                <button type="button" role="menuitem" id="cxScheduleBtn">
+                  <span class="ic" data-icon="monitor" data-icon-size="14"></span><span data-i18n="cx.schedule"></span></button>
+                <button type="button" role="menuitem" id="cxDraftBtn">
+                  <span class="ic" data-icon="bookmark" data-icon-size="14"></span><span data-i18n="cx.save_draft"></span></button>
+              </div>
+            </div>
+          </div>
+        </footer>
+      </section>
 
       <div class="search-bar c-search"><span class="ic" data-icon="search" data-icon-size="15"></span><input id="feedSearch" data-i18n-ph="home.search_feed"></div>
       <div class="feed-toolbar">

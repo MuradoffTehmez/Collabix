@@ -338,6 +338,9 @@ export function mapPost(
     myReaction: myReacts?.get(r.id) || null,
     pinnedAt: r.pinned_at || null,
     hiddenAt: r.hidden_at || null,
+    // Görünürlük/planlaşdırma (0045) — kartda göstərici üçün lazımdır.
+    visibility: r.visibility || 'public',
+    scheduledAt: r.scheduled_at || null,
     poll: polls?.get(r.id) || null,
     createdAt: r.created_at, editedAt: r.edited_at,
     sharedPostId: r.shared_post_id,

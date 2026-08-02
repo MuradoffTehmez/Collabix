@@ -139,7 +139,7 @@ export async function getPostById(postId){
 }
 
 // Block-based post: şəkil blokları əvvəl R2-yə yüklənir.
-export async function createPost({ blocks, tags, sharedPostId, poll }){
+export async function createPost({ blocks, tags, sharedPostId, poll, visibility, scheduledAt }){
   const outBlocks = [];
   const imageKeys = [];
   for(const b of blocks){
@@ -157,7 +157,7 @@ export async function createPost({ blocks, tags, sharedPostId, poll }){
       outBlocks.push({ type: 'text', content: b.content });
     }
   }
-  const d = await api('/posts', { method: 'POST', body: { blocks: outBlocks, tags, imageKeys, sharedPostId, poll } });
+  const d = await api('/posts', { method: 'POST', body: { blocks: outBlocks, tags, imageKeys, sharedPostId, poll, visibility, scheduledAt } });
   notifyXpCap(d);
   emit('refresh-feed');
   emit('refresh-users');

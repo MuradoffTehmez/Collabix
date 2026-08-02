@@ -198,10 +198,32 @@ export async function feed(c: Ctx) {
   const pinFirst = '(p.pinned_at IS NULL), p.pinned_at DESC, ';
   const hiddenFilter = c.isAdmin ? '' : ' AND p.hidden_at IS NULL';
 
+  /* ── Görünürlük + planlaşdırma filtri (0045) ────────────────────────────
+   * ⚠ Sütunları əlavə edib BURANI unutmaq təhlükəsizlik qüsuru olardı:
+   *   'private' post hamıya görünərdi.
+   *
+   * Qaydalar (öz postun HƏMİŞƏ görünür — qaralamanı özün görməlisən):
+   *   public    → hamıya
+   *   followers → yalnız müəllifi izləyənlərə
+   *   private   → yalnız müəllifə
+   *   scheduled → vaxtı çatmayıbsa yalnız müəllifə
+   *
+   * `?4` = cari istifadəçi. Planlaşdırma üçün ayrıca parametr LAZIM DEYİL:
+   * SQLite `unixepoch()` əvəzinə bind edilmiş `now()` işlədilir ki, sorğu
+   * D1-in funksiya dəstəyindən asılı olmasın. */
+  const visFilter = `
+    AND (p.author_id = ?4 OR (
+      p.scheduled_at IS NULL
+      AND (p.visibility = 'public'
+           OR (p.visibility = 'followers'
+               AND EXISTS (SELECT 1 FROM follows f
+                            WHERE f.target_id = p.author_id AND f.follower_id = ?4)))
+    ))`;
+
   const offset = !chrono && cursor && /^\d+$/.test(cursor) ? Number(cursor) : 0;
   const where = (chrono && after)
-    ? `WHERE u.blocked = 0${hiddenFilter} AND (p.created_at < ?1 OR (p.created_at = ?1 AND p.id < ?2))`
-    : `WHERE u.blocked = 0${hiddenFilter}`;
+    ? `WHERE u.blocked = 0${hiddenFilter}${visFilter} AND (p.created_at < ?1 OR (p.created_at = ?1 AND p.id < ?2))`
+    : `WHERE u.blocked = 0${hiddenFilter}${visFilter}`;
   const query = `
     SELECT p.*,
            s.id AS s_id, s.author_id AS s_author_id, s.author_name AS s_author_name,
@@ -214,14 +236,18 @@ export async function feed(c: Ctx) {
     ORDER BY ${pinFirst}${ORDER[sort]}
     LIMIT ${limit + 1}${chrono ? '' : ` OFFSET ${offset}`}
   `;
-  // ⚠ Yer tutucu nömrələri budaqdan asılıdır: keyset yolunda ?1/?2 cursor
-  //   üçündür, `trending` isə ?3-də `now()` gözləyir. Uyğunsuzluq D1-də
-  //   "bağlanmamış parametr" xətası verər.
-  const binds: any[] = chrono && after ? [after.ts, after.id] : [null, null];
-  const stmt = sort === 'trending'
-    ? D(c).prepare(query).bind(binds[0], binds[1], now())
-    : (chrono && after ? D(c).prepare(query).bind(after.ts, after.id) : D(c).prepare(query));
-  const rows = await stmt.all<any>();
+  /* ⚠ HƏR BUDAQDA EYNİ DÖRD PARAMETR bağlanır:
+   *   ?1/?2 — keyset cursor (yalnız `new` + cursor olanda SQL-də görünür)
+   *   ?3    — `now()` (yalnız `trending` ORDER BY-da)
+   *   ?4    — cari istifadəçi (görünürlük filtri — HƏMİŞƏ var)
+   *
+   * Əvvəl bind budağa görə dəyişirdi və hər yeni parametr əlavə edəndə
+   * budaqlardan biri unudulub "bağlanmamış parametr" xətası verirdi.
+   * Nömrəli yer tutucularda istifadə olunmayan indeksə dəyər vermək
+   * təhlükəsizdir — SQLite ən böyük indeksə qədər yer ayırır. */
+  const rows = await D(c).prepare(query)
+    .bind(after?.ts ?? null, after?.id ?? null, now(), c.user!.id)
+    .all<any>();
 
   // `limit + 1` çəkilir ki, "daha var?" sualı ƏLAVƏ SORĞU olmadan cavablansın.
   const hasMore = rows.results.length > limit;
@@ -284,8 +310,21 @@ export async function getPost(c: Ctx, id: string) {
     LEFT JOIN posts s ON p.shared_post_id = s.id
     WHERE p.id = ?
   `;
-  const row = await D(c).prepare(query).bind(id).first();
+  const row = await D(c).prepare(query).bind(id).first<any>();
   if (!row) return err('Post tapılmadı.', 404);
+  /* ⚠ GÖRÜNÜRLÜK BURADA DA YOXLANILIR. Yalnız feed-i filtrləmək KİFAYƏT
+   *   DEYİL: post id-si bilinirsə `/post/{id}` deep-link ilə birbaşa açmaq
+   *   olardı və 'private' post sızardı. */
+  if (row.author_id !== c.user!.id) {
+    const gizli = row.visibility === 'private'
+      || (row.scheduled_at && row.scheduled_at > now());
+    if (gizli) return err('Post tapılmadı.', 404);
+    if (row.visibility === 'followers') {
+      const f = await D(c).prepare('SELECT 1 FROM follows WHERE target_id = ? AND follower_id = ?')
+        .bind(row.author_id, c.user!.id).first<any>();
+      if (!f) return err('Post tapılmadı.', 404);
+    }
+  }
   const [reactMine, reactAgg] = await loadPostReactions(c, [id]);
   const polls = await loadPolls(c, [id]);
   return json({ post: mapPost(row, reactMine, reactAgg, polls) });
@@ -332,11 +371,20 @@ export async function createPost(c: Ctx) {
   const firstText = (blocks.find((x: any) => x.type === 'text') || {}).content || '';
   const quoteText = postType === 'quote' ? clampStr(firstText, 500) : null;
   const id = uuid();
+  // Görünürlük ALLOWLIST-dən keçir — naməlum dəyər 'public'-ə düşür.
+  // ⚠ Sərbəst mətn buraxsaq feed filtri onu tanımaz və post effektiv olaraq
+  //   HƏR KƏSƏ görünərdi (filtr yalnız məlum dəyərləri kəsir).
+  const VIS = ['public', 'followers', 'private'];
+  const visibility = VIS.includes(b.visibility) ? b.visibility : 'public';
+  // Yalnız GƏLƏCƏK tarix planlaşdırma sayılır; keçmiş tarix = dərhal yayım.
+  const scheduledAt = Number(b.scheduledAt) > now() ? Number(b.scheduledAt) : null;
   await D(c).prepare(
-    'INSERT INTO posts (id, author_id, author_name, blocks, image_keys, text, tags, created_at, shared_post_id, post_type, quote_text, search_text) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
+    `INSERT INTO posts (id, author_id, author_name, blocks, image_keys, text, tags, created_at,
+      shared_post_id, post_type, quote_text, search_text, visibility, scheduled_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
   ).bind(id, c.user!.id, c.user!.name, JSON.stringify(blocks),
     JSON.stringify(imageKeys), clampStr(firstText, 300), JSON.stringify(tags), now(), sharedPostId, postType, quoteText,
-    buildSearchText(blocks)).run();
+    buildSearchText(blocks), visibility, scheduledAt).run();
 
   // ── Sorğu (0043) ────────────────────────────────────────────────────────
   // Post yazıldıqdan SONRA: `polls.post_id` xarici açardır, əvvəl yazsaq

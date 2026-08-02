@@ -1,8 +1,8 @@
 // Block-based paylaşım composer-i: bir post çoxlu mətn / kod / şəkil blokundan
 // ibarət ola bilir; bloklar sıralanır, redaktə/silinir. Notion-vari yanaşma.
-import { createPost } from './store.js';
-import { el, clear, resizeImage, bus } from './util.js';
-import { toast } from './ui.js';
+import { createPost, state } from './store.js';
+import { el, clear, resizeImage, bus, avatarNode } from './util.js';
+import { toast, showModal, closeModal } from './ui.js';
 import { allCategoryLabels, highlightOptions } from './taxonomy.js';
 import { markdownNode } from './markdown.js';
 import { t } from './i18n.js';
@@ -11,6 +11,7 @@ import { iconX, paintIcons } from './icons.js';
 let blocks = []; // { id, type:'text'|'code'|'image', content, language, images:[{blob,previewURL,caption}] }
 let idSeq = 0;
 let attachedQuotedPost = null;
+let scheduledAt = null;   // planlaşdırılmış yayım vaxtı (epoch ms) və ya null
 
 export function attachQuotedPost(p) {
   attachedQuotedPost = p;
@@ -20,6 +21,88 @@ export function attachQuotedPost(p) {
 
 function newBlock(type){
   return { id: ++idSeq, type, content: '', language: (highlightOptions()[0] || {}).highlightId || 'python', images: [] };
+}
+
+/* ══ QARALAMA (auto-save) ══════════════════════════════════════════════════
+ * Yazılan mətn brauzer bağlananda İTİRDİ — indi `localStorage`-a yazılır.
+ *
+ * ⚠ ŞƏKİLLƏR SAXLANILMIR. Onlar `Blob` obyektləridir; JSON-a çevrilə bilmir
+ *   və base64 kimi yazmaq kvotanı (≈5 MB) bir postla doldurardı. Qaralama
+ *   yalnız MƏTN/KOD/tag/sorğu bərpa edir — bu, açıq şəkildə sənədləşdirilib
+ *   ki, sonradan "şəkillərim itdi" sualı yaranmasın.
+ *
+ * ⚠ Server tərəfli qaralama cədvəli QƏSDƏN qurulmadı: o, sinxronizasiya,
+ *   münaqişə həlli və təmizlik cronu tələb edir. Lokal saxlama tək cihazda
+ *   problemi 90% həll edir. */
+const DRAFT_KEY = 'collabix_draft_v1';
+const DRAFT_DEBOUNCE = 800;
+let draftTimer = null;
+
+function setSaveStatus(key){
+  const n = document.getElementById('cxSave');
+  if(n) n.textContent = key ? t(key) : '';
+}
+
+/** Qaralamanı DƏRHAL yazır (debounce yoxdur). */
+function writeDraft(){
+  {
+    try{
+      const payload = {
+        blocks: blocks
+          .filter(b => b.type !== 'image')          // bax yuxarıdakı izah
+          .map(b => ({ type: b.type, content: b.content, language: b.language })),
+        tags: [...document.querySelectorAll('#composerTags .pp.sel')].map(b => b.textContent),
+        poll,
+        visibility: document.getElementById('cxVisibility')?.value || 'public',
+        at: Date.now(),
+      };
+      const boş = !payload.blocks.some(b => (b.content || '').trim()) && !payload.poll;
+      if(boş){ localStorage.removeItem(DRAFT_KEY); setSaveStatus(null); return; }
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(payload));
+      setSaveStatus('cx.saved');
+    }catch(e){
+      // Kvota dolu və ya private rejim — qaralama İTİR, amma yazı axını
+      // pozulmamalıdır. İstifadəçiyə status vasitəsilə bildirilir.
+      setSaveStatus('cx.save_failed');
+    }
+  }
+}
+
+/** Yazma ilə eyni, amma debounce ilə — hər klaviatura vuruşunda çağırılır. */
+function saveDraft(){
+  clearTimeout(draftTimer);
+  draftTimer = setTimeout(writeDraft, DRAFT_DEBOUNCE);
+}
+
+function restoreDraft(){
+  let d = null;
+  try{ d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null'); }catch(e){ /* zədəli JSON — atılır */ }
+  if(!d || !Array.isArray(d.blocks) || !d.blocks.length) return false;
+  blocks = d.blocks.map(b => ({ ...newBlock(b.type || 'text'), content: b.content || '', language: b.language }));
+  if(d.poll) poll = d.poll;
+  const vis = document.getElementById('cxVisibility');
+  if(vis && d.visibility) vis.value = d.visibility;
+  // Tag-lar `rebuildTags`-dan SONRA bərpa olunur (çiplər hələ yaradılmayıb).
+  pendingDraftTags = Array.isArray(d.tags) ? d.tags : [];
+  setSaveStatus('cx.restored');
+  return true;
+}
+let pendingDraftTags = [];
+
+function clearDraft(){
+  clearTimeout(draftTimer);
+  try{ localStorage.removeItem(DRAFT_KEY); }catch(e){ /* əhəmiyyətsiz */ }
+  setSaveStatus(null);
+}
+
+/** Simvol sayğacı — yalnız hədd yaxınlaşanda görünür (daim göstərmək səs-küydür). */
+const TEXT_CAP = 4000;
+function updateCounter(){
+  const n = document.getElementById('cxCount');
+  if(!n) return;
+  const used = blocks.reduce((s, b) => s + (b.content || '').length, 0);
+  n.textContent = used > TEXT_CAP * 0.75 ? `${used} / ${TEXT_CAP}` : '';
+  n.classList.toggle('over', used > TEXT_CAP);
 }
 
 /* ── Sorğu (poll) ─────────────────────────────────────────────────────────
@@ -137,6 +220,8 @@ function blockNode(b){
     ta.addEventListener('input', () => {
       b.content = ta.value;
       autoGrow(ta);
+      updateCounter();
+      saveDraft();
       if(b.showPreview) renderPreview();
     });
     requestAnimationFrame(() => autoGrow(ta));
@@ -269,6 +354,7 @@ function renderBlocks(){
   const list = document.getElementById('blockList');
   clear(list);
   blocks.forEach(b => list.append(blockNode(b)));
+  updateCounter();
   
   if (attachedQuotedPost) {
     const qBox = el('div', { class: 'composer-quote-preview', style: 'margin:10px; padding:10px; border-left:3px solid var(--accent); background:var(--bg-card);' },
@@ -300,13 +386,39 @@ function moveBlock(id, dir){
   renderBlocks();
 }
 
+/**
+ * Tag çipləri — axtarışla filtrlənir.
+ *
+ * ⚠ SEÇİLMİŞLƏR HƏMİŞƏ GÖRÜNÜR, axtarışa uyğun gəlməsə belə: əks halda
+ *   istifadəçi "Python" seçib sonra "rus" yazanda seçimini itirdiyini
+ *   düşünərdi. Seçilmiş çip filtrdən kənardır.
+ */
 function rebuildTags(){
   const tagBox = document.getElementById('composerTags');
   const selected = new Set([...tagBox.querySelectorAll('.pp.sel')].map(x => x.textContent));
+  // Qaralamadan gələn tag-lar bir dəfə tətbiq olunur.
+  if(pendingDraftTags.length){
+    pendingDraftTags.forEach(x => selected.add(x));
+    pendingDraftTags = [];
+  }
+  const q = (document.getElementById('cxTagSearch')?.value || '').trim().toLowerCase();
   clear(tagBox);
-  allCategoryLabels().forEach(c => tagBox.append(
-    el('button', { type: 'button', class: 'pp' + (selected.has(c) ? ' sel' : ''), onclick: e => e.target.classList.toggle('sel') }, c)
+  const all = allCategoryLabels();
+  const görünən = all.filter(c => selected.has(c) || !q || c.toLowerCase().includes(q));
+  görünən.forEach(c => tagBox.append(
+    el('button', {
+      type: 'button', class: 'pp' + (selected.has(c) ? ' sel' : ''),
+      'aria-pressed': String(selected.has(c)),
+      onclick: e => {
+        e.target.classList.toggle('sel');
+        e.target.setAttribute('aria-pressed', String(e.target.classList.contains('sel')));
+        saveDraft();
+      },
+    }, c)
   ));
+  if(!görünən.length){
+    tagBox.append(el('span', { class: 'cx-tag-empty' }, t('cx.tag_none')));
+  }
 }
 
 async function publish(){
@@ -326,10 +438,18 @@ async function publish(){
   btn.disabled = true;
   try{
     const tags = [...document.querySelectorAll('#composerTags .pp.sel')].map(b => b.textContent);
-    await createPost({ blocks: meaningful, tags, sharedPostId: attachedQuotedPost ? attachedQuotedPost.id : null, poll: pollData });
+    await createPost({
+      blocks: meaningful, tags,
+      sharedPostId: attachedQuotedPost ? attachedQuotedPost.id : null,
+      poll: pollData,
+      visibility: document.getElementById('cxVisibility')?.value || 'public',
+      scheduledAt: scheduledAt || undefined,
+    });
     blocks = [newBlock('text')];
     attachedQuotedPost = null;
     poll = null;
+    scheduledAt = null;
+    clearDraft();          // uğurlu yayımdan sonra qaralama qalmamalıdır
     renderPoll();
     renderBlocks();
     document.querySelectorAll('#composerTags .pp.sel').forEach(b => b.classList.remove('sel'));
@@ -346,6 +466,20 @@ export function initComposer(){
   renderBlocks();
   rebuildTags();
   bus.addEventListener('taxonomy-updated', () => { rebuildTags(); });
+
+  /* 🔴 DİL DƏYİŞİKLİYİ — kompozitor blokları JS ilə qurulur, ona görə
+   *   `applyI18n` (yalnız `data-i18n` atributlarını yeniləyir) onlara ÇATMIR.
+   *   Nəticə: dil rus/ingilis edilsə də blok başlığı ("¶ Mətn"), markdown
+   *   placeholder-i və "Önbaxış" düyməsi AZƏRBAYCANCA qalırdı.
+   *   `remountCurrentPage` səhifələri yeniləyir, kompozitor isə səhifə deyil —
+   *   ona görə burada açıq şəkildə yenidən çəkilir.
+   *   ⚠ `blocks` massivi TOXUNULMUR: yazılmış mətn qorunur, yalnız DOM
+   *     yenidən qurulur. */
+  document.addEventListener('lang-changed', () => {
+    renderBlocks();
+    renderPoll();
+    rebuildTags();
+  });
   document.getElementById('addTextBlockBtn').addEventListener('click', () => addBlock('text'));
   document.getElementById('addCodeBlockBtn').addEventListener('click', () => addBlock('code'));
   document.getElementById('addImageBlockBtn').addEventListener('click', () => addBlock('image'));
@@ -355,4 +489,69 @@ export function initComposer(){
     renderPoll();
   });
   document.getElementById('shareBtn').addEventListener('click', publish);
+
+  /* ── Yeni nəzarətlər (kompozitor yenidən dizaynı) ─────────────────────── */
+  const av = document.getElementById('cxAvatar');
+  if(av && state.me) av.replaceWith(Object.assign(avatarNode(state.me, 'avatar cx-avatar'), { id: 'cxAvatar' }));
+
+  // Tag axtarışı — hər hərfdə filtr. Debounce LAZIM DEYİL: siyahı ~25
+  // elementdir və filtr sinxron massiv əməliyyatıdır.
+  document.getElementById('cxTagSearch')?.addEventListener('input', rebuildTags);
+
+  document.getElementById('cxVisibility')?.addEventListener('change', saveDraft);
+
+  // Yayım menyusu (Planlaşdır / Qaralama saxla).
+  const moreBtn = document.getElementById('cxMoreBtn');
+  const menu = document.getElementById('cxPublishMenu');
+  const closeMenu = () => { if(menu){ menu.hidden = true; moreBtn?.setAttribute('aria-expanded', 'false'); } };
+  moreBtn?.addEventListener('click', e => {
+    e.stopPropagation();
+    menu.hidden = !menu.hidden;
+    moreBtn.setAttribute('aria-expanded', String(!menu.hidden));
+  });
+  document.addEventListener('click', closeMenu);
+  menu?.addEventListener('keydown', e => { if(e.key === 'Escape') closeMenu(); });
+
+  document.getElementById('cxScheduleBtn')?.addEventListener('click', () => {
+    closeMenu();
+    openScheduleModal();
+  });
+  document.getElementById('cxDraftBtn')?.addEventListener('click', () => {
+    closeMenu();
+    // Debounce-u gözləmədən DƏRHAL yaz — istifadəçi açıq şəkildə istəyib.
+    clearTimeout(draftTimer);
+    writeDraft();
+    toast(t('cx.saved'));
+  });
+
+  // Qaralama bərpası — bloklar çəkilməzdən ƏVVƏL, sonra render.
+  if(restoreDraft()){ renderBlocks(); renderPoll(); rebuildTags(); }
 }
+
+/* Planlaşdırma modalı — `datetime-local` ilə.
+ * ⚠ Server keçmiş tarixi rədd edir (dərhal yayım sayır), ona görə burada da
+ *   minimum "indi"dir: istifadəçi keçmiş seçib sonra "niyə dərhal getdi?"
+ *   deməsin. */
+function openScheduleModal(){
+  const inp = el('input', { type: 'datetime-local', class: 'poll-in',
+    min: new Date(Date.now() + 60000).toISOString().slice(0, 16) });
+  const errEl = el('div', { class: 'form-err' });
+  const ok = el('button', { class: 'btn-primary', onclick: () => {
+    const ms = new Date(inp.value).getTime();
+    if(!inp.value || !Number.isFinite(ms) || ms <= Date.now()){
+      errEl.textContent = t('cx.schedule_future'); return;
+    }
+    scheduledAt = ms;
+    closeModal();
+    toast(t('cx.scheduled_for').replace('{t}', new Date(ms).toLocaleString()));
+  } }, t('cx.schedule'));
+  showModal([
+    el('div', { class: 'section-title' }, t('cx.schedule')),
+    el('p', { class: 'c-report-quote' }, t('cx.schedule_hint')),
+    inp, errEl,
+    el('div', { class: 'c-report-btns' }, ok),
+  ]);
+  inp.focus();
+}
+
+
