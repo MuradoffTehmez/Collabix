@@ -1,7 +1,7 @@
 // Server-side SEO: public path-lar üçün per-route meta + JSON-LD injection (HTMLRewriter),
 // D1-dən generasiya olunan robots.txt / sitemap.xml / llms.txt.
 // Crawler və social scraper JS icra etmədən düzgün meta görür (hash-routing problemi həlli).
-import { Env, fromJSON, fileUrl } from './util';
+import { Env, fromJSON, avatarUrl } from './util';
 
 // Domenin TƏK HƏQİQƏT MƏNBƏYİ: `wrangler.jsonc` → `vars.SITE_ORIGIN`
 // (AUDIT-TASK-2 / struktur borcu #14).
@@ -244,7 +244,8 @@ export async function buildMeta(route: RouteInfo, env: Env): Promise<Meta> {
       mainEntity: {
         '@type': 'Person', name: row.name, alternateName: '@' + row.username,
         description: truncate(row.bio, 200) || undefined,
-        image: row.photo_url ? origin + fileUrl(row.photo_url) : undefined,
+        // Faza 3.5: `fileUrl()` ikinci prefiks əlavə edirdi (`/files//files/…`).
+        image: row.photo_url ? origin + avatarUrl(row.photo_url) : undefined,
         url: base.canonical,
       },
     });

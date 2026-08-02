@@ -345,6 +345,34 @@ export function mapPost(r: any): any {
 
 export const fileUrl = (key: string | null) => (key ? `/files/${key}` : null);
 
+/**
+ * Avatar ünvanı — AUDIT-TASK-10 / Faza 3.5 (Task 7 §8/1 miras qüsuru).
+ *
+ * ⚠ PROBLEM: `users.photo_url` **AÇAR DEYİL, HAZIR ÜNVANDIR**. Client
+ *   `uploadAvatar()` → `d.url` saxlayır, o isə serverdə artıq
+ *   `fileUrl(key)` = `/files/avatars/…` kimi qurulub. Üzərinə ikinci dəfə
+ *   `fileUrl()` tətbiq edən hər yer `/files//files/avatars/…` alırdı və
+ *   şəkil 404 verirdi:
+ *     • `og.ts` — sosial paylaşım kartındakı avatar
+ *     • `seo.ts` — JSON-LD `image`
+ *     • `routes/public.ts` — publik profil və post müəllifi
+ *
+ * ⚠ DÜZ HƏLL "sadəcə `fileUrl()`-u silmək" DEYİL: bazada iki format yan-yana
+ *   yaşaya bilər (köhnə sətirlərdə xam açar, yenilərində tam yol). Ona görə
+ *   burada TOLERANT normallaşdırma var — hansı format gəlirsə gəlsin
+ *   nəticə birdir.
+ */
+export function avatarUrl(v: string | null | undefined): string | null {
+  const s = String(v || '').trim();
+  if (!s) return null;
+  // Artıq tam ünvan (`/files/…`) və ya xarici URL (OAuth avatarı) — toxunma.
+  if (s.startsWith('/files/') || s.startsWith('http://') || s.startsWith('https://')) return s;
+  // ⚠ Başqa mütləq yol (`/…`) da olduğu kimi qalır: onu `/files/` altına
+  //   salsaq mövcud olmayan açar düzəldərdik.
+  if (s.startsWith('/')) return s;
+  return `/files/${s}`;   // xam açar — köhnə sətirlər
+}
+
 export function mapMsg(r: any, dm = false): any {
   const base: any = {
     id: r.id, type: r.type || 'text', text: r.text,

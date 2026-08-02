@@ -4,7 +4,7 @@
 // (frontend-in feature bayraqları).
 import {
   Ctx, json, err, readJson, uuid, now, clampStr, fromJSON,
-  normalizeUsername, mapPost, fileUrl,
+  normalizeUsername, mapPost, avatarUrl,
 } from '../util';
 import { xpInvariant } from '../xp';
 import { alert } from '../alerts';
@@ -56,7 +56,8 @@ export async function publicGetPost(c: Ctx, id: string) {
   if (!row || row.author_blocked) return err('Post tapılmadı.', 404);
   const post = mapPost(row);
   post.authorUsername = row.author_username;
-  post.authorPhoto = fileUrl(row.author_photo);
+  // Faza 3.5: `photo_url` ARTIQ `/files/…` daşıyır — `fileUrl()` ikiqat prefiks verirdi.
+  post.authorPhoto = avatarUrl(row.author_photo);
   post.authorVerified = !!row.author_verified;
   return json({ post });
 }
@@ -71,7 +72,7 @@ export async function publicGetUser(c: Ctx, username: string) {
   return json({
     user: {
       uid: row.id, username: row.username, name: row.name, bio: row.bio,
-      photoURL: fileUrl(row.photo_url), verified: !!row.verified,
+      photoURL: avatarUrl(row.photo_url), verified: !!row.verified,
       xp: row.xp, streak: row.streak, tasksCompleted: row.tasks_completed, joinedAt: row.joined_at,
       prog: Object.keys(fromJSON(row.prog_levels, {})), langs: Object.keys(fromJSON(row.lang_levels, {})),
     },

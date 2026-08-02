@@ -2,7 +2,7 @@
 // workers-og: HTML+CSS → SVG (Satori) → PNG (resvg-wasm). Workers runtime-da Canvas yoxdur.
 // Nəticə caches.default-də saxlanılır (edit → ?v=updated_at ilə cache bust).
 import { ImageResponse } from 'workers-og';
-import { Env, fromJSON, fileUrl } from './util';
+import { Env, fromJSON, avatarUrl } from './util';
 import { siteOrigin } from './seo';
 
 const W = 1200, H = 630;
@@ -27,6 +27,50 @@ const shell = (inner: string) => `
       <span style="font-size:30px;font-weight:700;color:#5eeaea;">Collabix</span>
     </div>
   </div>`;
+
+/**
+ * Avatarın `data:` URI-si — AUDIT-TASK-10 / Faza 3.5 (Task 7 §8/2 miras bəndi).
+ *
+ * ⚠ NİYƏ ÜNVAN İŞLƏMİR: Satori `<img src>`-i ÖZÜ çəkir və o sorğuda SESSİYA
+ *   YOXDUR. `/files/*` yolu isə (Task 7 / C-1) autentifikasiya tələb edir və
+ *   401 qaytarır → OG kartında avatar HEÇ VAXT görünmürdü. Sosial botlar da
+ *   giriş etmir, yəni ünvanı publik etmək də seçim deyil.
+ *
+ * HƏLL: obyekt R2-dən SERVER TƏRƏFDƏ oxunur və şəklin içinə `data:` kimi
+ * yerləşdirilir — heç bir əlavə sorğu getmir.
+ *
+ * ⚠ ÖLÇÜ TAVANI MƏCBURİDİR: base64 həcmi ~1,37× artırır və nəticə HTML-i
+ *   Satori-nin yaddaşına düşür. Avatar yükləmə limiti onsuz da kiçikdir;
+ *   gözlənilməz böyük obyekt gəlsə kartı çökdürməkdənsə hərfli fallback-a
+ *   qayıdırıq.
+ */
+const OG_AVATAR_MAX = 512 * 1024;
+
+async function avatarDataUri(env: Env, photo: string | null): Promise<string | null> {
+  const u = avatarUrl(photo);
+  if (!u) return null;
+  // OAuth provayderindən gələn xarici avatar — publikdir, Satori özü çəkə bilər.
+  if (u.startsWith('http://') || u.startsWith('https://')) return u;
+  if (!u.startsWith('/files/')) return null;
+
+  try {
+    const key = decodeURIComponent(u.slice('/files/'.length));
+    const obj = await env.FILES.get(key);
+    if (!obj) return null;
+    if (obj.size > OG_AVATAR_MAX) return null;
+    const buf = new Uint8Array(await obj.arrayBuffer());
+    // ⚠ `String.fromCharCode(...buf)` İŞLƏMİR: 100 KB-lıq avatar üçün arqument
+    //   sayı yığın limitini aşır. Parça-parça yığırıq.
+    let bin = '';
+    for (let i = 0; i < buf.length; i += 0x8000) {
+      bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+    }
+    const mime = obj.httpMetadata?.contentType || 'image/jpeg';
+    return `data:${mime};base64,${btoa(bin)}`;
+  } catch {
+    return null;   // avatar OG kartını çökdürməməlidir
+  }
+}
 
 function avatarBox(name: string, photoUrl: string | null): string {
   if (photoUrl) {
@@ -95,7 +139,7 @@ export async function ogImageResponse(env: Env, request: Request, kind: 'post' |
       const body = truncate(row.text || blocks.map(b => b.content || '').join(' '), 180) || 'Collabix paylaşımı';
       html = shell(`
         <div style="display:flex;align-items:center;gap:20px;">
-          ${avatarBox(row.author_name, row.author_photo ? siteOrigin(env) + fileUrl(row.author_photo) : null)}
+          ${avatarBox(row.author_name, await avatarDataUri(env, row.author_photo))}
           <span style="font-size:40px;font-weight:700;">${esc(row.author_name)}</span>
         </div>
         <div style="display:flex;font-size:44px;line-height:1.3;font-weight:600;max-height:260px;overflow:hidden;">${esc(body)}</div>`);
@@ -107,7 +151,7 @@ export async function ogImageResponse(env: Env, request: Request, kind: 'post' |
       version = String(row.xp || 0) + '-' + String(row.tasks_completed || 0);
       html = shell(`
         <div style="display:flex;align-items:center;gap:28px;">
-          ${avatarBox(row.name, row.photo_url ? siteOrigin(env) + fileUrl(row.photo_url) : null)}
+          ${avatarBox(row.name, await avatarDataUri(env, row.photo_url))}
           <div style="display:flex;flex-direction:column;gap:8px;">
             <span style="font-size:52px;font-weight:800;">${esc(row.name)}${row.verified ? ' <span style="color:#5eeaea;">✓</span>' : ''}</span>
             <span style="font-size:32px;color:#8aa0bd;">@${esc(row.username)}</span>
