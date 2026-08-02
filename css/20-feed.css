@@ -1571,3 +1571,293 @@
   color: var(--coral);
   border-color: var(--coral);
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ŞƏRH SİSTEMİ — yenidən dizayn (AUDIT-UI + miqrasiya 0039)
+   ══════════════════════════════════════════════════════════════════════════
+   Bu blok faylın SONUNDADIR ki, yuxarıdakı köhnə `.comment-*` qaydalarını
+   eyni spesifiklikdə basa bilsin (cascade: sonuncu qazanır). Köhnə qaydalar
+   QƏSDƏN silinmir — `git blame` və AUDIT-9 responsive nəticələri qorunur. */
+
+/* ── Kompozitor ─────────────────────────────────────────────────────────── */
+.c-composer {
+  display: flex;
+  gap: var(--sp-3);
+  align-items: flex-start;
+  margin: var(--sp-4) 0 var(--sp-5);
+}
+
+.c-composer-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  font-size: .8rem;
+}
+
+.c-composer-main { flex: 1; min-width: 0; }
+
+.c-composer-row {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: flex-end;
+}
+
+.c-composer-input {
+  flex: 1;
+  min-width: 0;
+  /* resize:none + JS auto-grow: sürüklənən tutacaq düzəni pozurdu. */
+  resize: none;
+  overflow-y: auto;
+  min-height: 44px;
+  max-height: 220px;
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
+  transition: border-color var(--mo-base) var(--mo-ease),
+              box-shadow var(--mo-base) var(--mo-ease);
+}
+
+.c-composer-input:focus {
+  outline: none;
+  border-color: var(--coral);
+  box-shadow: 0 0 0 3px var(--coral-dim);
+}
+
+.c-send {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--r-md);
+  background: var(--coral);
+  color: var(--on-accent);
+  cursor: pointer;
+  transition: opacity var(--mo-fast) var(--mo-ease), transform var(--mo-fast) var(--mo-ease);
+}
+
+.c-send:hover:not(:disabled) { transform: scale(1.05); }
+.c-send:active:not(:disabled) { transform: scale(.94); }
+
+/* Boş sahədə göndərmək mümkün deyil — düymə həm görünüşcə, həm semantik
+   olaraq sönükdür (disabled-states: azaldılmış opaklıq + kursor). */
+.c-send:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+
+.c-send.busy { pointer-events: none; opacity: .6; }
+
+.c-composer-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: var(--sp-1);
+  padding-inline: var(--sp-1);
+}
+
+.c-hint,
+.c-counter {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+
+.c-counter { font-family: var(--mono); }
+
+/* ── Reaksiyalar ────────────────────────────────────────────────────────── */
+.c-react-wrap { position: relative; display: inline-flex; }
+
+.c-react-ic { color: currentColor; }
+
+/* Aktiv reaksiya öz rəngini alır — `currentColor` sayəsində SVG də dəyişir
+   (emoji ilə bu mümkün deyildi). */
+.c-like.on[data-react="like"]  { color: var(--coral); }
+.c-like.on[data-react="love"]  { color: var(--danger); }
+.c-like.on[data-react="laugh"],
+.c-like.on[data-react="wow"]   { color: #e0a800; }
+.c-like.on[data-react="fire"]  { color: #ff6b35; }
+.c-like.on[data-react="clap"]  { color: var(--teal); }
+
+.c-react-picker {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 40;
+  display: flex;
+  gap: var(--sp-1);
+  padding: var(--sp-2);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  box-shadow: var(--sh-2);
+  animation: cReactIn 160ms var(--mo-ease);
+}
+
+.c-react-picker[hidden] { display: none; }
+
+@keyframes cReactIn {
+  from { opacity: 0; transform: translateY(4px) scale(.94); }
+  to   { opacity: 1; transform: none; }
+}
+
+.c-react-opt {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  transition: transform var(--mo-fast) var(--mo-ease), background var(--mo-fast) var(--mo-ease);
+}
+
+.c-react-opt:hover { transform: scale(1.18); background: var(--surface-2); }
+.c-react-opt.on { color: var(--coral); background: var(--coral-dim); }
+
+/* ── "..." menyusu ──────────────────────────────────────────────────────── */
+.c-menu-wrap { position: relative; display: inline-flex; }
+
+.c-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 40;
+  min-width: 176px;
+  display: flex;
+  flex-direction: column;
+  padding: var(--sp-1);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  box-shadow: var(--sh-2);
+  animation: cReactIn 140ms var(--mo-ease);
+}
+
+.c-menu[hidden] { display: none; }
+
+.c-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  padding: var(--sp-2) var(--sp-3);
+  border: none;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-xs);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--mo-fast) var(--mo-ease);
+}
+
+.c-menu-item:hover { background: var(--surface-2); }
+
+/* Destruktiv bənd ayırıcı ilə ayrılır — səhvən silmə riskini azaldır. */
+.c-menu-item.danger {
+  color: var(--danger);
+  margin-top: var(--sp-1);
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 var(--r-sm) var(--r-sm);
+  padding-top: var(--sp-3);
+}
+
+/* ── Nişanlar + vəziyyət ────────────────────────────────────────────────── */
+.c-handle {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  font-family: var(--mono);
+}
+
+.c-badges { display: inline-flex; gap: var(--sp-1); }
+
+.c-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: var(--r-pill);
+  line-height: 1.5;
+}
+
+.c-badge.author { background: var(--coral-dim); color: var(--coral); }
+.c-badge.admin  { background: var(--teal-dim); color: var(--teal); }
+
+.c-subline {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding-inline: var(--sp-2);
+}
+
+/* Sancaqlanmış / gizlədilmiş şərh — RƏNG TƏK SİQNAL DEYİL, sol zolaq da var. */
+.comment-row.pinned { border-left: 3px solid var(--coral); padding-left: var(--sp-2); }
+.comment-row.hidden-cm { opacity: .55; border-left: 3px dashed var(--muted); padding-left: var(--sp-2); }
+
+/* ── Şikayət modalı ─────────────────────────────────────────────────────── */
+.c-report-quote {
+  padding: var(--sp-3);
+  margin-bottom: var(--sp-3);
+  background: var(--surface-2);
+  border-radius: var(--r-sm);
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-normal);
+}
+
+.c-report-input {
+  width: 100%;
+  padding: var(--sp-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-sm);
+  resize: vertical;
+}
+
+.c-report-btns { display: flex; justify-content: flex-end; margin-top: var(--sp-3); }
+
+/* ── Şərhin görünmə animasiyası ─────────────────────────────────────────── */
+.comment-row {
+  animation: cRowIn 200ms var(--mo-ease) both;
+}
+
+@keyframes cRowIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Sistem "az hərəkət" deyirsə bütün şərh animasiyaları söndürülür. */
+@media (prefers-reduced-motion: reduce) {
+  .comment-row,
+  .c-react-picker,
+  .c-menu { animation: none; }
+
+  .c-send:hover:not(:disabled),
+  .c-react-opt:hover { transform: none; }
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .c-composer-avatar { width: 36px; height: 36px; }
+  /* İpucu mətni dar ekranda sətri doldurur — sayğac qalır, ipucu gedir. */
+  .c-hint { display: none; }
+  .c-react-picker { left: 50%; transform: translateX(-50%); }
+  .c-menu { right: auto; left: 0; }
+}

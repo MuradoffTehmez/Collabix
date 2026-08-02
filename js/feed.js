@@ -3,7 +3,8 @@
 // Premium Card Redesign — Lucide SVG icons, glassmorphism, ARIA.
 import {
   state, watchFeed, updatePost, deletePost, getPostById,
-  toggleLike, toggleBookmark, watchComments, addComment, editComment, deleteComment, toggleCommentLike,
+  toggleLike, toggleBookmark, watchComments, addComment, editComment, deleteComment,
+  setCommentReaction, setCommentPinned, setCommentHidden, reportComment,
   toggleRepost, deriveMyReposts
 } from './store.js';
 import {
@@ -78,6 +79,18 @@ const iconLink = () => SVG(
   '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
   { w: '16', h: '16' }
 );
+
+/* Şərh reaksiyaları — ICONS reyestrindəki (icon-set.js) adlar.
+ * ⚠ Açarlar SERVERDƏKİ `REACTION_TYPES` (worker/routes/post.ts) və 0039
+ *   miqrasiyasındakı CHECK ilə EYNİ olmalıdır — üçü birlikdə dəyişir. */
+const REACTIONS = {
+  like:  { icon: 'thumbsUp' },
+  love:  { icon: 'heart' },
+  laugh: { icon: 'smile' },
+  wow:   { icon: 'wow' },
+  fire:  { icon: 'flame' },
+  clap:  { icon: 'clap' },
+};
 
 // Paylaşma linklərinin bazası — `location.origin`-dən gəlir (AUDIT-TASK-2 / 2.5).
 // Əvvəl bura domen HARDCODED yazılmışdı və `worker/seo.ts`-dəki dəyərin
@@ -781,16 +794,52 @@ function mountComments(box, p){
   const commentsBox = el('div', { class: 'comments-thread' });
   const moreWrap = el('div', { class: 'c-more-wrap' });
 
-  const input = el('input', { placeholder: t('feed.ph_comment'), maxLength: 1000 });
+  /* ── Kompozitor ──────────────────────────────────────────────────────────
+   * `input` → `textarea`: şərhlər Markdown dəstəkləyir və çoxsətirli ola bilər;
+   * tək sətirlik `input`-da uzun şərh yazmaq mümkün deyildi.
+   * Enter = göndər, Shift+Enter = yeni sətir (X/Slack modeli). */
+  const input = el('textarea', {
+    class: 'c-composer-input', placeholder: t('feed.ph_comment'),
+    maxLength: 1000, rows: 1, 'aria-label': t('feed.ph_comment'),
+  });
+  const counter = el('span', { class: 'c-counter', 'aria-hidden': 'true' });
+  const sendBtn = el('button', { type: 'button', class: 'c-send',
+    'aria-label': t('a11y.send'), onclick: () => send() }, iconSend());
+
+  const autoGrow = () => {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 220) + 'px';
+  };
+  const syncComposer = () => {
+    const len = input.value.trim().length;
+    sendBtn.disabled = len === 0;
+    // Sayğac yalnız hədd yaxınlaşanda görünür — daim göstərmək səs-küydür.
+    counter.textContent = len > 800 ? (1000 - input.value.length) : '';
+    autoGrow();
+  };
+
   const send = async () => {
     const text = input.value.trim();
     if(!text) return;
-    input.value = '';
-    try{ await addComment(p, text); }
-    catch(e){ toast(t('feed.comment_fail'), 'err'); input.value = text; }
+    input.disabled = true; sendBtn.disabled = true;
+    sendBtn.classList.add('busy');
+    try{
+      await addComment(p, text);
+      input.value = '';
+    }catch(e){ toast(t('feed.comment_fail'), 'err'); }
+    finally{
+      input.disabled = false; sendBtn.classList.remove('busy');
+      syncComposer(); input.focus();
+    }
   };
-  input.addEventListener('keydown', e => { if(e.key === 'Enter' && !e.defaultPrevented) send(); });
+
+  input.addEventListener('input', syncComposer);
+  input.addEventListener('keydown', e => {
+    // `defaultPrevented` — mention autocomplete Enter-i özü tutubsa ötür.
+    if(e.key === 'Enter' && !e.shiftKey && !e.defaultPrevented){ e.preventDefault(); send(); }
+  });
   attachMentionAutocomplete(input);
+  syncComposer();
 
   const renderSortBar = () => {
     clear(sortBar);
@@ -799,28 +848,92 @@ function mountComments(box, p){
     sortBar.append(
       el('span', { class: 'c-head-title' }, t('feed.comments'),
         cData.total ? el('span', { class: 'c-count-badge' }, cData.total) : null),
-      el('div', { class: 'csort-group' }, mk('new', t('feed.sort_new')), mk('top', t('feed.sort_top'))),
+      el('div', { class: 'csort-group' },
+        mk('new', t('feed.sort_new')), mk('old', t('feed.sort_old')),
+        mk('top', t('feed.sort_top')), mk('replies', t('feed.sort_replies'))),
     );
   };
 
-  const likeBtn = (c) => {
-    let liked = !!c.likedByMe, count = c.likeCount || 0;
-    let ic = iconHeart(liked);
-    const countEl = el('span', { class: 'count' }, count);
-    const btn = el('button', { type: 'button', class: 'c-like' + (liked ? ' on' : ''), 'aria-pressed': String(liked),
-      onclick: async e => {
-        e.preventDefault();
-        if(btn.disabled) return;
-        btn.disabled = true;
-        const was = liked;
-        liked = !liked; count = Math.max(0, count + (liked ? 1 : -1));
-        const paint = () => { const nx = iconHeart(liked); ic.replaceWith(nx); ic = nx; btn.classList.toggle('on', liked); btn.setAttribute('aria-pressed', String(liked)); countEl.textContent = count; };
-        paint();
-        try{ await toggleCommentLike(p.id, c.id, was); }
-        catch(err){ liked = was; count = Math.max(0, count + (was ? 1 : -1)); paint(); toast(t('dyn.err_generic'), 'err'); }
-        btn.disabled = false;
-      } }, ic, countEl);
-    return btn;
+  /**
+   * Reaksiya idarəsi: bir düymə + uzun basış/hover ilə açılan seçici.
+   *
+   * Davranış (X/LinkedIn modeli): tək klik = `like` toggle; seçicidən başqa
+   * tip seçmək = həmin tipə keçid. Server bir istifadəçiyə BİR tip verir.
+   *
+   * ⚠ Optimistik yeniləmə: sayğac və ikon dərhal dəyişir, xəta olsa əvvəlki
+   *   VƏZİYYƏTƏ (tip + bütün sayğaclar) qaytarılır — `was` snapshot-u ona görə
+   *   dərin kopyadır, yoxsa geri qaytarma yarımçıq qalardı.
+   */
+  const reactionBtn = (c) => {
+    let mine = c.myReaction || null;
+    let counts = { ...(c.reactions || {}) };
+
+    const wrap = el('div', { class: 'c-react-wrap' });
+    const face = el('button', {
+      type: 'button', class: 'c-like',
+      'aria-haspopup': 'true',
+    });
+    const picker = el('div', { class: 'c-react-picker', role: 'menu', hidden: true });
+
+    const total = () => Object.values(counts).reduce((a, b) => a + b, 0);
+
+    const paint = () => {
+      clear(face);
+      const active = mine || 'like';
+      face.append(
+        REACTIONS[active] ? el('span', { class: 'c-react-ic ic', 'data-icon': REACTIONS[active].icon, 'data-icon-size': '15' }) : iconHeart(false),
+        el('span', { class: 'count' }, total()),
+      );
+      face.classList.toggle('on', !!mine);
+      if(mine) face.dataset.react = mine; else delete face.dataset.react;
+      face.setAttribute('aria-pressed', String(!!mine));
+      face.setAttribute('aria-label', mine ? t('cm.react_' + mine) : t('feed.like'));
+      paintIcons(face);
+    };
+
+    const apply = async (type) => {
+      const wasMine = mine, wasCounts = { ...counts };
+      if(wasMine) counts[wasMine] = Math.max(0, (counts[wasMine] || 1) - 1);
+      if(type) counts[type] = (counts[type] || 0) + 1;
+      // Sıfıra düşən tip obyektdə qalmasın — `total()` düz saysın.
+      for(const k of Object.keys(counts)) if(!counts[k]) delete counts[k];
+      mine = type;
+      paint();
+      closePicker();
+      try{ await setCommentReaction(p.id, c.id, type); }
+      catch(err){ mine = wasMine; counts = wasCounts; paint(); toast(t('dyn.err_generic'), 'err'); }
+    };
+
+    const closePicker = () => { picker.hidden = true; };
+    const openPicker = () => {
+      if(!picker.hidden) return;
+      clear(picker);
+      for(const [key, def] of Object.entries(REACTIONS)){
+        picker.append(el('button', {
+          type: 'button', class: 'c-react-opt' + (mine === key ? ' on' : ''),
+          role: 'menuitem', title: t('cm.react_' + key), 'aria-label': t('cm.react_' + key),
+          onclick: () => apply(mine === key ? null : key),
+        }, el('span', { class: 'ic', 'data-icon': def.icon, 'data-icon-size': '18' })));
+      }
+      paintIcons(picker);
+      picker.hidden = false;
+    };
+
+    face.addEventListener('click', () => apply(mine ? null : 'like'));
+    // Seçici: hover (siçan) + uzun basış (toxunuş) + klaviatura üçün Alt+Ok.
+    wrap.addEventListener('mouseenter', openPicker);
+    wrap.addEventListener('mouseleave', closePicker);
+    face.addEventListener('keydown', e => {
+      if(e.key === 'ArrowUp' || (e.altKey && e.key === 'Enter')){ e.preventDefault(); openPicker(); picker.querySelector('button')?.focus(); }
+      if(e.key === 'Escape') closePicker();
+    });
+    let lp = null;
+    face.addEventListener('pointerdown', () => { lp = setTimeout(openPicker, 450); });
+    for(const ev of ['pointerup', 'pointercancel', 'pointerleave']) face.addEventListener(ev, () => clearTimeout(lp));
+
+    paint();
+    wrap.append(face, picker);
+    return wrap;
   };
 
   const openReply = (parent, parentAuthor) => {
@@ -875,6 +988,95 @@ function mountComments(box, p){
     try{ await deleteComment(p.id, c.id); }catch(e){ toast(t('dyn.del_fail'), 'err'); }
   };
 
+  /**
+   * Şikayət modalı.
+   *
+   * ⚠ `prompt()` İŞLƏDİLMİR: o, bütün səhifəni bloklayan brauzer dialoqudur,
+   *   üslub verilə bilmir, mobil brauzerlərdə görünüşü pozur və eslint
+   *   `no-alert` ilə qadağandır. Layihənin öz `showModal`-ı (fokus tələsi +
+   *   Escape + aria-labelledby ilə) düzgün alternativdir.
+   */
+  const openReportModal = (c) => {
+    const ta = el('textarea', { class: 'c-report-input', maxLength: 300, rows: 3,
+      placeholder: t('cm.report_q') });
+    const err = el('div', { class: 'form-err' });
+    const submit = el('button', { class: 'btn-danger', onclick: async () => {
+      const reason = ta.value.trim();
+      if(!reason){ err.textContent = t('cm.report_q'); ta.focus(); return; }
+      submit.disabled = true;
+      try{
+        await reportComment(p.id, c.id, reason);
+        closeModal();
+        toast(t('cm.report_ok'));
+      }catch(e){
+        err.textContent = e?.code === 'already_reported' ? t('cm.report_dup') : (e?.message || t('dyn.err_generic'));
+        submit.disabled = false;
+      }
+    } }, t('cm.report'));
+    showModal([
+      el('div', { class: 'section-title' }, t('cm.report')),
+      el('p', { class: 'c-report-quote' }, (c.text || '').slice(0, 140)),
+      ta, err,
+      el('div', { class: 'c-report-btns' }, submit),
+    ]);
+    ta.focus();
+  };
+
+  /**
+   * "..." menyusu — nadir və/və ya destruktiv əməliyyatlar.
+   *
+   * NİYƏ MENYU: sancaq/gizlət/şikayət/sil hər şərhdə görünsə, əməliyyat sətri
+   * yeddi düymə olardı və gündəlik iş (bəyən/cavab) itərdi. Menyu onları
+   * gizlədir, `Sil` isə ayırıcıdan sonra gəlir (destructive-emphasis).
+   */
+  const commentMenu = (c) => {
+    const mine = c.authorUid === state.authUser.uid;
+    const isPostOwner = p.authorUid === state.authUser.uid;
+    const canPin = isPostOwner || state.isAdmin;
+    const canDelete = mine || state.isAdmin || isPostOwner;
+    const wrap = el('div', { class: 'c-menu-wrap' });
+    const menu = el('div', { class: 'c-menu', role: 'menu', hidden: true });
+    const close = () => { menu.hidden = true; };
+
+    const item = (icon, label, fn, cls) => el('button', {
+      type: 'button', class: 'c-menu-item' + (cls ? ' ' + cls : ''), role: 'menuitem',
+      onclick: async () => { close(); await fn(); },
+    }, el('span', { class: 'ic', 'data-icon': icon, 'data-icon-size': '15' }), label);
+
+    const guard = async (fn) => { try{ await fn(); }catch(e){ toast(e?.message || t('dyn.err_generic'), 'err'); } };
+
+    if(canPin){
+      menu.append(c.pinnedAt
+        ? item('pin', t('cm.unpin'), () => guard(() => setCommentPinned(p.id, c.id, false)))
+        : item('pin', t('cm.pin'), () => guard(() => setCommentPinned(p.id, c.id, true))));
+    }
+    if(state.isAdmin){
+      menu.append(c.hiddenAt
+        ? item('eyeOff', t('cm.restore'), () => guard(() => setCommentHidden(p.id, c.id, false)))
+        : item('eyeOff', t('cm.hide'), () => guard(() => setCommentHidden(p.id, c.id, true))));
+    }
+    if(!mine) menu.append(item('flag', t('cm.report'), () => openReportModal(c)));
+    if(canDelete) menu.append(item('trash', t('feed.menu_del'), () => doDelete(c), 'danger'));
+    if(!menu.childNodes.length) return null;   // heç bir əməliyyat yoxdursa düymə də göstərmə
+
+    const btn = el('button', {
+      type: 'button', class: 'c-act c-menu-btn', 'aria-label': t('cm.more'),
+      title: t('cm.more'), 'aria-haspopup': 'true', 'aria-expanded': 'false',
+      onclick: e => {
+        e.stopPropagation();
+        menu.hidden = !menu.hidden;
+        btn.setAttribute('aria-expanded', String(!menu.hidden));
+      },
+    }, el('span', { class: 'ic', 'data-icon': 'more', 'data-icon-size': '15' }));
+
+    // Kənara klik / Escape bağlayır — menyu açıq qalıb yolu kəsməsin.
+    document.addEventListener('click', close);
+    wrap.addEventListener('keydown', e => { if(e.key === 'Escape') close(); });
+    wrap.append(btn, menu);
+    paintIcons(wrap);
+    return wrap;
+  };
+
   // Şərh linkini kopyala — post URL-i + şərh fraqmenti (deep-link).
   const copyCommentLink = async (c) => {
     try{
@@ -894,7 +1096,6 @@ function mountComments(box, p){
     const author = state.users.get(c.authorUid);
     const mine = c.authorUid === state.authUser.uid;
     const isPostAuthor = c.authorUid === p.authorUid;
-    const canManage = mine || state.isAdmin || p.authorUid === state.authUser.uid;
     // Markdown: şərhlər də kod bloku/qalın/link yaza bilir (post kimi).
     // `mentionify` @adları kliklənən edir və markdown-dan SONRA tətbiq olunur.
     const textEl = el('div', { class: 'cm-text' }, mentionify(c.text));
@@ -904,7 +1105,7 @@ function mountComments(box, p){
     if(author?.role === 'ADMIN' || author?.role === 'OWNER') badges.append(el('span', { class: 'c-badge admin' }, t('cm.admin')));
 
     const actions = el('div', { class: 'c-actions' },
-      likeBtn(c),
+      reactionBtn(c),
       el('button', { type: 'button', class: 'c-act', onclick: () => openReply(c, author) },
         el('span', { class: 'ic', 'data-icon': 'message', 'data-icon-size': '14' }), t('feed.reply')),
       el('button', { type: 'button', class: 'c-act', 'aria-label': t('cm.copy_link'),
@@ -912,8 +1113,7 @@ function mountComments(box, p){
         el('span', { class: 'ic', 'data-icon': 'link', 'data-icon-size': '14' })),
       mine ? el('button', { type: 'button', class: 'c-act', onclick: () => openEdit(c, textEl) },
         el('span', { class: 'ic', 'data-icon': 'edit', 'data-icon-size': '14' }), t('feed.menu_edit')) : null,
-      canManage ? el('button', { type: 'button', class: 'c-act danger', onclick: () => doDelete(c) },
-        el('span', { class: 'ic', 'data-icon': 'trash', 'data-icon-size': '14' }), t('feed.menu_del')) : null,
+      commentMenu(c),
     );
 
     const node = el('div', { class: 'comment-row' + (isReply ? ' is-reply' : ''), id: 'c-' + c.id },
@@ -962,8 +1162,14 @@ function mountComments(box, p){
 
   box.append(
     el('div', { class: 'comment-head' }, sortBar),
-    el('div', { class: 'comment-input-row' }, input,
-      el('button', { type: 'button', class: 'btn-small', 'aria-label': t('a11y.send'), onclick: send }, iconSend())),
+    el('div', { class: 'c-composer' },
+      avatarNode(state.me || {}, 'avatar c-composer-avatar'),
+      el('div', { class: 'c-composer-main' },
+        el('div', { class: 'c-composer-row' }, input, sendBtn),
+        el('div', { class: 'c-composer-foot' },
+          el('span', { class: 'c-hint' }, t('cm.hint')), counter),
+      ),
+    ),
     commentsBox,
     moreWrap,
   );

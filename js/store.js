@@ -285,6 +285,38 @@ export async function toggleCommentLike(postId, commentId, currentlyLiked){
   return !currentlyLiked;
 }
 
+/* ---------- şərh: reaksiya / moderasiya / şikayət (miqrasiya 0039) ---------- */
+
+/**
+ * Reaksiya qoyur, dəyişir və ya götürür.
+ * @param {string|null} type ICONS-dakı tip ('like'|'love'|'laugh'|'wow'|'fire'|'clap');
+ *   `null` verilsə reaksiya SİLİNİR.
+ *
+ * ⚠ Server `like` tipini köhnə `comment_likes` cədvəli ilə sinxron saxlayır,
+ *   ona görə burada ayrıca `toggleCommentLike` çağırmaq LAZIM DEYİL — iki
+ *   yerdən yazsaq sayğac ikiqat sürüşərdi.
+ */
+export async function setCommentReaction(postId, commentId, type){
+  const path = `/posts/${postId}/comments/${commentId}/reaction`;
+  if(!type){ await api(path, { method: 'DELETE' }); return null; }
+  const d = await api(path, { method: 'PUT', body: { type } });
+  return d.type || type;
+}
+
+export async function setCommentPinned(postId, commentId, pinned){
+  await api(`/posts/${postId}/comments/${commentId}/pin`, { method: pinned ? 'PUT' : 'DELETE' });
+  return pinned;
+}
+
+export async function setCommentHidden(postId, commentId, hidden){
+  await api(`/posts/${postId}/comments/${commentId}/hide`, { method: hidden ? 'PUT' : 'DELETE' });
+  return hidden;
+}
+
+export async function reportComment(postId, commentId, reason){
+  return api(`/posts/${postId}/comments/${commentId}/report`, { method: 'POST', body: { reason } });
+}
+
 /* ================= otaqlar ================= */
 export function watchRooms(cb){
   return startPoll({
