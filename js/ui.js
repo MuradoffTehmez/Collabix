@@ -246,24 +246,28 @@ export function toggleTheme(){
   const cur = getTheme();
   setTheme(THEMES[(THEMES.indexOf(cur) + 1) % THEMES.length]);
 }
-function applyTheme(t){
-  document.documentElement.dataset.theme = t;
-  // İkonu SVG-yə keçirmək: `data-icon`-u yenilə, köhnə <svg>-ni at, sonra
-  // yenidən boyanmasını istə.
-  // ⚠ paintIcons BURADA İMPORT EDİLMİR — icons.js ui.js-dən `toast` alır,
-  //   birbaşa import qarşılıqlı dövr yaradardı. Hadisə ilə ayrılıb.
-  let dirty = false;
-  for(const id of ['appThemeBtn', 'pubThemeBtn']){
-    // ⚠ Yalnız HƏQİQİ `.ic` yuvası olanlar. `themeToggleBtn` (Parametrlər)
-    //   QƏSDƏN siyahıda deyil: o, mətnli düymədir və etiketini `data-i18n`
-    //   yazır — ora SVG yeritsək, dil tətbiqi onu dərhal silərdi.
-    const slot = document.getElementById(id)?.querySelector('.ic');
+// ⚠ Parametr QƏSDƏN `theme` adlanır, `t` YOX: `t` bu modulda i18n tərcümə
+//   funksiyasıdır və parametr onu kölgələyərdi.
+function applyTheme(theme){
+  document.documentElement.dataset.theme = theme;
+  for(const id of ['appThemeBtn', 'pubThemeBtn', 'themeToggleBtn']){
+    const btn = document.getElementById(id);
+    const slot = btn?.querySelector('.ic');
     if(!slot) continue;
-    slot.dataset.icon = THEME_ICONS[t] || 'moon';
+    slot.dataset.icon = THEME_ICONS[theme] || 'moon';
     slot.querySelector('svg')?.remove();
-    dirty = true;
+
+    // Parametrlərdəki düymənin MƏTN etiketi də var və əvvəl STATİK idi
+    // (`data-i18n="set.theme.dark"`) — tema dəyişsə belə HƏMİŞƏ "Tünd" yazırdı.
+    // İndi cari temaya görə yenilənir. Açar `data-i18n`-ə də YAZILIR ki, dil
+    // dəyişəndə `applyI18n` onu öz mexanizmi ilə təzələsin.
+    const lbl = btn.querySelector('.lbl');
+    if(lbl){
+      lbl.dataset.i18n = 'set.theme.' + theme;
+      lbl.textContent = t('set.theme.' + theme);
+    }
   }
-  if(dirty) document.dispatchEvent(new CustomEvent('icons-dirty'));
+  paintIcons(document);
 
   // Ümumi animasiya keçidi (bütün temalar üçün)
   document.body.classList.remove('theme-transitioning');

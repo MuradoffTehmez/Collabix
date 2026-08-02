@@ -6,8 +6,11 @@ import { api } from './api.js';
 import { el } from './util.js';
 import { toast, confirmDialog } from './ui.js';
 import { t, fmtRelTime } from './i18n.js';
+import { paintIcons } from './icon-set.js';
 
-const DEVICE_ICON = { 'mobil': '📱', 'planşet': '📲', 'masaüstü': '💻' };
+// AUDIT-UI: əvvəl rəngli emoji idi (📱 📲 💻). ICONS reyestrindəki adlar —
+// `paintIcons` SVG ilə doldurur və rəng `currentColor`-dan gəlir.
+const DEVICE_ICON = { 'mobil': 'smartphone', 'planşet': 'smartphone', 'masaüstü': 'monitor' };
 
 function sessionRow(s, onRevoke){
   const meta = [s.browser, s.os].filter(Boolean).join(' · ');
@@ -17,7 +20,8 @@ function sessionRow(s, onRevoke){
   const where = [place, s.ip].filter(Boolean).join(' · ') || t('set.sess_unknown');
 
   return el('div', { class: 'session-row' + (s.current ? ' session-current' : '') }, [
-    el('span', { class: 'session-icon', 'aria-hidden': 'true' }, DEVICE_ICON[s.device] || '💻'),
+    el('span', { class: 'session-icon ic', 'aria-hidden': 'true',
+      'data-icon': DEVICE_ICON[s.device] || 'monitor', 'data-icon-size': '18' }),
     el('div', { class: 'session-info' }, [
       el('div', { class: 'session-title' }, [
         meta || t('set.sess_unknown'),
@@ -58,6 +62,7 @@ export async function loadSessions(){
     loadSessions();
   };
   data.sessions.forEach(s => box.appendChild(sessionRow(s, revoke)));
+  paintIcons(box);   // sətirlər dinamikdir → cihaz ikonları burada boyanır
 
   // "Digərlərini çıxart" yalnız çıxarılacaq cihaz varsa mənalıdır.
   const btn = document.getElementById('revokeOthersBtn');

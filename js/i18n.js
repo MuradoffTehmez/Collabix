@@ -139,10 +139,10 @@ const D = {
 
   /* ---------- settings ---------- */
   'set.theme':     { az: 'Tema', en: 'Theme', ru: 'Тема' },
-  'set.theme.dark':   { az: '🌙 Tünd', en: '🌙 Dark', ru: '🌙 Тёмная' },
-  'set.theme.light':  { az: '☀ Açıq', en: '☀ Light', ru: '☀ Светлая' },
-  'set.theme.matrix': { az: '🖥 Matrix', en: '🖥 Matrix', ru: '🖥 Matrix' },
-  'set.theme.cyberpunk': { az: '🤖 Cyberpunk', en: '🤖 Cyberpunk', ru: '🤖 Киберпанк' },
+  'set.theme.dark':   { az: 'Tünd', en: 'Dark', ru: 'Тёмная' },
+  'set.theme.light':  { az: 'Açıq', en: 'Light', ru: 'Светлая' },
+  'set.theme.matrix': { az: 'Matrix', en: 'Matrix', ru: 'Matrix' },
+  'set.theme.cyberpunk': { az: 'Cyberpunk', en: 'Cyberpunk', ru: 'Киберпанк' },
   'set.lang':      { az: 'Dil', en: 'Language', ru: 'Язык' },
   'set.privacy':   { az: 'Məxfilik', en: 'Privacy', ru: 'Приватность' },
   'set.whoMsg':    { az: 'Kim mənə mesaj yaza bilər?', en: 'Who can message me?', ru: 'Кто может мне писать?' },
@@ -349,9 +349,11 @@ const D = {
 
   /* ---------- Page: Profil ---------- */
   'prof.sub': { az: 'Sənin öyrənmə kartın', en: 'Your learning card', ru: 'Твоя учебная карточка' },
-  'prof.edit': { az: '✎ Redaktə et', en: '✎ Edit', ru: '✎ Редактировать' },
+  'prof.active_project': { az: 'Hazırda aktiv layihə üzərində işləyir', en: 'Currently working on an active project', ru: 'Сейчас работает над активным проектом' },
+  'prof.edit': { az: 'Redaktə et', en: 'Edit', ru: 'Редактировать' },
   'prof.tasks_done': { az: '☑ tamamlanmış tapşırıq', en: '☑ completed tasks', ru: '☑ выполненных заданий' },
-  'prof.badges': { az: '🏅 Nişanlar', en: '🏅 Badges', ru: '🏅 Бейджи' },
+  'prof.streak_track': { az: 'Son 7 gün: {n} gün ardıcıl aktiv', en: 'Last 7 days: {n} day streak', ru: 'Последние 7 дней: серия {n} дн.' },
+  'prof.badges': { az: 'Nişanlar', en: 'Badges', ru: 'Бейджи' },
   'prof.heatmap': { az: 'Aktivlik xəritəsi', en: 'Activity heatmap', ru: 'Карта активности' },
   'prof.prog': { az: 'Sahələr üzrə irəliləyiş', en: 'Progress by field', ru: 'Прогресс по сферам' },
   'prof.social': { az: 'Sosial media hesabları', en: 'Social media accounts', ru: 'Аккаунты в соцсетях' },
@@ -366,7 +368,7 @@ const D = {
   'set.pass_btn': { az: 'Şifrəni yenilə', en: 'Update password', ru: 'Обновить пароль' },
   'set.export': { az: 'Data ixracı', en: 'Data export', ru: 'Экспорт данных' },
   'set.export_sub': { az: 'Bütün fəaliyyət tarixçən: profil, postlar, rəylər, mesajlar, bəyənmələr, sessiyalar. JSON və ya CSV.', en: 'Your complete history: profile, posts, comments, messages, likes, sessions. JSON or CSV.', ru: 'Вся ваша история: профиль, посты, комментарии, сообщения, лайки, сессии. JSON или CSV.' },
-  'set.export_btn': { az: '⬇ Datamı endir (JSON)', en: '⬇ Download my data (JSON)', ru: '⬇ Скачать мои данные (JSON)' },
+  'set.export_btn': { az: 'Datamı endir (JSON)', en: 'Download my data (JSON)', ru: 'Скачать мои данные (JSON)' },
   /* ---------- profil tamlığı (TASK-8 / Bənd 6) ---------- */
   'cmp.title': { az: 'Profilini tamamla', en: 'Complete your profile', ru: 'Заполните профиль' },
   'cmp.hint': { az: 'Bütün sahələri doldur və {xp} XP bonus qazan.', en: 'Fill in every field to earn a {xp} XP bonus.', ru: 'Заполните все поля и получите бонус {xp} XP.' },
@@ -421,7 +423,7 @@ const D = {
   /* ---------- FAZA 4: axtarış / ixrac (TASK-8 / Bənd 10, 11) ---------- */
   'pal.posts': { az: 'Paylaşımlar', en: 'Posts', ru: 'Посты' },
   'pal.comments': { az: 'Rəylər', en: 'Comments', ru: 'Комментарии' },
-  'set.export_csv': { az: '⬇ CSV', en: '⬇ CSV', ru: '⬇ CSV' },
+  'set.export_csv': { az: 'CSV', en: 'CSV', ru: 'CSV' },
   'set.export_started': { az: 'İxrac başladı — fayl hazırlanır…', en: 'Export started — preparing your file…', ru: 'Экспорт начался — файл готовится…' },
 
   /* ---------- 2FA / TOTP (TASK-8 / Bənd 2) ---------- */
@@ -717,7 +719,7 @@ const D = {
   'prof.pass_confirm': { az: 'Təsdiq üçün şifrə', en: 'Password for confirmation', ru: 'Пароль для подтверждения' },
   'prof.warn_set': { az: 'Hesab əməliyyatları (şifrə, silmə, data ixracı) — Parametrlər səhifəsində və Təhlükəsizlik tabındadır.', en: 'Account actions (password, delete, export) — in Settings and Security tab.', ru: 'Действия с аккаунтом (пароль, удаление, экспорт) — на странице Настройки и вкладке Безопасность.' },
   'prof.upd_ok': { az: 'Profil yeniləndi', en: 'Profile updated', ru: 'Профиль обновлен' },
-  'prof.edit_title': { az: '✎ Profili redaktə et', en: '✎ Edit profile', ru: '✎ Редактировать профиль' },
+  'prof.edit_title': { az: 'Profili redaktə et', en: 'Edit profile', ru: 'Редактировать профиль' },
   'usr.view': { az: 'Profilə bax', en: 'View profile', ru: 'Посмотреть профиль' },
   'usr.msg': { az: 'Mesaj yaz', en: 'Send message', ru: 'Написать сообщение' },
   'usr.act_map': { az: 'Aktivlik xəritəsi', en: 'Activity map', ru: 'Карта активности' },
@@ -860,6 +862,8 @@ const D = {
   'prof.stat_shares': { az: 'Alınan paylaşım', en: 'Shares received', ru: 'Получено репостов' },
 
   /* ---------- Badges ---------- */
+  'badge.earned': { az: 'qazanılıb', en: 'earned', ru: 'получен' },
+  'badge.locked': { az: 'hələ qazanılmayıb', en: 'not earned yet', ru: 'ещё не получен' },
   'badge.first_post': { az: 'İlk paylaşım', en: 'First post', ru: 'Первый пост' },
   'badge.streak_7': { az: '7 gün seriya', en: '7 day streak', ru: 'Серия 7 дней' },
   'badge.streak_30': { az: '30 gün seriya', en: '30 day streak', ru: 'Серия 30 дней' },
@@ -919,17 +923,44 @@ export function fmtNum(n){
 }
 
 // Nisbi vaxt: "5 dəq əvvəl" / "5 min ago" / "5 мин назад".
+/* Azərbaycanca nisbi vaxt adları.
+ *
+ * ⚠ NİYƏ ƏLLƏ: Chrome `Intl.RelativeTimeFormat.supportedLocalesOf(['az'])`
+ *   üçün `az` QAYTARIR və `resolvedOptions().locale === 'az'` olur, LAKİN
+ *   CLDR-in `az` nisbi-vaxt datası yoxdur → çıxış xam fallback olur:
+ *   `format(-5,'hour')` → "-5 h". İstifadəçi feed-də "-5 h", sessiyalarda
+ *   "son fəallıq: -27 s" görürdü. Rus/ingilis dilləri düzgün işləyir, ona
+ *   görə yalnız `az` üçün öz cədvəlimiz var. */
+const REL_AZ = {
+  year: 'il', month: 'ay', week: 'həftə', day: 'gün',
+  hour: 'saat', minute: 'dəqiqə', second: 'saniyə',
+};
+
 export function fmtRelTime(ts){
   const then = ts instanceof Date ? ts.getTime() : Number(ts);
   if(!isFinite(then)) return '';
   const diff = then - Date.now();
-  const rtf = new Intl.RelativeTimeFormat(localeTag(), { numeric: 'auto' });
   const abs = Math.abs(diff);
   /** @type {Array<[Intl.RelativeTimeFormatUnit, number]>} */
   const units = [
     ['year', 31536e6], ['month', 2592e6], ['week', 6048e5],
     ['day', 864e5], ['hour', 36e5], ['minute', 6e4], ['second', 1e3],
   ];
+
+  if(current === 'az'){
+    // 45 saniyədən yaxın — həm keçmiş, həm gələcək "indicə"dir. Bu, saat
+    // fərqindən yaranan kiçik MƏNFİ fərqləri də udur.
+    if(abs < 45e3) return 'indicə';
+    for(const [unit, ms] of units){
+      if(abs >= ms){
+        const n = Math.round(abs / ms);
+        return n + ' ' + REL_AZ[unit] + (diff < 0 ? ' əvvəl' : ' sonra');
+      }
+    }
+    return 'indicə';
+  }
+
+  const rtf = new Intl.RelativeTimeFormat(localeTag(), { numeric: 'auto' });
   for(const [unit, ms] of units){
     if(abs >= ms || unit === 'second'){
       return rtf.format(Math.round(diff / ms), unit);

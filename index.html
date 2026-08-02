@@ -841,7 +841,7 @@
           <div class="follow-counts" id="profFollowCounts"></div>
           <div class="streak-track" id="profStreakTrack"></div>
         </div>
-        <button class="btn-small" id="profEditBtn" data-i18n="prof.edit"></button>
+        <button class="btn-small" id="profEditBtn"><span class="ic" data-icon="edit" data-icon-size="14"></span><span data-i18n="prof.edit"></span></button>
       </div>
       <!-- TASK-8 / Bənd 6 — profil tamlığı + XP nudge (100%-də gizlənir) -->
       <div id="profCompleteness" class="cmp-host"></div>
@@ -850,7 +850,7 @@
         <div class="stat-card"><div class="num" id="profXPNum">0</div><div class="lbl"><span class="ic" data-icon="zap" data-icon-size="14"></span><span data-i18n="home.lbl_xp"></span> · <span id="profLevel">Lv 1</span></div></div>
         <div class="stat-card"><div class="num" id="profTaskNum">0</div><div class="lbl" data-i18n="prof.tasks_done"></div></div>
       </div>
-      <div class="section-title" data-i18n="prof.badges"></div>
+      <div class="section-title"><span class="ic" data-icon="award" data-icon-size="16"></span><span data-i18n="prof.badges"></span></div>
       <div class="badge-row" id="badgeRow"></div>
       <div class="section-title" data-i18n="prof.heatmap"></div>
       <div class="heatmap" id="activityHeatmap"></div>
@@ -871,15 +871,18 @@
     <div class="page" id="page-settings">
       <h1 class="page-title" data-i18n="nav.settings"></h1>
       <p class="page-sub" data-i18n="set.sub"></p>
+      <!-- Bloklar responsive grid-dədir: 1440px-də tək 520px sütun
+           ~900px boşluq buraxırdı (AUDIT-UI). -->
+      <div class="settings-grid">
       <div class="settings-block">
-        <h3 data-i18n="set.appr"></h3>
+        <h3><span class="ic" data-icon="sun" data-icon-size="16"></span><span data-i18n="set.appr"></span></h3>
         <div class="theme-toggle-row">
           <span class="u-font-size-86rem u-color-muted" data-i18n="set.theme"></span>
-          <button class="btn-mini" id="themeToggleBtn" data-i18n="set.theme.dark"></button>
+          <button class="btn-mini" id="themeToggleBtn"><span class="ic"></span><span class="lbl"></span></button>
         </div>
       </div>
       <div class="settings-block">
-        <h3 data-i18n="set.pass_ch"></h3>
+        <h3><span class="ic" data-icon="lock" data-icon-size="16"></span><span data-i18n="set.pass_ch"></span></h3>
         <div class="field"><label data-i18n="set.pass_cur"></label><input id="curPassInput" type="password"></div>
         <div class="field"><label data-i18n="set.pass_new"></label><input id="newPassInput" type="password"></div>
         <button class="btn-small" id="changePassBtn" data-i18n="set.pass_btn"></button>
@@ -887,35 +890,36 @@
       </div>
       <!-- TASK-8 / Bənd 2 — iki mərhələli təsdiq (TOTP) -->
       <div class="settings-block">
-        <h3 data-i18n="mfa.title"></h3>
+        <h3><span class="ic" data-icon="shield" data-icon-size="16"></span><span data-i18n="mfa.title"></span></h3>
         <p class="u-font-size-8rem u-color-muted u-margin-bottom-12px" data-i18n="mfa.sub"></p>
         <div id="mfaPanel" class="mfa-panel" aria-live="polite"></div>
       </div>
       <!-- TASK-8 / Bənd 5 — bağlı OAuth hesabları -->
       <div class="settings-block">
-        <h3 data-i18n="oauth.title"></h3>
+        <h3><span class="ic" data-icon="link" data-icon-size="16"></span><span data-i18n="oauth.title"></span></h3>
         <p class="u-font-size-8rem u-color-muted u-margin-bottom-12px" data-i18n="oauth.sub"></p>
         <div id="oauthAccounts" class="oauth-accounts" aria-live="polite"></div>
       </div>
       <!-- TASK-8 / Bənd 3 — aktiv sessiyalar və cihazlar -->
       <div class="settings-block">
-        <h3 data-i18n="set.sessions"></h3>
+        <h3><span class="ic" data-icon="monitor" data-icon-size="16"></span><span data-i18n="set.sessions"></span></h3>
         <p class="u-font-size-8rem u-color-muted u-margin-bottom-12px" data-i18n="set.sessions_sub"></p>
         <div id="sessionList" class="session-list" aria-live="polite"></div>
         <button class="btn-small" id="revokeOthersBtn" data-i18n="set.sess_revoke_all"></button>
       </div>
       <div class="settings-block">
-        <h3 data-i18n="set.export"></h3>
+        <h3><span class="ic" data-icon="chart" data-icon-size="16"></span><span data-i18n="set.export"></span></h3>
         <p class="u-font-size-8rem u-color-muted u-margin-bottom-12px" data-i18n="set.export_sub"></p>
         <div class="u-display-flex u-gap-8px u-flex-wrap-wrap">
-          <button class="btn-small" id="exportDataBtn" data-i18n="set.export_btn"></button>
-          <button class="btn-mini" id="exportCsvBtn" data-i18n="set.export_csv"></button>
+          <button class="btn-small" id="exportDataBtn"><span class="ic" data-icon="download" data-icon-size="14"></span><span data-i18n="set.export_btn"></span></button>
+          <button class="btn-mini" id="exportCsvBtn"><span class="ic" data-icon="download" data-icon-size="13"></span><span data-i18n="set.export_csv"></span></button>
         </div>
       </div>
       <div class="settings-block danger-zone">
-        <h3 data-i18n="set.danger"></h3>
+        <h3><span class="ic" data-icon="trash" data-icon-size="16"></span><span data-i18n="set.danger"></span></h3>
         <p class="u-font-size-8rem u-color-muted u-margin-bottom-12px" data-i18n="set.danger_sub"></p>
         <button class="btn-danger" id="deleteAccountBtn" data-i18n="set.danger_btn"></button>
+      </div>
       </div>
     </div>
 

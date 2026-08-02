@@ -14,6 +14,7 @@ import { toast, showModal, closeModal, emptyState, setTheme, getTheme, THEMES } 
 import { t, setLang, getLang, LANGS } from './i18n.js';
 import { getPosts, postCard } from './feed.js';
 import { openFollowList } from './users.js';
+import { paintIcons } from './icon-set.js';
 import { tax, SKILL_LEVELS } from './taxonomy.js';
 import { skillLevelPicker, ageFromBirthDate } from './wizard.js';
 import { renderCompleteness } from './completeness.js';
@@ -41,7 +42,8 @@ function renderCard(){
   
   if (me.showProjectOnProfile && me.activeProjectId) {
     bioContainer.appendChild(el('div', { style: 'margin-top:10px; font-size:0.9rem; color:var(--primary); font-weight:500;' }, 
-      '🚀 Hazırda aktiv layihə üzərində işləyir'
+      el('span', { class: 'ic', 'data-icon': 'zap', 'data-icon-size': '14' }),
+      ' ' + t('prof.active_project'),
     ));
   }
 
@@ -67,17 +69,24 @@ function renderCard(){
     chips.append(el('span', { class: 'skill-chip-view' }, label,
       levels[label] ? el('span', { class: 'lvl' }, '· ' + levels[label]) : null));
   });
-  (me.lookingFor || []).forEach(x => chips.append(el('span', { class: 'tag on' }, '⌕ ' + x)));
+  (me.lookingFor || []).forEach(x => chips.append(el('span', { class: 'tag on' },
+    el('span', { class: 'ic', 'data-icon': 'userSearch', 'data-icon-size': '12' }), x)));
 
   document.getElementById('profStreakNum').textContent = me.streak || 0;
   document.getElementById('profXPNum').textContent = me.xp || 0;
   document.getElementById('profLevel').textContent = 'Lv ' + levelFromXP(me.xp);
   document.getElementById('profTaskNum').textContent = me.tasksCompleted || 0;
 
+  // Yeddi nöqtə = son 7 gün seriyası. Əvvəl NƏ olduğu heç yerdə yazılmırdı —
+  // izahsız rəngli kvadratlar sırası kimi görünürdü. İndi başlıq + əlçatan ad.
   const track = document.getElementById('profStreakTrack');
   clear(track);
+  const days = Math.min(me.streak || 0, 7);
+  track.setAttribute('role', 'img');
+  track.setAttribute('aria-label', t('prof.streak_track').replace('{n}', String(days)));
+  track.title = t('prof.streak_track').replace('{n}', String(days));
   for(let i = 0; i < 7; i++){
-    track.append(el('div', { class: 'd' + (i < Math.min(me.streak || 0, 7) ? ' on' : '') }));
+    track.append(el('div', { class: 'd' + (i < days ? ' on' : '') }));
   }
 
   const social = document.getElementById('profSocial');
@@ -92,18 +101,32 @@ function renderCard(){
 
 function renderBadges(){
   const me = state.me;
+  // ⚠ Kimlik `state.authUser.uid`-dən götürülür, `state.me.uid`-dən YOX.
+  //   `state.me` store.js-də `users` map-i ilə birləşdirilir və oradakı sətir
+  //   `uid` daşımaya bilər → filtr 0 qaytarırdı və "İlk paylaşım" nişanı
+  //   60 postu olan hesabda belə KİLİDLİ qalırdı. `renderMyPosts` onsuz da
+  //   `authUser.uid` işlədir; iki funksiya eyni mənbədən oxumalıdır.
+  const myUid = state.authUser.uid;
   const stats = {
-    posts: getPosts().filter(p => p.authorUid === me.uid).length,
+    posts: getPosts().filter(p => p.authorUid === myUid).length,
     streak: me.streak || 0, xp: me.xp || 0, tasksCompleted: me.tasksCompleted || 0,
   };
   const row = document.getElementById('badgeRow');
   clear(row);
   BADGES.forEach(b => {
-    row.append(el('div', { class: 'badge-chip' + (b.test(stats) ? '' : ' locked'), title: t(b.nameKey) },
-      el('span', { class: 'b-ic' }, b.ic),
+    const earned = b.test(stats);
+    row.append(el('div', {
+      class: 'badge-chip' + (earned ? ' earned' : ' locked'),
+      title: t(b.nameKey),
+      // Rəng/solğunluq TƏK siqnal olmasın (WCAG color-not-only): vəziyyət
+      // ekran oxuyucusuna da bildirilir.
+      'aria-label': t(b.nameKey) + ' — ' + t(earned ? 'badge.earned' : 'badge.locked'),
+    },
+      el('span', { class: 'b-ic ic', 'data-icon': b.ic, 'data-icon-size': '20' }),
       el('span', { class: 'b-name' }, t(b.nameKey)),
     ));
   });
+  paintIcons(row);
 }
 
 // Heatmap datası ARTIQ normalized `user_activity` cədvəlindən gəlir (Bənd 9),

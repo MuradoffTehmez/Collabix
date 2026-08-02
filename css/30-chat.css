@@ -266,13 +266,28 @@
   min-width: 86px;
 }
 
-.badge-chip.locked {
-  opacity: .35;
-  filter: grayscale(1);
+/* AUDIT-UI: əvvəl fərq YALNIZ `opacity:.35 + grayscale` idi — rəngli emoji-də
+   grayscale demək olar heç nə etmirdi və 0.35 kontrastı 4.5:1-in çox altına
+   salırdı (kilidli nişanın adı oxunmurdu). İndi ikon `currentColor`-dur, ona
+   görə vəziyyəti RƏNG + FON + SƏRHƏD ilə göstəririk, şəffaflıqla yox. */
+.badge-chip.earned {
+  border-color: color-mix(in srgb, var(--coral) 45%, var(--border));
+  background: color-mix(in srgb, var(--coral) 8%, var(--surface));
 }
 
+.badge-chip.earned .b-ic { color: var(--coral); }
+.badge-chip.earned .b-name { color: var(--text); }
+
+.badge-chip.locked {
+  /* opacity YOX: mətn oxunaqlı qalmalıdır. Sönük ton kifayətdir. */
+  border-style: dashed;
+}
+
+.badge-chip.locked .b-ic { color: var(--muted); opacity: .6; }
+
 .badge-chip .b-ic {
-  font-size: 1.4rem;
+  width: 20px;
+  height: 20px;
 }
 
 .badge-chip .b-name {

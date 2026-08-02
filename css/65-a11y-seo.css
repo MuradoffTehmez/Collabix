@@ -156,7 +156,15 @@ a:focus-visible {
   gap: 6px;
 }
 .social-share-panel.hidden { display: none; }
-.share-btn {
+
+/* ⚠ SİNİF TOQQUŞMASI (AUDIT-UI): bu qayda əvvəl sadəcə `.share-btn` idi və
+ *   feed kartındakı repost düyməsinə də sızırdı (`js/feed.js` ona
+ *   `act-btn share-btn` verir). Hər ikisi (0,1,0) spesifiklikdə idi, bu fayl
+ *   isə `20-feed.css`-dən SONRA yüklənir → qalib bu olurdu.
+ *   Nəticə: repost düyməsi 40×40 DAİRƏ + `--surface` fon alırdı, qonşu
+ *   bəyən/şərh düymələri isə şəffaf 34px pill idi — kartda tək "yamaq".
+ *   Qayda indi öz konteynerinə bağlıdır. */
+.social-share-panel .share-btn {
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -172,7 +180,7 @@ a:focus-visible {
   transition: all .2s;
   box-shadow: 0 2px 10px rgba(0,0,0,.15);
 }
-.share-btn:hover {
+.social-share-panel .share-btn:hover {
   background: var(--coral);
   color: var(--on-accent);
   border-color: var(--coral);
@@ -188,7 +196,7 @@ a:focus-visible {
     transform: none;
     flex-direction: column;
   }
-  .share-btn { width: 34px; height: 34px; font-size: .8rem; }
+  .social-share-panel .share-btn { width: 34px; height: 34px; font-size: .8rem; }
 }
 @media (max-width: 480px) {
   .social-share-panel { display: none !important; }

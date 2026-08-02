@@ -78,26 +78,52 @@
   flex-shrink: 0;
 }
 
+/* AUDIT-UI: bloklar `max-width:520px` ilə TƏK sütunda yığılırdı — 1440px
+   ekranda sağda ~900px ölü sahə qalırdı. İndi responsive grid.
+   `auto-fit` + `minmax`: dar ekranda 1, orta ekranda 2, geniş ekranda 3 sütun —
+   media query olmadan. `align-items:start` fərqli hündürlüklü kartların
+   dartılmasının qarşısını alır. */
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--sp-4);
+  align-items: start;
+}
+
 .settings-block {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 20px;
-  margin-bottom: 16px;
-  max-width: 520px;
+  /* margin/max-width grid-ə köçdü; blok tək işlədilsə deyə sıfırlanır. */
+  margin-bottom: 0;
 }
 
 .settings-block h3 {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
   font-family: var(--display);
   font-size: 1rem;
   margin-bottom: 12px;
 }
 
-.settings-block.danger-zone {
-  border-color: var(--danger);
+.settings-block h3 .ic {
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
 }
 
-.settings-block.danger-zone h3 {
+/* Təhlükəli zona bütün sütunları tutur və axırda gəlir — silinmə əməliyyatı
+   adi parametrlərlə YAN-YANA durmamalıdır (HIG: destructive-nav-separation). */
+.settings-block.danger-zone {
+  grid-column: 1 / -1;
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 5%, var(--surface));
+}
+
+.settings-block.danger-zone h3,
+.settings-block.danger-zone h3 .ic {
   color: var(--danger);
 }
 

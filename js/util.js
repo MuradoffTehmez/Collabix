@@ -290,14 +290,18 @@ export function levelFromXP(xp){
   return 1;
 }
 
+// `ic` — ICONS reyestrindəki (js/icon-set.js) ad. Əvvəl xam emoji idi
+// (✎ 🔥 🌋 ☑ 🏗 ⚡ 💎): yeddi nişan yeddi fərqli vizual ailədən gəlirdi və
+// "kilidli" (solğun) vəziyyət rəngli emoji-yə işləmirdi — kilidli nişan
+// açıq nişandan seçilmirdi.
 export const BADGES = [
-  { id:'first-post',  ic:'✎',  nameKey:'badge.first_post',  test: s => s.posts >= 1 },
-  { id:'streak-7',    ic:'🔥', nameKey:'badge.streak_7',   test: s => s.streak >= 7 },
-  { id:'streak-30',   ic:'🌋', nameKey:'badge.streak_30',  test: s => s.streak >= 30 },
-  { id:'task-1',      ic:'☑',  nameKey:'badge.task_1',   test: s => s.tasksCompleted >= 1 },
-  { id:'task-10',     ic:'🏗', nameKey:'badge.task_10',    test: s => s.tasksCompleted >= 10 },
-  { id:'xp-500',      ic:'⚡', nameKey:'badge.xp_500',         test: s => s.xp >= 500 },
-  { id:'xp-2000',     ic:'💎', nameKey:'badge.xp_2000',        test: s => s.xp >= 2000 },
+  { id:'first-post',  ic:'type',     nameKey:'badge.first_post',  test: s => s.posts >= 1 },
+  { id:'streak-7',    ic:'flame',    nameKey:'badge.streak_7',    test: s => s.streak >= 7 },
+  { id:'streak-30',   ic:'trophy',   nameKey:'badge.streak_30',   test: s => s.streak >= 30 },
+  { id:'task-1',      ic:'tasks',    nameKey:'badge.task_1',      test: s => s.tasksCompleted >= 1 },
+  { id:'task-10',     ic:'award',    nameKey:'badge.task_10',     test: s => s.tasksCompleted >= 10 },
+  { id:'xp-500',      ic:'zap',      nameKey:'badge.xp_500',      test: s => s.xp >= 500 },
+  { id:'xp-2000',     ic:'shield',   nameKey:'badge.xp_2000',     test: s => s.xp >= 2000 },
 ];
 
 export function authErrMessage(e, t_func){

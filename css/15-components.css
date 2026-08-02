@@ -126,6 +126,18 @@
   max-width: none;
 }
 
+/* İkon + mətn daşıyan düymələr: ikon mətnin optik mərkəzinə hizalanır.
+   Əvvəl ikon mətnin bir hissəsi idi ('⬇ CSV'), ona görə hizalama "təsadüfən"
+   alınırdı; ayrıca element olduqda açıq qayda lazımdır. */
+.btn-mini:has(> .ic),
+.btn-small:has(> .ic),
+.img-pick-btn:has(> .ic),
+.md-tb-btn:has(> .ic) {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
 /* Yan panel altbilgisi: "🔥 1 · ⚡55" tək mətn idi → ikon + rəqəm cütləri. */
 .user-chip .streak {
   display: flex;
@@ -534,4 +546,11 @@
   /* Modal düymələri tam enli — kiçik ekranda yan-yana sıxışırdılar. */
   .c-modal__foot { flex-direction: column-reverse; }
   .c-modal__foot .c-btn { width: 100%; }
+}
+
+/* Bölmə başlığındakı ikon: mətn ölçüsündən asılı olmayan sabit qutu. */
+.section-title .ic {
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
 }

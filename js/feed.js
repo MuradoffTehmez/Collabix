@@ -296,7 +296,10 @@ export function postCard(p, { full = false } = {}){
       lvlBadge
     ),
     el('div', { class: 'feed-head-meta' },
-      el('span', { class: 'when' }, fmtTime(p.createdAt)),
+      // Nisbi vaxt ("2 saat əvvəl") mütləq damğadan ("08-02 16:08") daha tez
+      // oxunur — feed-də təzəliyi bir baxışda bildirir. Dəqiq tarix `title`-da
+      // qalır, yəni məlumat İTMİR (HIG: truncation-strategy).
+      el('span', { class: 'when', title: fmtTime(p.createdAt) }, fmtRelTime(p.createdAt)),
       p.editedAt ? el('span', { class: 'dot-sep' }, '•') : null,
       p.editedAt ? el('span', { class: 'edited-mark' }, t('feed.edited')) : null,
       p.postType === 'quote' ? el('span', { class: 'dot-sep' }, '•') : null,
