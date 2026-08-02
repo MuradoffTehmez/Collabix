@@ -383,6 +383,105 @@ export async function markThreadRead(c: Ctx, pairId: string) {
   return json({ ok: true });
 }
 
+/* ================= SABİTLƏNMİŞ (PINNED) MESAJLAR — miqrasiya 0046 =================
+ *
+ * 🔴 İCAZƏ MODELİ QƏSDƏN ASİMMETRİKDİR — otaq ilə DM eyni şey deyil:
+ *
+ *   OTAQ  → yalnız `c.isAdmin`. Sabitlənmiş mesaj BÜTÜN otağa göstərilir, yəni
+ *           bu, moderasiya əməliyyatıdır. Hər müəllif öz mesajını sabitləyə
+ *           bilsəydi, panel spam kanalına çevrilərdi.
+ *           ⚠ Komanda otaqlarında sahib/admin-in sabitləməsi HƏLƏ YOXDUR:
+ *             bunun üçün komanda RBAC-ı (`hasPermission`) bu modula gətirmək
+ *             lazımdır, o isə AYRI rol sistemidir (platforma rolları ilə
+ *             qarışdırmaq eskalasiya riski yaradır). Ayrıca iş kimi qeyd edilib.
+ *
+ *   DM    → hər iki iştirakçı. İki nəfərlik şəxsi söhbətdir; "moderasiya"
+ *           anlayışı yoxdur, tərəflər öz söhbətlərinin sahibidir.
+ *
+ * ⚠ HƏDD: `PIN_MAX`. Sabitlənmiş mesaj panelin YUXARISINDA durur — limitsiz
+ *   olsaydı panel ikinci bir mesaj axınına çevrilər və mənasını itirərdi. */
+const PIN_MAX = 20;
+
+/** Sabitlənmişlərin sayı həddi keçibsə xəta, yoxsa `null`. */
+async function pinLimitGuard(c: Ctx, table: 'room_messages' | 'dm_messages', col: 'room_id' | 'pair_id', scopeId: string) {
+  const row = await D(c).prepare(
+    `SELECT COUNT(*) AS n FROM ${table} WHERE ${col} = ? AND pinned_at IS NOT NULL`,
+  ).bind(scopeId).first<any>();
+  return (row?.n ?? 0) >= PIN_MAX
+    ? err(`Ən çox ${PIN_MAX} mesaj sabitlənə bilər — əvvəlcə birini çıxarın.`, 409, 'pin_limit')
+    : null;
+}
+
+export async function listRoomPins(c: Ctx, roomId: string) {
+  const denied = await guardTeamRoom(c, roomId);
+  if (denied) return denied;
+  const rows = await D(c).prepare(
+    'SELECT * FROM room_messages WHERE room_id = ? AND pinned_at IS NOT NULL ORDER BY pinned_at DESC LIMIT ?',
+  ).bind(roomId, PIN_MAX).all<any>();
+  return json({ pins: rows.results.map(r => mapMsg(r)) });
+}
+
+export async function pinRoomMessage(c: Ctx, roomId: string, mid: string) {
+  const denied = await guardTeamRoom(c, roomId);
+  if (denied) return denied;
+  if (!c.isAdmin) return err('Otaqda mesaj sabitləmək üçün admin olmalısınız.', 403, 'forbidden');
+  // `room_id` MESAJIN ÖZÜNDƏN yoxlanılır: marşrut parametri client-dəndir,
+  // başqa otağın mesajını bu otağa "sabitləmək" mümkün olmamalıdır.
+  const row = await D(c).prepare('SELECT room_id, pinned_at FROM room_messages WHERE id = ?').bind(mid).first<any>();
+  if (!row || row.room_id !== roomId) return err('Tapılmadı.', 404);
+  if (!row.pinned_at) {
+    const over = await pinLimitGuard(c, 'room_messages', 'room_id', roomId);
+    if (over) return over;
+  }
+  await D(c).prepare('UPDATE room_messages SET pinned_at = ?, pinned_by = ? WHERE id = ?')
+    .bind(now(), c.user!.id, mid).run();
+  await roomBroadcast(c, roomId, { t: 'refresh' });
+  return json({ ok: true });
+}
+
+export async function unpinRoomMessage(c: Ctx, roomId: string, mid: string) {
+  const denied = await guardTeamRoom(c, roomId);
+  if (denied) return denied;
+  if (!c.isAdmin) return err('Otaqda mesaj sabitləmək üçün admin olmalısınız.', 403, 'forbidden');
+  await D(c).prepare('UPDATE room_messages SET pinned_at = NULL, pinned_by = NULL WHERE id = ? AND room_id = ?')
+    .bind(mid, roomId).run();
+  await roomBroadcast(c, roomId, { t: 'refresh' });
+  return json({ ok: true });
+}
+
+/** DM-də iştirakçılıq yoxlaması — `dmMessages` ilə eyni qayda. */
+const dmMember = (c: Ctx, pairId: string) => pairId.split('_').includes(c.user!.id);
+
+export async function listDMPins(c: Ctx, pairId: string) {
+  if (!dmMember(c, pairId)) return err('İcazə yoxdur.', 403, 'forbidden');
+  const rows = await D(c).prepare(
+    'SELECT * FROM dm_messages WHERE pair_id = ? AND pinned_at IS NOT NULL ORDER BY pinned_at DESC LIMIT ?',
+  ).bind(pairId, PIN_MAX).all<any>();
+  return json({ pins: rows.results.map(r => mapMsg(r, true)) });
+}
+
+export async function pinDMMessage(c: Ctx, pairId: string, mid: string) {
+  if (!dmMember(c, pairId)) return err('İcazə yoxdur.', 403, 'forbidden');
+  const row = await D(c).prepare('SELECT pair_id, pinned_at FROM dm_messages WHERE id = ?').bind(mid).first<any>();
+  if (!row || row.pair_id !== pairId) return err('Tapılmadı.', 404);
+  if (!row.pinned_at) {
+    const over = await pinLimitGuard(c, 'dm_messages', 'pair_id', pairId);
+    if (over) return over;
+  }
+  await D(c).prepare('UPDATE dm_messages SET pinned_at = ?, pinned_by = ? WHERE id = ?')
+    .bind(now(), c.user!.id, mid).run();
+  await dmPush(c, pairId);
+  return json({ ok: true });
+}
+
+export async function unpinDMMessage(c: Ctx, pairId: string, mid: string) {
+  if (!dmMember(c, pairId)) return err('İcazə yoxdur.', 403, 'forbidden');
+  await D(c).prepare('UPDATE dm_messages SET pinned_at = NULL, pinned_by = NULL WHERE id = ? AND pair_id = ?')
+    .bind(mid, pairId).run();
+  await dmPush(c, pairId);
+  return json({ ok: true });
+}
+
 /* ================= PRESENCE =================
  *
  * 🔴 AUDIT-TASK-10 / Faza 3.2 (audit struktur borcu #5) — "İKİ PRESENCE SİSTEMİ".

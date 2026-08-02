@@ -400,6 +400,17 @@ export async function deleteRoomMessage(roomId, msgId){
   emit('refresh-msgs-' + roomId);
 }
 
+/* ---- Sabitlənmiş mesajlar (miqrasiya 0046) ----
+ * ⚠ Otaqda sabitləmə YALNIZ admin üçündür (server məcbur edir) — UI düyməni
+ *   də yalnız adminə göstərir, amma qərar serverdədir. */
+export function fetchRoomPins(roomId){
+  return api(`/rooms/${roomId}/pins`);
+}
+export async function setRoomPin(roomId, msgId, pinned){
+  await api(`/rooms/${roomId}/messages/${msgId}/pin`, { method: pinned ? 'PUT' : 'DELETE' });
+  emit('refresh-msgs-' + roomId);
+}
+
 /* ================= DM ================= */
 export function pairIdFor(a, b){ return [a, b].sort().join('_'); }
 
@@ -441,6 +452,15 @@ export async function deleteDM(pairId, msgId){
 }
 export async function markThreadRead(pairId){
   await api(`/dms/${pairId}/read`, { method: 'POST' });
+}
+
+/* DM-də hər iki iştirakçı sabitləyə bilər — şəxsi söhbətdə "moderasiya" yoxdur. */
+export function fetchDMPins(pairId){
+  return api(`/dms/${pairId}/pins`);
+}
+export async function setDMPin(pairId, msgId, pinned){
+  await api(`/dms/${pairId}/messages/${msgId}/pin`, { method: pinned ? 'PUT' : 'DELETE' });
+  emit('refresh-dm-' + pairId);
 }
 
 /* ================= follows ================= */

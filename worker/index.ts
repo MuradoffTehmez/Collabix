@@ -185,6 +185,10 @@ const ROUTES: Route[] = [
   { method: 'POST', pattern: /^\/api\/rooms\/([\w-]+)\/messages$/, handler: R.sendRoomMessage, auth: true, rl: 'write' },
   { method: 'PATCH', pattern: /^\/api\/rooms\/([\w-]+)\/messages\/([\w-]+)$/, handler: R.editRoomMessage, auth: true, rl: 'write' },
   { method: 'DELETE', pattern: /^\/api\/rooms\/([\w-]+)\/messages\/([\w-]+)$/, handler: R.deleteRoomMessage, auth: true, rl: 'write' },
+  // Sabitlənmiş mesajlar (0046). Şərh pin-i ilə eyni PUT/DELETE konvensiyası.
+  { method: 'GET', pattern: /^\/api\/rooms\/([\w-]+)\/pins$/, handler: R.listRoomPins, auth: true, rl: 'read' },
+  { method: 'PUT', pattern: /^\/api\/rooms\/([\w-]+)\/messages\/([\w-]+)\/pin$/, handler: R.pinRoomMessage, auth: true, rl: 'write' },
+  { method: 'DELETE', pattern: /^\/api\/rooms\/([\w-]+)\/messages\/([\w-]+)\/pin$/, handler: R.unpinRoomMessage, auth: true, rl: 'write' },
 
   // dms
   { method: 'GET', pattern: /^\/api\/dms$/, handler: R.listThreads, auth: true, rl: 'read' },
@@ -193,6 +197,9 @@ const ROUTES: Route[] = [
   { method: 'PATCH', pattern: /^\/api\/dms\/([\w_-]+)\/messages\/([\w-]+)$/, handler: R.editDM, auth: true, rl: 'write' },
   { method: 'DELETE', pattern: /^\/api\/dms\/([\w_-]+)\/messages\/([\w-]+)$/, handler: R.deleteDMMsg, auth: true, rl: 'write' },
   { method: 'POST', pattern: /^\/api\/dms\/([\w_-]+)\/read$/, handler: R.markThreadRead, auth: true, rl: 'write' },
+  { method: 'GET', pattern: /^\/api\/dms\/([\w_-]+)\/pins$/, handler: R.listDMPins, auth: true, rl: 'read' },
+  { method: 'PUT', pattern: /^\/api\/dms\/([\w_-]+)\/messages\/([\w-]+)\/pin$/, handler: R.pinDMMessage, auth: true, rl: 'write' },
+  { method: 'DELETE', pattern: /^\/api\/dms\/([\w_-]+)\/messages\/([\w-]+)\/pin$/, handler: R.unpinDMMessage, auth: true, rl: 'write' },
 
   // presence + notifications
   { method: 'POST', pattern: /^\/api\/presence$/, handler: R.heartbeat, auth: true, rl: 'presence' },

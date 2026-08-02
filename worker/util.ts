@@ -401,6 +401,9 @@ export function mapMsg(r: any, dm = false): any {
     fileUrl: fileUrl(r.file_key), fileName: r.file_name, fileSize: r.file_size,
     mimeType: r.mime_type, language: r.language,
     createdAt: r.created_at, editedAt: r.edited_at,
+    // Sabitlənmiş mesajlar (0046). Arxivdən oxunan köhnə qeydlərdə sütun
+    // olmaya bilər → `?? null` ilə normallaşdırılır ki, UI `undefined` görməsin.
+    pinnedAt: r.pinned_at ?? null, pinnedBy: r.pinned_by ?? null,
   };
   if (dm) { base.fromUid = r.from_id; base.toUid = r.to_id; }
   else { base.authorUid = r.author_id; base.authorName = r.author_name; }

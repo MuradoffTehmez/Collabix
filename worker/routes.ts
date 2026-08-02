@@ -117,6 +117,9 @@ export {
   listRooms, createRoom, deleteRoom, roomMessages, sendRoomMessage,
   editRoomMessage, deleteRoomMessage, listThreads, dmMessages, sendDM,
   editDM, deleteDMMsg, markThreadRead, heartbeat, presenceMap,
+  // Sabitlənmiş mesajlar (0046)
+  listRoomPins, pinRoomMessage, unpinRoomMessage,
+  listDMPins, pinDMMessage, unpinDMMessage,
 } from './routes/room';
 export {
   listTasks, createTask, reviewTask, deleteTask, submitSolution,
