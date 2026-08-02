@@ -299,18 +299,19 @@ boşluğun **rəsmi siyahısı**. Hər sətir mənbədə yoxlandı.
 | 1 | Rol enum (10) | Sütun var, **avtorizasiyada oxunmur** | ✅ **10/10** | `0031:238-247` `OWNER…GUEST` + `worker/rbac.ts` `roleOf`/`can`/`requirePermission` |
 | 2 | Permission enum (~30) | yoxdur | ✅ **30** | `0031:251-284` + `role_permissions` matrisi |
 | 3 | PRD cədvəlləri | **heç biri** | ✅ **13** | `roles`, `permissions`, `role_permissions`, `user_permissions`, `warnings`, `bans`, `mutes`, `reputation_logs`, `badges`, `badge_logs`, `achievements`, `achievement_logs`, `levels` |
-| 4 | XP hadisə növləri (11) | 4 PRD hadisəsi | ✅ **10/11** | `worker/routes/shared.ts` + `worker/xp.ts`. Əlavə olundu: **İlk qeydiyyat +50**, **Gündəlik giriş +5**, **Repost +3**, **Like almaq +1**, **Hesabın təsdiqi +100**, **Orijinal paylaşım +15**. Dəyərlər PRD-yə uyğunlaşdırıldı: şərh **5→2**, profil bonusu **20→100**. ⚠ Açıq qalan tək bənd: **Dost dəvəti +50** |
+| 4 | XP hadisə növləri (11) | 4 PRD hadisəsi | ✅ **11/11** | `worker/routes/shared.ts` + `worker/xp.ts`. Əlavə olundu: **İlk qeydiyyat +50**, **Gündəlik giriş +5**, **Repost +3**, **Like almaq +1**, **Hesabın təsdiqi +100**, **Orijinal paylaşım +15**, **Dost dəvəti +50** (dəvət axını — `migrations/0037` + `routes/invite.ts`). Dəyərlər PRD-yə uyğunlaşdırıldı: şərh **5→2**, profil bonusu **20→100** |
 | 5 | Level cədvəli (10 səviyyə) | Formula fərqli (6× fərq) | ✅ **10/10** | `migrations/0034_prd_level_thresholds.sql` — PRD §7 astanaları. Üç nüsxə sinxronlaşdırıldı: miqrasiya (mənbə) → `worker/level.ts` (DB-dən oxuyur) → `js/util.js` `LEVEL_THRESHOLDS`. `routes/admin.ts`-dəki sabit formula kopyası da `levelFromXp()`-ə bağlandı |
 | 6 | Engine-lər (5) | XP ✓, Level qismən, 3 yoxdur | ✅ **5/5** | `xp.ts`, `level.ts`, `progression.ts` (`grantReputation`, `evaluateProgression`, `badgesOf`, `achievementsOf`), `rbac.ts` |
 
-**Nəticə: 5 tam + 1 qismən (10/11) → 5,91 / 6 = ≈ 97%.**
+**Nəticə: 6 / 6 komponent tam → ≈ 100%.**
 
 ✅ DONE-un **"sənəd-kod uyğunluğu ≥90%"** şərti **ödənir**.
 
-⚠️ **Yeganə açıq bənd — "Dost dəvəti +50":** `INVITE_XP` sabiti və `invite` XP
-mənbəyi (tavan 100/gün) qurulub, lakin **məhsulda dəvət axını mövcud deyil**.
-Bu, XP mühərrikinin çatışmazlığı deyil — yazılmamış **məhsul funksiyasıdır**
-(§2.b taksonomiyası: "məhsul əhatəsi ≠ borc"). Axın yazılan gün tək sətir qoşulur.
+> 📌 **Sonrakı iş (2026-08-02, eyni gün):** son açıq bənd — "Dost dəvəti +50" —
+> dəvət axını ilə bağlandı (`migrations/0037_invites.sql`, `worker/routes/invite.ts`).
+> Həmçinin **platforma rol ayrımı** tamamlandı: 34 marşrut binar `admins`
+> yoxlamasından PRD §5 icazə modelinə köçdü və **moderator namizədliyi (PRD §12)**
+> icra olundu. Təfərrüat: `docs/GOVERNANCE.md`.
 
 ### 9.b · ⚠️ Bu dəyişikliyin GÖRÜNƏN təsiri
 
