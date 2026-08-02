@@ -66,7 +66,7 @@ let rolesCache = [];
 
 async function loadRoles() {
   if (rolesCache.length) return rolesCache;
-  const d = await api('/api/roles');
+  const d = await api('/roles');
   rolesCache = d.roles || [];
   return rolesCache;
 }
@@ -96,7 +96,7 @@ export async function openRoleEditor(user) {
   save.addEventListener('click', async () => {
     save.disabled = true;
     try {
-      await api(`/api/users/${user.uid}/role`, { method: 'PUT', body: { role: sel.value } });
+      await api(`/users/${user.uid}/role`, { method: 'PUT', body: { role: sel.value } });
       toast('Rol yeniləndi.');
       closeModal();
       document.dispatchEvent(new CustomEvent('gov:role-changed', { detail: { uid: user.uid } }));
@@ -153,7 +153,7 @@ async function reviewApp(app, approve) {
   btn.addEventListener('click', async () => {
     btn.disabled = true;
     try {
-      await api(`/api/admin/moderator-applications/${app.id}/review`, {
+      await api(`/admin/moderator-applications/${app.id}/review`, {
         method: 'POST', body: { approve, note: note.value },
       });
       toast(approve ? 'Namizəd moderator oldu.' : 'Müraciət rədd edildi.');
@@ -193,7 +193,7 @@ export async function renderModApps() {
 
   let apps;
   try {
-    const d = await api(`/api/admin/moderator-applications?status=${appFilter}`);
+    const d = await api(`/admin/moderator-applications?status=${appFilter}`);
     apps = d.applications || [];
   } catch (e) {
     clear(host);
@@ -268,7 +268,7 @@ export async function renderModeratorSection() {
 
   let d;
   try {
-    d = await api('/api/me/moderator-eligibility');
+    d = await api('/me/moderator-eligibility');
   } catch {
     return;                       // səssiz: bu bölmə kritik deyil
   }
@@ -295,7 +295,7 @@ export async function renderModeratorSection() {
     wd.addEventListener('click', async () => {
       if (!await confirmDialog('Müraciətiniz geri götürülsün?')) return;
       try {
-        await api('/api/me/moderator-application', { method: 'DELETE' });
+        await api('/me/moderator-application', { method: 'DELETE' });
         toast('Müraciət geri götürüldü.');
         renderModeratorSection();
       } catch (e) { toast(e.message || 'Alınmadı.', 'err'); }
@@ -340,7 +340,7 @@ function openApplyModal() {
     }
     send.disabled = true;
     try {
-      await api('/api/me/moderator-application', { method: 'POST', body: { message: ta.value } });
+      await api('/me/moderator-application', { method: 'POST', body: { message: ta.value } });
       toast('Müraciətiniz göndərildi.');
       closeModal();
       renderModeratorSection();
@@ -371,7 +371,7 @@ export async function renderInvites() {
   clear(host);
 
   let d;
-  try { d = await api('/api/me/invites'); } catch { return; }
+  try { d = await api('/me/invites'); } catch { return; }
 
   const list = el('div', { class: 'c-checklist' });
   const active = (d.invites || []).filter(i => i.active);
@@ -384,7 +384,7 @@ export async function renderInvites() {
     revoke.addEventListener('click', async () => {
       if (!await confirmDialog(`${i.code} kodu ləğv edilsin?`)) return;
       try {
-        await api(`/api/me/invites/${i.code}`, { method: 'DELETE' });
+        await api(`/me/invites/${i.code}`, { method: 'DELETE' });
         toast('Kod ləğv edildi.');
         renderInvites();
       } catch (e) { toast(e.message || 'Alınmadı.', 'err'); }
@@ -413,7 +413,7 @@ export async function renderInvites() {
   create.addEventListener('click', async () => {
     create.disabled = true;
     try {
-      const r = await api('/api/me/invites', { method: 'POST' });
+      const r = await api('/me/invites', { method: 'POST' });
       toast('Kod yaradıldı: ' + r.code);
       renderInvites();
     } catch (e) {
