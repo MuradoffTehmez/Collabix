@@ -174,6 +174,8 @@ const ROUTES: Route[] = [
   { method: 'PUT', pattern: /^\/api\/posts\/([\w-]+)\/hide$/, handler: R.postHide, auth: true, rl: 'admin' },
   { method: 'DELETE', pattern: /^\/api\/posts\/([\w-]+)\/hide$/, handler: R.postRestore, auth: true, rl: 'admin' },
   { method: 'POST', pattern: /^\/api\/posts\/([\w-]+)\/report$/, handler: R.postReport, auth: true, rl: 'write' },
+  // Sorğu səsverməsi (0043) — eyni variantı təkrar seçmək səsi götürür.
+  { method: 'POST', pattern: /^\/api\/posts\/([\w-]+)\/poll\/vote$/, handler: R.pollVote, auth: true, rl: 'write' },
 
   // rooms
   { method: 'GET', pattern: /^\/api\/rooms$/, handler: R.listRooms, auth: true, rl: 'read' },

@@ -22,6 +22,69 @@ function newBlock(type){
   return { id: ++idSeq, type, content: '', language: (highlightOptions()[0] || {}).highlightId || 'python', images: [] };
 }
 
+/* ── Sorğu (poll) ─────────────────────────────────────────────────────────
+ * ⚠ Sorğu BLOK DEYİL: API-də post səviyyəsində ayrıca sahədir (`poll`), çünki
+ *   bir postda ən çox bir sorğu olur (`polls.post_id` UNIQUE). Blok modelinə
+ *   salsaydıq, `meaningful` filtri və blok sırası məntiqi lazımsız yerə
+ *   mürəkkəbləşərdi. Ona görə tag-lar kimi ayrıca bölmədir. */
+let poll = null;   // null = sorğu yoxdur; { question, options: string[], hideResults }
+
+function renderPoll(){
+  const box = document.getElementById('composerPoll');
+  if(!box) return;
+  clear(box);
+  box.classList.toggle('hidden', !poll);
+  if(!poll) return;
+
+  const q = el('input', { class: 'poll-in', maxLength: 200, value: poll.question,
+    placeholder: t('poll.question_ph'), oninput: e => { poll.question = e.target.value; } });
+
+  const opts = el('div', { class: 'poll-opts' });
+  poll.options.forEach((val, i) => {
+    const inp = el('input', { class: 'poll-in', maxLength: 80, value: val,
+      placeholder: t('poll.option_ph').replace('{n}', String(i + 1)),
+      oninput: e => { poll.options[i] = e.target.value; } });
+    // Silmə yalnız 2-dən çox variant olanda — 2 minimumdur (server də tələb edir).
+    const del = poll.options.length > 2
+      ? el('button', { type: 'button', class: 'poll-del', 'aria-label': t('comp.del'),
+          onclick: () => { poll.options.splice(i, 1); renderPoll(); } }, iconX())
+      : null;
+    opts.append(el('div', { class: 'poll-opt-row' }, inp, del));
+  });
+
+  const addOpt = poll.options.length < 6
+    ? el('button', { type: 'button', class: 'btn-mini',
+        onclick: () => { poll.options.push(''); renderPoll(); } }, t('poll.add_option'))
+    : null;
+
+  const hide = el('input', { type: 'checkbox', checked: !!poll.hideResults,
+    onchange: e => { poll.hideResults = e.target.checked; } });
+
+  box.append(
+    el('div', { class: 'poll-head' },
+      el('span', { class: 'ic', 'data-icon': 'poll', 'data-icon-size': '15' }),
+      el('b', {}, t('poll.add')),
+      el('button', { type: 'button', class: 'poll-close', 'aria-label': t('comp.del'),
+        onclick: () => { poll = null; renderPoll(); } }, iconX()),
+    ),
+    q, opts,
+    el('div', { class: 'poll-foot' },
+      addOpt,
+      el('label', { class: 'poll-hide' }, hide, t('poll.hide_results')),
+    ),
+  );
+  paintIcons(box);
+}
+
+/** Yayımlanacaq sorğu — natamamsa `undefined` (server də 2 variant tələb edir). */
+function pollPayload(){
+  if(!poll) return undefined;
+  const question = (poll.question || '').trim();
+  const options = poll.options.map(o => (o || '').trim()).filter(Boolean);
+  if(!question || options.length < 2) return undefined;
+  return { question, options, hideResults: !!poll.hideResults };
+}
+
 function blockNode(b){
   const wrap = el('div', { class: 'c-block', dataset: { bid: b.id } });
   const tools = el('div', { class: 'c-block-tools' },
@@ -228,14 +291,21 @@ async function publish(){
   // Sitat (quote) həmişə öz mətn/məzmununu tələb edir — mətnsiz "paylaşım" birbaşa
   // re-post-dur və feed-dəki ↺ düyməsi ilə edilir.
   if(attachedQuotedPost && !meaningful.length){ toast(t('comp.quote_need_text'), 'err'); return; }
-  if(!meaningful.length){ toast(t('comp.empty'), 'err'); return; }
+  const pollData = pollPayload();
+  // Sorğu AÇIQ, amma natamamdırsa səssizcə atmaq olmaz — istifadəçi onu
+  // doldurduğunu düşünür. Açıq xəbərdarlıq verilir.
+  if(poll && !pollData){ toast(t('poll.incomplete'), 'err'); return; }
+  // Sorğu tək başına da mənalı postdur (mətn məcburi deyil).
+  if(!meaningful.length && !pollData){ toast(t('comp.empty'), 'err'); return; }
   const btn = document.getElementById('shareBtn');
   btn.disabled = true;
   try{
     const tags = [...document.querySelectorAll('#composerTags .pp.sel')].map(b => b.textContent);
-    await createPost({ blocks: meaningful, tags, sharedPostId: attachedQuotedPost ? attachedQuotedPost.id : null });
+    await createPost({ blocks: meaningful, tags, sharedPostId: attachedQuotedPost ? attachedQuotedPost.id : null, poll: pollData });
     blocks = [newBlock('text')];
     attachedQuotedPost = null;
+    poll = null;
+    renderPoll();
     renderBlocks();
     document.querySelectorAll('#composerTags .pp.sel').forEach(b => b.classList.remove('sel'));
     toast(t('comp.published'));
@@ -254,5 +324,10 @@ export function initComposer(){
   document.getElementById('addTextBlockBtn').addEventListener('click', () => addBlock('text'));
   document.getElementById('addCodeBlockBtn').addEventListener('click', () => addBlock('code'));
   document.getElementById('addImageBlockBtn').addEventListener('click', () => addBlock('image'));
+  document.getElementById('addPollBtn')?.addEventListener('click', () => {
+    // Toggle: açıqdırsa bağlayır (ikinci sorğu mümkün deyil).
+    poll = poll ? null : { question: '', options: ['', ''], hideResults: false };
+    renderPoll();
+  });
   document.getElementById('shareBtn').addEventListener('click', publish);
 }

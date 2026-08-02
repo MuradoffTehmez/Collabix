@@ -326,6 +326,7 @@ export function mapPost(
   r: any,
   myReacts?: Map<string, string>,
   reactCounts?: Map<string, Record<string, number>>,
+  polls?: Map<string, any>,
 ): any {
   if (!r) return null;
   const post: any = {
@@ -337,6 +338,7 @@ export function mapPost(
     myReaction: myReacts?.get(r.id) || null,
     pinnedAt: r.pinned_at || null,
     hiddenAt: r.hidden_at || null,
+    poll: polls?.get(r.id) || null,
     createdAt: r.created_at, editedAt: r.edited_at,
     sharedPostId: r.shared_post_id,
     postType: r.post_type || 'original',

@@ -13,6 +13,7 @@ import {
   debounce, bus, emit, updateDynamicSEO, levelFromXP
 } from './util.js';
 import { toast, confirmDialog, showModal, closeModal, skeletons, emptyState } from './ui.js';
+import { api } from './api.js';
 import { openProfileModal, setFeedCache } from './users.js';
 import { markdownNode } from './markdown.js';
 import { highlightOptions } from './taxonomy.js';
@@ -311,6 +312,88 @@ function imageGalleryNode(urls, caption){
   return box;
 }
 
+/**
+ * Sorğu bloku — variantlar + nəticə çubuqları.
+ *
+ * ⚠ Nəticələr GİZLİ ola bilər (`hideResults`): o halda server `votes`/`total`
+ *   üçün `null` göndərir (klientdə gizlətmək kifayət deyildi — şəbəkə cavabına
+ *   baxan hər kəs görərdi). UI `null`-u "hələ göstərmə" kimi oxuyur.
+ *
+ * Səsvermə optimistikdir: çubuq dərhal dəyişir, xətada əvvəlki vəziyyət qayıdır.
+ */
+function pollNode(p){
+  let poll = p.poll;
+  const box = el('div', { class: 'poll' });
+
+  const paint = () => {
+    clear(box);
+    const gizli = poll.total === null;
+    const total = poll.total || 0;
+    box.append(el('div', { class: 'poll-q' }, poll.question));
+
+    for(const o of poll.options){
+      const mine = poll.myOption === o.id;
+      // Faiz yalnız nəticə açıq olduqda hesablanır.
+      const pct = gizli || !total ? 0 : Math.round((o.votes / total) * 100);
+      const row = el('button', {
+        type: 'button',
+        class: 'poll-opt' + (mine ? ' mine' : '') + (poll.closed ? ' closed' : ''),
+        disabled: poll.closed,
+        // Vəziyyət RƏNGDƏN başqa yolla da bildirilir (WCAG color-not-only).
+        'aria-pressed': String(mine),
+        'aria-label': o.text + (gizli ? '' : ` — ${pct}%`),
+        onclick: () => vote(o.id),
+      },
+        // Çubuq mətnin ARXASINDADIR: mətn həmişə oxunaqlı qalır.
+        el('span', { class: 'poll-bar', style: `width:${pct}%` }),
+        el('span', { class: 'poll-txt' }, o.text),
+        gizli ? null : el('span', { class: 'poll-pct' }, pct + '%'),
+        mine ? el('span', { class: 'ic poll-check', 'data-icon': 'check', 'data-icon-size': '14' }) : null,
+      );
+      box.append(row);
+    }
+
+    const meta = [];
+    if(!gizli) meta.push(t('poll.votes').replace('{n}', String(total)));
+    if(poll.closed) meta.push(t('poll.closed'));
+    else if(poll.closesAt) meta.push(t('poll.closes').replace('{t}', fmtRelTime(poll.closesAt)));
+    if(gizli) meta.push(t('poll.hidden_hint'));
+    box.append(el('div', { class: 'poll-meta' }, meta.join(' · ')));
+    paintIcons(box);
+  };
+
+  const vote = async (optionId) => {
+    if(poll.closed) return;
+    const prev = JSON.parse(JSON.stringify(poll));
+    // Optimistik: sayğacları yerli hesabla.
+    const wasMine = poll.myOption;
+    const next = wasMine === optionId ? null : optionId;
+    if(poll.total !== null){
+      for(const o of poll.options){
+        if(o.id === wasMine) o.votes = Math.max(0, o.votes - 1);
+        if(o.id === next) o.votes += 1;
+      }
+      poll.total = poll.options.reduce((n, o) => n + o.votes, 0);
+    }
+    poll.myOption = next;
+    // Gizli nəticə səsdən SONRA açılır — server də bunu edir.
+    if(poll.hideResults && next && poll.total === null) poll.total = 0;
+    paint();
+    try{
+      await api(`/posts/${p.id}/poll/vote`, { method: 'POST', body: { optionId } });
+      // Serverdən dəqiq saylar (başqaları da səs vermiş ola bilər).
+      const fresh = await getPostById(p.id);
+      if(fresh?.poll){ poll = fresh.poll; p.poll = fresh.poll; paint(); }
+    }catch(e){
+      poll = prev; p.poll = prev; paint();
+      toast(e?.message || t('dyn.err_generic'), 'err');
+    }
+  };
+
+  paint();
+  return box;
+}
+
 // Həm yeni block-based, həm köhnə (text/code/imageURL) postları render edir.
 export function postBodyNode(p){
   const body = el('div', { class: 'post-body' });
@@ -516,6 +599,8 @@ export function postCard(p, { full = false } = {}){
       }
     });
   }
+
+  if(p.poll) card.append(pollNode(p));
 
   if(p.tags && p.tags.length){
     card.append(el('div', { class: 'feed-tags' }, p.tags.map(t => el('span', { class: 'tag on' }, t))));

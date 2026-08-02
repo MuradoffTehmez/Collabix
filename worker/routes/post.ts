@@ -227,9 +227,11 @@ export async function feed(c: Ctx) {
   const hasMore = rows.results.length > limit;
   const page = rows.results.slice(0, limit);
   const last = page[page.length - 1];
-  const [reactMine, reactAgg] = await loadPostReactions(c, page.map(r => r.id as string));
+  const ids = page.map(r => r.id as string);
+  const [reactMine, reactAgg] = await loadPostReactions(c, ids);
+  const polls = await loadPolls(c, ids);
   return json({
-    posts: page.map(r => mapPost(r, reactMine, reactAgg)),
+    posts: page.map(r => mapPost(r, reactMine, reactAgg, polls)),
     hasMore,
     // Xronoloji sırada keyset açarı, digərlərində növbəti OFFSET.
     nextCursor: !hasMore || !last ? null
@@ -284,7 +286,8 @@ export async function getPost(c: Ctx, id: string) {
   const row = await D(c).prepare(query).bind(id).first();
   if (!row) return err('Post tapılmadı.', 404);
   const [reactMine, reactAgg] = await loadPostReactions(c, [id]);
-  return json({ post: mapPost(row, reactMine, reactAgg) });
+  const polls = await loadPolls(c, [id]);
+  return json({ post: mapPost(row, reactMine, reactAgg, polls) });
 }
 
 export async function createPost(c: Ctx) {
@@ -333,6 +336,12 @@ export async function createPost(c: Ctx) {
   ).bind(id, c.user!.id, c.user!.name, JSON.stringify(blocks),
     JSON.stringify(imageKeys), clampStr(firstText, 300), JSON.stringify(tags), now(), sharedPostId, postType, quoteText,
     buildSearchText(blocks)).run();
+
+  // ── Sorğu (0043) ────────────────────────────────────────────────────────
+  // Post yazıldıqdan SONRA: `polls.post_id` xarici açardır, əvvəl yazsaq
+  // istinad boşluğa düşərdi.
+  await createPollFor(c, id, b.poll);
+
   // H-5: XP idempotent + gündəlik tavanlı verilir. Tavana çatanda post YENƏ DƏ
   // yaradılır — yalnız XP verilmir (audit §B-3: "əməliyyat uğurlu olsun").
   //
@@ -863,6 +872,135 @@ export async function commentLikeDelete(c: Ctx, _postId: string, cid: string) {
     await D(c).prepare('UPDATE comments SET like_count = MAX(0, like_count - 1) WHERE id = ?').bind(cid).run();
   }
   return json({ ok: true });
+}
+
+/* ================= SORĞU (POLL) — 0043 ================= */
+
+const POLL_MAX_OPTIONS = 6;
+const POLL_MAX_Q = 200;
+const POLL_MAX_OPT = 80;
+
+/**
+ * Post yaradılarkən sorğunu qurur. `poll` yoxdursa heç nə etmir.
+ *
+ * ⚠ İki variantdan AZ sorğu qəbul edilmir: tək variantlı "səsvermə" mənasızdır
+ *   və UI-da nəticə çubuğu həmişə 100% göstərərdi.
+ */
+async function createPollFor(c: Ctx, postId: string, poll: any) {
+  if (!poll || typeof poll !== 'object') return;
+  const question = clampStr(poll.question, POLL_MAX_Q).trim();
+  const rawOpts = Array.isArray(poll.options) ? poll.options : [];
+  const options = rawOpts
+    .map((o: any) => clampStr(typeof o === 'string' ? o : o?.text, POLL_MAX_OPT).trim())
+    .filter(Boolean)
+    .slice(0, POLL_MAX_OPTIONS);
+  if (!question || options.length < 2) return;
+
+  const pollId = uuid();
+  const ts = now();
+  // `closesAt` yalnız GƏLƏCƏK tarix kimi qəbul edilir — keçmiş tarix sorğunu
+  // doğulan kimi bağlayardı, bu isə yəqin ki, səhv girişdir.
+  const closesAt = Number(poll.closesAt) > ts ? Number(poll.closesAt) : null;
+  await D(c).prepare(
+    'INSERT INTO polls (id, post_id, question, closes_at, hide_results, created_at) VALUES (?,?,?,?,?,?)',
+  ).bind(pollId, postId, question, closesAt, poll.hideResults ? 1 : 0, ts).run();
+  for (let i = 0; i < options.length; i++) {
+    await D(c).prepare('INSERT INTO poll_options (id, poll_id, text, position) VALUES (?,?,?,?)')
+      .bind(uuid(), pollId, options[i], i).run();
+  }
+}
+
+/**
+ * Postlara aid sorğuları toplu oxuyur (N+1 qarşısı).
+ * @returns postId → sorğu obyekti
+ */
+async function loadPolls(c: Ctx, postIds: string[]) {
+  const out = new Map<string, any>();
+  if (!postIds.length) return out;
+
+  const polls: any[] = [];
+  for (const chunk of chunkForD1(postIds)) {
+    const r = await D(c).prepare(
+      `SELECT * FROM polls WHERE post_id IN (${placeholders(chunk.length)})`,
+    ).bind(...chunk).all<any>();
+    polls.push(...r.results);
+  }
+  if (!polls.length) return out;
+
+  const pollIds = polls.map(p => p.id as string);
+  const optsBy = new Map<string, any[]>();
+  for (const chunk of chunkForD1(pollIds)) {
+    const r = await D(c).prepare(
+      `SELECT * FROM poll_options WHERE poll_id IN (${placeholders(chunk.length)}) ORDER BY position ASC`,
+    ).bind(...chunk).all<any>();
+    for (const o of r.results) {
+      const key = o.poll_id as string;
+      if (!optsBy.has(key)) optsBy.set(key, []);
+      optsBy.get(key)!.push(o);
+    }
+  }
+  // Tip üzrə saylar + mənim səsim.
+  const counts = new Map<string, number>();
+  const mine = new Map<string, string>();
+  for (const chunk of chunkForD1(pollIds)) {
+    const agg = await D(c).prepare(
+      `SELECT option_id, COUNT(*) AS n FROM poll_votes
+        WHERE poll_id IN (${placeholders(chunk.length)}) GROUP BY option_id`,
+    ).bind(...chunk).all<any>();
+    for (const r of agg.results) counts.set(r.option_id as string, r.n as number);
+  }
+  for (const chunk of chunkForD1(pollIds, 1)) {
+    const r = await D(c).prepare(
+      `SELECT poll_id, option_id FROM poll_votes
+        WHERE user_id = ? AND poll_id IN (${placeholders(chunk.length)})`,
+    ).bind(c.user!.id, ...chunk).all<any>();
+    for (const v of r.results) mine.set(v.poll_id as string, v.option_id as string);
+  }
+
+  for (const p of polls) {
+    const opts = optsBy.get(p.id) || [];
+    const myOption = mine.get(p.id) || null;
+    const total = opts.reduce((n: number, o: any) => n + (counts.get(o.id) || 0), 0);
+    const closed = !!p.closes_at && p.closes_at <= now();
+    // ⚠ Nəticə GİZLƏDİLİRSƏ saylar CAVABDA DA getmir — klientdə gizlətmək
+    //   kifayət deyil, kim istəsə şəbəkə cavabına baxardı.
+    const reveal = !p.hide_results || !!myOption || closed;
+    out.set(p.post_id as string, {
+      id: p.id, question: p.question, closesAt: p.closes_at || null,
+      hideResults: !!p.hide_results, closed, myOption, total: reveal ? total : null,
+      options: opts.map((o: any) => ({
+        id: o.id, text: o.text,
+        votes: reveal ? (counts.get(o.id) || 0) : null,
+      })),
+    });
+  }
+  return out;
+}
+
+/** Səs ver / seçimi dəyiş. Eyni variantı təkrar seçmək səsi GÖTÜRÜR (toggle). */
+export async function pollVote(c: Ctx, postId: string) {
+  const b = await readJson(c.req);
+  const poll = await D(c).prepare('SELECT * FROM polls WHERE post_id = ?').bind(postId).first<any>();
+  if (!poll) return err('Sorğu tapılmadı.', 404);
+  if (poll.closes_at && poll.closes_at <= now()) return err('Sorğu bağlanıb.', 409, 'poll_closed');
+
+  const optionId = clampStr(b.optionId, 50);
+  const opt = await D(c).prepare('SELECT id FROM poll_options WHERE id = ? AND poll_id = ?')
+    .bind(optionId, poll.id).first<any>();
+  if (!opt) return badReq('Variant tapılmadı.');
+
+  const prev = await D(c).prepare('SELECT option_id FROM poll_votes WHERE poll_id = ? AND user_id = ?')
+    .bind(poll.id, c.user!.id).first<any>();
+  if (prev?.option_id === optionId) {
+    await D(c).prepare('DELETE FROM poll_votes WHERE poll_id = ? AND user_id = ?')
+      .bind(poll.id, c.user!.id).run();
+    return json({ ok: true, myOption: null });
+  }
+  await D(c).prepare(
+    `INSERT INTO poll_votes (poll_id, user_id, option_id, created_at) VALUES (?,?,?,?)
+       ON CONFLICT(poll_id, user_id) DO UPDATE SET option_id = excluded.option_id`,
+  ).bind(poll.id, c.user!.id, optionId, now()).run();
+  return json({ ok: true, myOption: optionId });
 }
 
 /* ================= POST: REAKSİYA / MODERASİYA / ŞİKAYƏT (0040) =================

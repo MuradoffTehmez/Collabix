@@ -106,6 +106,7 @@ export {
   commentPin, commentUnpin, commentHide, commentRestore, commentReport,
   postReactionPut, postReactionDelete,
   postPin, postUnpin, postHide, postRestore, postReport,
+  pollVote,
 } from './routes/post';
 
 export {

@@ -2059,3 +2059,138 @@
   .lb-nav { transition: none; }
   .lb-nav:active { transform: translateY(-50%); }
 }
+
+/* ── Sorğu (poll) ───────────────────────────────────────────────────────── */
+.poll {
+  margin-top: var(--sp-3);
+  padding: var(--sp-3);
+  border: 1px solid var(--card-border);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--surface-2) 45%, transparent);
+}
+
+.poll-q {
+  font-weight: 650;
+  font-size: var(--fs-sm);
+  margin-bottom: var(--sp-2);
+}
+
+.poll-opt {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  min-height: 40px;
+  padding: var(--sp-2) var(--sp-3);
+  margin-bottom: var(--sp-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color var(--mo-fast) var(--mo-ease);
+}
+
+.poll-opt:hover:not(:disabled) { border-color: var(--coral); }
+.poll-opt:disabled { cursor: default; }
+
+/* Seçilmiş variant RƏNGDƏN başqa nişanla da bildirilir (yoxlama işarəsi). */
+.poll-opt.mine { border-color: var(--coral); }
+.poll-check { color: var(--coral); margin-left: auto; }
+
+/* Çubuq mətnin ARXASINDA: mətn həmişə tam oxunaqlı qalır. */
+.poll-bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--coral-dim);
+  transition: width var(--mo-base) var(--mo-ease);
+  pointer-events: none;
+}
+
+.poll-txt, .poll-pct { position: relative; }
+.poll-pct { margin-left: auto; font-family: var(--mono); font-size: var(--fs-xs); color: var(--muted); }
+.poll-opt.mine .poll-pct { color: var(--coral); }
+
+.poll-meta {
+  margin-top: var(--sp-1);
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .poll-bar { transition: none; }
+}
+
+/* ── Kompozitorda sorğu ─────────────────────────────────────────────────── */
+.composer-poll {
+  margin: var(--sp-3) 0;
+  padding: var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+
+.composer-poll.hidden { display: none; }
+
+.poll-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-2);
+  font-size: var(--fs-sm);
+}
+
+.poll-close, .poll-del {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.poll-close { margin-left: auto; }
+.poll-close:hover, .poll-del:hover { background: var(--surface-2); color: var(--danger); }
+
+.poll-in {
+  width: 100%;
+  min-height: 38px;
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-sm);
+  margin-bottom: var(--sp-2);
+}
+
+.poll-in:focus { outline: none; border-color: var(--coral); box-shadow: 0 0 0 3px var(--coral-dim); }
+
+.poll-opt-row { display: flex; align-items: center; gap: var(--sp-2); }
+.poll-opt-row .poll-in { margin-bottom: var(--sp-2); }
+
+.poll-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+
+.poll-hide {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  cursor: pointer;
+}
