@@ -260,6 +260,18 @@ const ROUTES: Route[] = [
   { method: 'GET',  pattern: /^\/api\/me\/moderator-eligibility$/, handler: R.myModeratorEligibility, auth: true, rl: 'read' },
   { method: 'POST', pattern: /^\/api\/me\/moderator-application$/, handler: R.applyForModerator, auth: true, rl: 'write' },
   { method: 'DELETE', pattern: /^\/api\/me\/moderator-application$/, handler: R.withdrawModeratorApplication, auth: true, rl: 'write' },
+  // ── Dəvət axını — PRD §6 ─────────────────────────────────────────────────
+  //
+  // ⚠ `/api/invites/:code/check` QONAQ üçündür (`auth` YOXDUR): qeydiyyat
+  //   formunda kod yazılarkən canlı yoxlanılır, istifadəçi isə hələ giriş
+  //   etməyib. Cavab yalnız `valid` + dəvət edənin ADInı daşıyır — kod
+  //   sadalayan hücumçu istifadəçi kataloqu çıxara bilməməlidir.
+  { method: 'GET',    pattern: /^\/api\/invites\/([A-Za-z0-9]{1,16})\/check$/, handler: R.checkInvite, rl: 'read' },
+  { method: 'GET',    pattern: /^\/api\/me\/invites$/, handler: R.myInvites, auth: true, rl: 'read' },
+  { method: 'POST',   pattern: /^\/api\/me\/invites$/, handler: R.createInvite, auth: true, rl: 'write' },
+  { method: 'DELETE', pattern: /^\/api\/me\/invites\/([A-Za-z0-9]{1,16})$/, handler: R.revokeInvite, auth: true, rl: 'write' },
+  { method: 'GET',    pattern: /^\/api\/admin\/invite-stats$/, handler: R.adminInviteStats, auth: true, perm: 'VIEW_ANALYTICS', rl: 'admin' },
+
   { method: 'GET',  pattern: /^\/api\/admin\/moderator-applications$/, handler: R.listModeratorApplications, auth: true, perm: 'MANAGE_ROLES', rl: 'admin' },
   { method: 'POST', pattern: /^\/api\/admin\/moderator-applications\/([\w-]+)\/review$/, handler: R.reviewModeratorApplication, auth: true, perm: 'MANAGE_ROLES', rl: 'admin' },
   { method: 'GET', pattern: /^\/api\/admin\/stats-daily$/, handler: R.adminStatsDaily, auth: true, perm: 'VIEW_ANALYTICS', rl: 'heavy' },

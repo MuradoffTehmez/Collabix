@@ -133,3 +133,7 @@ export {
   myModeratorEligibility, applyForModerator, withdrawModeratorApplication,
   listModeratorApplications, reviewModeratorApplication,
 } from './routes/mod-application';
+// Dəvət axını — PRD §6-nın son açıq bəndi ("Dost dəvəti +50").
+export {
+  myInvites, createInvite, revokeInvite, checkInvite, adminInviteStats,
+} from './routes/invite';

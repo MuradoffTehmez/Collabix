@@ -44,6 +44,7 @@ import {
   DELETED_UID, DELETED_NAME, SIGNUP_XP, grantDailyLogin,
 } from './shared';
 import { grantXp } from '../xp';
+import { redeemInvite } from './invite';
 import {
   CAPTCHA_SOFT_AT, CAPTCHA_HARD_AT, turnstileGate, alertAccountOwner,
 } from './auth-guard';
@@ -140,6 +141,13 @@ export async function register(c: Ctx) {
   //   düşməlidir, əks halda istifadəçi qeydiyyatdan dərhal sonra 0 XP görər və
   //   yalnız növbəti yükləmədə 50 XP peyda olar.
   await grantXp(c.env, id, 'signup', id, SIGNUP_XP);
+
+  // PRD §6 "Dost dəvəti +50" — XP DƏVƏT EDƏNƏ verilir.
+  //
+  // ⚠ `await` (waitUntil deyil): `redeemInvite` özü səhvləri udur və
+  //   qeydiyyatı bloklamır, lakin `invite_redemptions` sətri cavabdan ƏVVƏL
+  //   yazılmalıdır — əks halda istifadəçi dərhal ikinci kodu işlədə bilərdi.
+  await redeemInvite(c, b.inviteCode, id);
 
   const pair = await createSession(c.env, c.req, id);
   const row = await D(c).prepare('SELECT * FROM users WHERE id = ?').bind(id).first();
