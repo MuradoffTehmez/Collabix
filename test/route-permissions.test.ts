@@ -102,6 +102,39 @@ describe('marşrut icazələri — sxemlə uyğunluq', () => {
   });
 });
 
+describe('🔴 users.role etibarlılığı — istehsal qüsuru (0038)', () => {
+  // `0001_init.sql` sütunu `DEFAULT 'user'` (kiçik) ilə yaratdı, `roles`
+  // cədvəlində isə ad `'USER'`-dir. Qeydiyyat sütunu açıq yazmasa hər yeni
+  // hesab SIFIR icazə alır. Aşağıdakı üç test müdafiənin hər qatını yoxlayır.
+
+  it('qeydiyyat `role` sütununu AÇIQ yazır (default-a güvənmir)', () => {
+    const src = readFileSync(join(root, 'worker/routes/auth.ts'), 'utf8');
+    const insert = src.match(/INSERT INTO users \([\s\S]*?VALUES[\s\S]*?`/);
+    expect(insert, 'register INSERT tapılmadı').toBeTruthy();
+    expect(insert![0], '`role` sütunu INSERT-də yoxdur').toMatch(/\brole\b/);
+    expect(insert![0], "rol dəyəri 'USER' olmalıdır").toMatch(/'USER'/);
+  });
+
+  it('`normalizeRole` naməlum dəyəri USER-ə salır (fail-safe)', async () => {
+    const { normalizeRole } = await import('../worker/rbac');
+    expect(normalizeRole('user')).toBe('USER');      // əsl qüsur dəyəri
+    expect(normalizeRole('')).toBe('USER');
+    expect(normalizeRole(null)).toBe('USER');
+    expect(normalizeRole('SILINMIS_ROL')).toBe('USER');
+    // Düzgün rollar TOXUNULMAZ qalır — xüsusilə OWNER (0035 bootstrap-ı).
+    expect(normalizeRole('OWNER')).toBe('OWNER');
+    expect(normalizeRole('moderator')).toBe('MODERATOR');
+  });
+
+  it('0038 miqrasiyası pozuq sətirləri normallaşdırır', () => {
+    const sql = readFileSync(join(root, 'migrations/0038_fix_user_role_default.sql'), 'utf8');
+    expect(sql).toMatch(/UPDATE users[\s\S]*SET role = 'USER'/);
+    // ⚠ Şərt `roles` cədvəlinə söykənməlidir — sabit siyahı yazılsa yeni rol
+    //   əlavə olunanda miqrasiya onu "pozuq" sayıb sıfırlayardı.
+    expect(sql).toMatch(/role NOT IN \(SELECT name FROM roles\)/);
+  });
+});
+
 describe('rol matrisi — kilidlənmə mühafizəsi', () => {
   it('🔴 OWNER bootstrap-ı miqrasiyada var (MANAGE_ROLES zənciri açıqdır)', () => {
     const sql = readFileSync(join(root, 'migrations/0035_rbac_completion.sql'), 'utf8');

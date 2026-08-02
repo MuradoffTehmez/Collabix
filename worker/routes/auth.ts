@@ -85,11 +85,21 @@ export async function register(c: Ctx) {
   const id = uuid();
   const day = todayStr();
   await D(c).prepare(
+    // 🔴 `role` AÇIQ YAZILIR — sütun default-una GÜVƏNMƏ.
+    //
+    // `0001_init.sql` sütunu `DEFAULT 'user'` (KİÇİK hərf) ilə yaratmışdı,
+    // `roles` cədvəlindəki ad isə `'USER'`-dir. Sütun burada verilmədiyi üçün
+    // hər yeni hesab etibarsız rol alırdı və `rbac.ts` onun üçün SIFIR icazə
+    // hesablayırdı (bax `migrations/0038_fix_user_role_default.sql`).
+    //
+    // ⚠ SQLite `ALTER COLUMN ... SET DEFAULT` dəstəkləmir və `users` 40+
+    //   cədvəldən FK ilə istinad olunur → cədvəli yenidən qurmaq canlı bazada
+    //   yüksək riskdir. Ona görə həqiqət mənbəyi BU SƏTİRDİR.
     `INSERT INTO users (id, username, name, age, birth_date, gender, country, city, bio, contact_email,
       photo_url, prog_levels, lang_levels, goals, looking_for, instagram, github, linkedin, telegram, website,
       streak, last_active_day, last_active_at, activity_days, joined_at, pass_hash, pass_salt, pass_iter,
-      search_name)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?,?,?,?,?,?,?,?)`,
+      search_name, role)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?,?,?,?,?,?,?,?,'USER')`,
   ).bind(
     id, username, clampStr(b.name, 60) || username, age, clampStr(b.birthDate, 10),
     clampStr(b.gender, 10), clampStr(b.country, 40), clampStr(b.city, 40),

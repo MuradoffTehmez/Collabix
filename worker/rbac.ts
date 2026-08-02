@@ -29,6 +29,33 @@ export type RoleName =
   | 'OWNER' | 'SUPER_ADMIN' | 'ADMIN' | 'SENIOR_MODERATOR' | 'MODERATOR'
   | 'HELPER' | 'PREMIUM' | 'VERIFIED' | 'USER' | 'GUEST';
 
+/** Runtime yoxlaması üçün — tip birləşməsi kompilyasiyadan sonra itir. */
+export const ROLE_NAMES: readonly RoleName[] = [
+  'OWNER', 'SUPER_ADMIN', 'ADMIN', 'SENIOR_MODERATOR', 'MODERATOR',
+  'HELPER', 'PREMIUM', 'VERIFIED', 'USER', 'GUEST',
+];
+
+/**
+ * 🔴 FAIL-SAFE rol normallaşdırması — istehsal qüsurundan sonra əlavə olundu
+ *    (bax `migrations/0038_fix_user_role_default.sql`).
+ *
+ * `users.role` sütununun DEFAULT-u `'user'`-dir (kiçik hərf, 0001-dən), `roles`
+ * cədvəlindəki ad isə `'USER'`. Qeydiyyat sütunu açıq təyin etmədiyi üçün hər
+ * yeni hesab etibarsız dəyər alırdı və `role_permissions` sorğusu SIFIR sətir
+ * qaytarırdı — yəni istifadəçinin HEÇ BİR icazəsi olmurdu.
+ *
+ * ⚠ NİYƏ `USER`-Ə DÜŞÜR, XƏTA ATMIR: bu, ən AŞAĞI real roldur və yalnız baza
+ *   məzmun icazələrini verir. Xəta atsaydıq bir pozuq sətir istifadəçini
+ *   tamamilə bloklayardı; daha yuxarı rola düşsəydik bu, eskalasiya olardı.
+ *
+ * ⚠ `toUpperCase()` KİFAYƏT DEYİL — ağ siyahı da yoxlanılır: silinmiş və ya
+ *   səhv yazılmış rol adı sükutla keçməməlidir.
+ */
+export function normalizeRole(v: unknown): RoleName {
+  const s = String(v ?? '').trim().toUpperCase();
+  return (ROLE_NAMES as readonly string[]).includes(s) ? (s as RoleName) : 'USER';
+}
+
 /**
  * İcazə keşi — uid → {icazələr, bitmə anı}.
  *
@@ -69,7 +96,7 @@ async function resolve(env: Env, uid: string): Promise<Resolved> {
 
   const row = await env.DB.prepare('SELECT role FROM users WHERE id = ?')
     .bind(uid).first<any>();
-  const role = (row?.role || 'USER') as RoleName;
+  const role = normalizeRole(row?.role);
 
   const [base, overrides] = await Promise.all([
     env.DB.prepare('SELECT permission_name FROM role_permissions WHERE role_name = ?')
