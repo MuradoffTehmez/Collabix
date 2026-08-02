@@ -247,6 +247,21 @@ const ROUTES: Route[] = [
   { method: 'POST', pattern: /^\/api\/users\/([\w-]+)\/ban$/, handler: R.banUser, auth: true, rl: 'write' },
   { method: 'POST', pattern: /^\/api\/users\/([\w-]+)\/mute$/, handler: R.muteUser, auth: true, rl: 'write' },
   { method: 'POST', pattern: /^\/api\/users\/([\w-]+)\/restore$/, handler: R.restoreUser, auth: true, rl: 'write' },
+
+  // ── Moderator namizədliyi — PRD §12 ──────────────────────────────────────
+  //
+  // ⚠ İlk üçündə `perm` YOXDUR və bu qəsdəndir: onlar İSTİFADƏÇİNİN ÖZ
+  //   müraciətidir (`c.user!.id` ilə işləyir), başqasına toxunmur.
+  //   Uyğunluq qapısı `evaluateEligibility`-nin içindədir.
+  //
+  // ⚠ Son ikisi `MANAGE_ROLES` tələb edir — namizədləri görmək və təsdiqləmək
+  //   rol təyini prosesidir; moderatorun özü namizədləri görməməlidir
+  //   (maraqlar toqquşması).
+  { method: 'GET',  pattern: /^\/api\/me\/moderator-eligibility$/, handler: R.myModeratorEligibility, auth: true, rl: 'read' },
+  { method: 'POST', pattern: /^\/api\/me\/moderator-application$/, handler: R.applyForModerator, auth: true, rl: 'write' },
+  { method: 'DELETE', pattern: /^\/api\/me\/moderator-application$/, handler: R.withdrawModeratorApplication, auth: true, rl: 'write' },
+  { method: 'GET',  pattern: /^\/api\/admin\/moderator-applications$/, handler: R.listModeratorApplications, auth: true, perm: 'MANAGE_ROLES', rl: 'admin' },
+  { method: 'POST', pattern: /^\/api\/admin\/moderator-applications\/([\w-]+)\/review$/, handler: R.reviewModeratorApplication, auth: true, perm: 'MANAGE_ROLES', rl: 'admin' },
   { method: 'GET', pattern: /^\/api\/admin\/stats-daily$/, handler: R.adminStatsDaily, auth: true, perm: 'VIEW_ANALYTICS', rl: 'heavy' },
   { method: 'GET', pattern: /^\/api\/admin\/teams$/, handler: async (c) => TR(c, m => m.listAllTeams(c)), auth: true, perm: 'MANAGE_TEAMS', rl: 'admin' },
   { method: 'GET', pattern: /^\/api\/admin\/teams\/([\w-]+)$/, handler: async (c, id) => TR(c, m => m.adminTeamDetail(c, id)), auth: true, perm: 'MANAGE_TEAMS', rl: 'admin' },

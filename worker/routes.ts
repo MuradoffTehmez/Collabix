@@ -127,3 +127,9 @@ export {
   warnUser, listWarnings, banUser, muteUser, restoreUser, moderationStatus,
   listRoles, setUserRole, setUserPermission, myPermissions,
 } from './routes/moderation';
+// Moderator namizədliyi — PRD §12 (ayrı modul: moderasiya CƏZA verir,
+// namizədlik isə SƏLAHİYYƏT verir — iki fərqli iş axını).
+export {
+  myModeratorEligibility, applyForModerator, withdrawModeratorApplication,
+  listModeratorApplications, reviewModeratorApplication,
+} from './routes/mod-application';
