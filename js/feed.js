@@ -5,7 +5,7 @@ import {
   state, watchFeed, updatePost, deletePost, getPostById,
   toggleLike, toggleBookmark, watchComments, addComment, editComment, deleteComment,
   setCommentReaction, setCommentPinned, setCommentHidden, reportComment,
-  setPostPinned, setPostHidden, reportPost,
+  setPostReaction, setPostPinned, setPostHidden, reportPost,
   toggleRepost, deriveMyReposts
 } from './store.js';
 import {
@@ -129,6 +129,9 @@ const REACTIONS = {
   wow:   { icon: 'wow' },
   fire:  { icon: 'flame' },
   clap:  { icon: 'clap' },
+  tada:  { icon: 'party' },
+  hundred: { icon: 'hundred' },
+  rocket:  { icon: 'rocket' },
 };
 
 // Paylaşma linklərinin bazası — `location.origin`-dən gəlir (AUDIT-TASK-2 / 2.5).
@@ -342,10 +345,20 @@ export function postCard(p, { full = false } = {}){
   // Səviyyə nişanı ayrıca saxlanılır: XP tez-tez dəyişir və bunun üçün kartı
   // yenidən qurmaq lazım deyil — `_cxPatch` onu yerində yeniləyir.
   const lvlBadge = author ? el('span', { class: 'role-badge' }, `LVL ${levelFromXP(author.xp)}`) : null;
+  // AUDIT-UI: başlıq şərh kartları ilə EYNİ məlumat dəstini daşıyır —
+  // əvvəl yalnız ad + LVL var idi, kimin admin/moderator olduğu görünmürdü.
+  // ⚠ `nameWithBadge` təsdiqlənmiş (verified) nişanını özü əlavə edir.
+  const roleBadges = el('span', { class: 'c-badges' });
+  if(author?.role === 'ADMIN' || author?.role === 'OWNER') roleBadges.append(el('span', { class: 'c-badge admin' }, t('cm.admin')));
+  else if(author?.role === 'MODERATOR') roleBadges.append(el('span', { class: 'c-badge mod' }, t('cm.moderator')));
+
   const headerInfo = el('div', { class: 'feed-head-info' },
     el('div', { class: 'feed-head-top' },
-      el('button', { type: 'button', class: 'name', onclick: () => emit('nav', { page: 'u/' + ((author && author.username) || '') }) }, p.authorName || '—'),
-      lvlBadge
+      el('button', { type: 'button', class: 'name', onclick: () => emit('nav', { page: 'u/' + ((author && author.username) || '') }) },
+        nameWithBadge(author || { name: p.authorName })),
+      author?.username ? el('span', { class: 'c-handle' }, '@' + author.username) : null,
+      lvlBadge,
+      roleBadges.childNodes.length ? roleBadges : null,
     ),
     el('div', { class: 'feed-head-meta' },
       // Nisbi vaxt ("2 saat əvvəl") mütləq damğadan ("08-02 16:08") daha tez
@@ -609,8 +622,50 @@ export function postCard(p, { full = false } = {}){
     }
   }, bmIcon);
 
+  /* Reaksiya seçicisi post kartına ƏLAVƏ olunur, `likeBtn`-i ƏVƏZ ETMİR.
+   *
+   * NİYƏ: `likeBtn` optimistik yeniləmə + `_cxPatch` (poll gələndə kartı
+   * yenidən qurmadan yamama) ilə sıx bağlıdır. Onu söksək həmin məntiqi də
+   * yenidən yazmaq lazım gələrdi. Bunun əvəzinə düymə sarğıya salınır və
+   * hover/uzun-basış seçicini açır — tək klik hələ də adi "bəyən"dir. */
+  const reactWrap = el('div', { class: 'c-react-wrap' });
+  const reactPicker = el('div', { class: 'c-react-picker', role: 'menu', hidden: true });
+  const closeReact = () => { reactPicker.hidden = true; };
+  const openReact = () => {
+    if(!reactPicker.hidden) return;
+    clear(reactPicker);
+    for(const [key, def] of Object.entries(REACTIONS)){
+      reactPicker.append(el('button', {
+        type: 'button', class: 'c-react-opt' + (p.myReaction === key ? ' on' : ''),
+        role: 'menuitem', title: t('cm.react_' + key), 'aria-label': t('cm.react_' + key),
+        onclick: async () => {
+          closeReact();
+          const next = p.myReaction === key ? null : key;
+          const prev = p.myReaction;
+          p.myReaction = next;
+          try{
+            await setPostReaction(p.id, next);
+            emit('refresh-feed');   // sayğaclar serverdən dəqiq gəlsin
+          }catch(err){ p.myReaction = prev; toast(t('dyn.err_generic'), 'err'); }
+        },
+      }, el('span', { class: 'ic', 'data-icon': def.icon, 'data-icon-size': '18' })));
+    }
+    paintIcons(reactPicker);
+    reactPicker.hidden = false;
+  };
+  reactWrap.addEventListener('mouseenter', openReact);
+  reactWrap.addEventListener('mouseleave', closeReact);
+  let lpTimer = null;
+  likeBtn.addEventListener('pointerdown', () => { lpTimer = setTimeout(openReact, 450); });
+  for(const ev of ['pointerup', 'pointercancel', 'pointerleave']) likeBtn.addEventListener(ev, () => clearTimeout(lpTimer));
+  likeBtn.addEventListener('keydown', e => {
+    if(e.key === 'ArrowUp' || (e.altKey && e.key === 'Enter')){ e.preventDefault(); openReact(); reactPicker.querySelector('button')?.focus(); }
+    if(e.key === 'Escape') closeReact();
+  });
+  reactWrap.append(likeBtn, reactPicker);
+
   const actions = el('div', { class: 'feed-actions' },
-    likeBtn,
+    reactWrap,
     commentBtn,
     shareBtn,
     el('div', { class: 'act-spacer' }),

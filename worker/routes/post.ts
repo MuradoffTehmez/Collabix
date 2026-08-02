@@ -191,11 +191,45 @@ export async function feed(c: Ctx) {
   const hasMore = rows.results.length > limit;
   const page = rows.results.slice(0, limit);
   const last = page[page.length - 1];
+  const [reactMine, reactAgg] = await loadPostReactions(c, page.map(r => r.id as string));
   return json({
-    posts: page.map(mapPost),
+    posts: page.map(r => mapPost(r, reactMine, reactAgg)),
     hasMore,
     nextCursor: hasMore && last ? `${last.created_at}_${last.id}` : null,
   });
+}
+
+/**
+ * Post reaksiyalarını toplu oxuyur (N+1 sorğudan qaçmaq üçün).
+ * @returns [mənimkilər, tip üzrə saylar]
+ *
+ * ⚠ `chunkForD1` MƏCBURİDİR: feed 100 posta qədər qaytara bilər, D1-in
+ *   bir sorğuda bağlana bilən dəyişən limiti isə 100-dür. `reserved: 1`
+ *   variantında `user_id = ?` əlavə bir yer tutur.
+ */
+async function loadPostReactions(c: Ctx, ids: string[]) {
+  const mine = new Map<string, string>();
+  const agg = new Map<string, Record<string, number>>();
+  if (!ids.length) return [mine, agg] as const;
+  for (const chunk of chunkForD1(ids, 1)) {
+    const r = await D(c).prepare(
+      `SELECT post_id, type FROM post_reactions
+        WHERE user_id = ? AND post_id IN (${placeholders(chunk.length)})`,
+    ).bind(c.user!.id, ...chunk).all<any>();
+    for (const row of r.results) mine.set(row.post_id as string, row.type as string);
+  }
+  for (const chunk of chunkForD1(ids)) {
+    const r = await D(c).prepare(
+      `SELECT post_id, type, COUNT(*) AS n FROM post_reactions
+        WHERE post_id IN (${placeholders(chunk.length)}) GROUP BY post_id, type`,
+    ).bind(...chunk).all<any>();
+    for (const row of r.results) {
+      const b = agg.get(row.post_id as string) || {};
+      b[row.type as string] = row.n as number;
+      agg.set(row.post_id as string, b);
+    }
+  }
+  return [mine, agg] as const;
 }
 
 export async function getPost(c: Ctx, id: string) {
@@ -210,7 +244,8 @@ export async function getPost(c: Ctx, id: string) {
   `;
   const row = await D(c).prepare(query).bind(id).first();
   if (!row) return err('Post tapılmadı.', 404);
-  return json({ post: mapPost(row) });
+  const [reactMine, reactAgg] = await loadPostReactions(c, [id]);
+  return json({ post: mapPost(row, reactMine, reactAgg) });
 }
 
 export async function createPost(c: Ctx) {
@@ -512,7 +547,7 @@ export async function bookmarkDelete(c: Ctx, id: string) {
 // "daha çox yüklə". Polling ilə uzlaşsın deyə səhifələmə `limit`-lə aparılır: müştəri
 // cari limit-i saxlayır, "daha çox" onu artırır, hər poll cari limit-i gətirir.
 /** İcazə verilən reaksiya tipləri — 0039 miqrasiyasındakı CHECK ilə EYNİ olmalıdır. */
-export const REACTION_TYPES = ['like', 'love', 'laugh', 'wow', 'fire', 'clap'] as const;
+export const REACTION_TYPES = ['like', 'love', 'laugh', 'wow', 'fire', 'clap', 'tada', 'hundred', 'rocket'] as const;
 export type ReactionType = typeof REACTION_TYPES[number];
 const isReaction = (v: unknown): v is ReactionType =>
   typeof v === 'string' && (REACTION_TYPES as readonly string[]).includes(v);

@@ -769,6 +769,7 @@ const D = {
   'feed.sort_replies': { az: 'Ən çox cavab', en: 'Most replies', ru: 'Больше ответов' },
   /* şərh sistemi — AUDIT-UI yenidən dizayn */
   'cm.author': { az: 'Müəllif', en: 'Author', ru: 'Автор' },
+  'cm.moderator': { az: 'Moderator', en: 'Moderator', ru: 'Модератор' },
   'cm.admin': { az: 'Admin', en: 'Admin', ru: 'Админ' },
   'cm.you': { az: 'Sən', en: 'You', ru: 'Вы' },
   'cm.copy_link': { az: 'Linki kopyala', en: 'Copy link', ru: 'Копировать ссылку' },
@@ -790,6 +791,9 @@ const D = {
   'cm.react_wow':   { az: 'Təəccübləndim', en: 'Wow', ru: 'Ух ты' },
   'cm.react_fire':  { az: 'Alovlu', en: 'Fire', ru: 'Огонь' },
   'cm.react_clap':  { az: 'Alqış', en: 'Clap', ru: 'Аплодисменты' },
+  'cm.react_tada':  { az: 'Təbrik', en: 'Celebrate', ru: 'Праздник' },
+  'cm.react_hundred': { az: 'Tam dəstək', en: 'Hundred', ru: 'Сто процентов' },
+  'cm.react_rocket': { az: 'Uçuş', en: 'Rocket', ru: 'Ракета' },
   /* moderasiya */
   'cm.pin':      { az: 'Sancaqla', en: 'Pin', ru: 'Закрепить' },
   'cm.unpin':    { az: 'Sancağı götür', en: 'Unpin', ru: 'Открепить' },

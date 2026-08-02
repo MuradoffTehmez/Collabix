@@ -313,13 +313,30 @@ export function mapUser(r: any, self = false): any {
   return u;
 }
 
-export function mapPost(r: any): any {
+/**
+ * @param myReacts postId → mənim reaksiya tipim (0040/0041)
+ * @param reactCounts postId → { tip: say }
+ *
+ * ⚠ İkisi də OPSİONALDIR: `mapPost` bir neçə yerdən (feed, getPost, arxiv,
+ *   public SEO) çağırılır və hamısı reaksiya sorğusu etmir. Verilmədikdə
+ *   `reactions: {}` / `myReaction: null` qayıdır — UI onu "reaksiya yoxdur"
+ *   kimi göstərir, sınmır.
+ */
+export function mapPost(
+  r: any,
+  myReacts?: Map<string, string>,
+  reactCounts?: Map<string, Record<string, number>>,
+): any {
   if (!r) return null;
   const post: any = {
     id: r.id, authorUid: r.author_id, authorName: r.author_name,
     blocks: fromJSON(r.blocks, []), text: r.text, tags: fromJSON(r.tags, []),
     imagePaths: fromJSON(r.image_keys, []),
     likeCount: r.like_count, commentCount: r.comment_count, shareCount: r.share_count || 0,
+    reactions: reactCounts?.get(r.id) || {},
+    myReaction: myReacts?.get(r.id) || null,
+    pinnedAt: r.pinned_at || null,
+    hiddenAt: r.hidden_at || null,
     createdAt: r.created_at, editedAt: r.edited_at,
     sharedPostId: r.shared_post_id,
     postType: r.post_type || 'original',
