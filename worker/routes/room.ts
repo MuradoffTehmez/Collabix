@@ -41,7 +41,9 @@ export async function deleteRoom(c: Ctx, id: string) {
   return json({ ok: true });
 }
 
-const MSG_COLS = '(id, room_id, author_id, author_name, type, text, file_key, file_name, file_size, mime_type, language, created_at)';
+// ⚠ `room-do.ts`-dəki `INSERT_SQL` ilə SIRA ÜZRƏ EYNİ olmalıdır — mesajın iki
+//   yazma yolu var (REST və WS/DO) və onlar ayrılsa sütunlar sürüşər.
+const MSG_COLS = '(id, room_id, author_id, author_name, type, text, file_key, file_name, file_size, mime_type, language, created_at, reply_to)';
 
 /**
  * TASK-11 — komanda otağı qapısı.
@@ -231,6 +233,7 @@ export async function roomMessages(c: Ctx, roomId: string) {
   // §5.3 — R2 xətası "boş"dan AYRILIR: boş qaytarsaydıq UI "söhbətin
   // başlanğıcı" göstərər və istifadəçi datanın itdiyini düşünərdi.
   if (res.failed) return err('Arxiv oxunmadı, yenidən cəhd edin.', 502, 'archive_unavailable');
+  await attachReactions(c, 'room', res.messages);
   return json({ messages: res.messages, hasMore: res.hasMore, source: res.source });
 }
 export async function sendRoomMessage(c: Ctx, roomId: string) {
@@ -240,8 +243,8 @@ export async function sendRoomMessage(c: Ctx, roomId: string) {
   const b = await readJson(c.req);
   const m = sanitizeMsg(b, c.user!.id);
   if (!m) return badReq('Mesaj boşdur.');
-  await D(c).prepare(`INSERT INTO room_messages ${MSG_COLS} VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`)
-    .bind(uuid(), roomId, c.user!.id, c.user!.name, m.type, m.text, m.fileKey, m.fileName, m.fileSize, m.mimeType, m.language, now()).run();
+  await D(c).prepare(`INSERT INTO room_messages ${MSG_COLS} VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+    .bind(uuid(), roomId, c.user!.id, c.user!.name, m.type, m.text, m.fileKey, m.fileName, m.fileSize, m.mimeType, m.language, now(), m.replyTo).run();
   await bumpActivity(c);
   if (m.text) await notifyMentions(c, m.text, 'səni otaqda qeyd etdi');
   await roomBroadcast(c, roomId, { t: 'refresh' });
@@ -304,6 +307,7 @@ export async function dmMessages(c: Ctx, pairId: string) {
   });
   if (res instanceof Response) return res;
   if (res.failed) return err('Arxiv oxunmadı, yenidən cəhd edin.', 502, 'archive_unavailable');
+  await attachReactions(c, 'dm', res.messages);
   return json({ messages: res.messages, hasMore: res.hasMore, source: res.source });
 }
 
@@ -340,8 +344,8 @@ export async function sendDM(c: Ctx, toUid: string) {
        ON CONFLICT(pair_id) DO UPDATE SET last_msg = ?, last_from = ?, last_at = ?, ${readCol} = ?`,
     ).bind(pairId, a, bUid, preview, me.id, now(), now(), preview, me.id, now(), now()),
     D(c).prepare(
-      'INSERT INTO dm_messages (id, pair_id, from_id, to_id, type, text, file_key, file_name, file_size, mime_type, language, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
-    ).bind(uuid(), pairId, me.id, toUid, m.type, m.text, m.fileKey, m.fileName, m.fileSize, m.mimeType, m.language, now()),
+      'INSERT INTO dm_messages (id, pair_id, from_id, to_id, type, text, file_key, file_name, file_size, mime_type, language, created_at, reply_to) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
+    ).bind(uuid(), pairId, me.id, toUid, m.type, m.text, m.fileKey, m.fileName, m.fileSize, m.mimeType, m.language, now(), m.replyTo),
   ]);
   await notify(c, toUid, 'dm', 'sənə mesaj yazdı');
   await dmPush(c, pairId);
@@ -480,6 +484,191 @@ export async function unpinDMMessage(c: Ctx, pairId: string, mid: string) {
     .bind(mid, pairId).run();
   await dmPush(c, pairId);
   return json({ ok: true });
+}
+
+/* ═══════════ REAKSİYA · ƏLFƏCİN · FORWARD (miqrasiya 0047) ═══════════════
+ *
+ * ⚠ ORTAQ QAPI: hər üç əməliyyat əvvəlcə "bu istifadəçi bu mesajı OXUYA
+ *   BİLİRMİ?" sualına cavab verməlidir. Otaqda bu `guardTeamRoom`, DM-də isə
+ *   cüt üzvlüyüdür. Aşağıdakı `msgScopeGuard` hər iki halı bir yerdə yığır ki,
+ *   yeni əməliyyat əlavə edəndə qapı unudulmasın. */
+
+const REACTION_TYPES = ['like', 'love', 'laugh', 'wow', 'fire', 'clap', 'party', 'rocket'];
+
+/** Mesaja çıxışı yoxlayır və mesajın sətrini qaytarır. Xəta → `Response`. */
+async function msgScopeGuard(c: Ctx, scope: 'room' | 'dm', scopeId: string, mid: string) {
+  if (scope === 'room') {
+    const denied = await guardTeamRoom(c, scopeId);
+    if (denied) return denied;
+    const row = await D(c).prepare('SELECT id, room_id AS sid, author_id AS uid, file_key, type, text, file_name, file_size, mime_type, language FROM room_messages WHERE id = ?')
+      .bind(mid).first<any>();
+    // Marşrut parametrinə güvənilmir: mesaj HƏQİQƏTƏN bu otaqda olmalıdır.
+    if (!row || row.sid !== scopeId) return err('Tapılmadı.', 404);
+    return row;
+  }
+  if (!dmMember(c, scopeId)) return err('İcazə yoxdur.', 403, 'forbidden');
+  const row = await D(c).prepare('SELECT id, pair_id AS sid, from_id AS uid, file_key, type, text, file_name, file_size, mime_type, language FROM dm_messages WHERE id = ?')
+    .bind(mid).first<any>();
+  if (!row || row.sid !== scopeId) return err('Tapılmadı.', 404);
+  return row;
+}
+
+/** Dəyişiklikdən sonra hər iki nəqliyyat üçün "yenilə" siqnalı. */
+async function scopePush(c: Ctx, scope: 'room' | 'dm', scopeId: string) {
+  if (scope === 'room') await roomBroadcast(c, scopeId, { t: 'refresh' });
+  else await dmPush(c, scopeId);
+}
+
+async function setReaction(c: Ctx, scope: 'room' | 'dm', scopeId: string, mid: string, on: boolean) {
+  const row = await msgScopeGuard(c, scope, scopeId, mid);
+  if (row instanceof Response) return row;
+  const b = await readJson(c.req);
+  const type = String(b?.type || '');
+  if (!REACTION_TYPES.includes(type)) return badReq('Naməlum reaksiya tipi.');
+  if (on) {
+    // `OR IGNORE`: təkrar klik xəta vermir, sadəcə mövcud sətri saxlayır.
+    await D(c).prepare('INSERT OR IGNORE INTO message_reactions (scope, message_id, user_id, type, created_at) VALUES (?,?,?,?,?)')
+      .bind(scope, mid, c.user!.id, type, now()).run();
+  } else {
+    await D(c).prepare('DELETE FROM message_reactions WHERE scope = ? AND message_id = ? AND user_id = ? AND type = ?')
+      .bind(scope, mid, c.user!.id, type).run();
+  }
+  await scopePush(c, scope, scopeId);
+  return json({ ok: true });
+}
+
+export const roomReactionPut = (c: Ctx, rid: string, mid: string) => setReaction(c, 'room', rid, mid, true);
+export const roomReactionDelete = (c: Ctx, rid: string, mid: string) => setReaction(c, 'room', rid, mid, false);
+export const dmReactionPut = (c: Ctx, pid: string, mid: string) => setReaction(c, 'dm', pid, mid, true);
+export const dmReactionDelete = (c: Ctx, pid: string, mid: string) => setReaction(c, 'dm', pid, mid, false);
+
+async function setBookmark(c: Ctx, scope: 'room' | 'dm', scopeId: string, mid: string, on: boolean) {
+  const row = await msgScopeGuard(c, scope, scopeId, mid);
+  if (row instanceof Response) return row;
+  if (on) {
+    await D(c).prepare('INSERT OR IGNORE INTO message_bookmarks (scope, message_id, user_id, created_at) VALUES (?,?,?,?)')
+      .bind(scope, mid, c.user!.id, now()).run();
+  } else {
+    await D(c).prepare('DELETE FROM message_bookmarks WHERE scope = ? AND message_id = ? AND user_id = ?')
+      .bind(scope, mid, c.user!.id).run();
+  }
+  // ⚠ Yayım YOXDUR: əlfəcin ŞƏXSİdir, başqa iştirakçılara görünmür.
+  return json({ ok: true });
+}
+
+export const roomBookmarkPut = (c: Ctx, rid: string, mid: string) => setBookmark(c, 'room', rid, mid, true);
+export const roomBookmarkDelete = (c: Ctx, rid: string, mid: string) => setBookmark(c, 'room', rid, mid, false);
+export const dmBookmarkPut = (c: Ctx, pid: string, mid: string) => setBookmark(c, 'dm', pid, mid, true);
+export const dmBookmarkDelete = (c: Ctx, pid: string, mid: string) => setBookmark(c, 'dm', pid, mid, false);
+
+/**
+ * Mesajın başqa söhbətə yönləndirilməsi.
+ *
+ * 🔴 FAYL AÇARI KÖÇÜRÜLÜR, TƏKRAR İSTİFADƏ EDİLMİR.
+ *    `worker/msg.ts` şərhi bunu açıq tələb edir: `sanitizeMsg` fayl açarının
+ *    GÖNDƏRƏNƏ aid olmasını yoxlayır (`msgfiles/{uid}/…`). Yönləndirmədə
+ *    mənbə fayl BAŞQASININ açarındadır. İki yanlış yol var idi:
+ *      (a) yoxlamanı zəiflətmək → hücumçu yad faylı öz söhbətinə bağlayardı;
+ *      (b) açarı olduğu kimi yazmaq → `canReadKey` sahiblik seqmentinə baxdığı
+ *          üçün fayl yeni söhbətin iştirakçılarına AÇILMAZDI (sınıq əlavə).
+ *    Ona görə R2 obyekti YENİ `msgfiles/{yönləndirənin uid-i}/…` açarına
+ *    fiziki olaraq köçürülür.
+ *
+ * ⚠ Yönləndirən mənbəni OXUYA bilməlidir — `msgScopeGuard` bunu təmin edir.
+ */
+export async function forwardMessage(c: Ctx) {
+  const b = await readJson(c.req);
+  const fromScope = b?.fromScope === 'dm' ? 'dm' : 'room';
+  const toScope = b?.toScope === 'dm' ? 'dm' : 'room';
+  const fromId = String(b?.fromId || '');
+  const toId = String(b?.toId || '');
+  const mid = String(b?.messageId || '');
+  if (!fromId || !toId || !mid) return badReq('Natamam sorğu.');
+
+  const src = await msgScopeGuard(c, fromScope, fromId, mid);
+  if (src instanceof Response) return src;
+
+  // HƏDƏF söhbətə YAZMA hüququ ayrıca yoxlanılır — mənbəni oxumaq hədəfə
+  // yazmaq demək deyil.
+  if (toScope === 'room') {
+    const denied = await guardTeamRoom(c, toId);
+    if (denied) return denied;
+  } else if (!dmMember(c, toId)) {
+    return err('İcazə yoxdur.', 403, 'forbidden');
+  }
+
+  let fileKey: string | null = null;
+  if (src.file_key) {
+    const obj = await c.env.FILES.get(src.file_key);
+    if (obj) {
+      const ext = String(src.file_key).split('.').pop() || 'bin';
+      fileKey = `msgfiles/${c.user!.id}/${uuid()}.${ext}`;
+      await c.env.FILES.put(fileKey, obj.body, {
+        httpMetadata: { contentType: src.mime_type || 'application/octet-stream' },
+      });
+    }
+  }
+
+  const created = now();
+  const fwdText = String(src.text || '');
+  if (toScope === 'room') {
+    await D(c).prepare(`INSERT INTO room_messages ${MSG_COLS} VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+      .bind(uuid(), toId, c.user!.id, c.user!.name, src.type, fwdText, fileKey,
+        src.file_name, src.file_size, src.mime_type, src.language, created, null).run();
+  } else {
+    const [a, bUid] = toId.split('_');
+    const toUid = a === c.user!.id ? bUid : a;
+    const preview = src.type === 'text' ? fwdText.slice(0, 80) : `[${src.type}]`;
+    const readCol = c.user!.id === a ? 'read_a' : 'read_b';
+    await D(c).batch([
+      D(c).prepare(
+        `INSERT INTO dm_threads (pair_id, user_a, user_b, last_msg, last_from, last_at, ${readCol}) VALUES (?,?,?,?,?,?,?)
+         ON CONFLICT(pair_id) DO UPDATE SET last_msg = ?, last_from = ?, last_at = ?, ${readCol} = ?`,
+      ).bind(toId, a, bUid, preview, c.user!.id, created, created, preview, c.user!.id, created, created),
+      D(c).prepare(
+        'INSERT INTO dm_messages (id, pair_id, from_id, to_id, type, text, file_key, file_name, file_size, mime_type, language, created_at, reply_to) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
+      ).bind(uuid(), toId, c.user!.id, toUid, src.type, fwdText, fileKey,
+        src.file_name, src.file_size, src.mime_type, src.language, created, null),
+    ]);
+  }
+  await scopePush(c, toScope, toId);
+  return json({ ok: true });
+}
+
+/**
+ * Mesaj səhifəsinə reaksiyaları və şəxsi əlfəcin bayrağını bağlayır.
+ *
+ * ⚠ TƏK TOPLU SORĞU (N+1 YOX): 120 mesajlıq səhifə üçün mesaj başına sorğu
+ *   atmaq D1-də fəlakət olardı. `IN (…)` ilə bir dəfə oxunur və yaddaşda
+ *   qruplaşdırılır.
+ * ⚠ Nəticə formatı UI üçün HAZIR gəlir: `[{type, count, mine}]` — client
+ *   sayğac hesablamamalıdır.
+ */
+async function attachReactions(c: Ctx, scope: 'room' | 'dm', msgs: any[]) {
+  if (!msgs.length) return msgs;
+  const ids = msgs.map(m => m.id);
+  const ph = ids.map(() => '?').join(',');
+  const [reacts, bms] = await Promise.all([
+    D(c).prepare(`SELECT message_id, type, user_id FROM message_reactions WHERE scope = ? AND message_id IN (${ph})`)
+      .bind(scope, ...ids).all<any>(),
+    D(c).prepare(`SELECT message_id FROM message_bookmarks WHERE scope = ? AND user_id = ? AND message_id IN (${ph})`)
+      .bind(scope, c.user!.id, ...ids).all<any>(),
+  ]);
+  const byMsg = new Map<string, Map<string, { type: string; count: number; mine: boolean }>>();
+  for (const r of reacts.results) {
+    if (!byMsg.has(r.message_id)) byMsg.set(r.message_id, new Map());
+    const m = byMsg.get(r.message_id)!;
+    const cur = m.get(r.type) || { type: r.type, count: 0, mine: false };
+    cur.count++;
+    if (r.user_id === c.user!.id) cur.mine = true;
+    m.set(r.type, cur);
+  }
+  const bookmarked = new Set(bms.results.map((r: any) => r.message_id));
+  for (const m of msgs) {
+    m.reactions = byMsg.has(m.id) ? [...byMsg.get(m.id)!.values()] : [];
+    m.bookmarked = bookmarked.has(m.id);
+  }
+  return msgs;
 }
 
 /* ================= PRESENCE =================

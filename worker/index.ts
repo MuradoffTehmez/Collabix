@@ -189,6 +189,11 @@ const ROUTES: Route[] = [
   { method: 'GET', pattern: /^\/api\/rooms\/([\w-]+)\/pins$/, handler: R.listRoomPins, auth: true, rl: 'read' },
   { method: 'PUT', pattern: /^\/api\/rooms\/([\w-]+)\/messages\/([\w-]+)\/pin$/, handler: R.pinRoomMessage, auth: true, rl: 'write' },
   { method: 'DELETE', pattern: /^\/api\/rooms\/([\w-]+)\/messages\/([\w-]+)\/pin$/, handler: R.unpinRoomMessage, auth: true, rl: 'write' },
+  // Reaksiya · əlfəcin (0047). Şərh reaksiyaları ilə eyni PUT/DELETE konvensiyası.
+  { method: 'PUT', pattern: /^\/api\/rooms\/([\w-]+)\/messages\/([\w-]+)\/reaction$/, handler: R.roomReactionPut, auth: true, rl: 'write' },
+  { method: 'DELETE', pattern: /^\/api\/rooms\/([\w-]+)\/messages\/([\w-]+)\/reaction$/, handler: R.roomReactionDelete, auth: true, rl: 'write' },
+  { method: 'PUT', pattern: /^\/api\/rooms\/([\w-]+)\/messages\/([\w-]+)\/bookmark$/, handler: R.roomBookmarkPut, auth: true, rl: 'write' },
+  { method: 'DELETE', pattern: /^\/api\/rooms\/([\w-]+)\/messages\/([\w-]+)\/bookmark$/, handler: R.roomBookmarkDelete, auth: true, rl: 'write' },
 
   // dms
   { method: 'GET', pattern: /^\/api\/dms$/, handler: R.listThreads, auth: true, rl: 'read' },
@@ -200,6 +205,14 @@ const ROUTES: Route[] = [
   { method: 'GET', pattern: /^\/api\/dms\/([\w_-]+)\/pins$/, handler: R.listDMPins, auth: true, rl: 'read' },
   { method: 'PUT', pattern: /^\/api\/dms\/([\w_-]+)\/messages\/([\w-]+)\/pin$/, handler: R.pinDMMessage, auth: true, rl: 'write' },
   { method: 'DELETE', pattern: /^\/api\/dms\/([\w_-]+)\/messages\/([\w-]+)\/pin$/, handler: R.unpinDMMessage, auth: true, rl: 'write' },
+  { method: 'PUT', pattern: /^\/api\/dms\/([\w_-]+)\/messages\/([\w-]+)\/reaction$/, handler: R.dmReactionPut, auth: true, rl: 'write' },
+  { method: 'DELETE', pattern: /^\/api\/dms\/([\w_-]+)\/messages\/([\w-]+)\/reaction$/, handler: R.dmReactionDelete, auth: true, rl: 'write' },
+  { method: 'PUT', pattern: /^\/api\/dms\/([\w_-]+)\/messages\/([\w-]+)\/bookmark$/, handler: R.dmBookmarkPut, auth: true, rl: 'write' },
+  { method: 'DELETE', pattern: /^\/api\/dms\/([\w_-]+)\/messages\/([\w-]+)\/bookmark$/, handler: R.dmBookmarkDelete, auth: true, rl: 'write' },
+  /* Forward — HƏR İKİ istiqamət (otaq↔DM) üçün TƏK endpoint.
+     Mənbə və hədəf gövdədədir, çünki marşrut naxışı iki fərqli scope-u
+     eyni anda ifadə edə bilmir. */
+  { method: 'POST', pattern: /^\/api\/messages\/forward$/, handler: R.forwardMessage, auth: true, rl: 'write' },
 
   // presence + notifications
   { method: 'POST', pattern: /^\/api\/presence$/, handler: R.heartbeat, auth: true, rl: 'presence' },

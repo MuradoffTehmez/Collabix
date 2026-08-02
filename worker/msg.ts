@@ -19,6 +19,8 @@ export interface CleanMsg {
   fileSize: number | null;
   mimeType: string | null;
   language: string | null;
+  /** Thread (0047): hansı mesaja cavabdır. `null` = kök mesaj. */
+  replyTo: string | null;
 }
 
 const clamp = (v: unknown, max: number) => String(v ?? '').slice(0, max);
@@ -40,10 +42,11 @@ const clamp = (v: unknown, max: number) => String(v ?? '').slice(0, max);
  * `senderUid` çağıran tərəfdən gəlir (REST: `c.user.id`, WS: `meta.uid`) —
  * hər ikisi serverdə doğrulanmış kimlikdir, client onu spoof edə bilmir.
  *
- * Mesajın yönləndirilməsi (forward/repost) funksiyası MÖVCUD DEYİL, ona görə
- * "başqasının açarını göndərmək" qanuni ssenari sayılmır. Belə funksiya
- * əlavə edilsə, açarı köçürmək (yeni `msgfiles/{yeni göndərən}/…` obyekti)
- * lazım olacaq — bu yoxlamanı zəiflətmək YOX.
+ * ✅ FORWARD ARTIQ MÖVCUDDUR (`forwardMessage`, routes/room.ts) və yuxarıdakı
+ * tələbə MƏHZ deyildiyi kimi əməl edir: yönləndirmə bu funksiyadan KEÇMİR,
+ * server mənbə faylını R2-də YENİ `msgfiles/{yönləndirənin uid-i}/…` açarına
+ * KÖÇÜRÜR. Yoxlama zəiflədilməyib — client hələ də başqasının açarını
+ * göndərə bilmir.
  */
 export function sanitizeMsg(b: any, senderUid: string): CleanMsg | null {
   const type = (MSG_TYPES as readonly string[]).includes(b?.type) ? b.type as MsgType : 'text';
@@ -71,5 +74,11 @@ export function sanitizeMsg(b: any, senderUid: string): CleanMsg | null {
     fileSize: parseInt(b?.fileSize, 10) || null,
     mimeType: clamp(b?.mimeType, 60) || null,
     language: clamp(b?.language, 20) || null,
+    /* ⚠ Yalnız FORMAT yoxlanılır (uuid-vari id), MÖVCUDLUQ yox.
+     * Mövcudluğu yoxlamaq üçün əlavə SELECT lazımdır və o, HƏR mesaj
+     * göndərişinə bir sorğu əlavə edərdi. Sahibsiz `reply_to` zərərsizdir:
+     * UI onu "silinmiş mesaja cavab" kimi göstərir (arxivləmə onsuz da
+     * valideyni silə bilir — bax miqrasiya 0047 şərhi). */
+    replyTo: /^[\w-]{1,64}$/.test(String(b?.replyTo || '')) ? String(b.replyTo) : null,
   };
 }

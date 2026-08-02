@@ -454,6 +454,55 @@ export async function markThreadRead(pairId){
   await api(`/dms/${pairId}/read`, { method: 'POST' });
 }
 
+/* ══ Reaksiya · əlfəcin · forward (miqrasiya 0047) ═══════════════════════════
+ * ⚠ `scope` ('room' | 'dm') marşrutu seçir. Otaq və DM üçün AYRI funksiya
+ *   yazmaq əvəzinə tək funksiya işlədilir: çağıran tərəflər (chat.js / dm.js)
+ *   eyni UI komponentini paylaşır və onun iki variantı olmamalıdır. */
+const scopePath = (scope, id) => scope === 'dm' ? `/dms/${id}` : `/rooms/${id}`;
+
+export async function setMessageReaction(scope, scopeId, msgId, type, on){
+  await api(`${scopePath(scope, scopeId)}/messages/${msgId}/reaction`, {
+    method: on ? 'PUT' : 'DELETE', body: { type },
+  });
+  emit(scope === 'dm' ? 'refresh-dm-' + scopeId : 'refresh-msgs-' + scopeId);
+}
+
+export async function setMessageBookmark(scope, scopeId, msgId, on){
+  await api(`${scopePath(scope, scopeId)}/messages/${msgId}/bookmark`, { method: on ? 'PUT' : 'DELETE' });
+  // Yayım YOXDUR — əlfəcin şəxsidir, server də siqnal göndərmir.
+}
+
+/** Mesajı başqa söhbətə yönləndirir. Fayl SERVERDƏ köçürülür (bax routes/room.ts). */
+export async function forwardMessage({ fromScope, fromId, toScope, toId, messageId }){
+  await api('/messages/forward', {
+    method: 'POST', body: { fromScope, fromId, toScope, toId, messageId },
+  });
+  emit(toScope === 'dm' ? 'refresh-dm-' + toId : 'refresh-msgs-' + toId);
+}
+
+/* ── Söhbətin sabitlənməsi / susdurulması ────────────────────────────────
+ * ⚠ SXEM DƏYİŞMİR: bunlar `users.settings` JSON blobunda saxlanılır və
+ *   MÖVCUD `PATCH /api/me/settings` endpoint-i ilə yazılır (o, açarları
+ *   birləşdirir). Yeni cədvəl/sütun lazım deyil, çünki bu, tamamilə ŞƏXSİ
+ *   tərcihdir — başqa istifadəçi onu görmür və sorğu ilə filtrlənmir. */
+export function convPrefs(){
+  const s = state.me?.settings || {};
+  return { pinned: s.pinnedConvs || [], muted: s.mutedConvs || [] };
+}
+
+export async function setConvPref(key, id, on){
+  const cur = convPrefs();
+  const list = key === 'pinned' ? [...cur.pinned] : [...cur.muted];
+  const i = list.indexOf(id);
+  if(on && i < 0) list.push(id);
+  if(!on && i >= 0) list.splice(i, 1);
+  const field = key === 'pinned' ? 'pinnedConvs' : 'mutedConvs';
+  // Lokal vəziyyət DƏRHAL yenilənir ki, UI serveri gözləməsin (optimistik).
+  if(state.me) state.me.settings = { ...(state.me.settings || {}), [field]: list };
+  await api('/me/settings', { method: 'PATCH', body: { [field]: list } });
+  emit('conv-prefs-changed');
+}
+
 /* DM-də hər iki iştirakçı sabitləyə bilər — şəxsi söhbətdə "moderasiya" yoxdur. */
 export function fetchDMPins(pairId){
   return api(`/dms/${pairId}/pins`);

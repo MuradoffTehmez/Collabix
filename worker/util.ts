@@ -404,6 +404,12 @@ export function mapMsg(r: any, dm = false): any {
     // Sabitlənmiş mesajlar (0046). Arxivdən oxunan köhnə qeydlərdə sütun
     // olmaya bilər → `?? null` ilə normallaşdırılır ki, UI `undefined` görməsin.
     pinnedAt: r.pinned_at ?? null, pinnedBy: r.pinned_by ?? null,
+    // Thread (0047). Eyni səbəbdən normallaşdırılır.
+    replyTo: r.reply_to ?? null,
+    /* Reaksiyalar `attachReactions()` ilə SONRADAN doldurulur (mesaj səhifəsi
+     * üçün TƏK toplu sorğu). Burada boş massiv qoyulur ki, UI sahənin
+     * mövcudluğuna güvənə bilsin və `undefined` yoxlaması yayılmasın. */
+    reactions: [],
   };
   if (dm) { base.fromUid = r.from_id; base.toUid = r.to_id; }
   else { base.authorUid = r.author_id; base.authorName = r.author_name; }

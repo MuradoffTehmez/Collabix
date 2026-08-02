@@ -120,6 +120,10 @@ export {
   // Sabitlənmiş mesajlar (0046)
   listRoomPins, pinRoomMessage, unpinRoomMessage,
   listDMPins, pinDMMessage, unpinDMMessage,
+  // Reaksiya · əlfəcin · forward (0047)
+  roomReactionPut, roomReactionDelete, dmReactionPut, dmReactionDelete,
+  roomBookmarkPut, roomBookmarkDelete, dmBookmarkPut, dmBookmarkDelete,
+  forwardMessage,
 } from './routes/room';
 export {
   listTasks, createTask, reviewTask, deleteTask, submitSolution,

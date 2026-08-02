@@ -40,8 +40,8 @@ interface WsMeta {
 // Otaq mesajının D1 sütunları — routes.ts-dəki `MSG_COLS` ilə eyni sıra.
 const INSERT_SQL =
   `INSERT INTO room_messages
-     (id, room_id, author_id, author_name, type, text, file_key, file_name, file_size, mime_type, language, created_at)
-   VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`;
+     (id, room_id, author_id, author_name, type, text, file_key, file_name, file_size, mime_type, language, created_at, reply_to)
+   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`;
 
 // Soket başına sadə token-bucket. WS açıq qaldığı üçün REST rate-limit-i
 // (IP + endpoint) buradakı axını TUTMUR — spam qapısını DO-nun özü bağlamalıdır.
@@ -363,6 +363,7 @@ export class RoomDO extends DurableObject<Env> {
       await this.env.DB.prepare(INSERT_SQL).bind(
         id, roomId, meta.uid, meta.name, msg.type, msg.text,
         msg.fileKey, msg.fileName, msg.fileSize, msg.mimeType, msg.language, createdAt,
+        msg.replyTo,
       ).run();
     } catch (e: any) {
       console.error('otaq mesajı D1-ə yazılmadı', roomId, id, e?.message || e);
