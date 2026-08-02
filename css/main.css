@@ -59,5 +59,11 @@
 @import './85-teams.css';
 @import './86-admin-ui.css';
 
+/* Mesaj/çat bölməsinin yenidən dizaynı.
+   ⚠ QƏSDƏN `75-touch.css`-dən SONRADIR (öz başlıq şərhinə bax): toxunuş
+     hədəfləri həmin faylı basa bildiyi üçün modul onları öz media query-sində
+     açıq şəkildə bərpa edir. */
+@import './87-chat-modern.css';
+
 /* 🔴 HƏMİŞƏ SONUNCU */
 @import './90-utilities.css';

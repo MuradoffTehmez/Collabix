@@ -68,11 +68,20 @@ export function attachRichControls(inputRow, send){
       toast(err.message === 'Bu fayl tipi dəstəklənmir' ? t('msg.badType') : (err.message || t('msg.badType')), 'err');
     }
   });
-  const attachBtn = el('button', { type: 'button', class: 'chat-attach-btn', title: t('msg.attach'),
-    onclick: () => fileIn.click() }, '📎');
-  const codeBtn = el('button', { type: 'button', class: 'chat-attach-btn', title: t('msg.code'),
-    onclick: () => openCodeModal(send) }, '</>');
+  /* AUDIT-UI + çat redizaynı: düymələr '📎' və '</>' MƏTN qlifləri idi —
+   * emoji ikon kimi (`no-emoji-icons`) və əlçatan ad məzmundan gəlirdi
+   * ("paperclip" / "less-than slash greater-than"). İndi SVG ikon qatı +
+   * açıq `aria-label`; sinif isə yeni kompozitorun `.cmp-btn` primitividir. */
+  const attachBtn = el('button', {
+    type: 'button', class: 'cmp-btn', title: t('msg.attach'), 'aria-label': t('msg.attach'),
+    onclick: () => fileIn.click(),
+  }, el('span', { class: 'ic', 'data-icon': 'paperclip', 'data-icon-size': '16' }));
+  const codeBtn = el('button', {
+    type: 'button', class: 'cmp-btn', title: t('msg.code'), 'aria-label': t('msg.code'),
+    onclick: () => openCodeModal(send),
+  }, el('span', { class: 'ic', 'data-icon': 'code', 'data-icon-size': '16' }));
   inputRow.prepend(attachBtn, codeBtn, fileIn);
+  paintIcons(inputRow);
 }
 
 // Ardıcıl eyni-göndərən mesajları qruplaşdırıb render edir (TASK-7 / Bənd 9,

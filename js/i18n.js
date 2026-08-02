@@ -881,6 +881,62 @@ const D = {
   'chat.typing': { az: 'yazır…', en: 'is typing…', ru: 'печатает…' },
   'chat.someone': { az: 'Kimsə', en: 'Someone', ru: 'Кто-то' },
 
+  /* ── Çat redizaynı: siyahı, detallar paneli, emoji, AI ─────────────────── */
+  'chat.unread_n':   { az: '{n} oxunmamış mesaj', en: '{n} unread messages', ru: '{n} непрочитанных сообщений' },
+  /* Say bilinmədikdə (DM siyahısı — server yalnız `readAt` damğası verir). */
+  'chat.unread_any': { az: 'Oxunmamış mesaj var', en: 'Has unread messages', ru: 'Есть непрочитанные' },
+  'chat.prev_image': { az: 'Şəkil', en: 'Photo', ru: 'Фото' },
+  'chat.prev_file':  { az: 'Fayl:', en: 'File:', ru: 'Файл:' },
+  'chat.prev_code':  { az: 'Kod parçası', en: 'Code snippet', ru: 'Фрагмент кода' },
+  'chat.room_sub':   { az: 'Hamı üçün açıqdır', en: 'Open to everyone', ru: 'Открыт для всех' },
+  'chat.pinned_one': { az: 'Sabitlənmiş mesaj', en: 'Pinned message', ru: 'Закреплённое сообщение' },
+  'chat.pin':        { az: 'Sabitlə', en: 'Pin', ru: 'Закрепить' },
+  'chat.unpin':      { az: 'Sabitləməni ləğv et', en: 'Unpin', ru: 'Открепить' },
+  'chat.pin_fail':   { az: 'Sabitlənmədi', en: 'Could not pin', ru: 'Не удалось закрепить' },
+  'chat.search_conv': { az: 'Söhbətlərdə axtar', en: 'Search conversations', ru: 'Поиск по чатам' },
+  'chat.you':        { az: 'sən: ', en: 'you: ', ru: 'вы: ' },
+
+  'cd.title':      { az: 'Söhbət detalları', en: 'Conversation details', ru: 'Детали чата' },
+  'cd.toggle':     { az: 'Söhbət detallarını aç/bağla', en: 'Toggle conversation details', ru: 'Показать/скрыть детали' },
+  'cd.close':      { az: 'Paneli bağla', en: 'Close panel', ru: 'Закрыть панель' },
+  'cd.search':     { az: 'Axtarış', en: 'Search', ru: 'Поиск' },
+  'cd.search_ph':  { az: 'Bu söhbətdə axtar…', en: 'Search this conversation…', ru: 'Искать в этом чате…' },
+  'cd.no_hits':    { az: 'Nəticə tapılmadı.', en: 'No results.', ru: 'Ничего не найдено.' },
+  'cd.people':     { az: 'İştirakçılar', en: 'Participants', ru: 'Участники' },
+  'cd.no_people':  { az: 'İştirakçı məlumatı yoxdur.', en: 'No participant data.', ru: 'Нет данных об участниках.' },
+  'cd.online':     { az: 'Onlayn', en: 'Online', ru: 'В сети' },
+  'cd.pins':       { az: 'Sabitlənmiş', en: 'Pinned', ru: 'Закреплённые' },
+  'cd.no_pins':    { az: 'Hələ sabitlənmiş mesaj yoxdur.', en: 'No pinned messages yet.', ru: 'Пока нет закреплённых сообщений.' },
+  'cd.unpin':      { az: 'Sabitləməni ləğv et', en: 'Unpin', ru: 'Открепить' },
+  'cd.summary':    { az: 'AI xülasə', en: 'AI summary', ru: 'AI-сводка' },
+  'cd.summarize':  { az: 'Söhbəti xülasə et', en: 'Summarize conversation', ru: 'Сделать сводку' },
+
+  'emoji.open':        { az: 'Emoji əlavə et', en: 'Add emoji', ru: 'Добавить эмодзи' },
+  'emoji.cat_smiley':  { az: 'Üzlər', en: 'Smileys', ru: 'Смайлы' },
+  'emoji.cat_gesture': { az: 'Jestlər', en: 'Gestures', ru: 'Жесты' },
+  'emoji.cat_object':  { az: 'Simvollar', en: 'Symbols', ru: 'Символы' },
+  'emoji.cat_dev':     { az: 'Developer', en: 'Developer', ru: 'Разработка' },
+
+  'ai.open':      { az: 'AI alətləri', en: 'AI tools', ru: 'AI-инструменты' },
+  'ai.improve':   { az: 'Mətni yaxşılaşdır', en: 'Improve text', ru: 'Улучшить текст' },
+  'ai.translate': { az: 'Tərcümə et → {lang}', en: 'Translate → {lang}', ru: 'Перевести → {lang}' },
+  'ai.code':      { az: 'Kodu izah et / təkmilləşdir', en: 'Explain / improve code', ru: 'Объяснить / улучшить код' },
+  'ai.summary':   { az: 'Söhbəti xülasə et', en: 'Summarize conversation', ru: 'Сделать сводку чата' },
+  'ai.apply':     { az: 'Tətbiq et', en: 'Apply', ru: 'Применить' },
+  'ai.cancel':    { az: 'Ləğv et', en: 'Cancel', ru: 'Отмена' },
+  'ai.need_text': { az: 'Əvvəlcə mesaj yazın.', en: 'Type a message first.', ru: 'Сначала напишите сообщение.' },
+  'ai.working':   { az: 'AI işləyir…', en: 'AI is working…', ru: 'AI работает…' },
+  'ai.empty':     { az: 'AI cavab qaytarmadı.', en: 'AI returned nothing.', ru: 'AI ничего не вернул.' },
+  'ai.fail':      { az: 'AI sorğusu alınmadı.', en: 'AI request failed.', ru: 'Запрос к AI не удался.' },
+  'ai.summary_ready': { az: 'Xülasə detallar panelindədir', en: 'Summary is in the details panel', ru: 'Сводка в панели деталей' },
+  /* ⚠ Bu qeyd QƏSDƏN göstərilir: nəticə birbaşa göndərilmir, istifadəçi
+     təsdiqləyir. İstifadəçi AI-ın nə etdiyini əvvəlcədən bilməlidir. */
+  'ai.note': {
+    az: 'Nəticə əvvəlcə önbaxışda göstərilir — təsdiqləməsən mesaj dəyişmir.',
+    en: 'The result is shown as a preview first — nothing changes until you apply it.',
+    ru: 'Результат сначала показывается в предпросмотре — ничего не меняется, пока вы не примените.',
+  },
+
   /* ---------- Actions / Dynamic ---------- */
   'dyn.del_fail': { az: 'Silinə bilmədi', en: 'Failed to delete', ru: 'Не удалось удалить' },
   'dyn.upd_fail': { az: 'Yenilənə bilmədi', en: 'Failed to update', ru: 'Не удалось обновить' },

@@ -698,10 +698,14 @@
     <div class="page" id="page-chat">
       <h1 class="page-title" data-i18n="nav.rooms"></h1>
       <p class="page-sub" data-i18n="chat.sub"></p>
-      <div class="chat-wrap">
+      <!-- `data-details` panelin vəziyyətini saxlayır; CSS yalnız grid sütun
+           şablonunu dəyişir, uşaqlara toxunmur (layout sıçraması olmasın). -->
+      <div class="chat-wrap" id="chatWrap">
         <div class="chat-list" id="roomList"></div>
         <div class="chat-main">
-          <div class="chat-head" id="chatHead"># ümumi</div>
+          <div class="chat-head" id="chatHead"></div>
+          <!-- Sabitlənmiş mesaj zolağı — panel yeganə giriş nöqtəsi olmamalıdır. -->
+          <div class="chat-pinstrip" id="chatPinStrip" hidden></div>
           <div class="chat-messages" id="chatMessages"></div>
           <!-- AUDIT-UI: real-time çatda yeni mesajlar ekran oxuyucusuna HEÇ CÜR
                bildirilmirdi. `#chatMessages`-in özünə `aria-live` qoymaq OLMAZ:
@@ -709,30 +713,35 @@
                yəni canlı region BÜTÜN tarixçəni təkrar oxuyardı.
                Ona görə ayrıca, yalnız ƏN SON mesajı saxlayan gizli region. -->
           <div id="chatLive" class="sr-only" aria-live="polite" aria-atomic="true"></div>
-          <div class="chat-input">
+          <div class="typing-indicator" id="chatTyping"></div>
+          <div class="chat-input" id="chatComposer">
             <!-- AUDIT-UI: yalnız placeholder var idi (`input-labels` pozuntusu:
                  placeholder etiket deyil — yazmağa başlayanda itir). -->
             <input id="chatInput" data-i18n-ph="chat.ph" data-i18n-aria="chat.ph" maxlength="2000">
             <button id="chatSendBtn" data-i18n="chat.send"></button>
           </div>
         </div>
+        <aside class="chat-details" id="chatDetails" aria-labelledby="chatDetailsTitle"></aside>
       </div>
     </div>
 
     <div class="page" id="page-dm">
       <h1 class="page-title" data-i18n="nav.dm"></h1>
       <p class="page-sub" data-i18n="dm.sub"></p>
-      <div class="chat-wrap">
+      <div class="chat-wrap" id="dmWrap">
         <div class="chat-list" id="dmList"></div>
         <div class="chat-main">
-          <div class="chat-head" id="dmHead" data-i18n="dm.head"></div>
+          <div class="chat-head" id="dmHead"></div>
+          <div class="chat-pinstrip" id="dmPinStrip" hidden></div>
           <div class="chat-messages" id="dmMessages"><div class="empty-state"><div class="ic" data-icon="mail" data-icon-size="28"></div><span data-i18n="dm.empty"></span></div></div>
-          <div class="chat-input">
+          <div id="dmLive" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+          <div class="chat-input" id="dmComposer">
             <!-- AUDIT-UI: `#chatInput` ilə eyni — placeholder etiket deyil. -->
             <input id="dmInput" data-i18n-ph="chat.ph" data-i18n-aria="chat.ph" maxlength="2000">
             <button id="dmSendBtn" data-i18n="chat.send"></button>
           </div>
         </div>
+        <aside class="chat-details" id="dmDetails" aria-labelledby="dmDetailsTitle"></aside>
       </div>
     </div>
 

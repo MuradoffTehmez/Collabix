@@ -1,16 +1,21 @@
 // Otaqlar (ümumi + mövzu otaqları): real-time mesajlar, redaktə/silmə.
 import {
   state, watchRooms, watchRoomMessages, sendRoomMessage, editRoomMessage, deleteRoomMessage, deleteRoom,
-  fetchOlderRoomMessages,
+  fetchOlderRoomMessages, fetchRoomPins, setRoomPin,
 } from './store.js';
 import { createHistory, historyBar, loadOlder } from './history.js';
-import { el, clear, fmtTime, emit } from './util.js';
+import { el, clear, fmtTime, emit, isOnline } from './util.js';
 import { toast, confirmDialog, showModal, closeModal, emptyState } from './ui.js';
 import { openProfileModal } from './users.js';
 import { mentionify, attachMentionAutocomplete } from './mention.js';
 import { richContent, attachRichControls, renderGroupedMessages } from './richmsg.js';
 import { t } from './i18n.js';
 import { iconTrash, iconEdit } from './icons.js';
+import { paintIcons } from './icons.js';
+import {
+  conversationRow, buildChatHead, detailsToggleButton, setDetailsOpen,
+  enhanceComposer, renderDetailsPanel, previewOf, askAI,
+} from './chat-ui.js';
 
 let rooms = [];
 let currentRoomId = 'general';
@@ -155,24 +160,60 @@ function closeRoomDetail(){
   document.querySelector('#page-chat .chat-wrap')?.classList.remove('detail-open');
 }
 
+/* Siyahı filtri — `.cl-search` sahəsindən. Debounce LAZIM DEYİL: otaq sayı
+   onlarladır və filtr sinxron massiv əməliyyatıdır. */
+let roomFilter = '';
+
 function renderRoomList(){
   const list = document.getElementById('roomList');
   clear(list);
-  rooms.forEach(r => {
-    const item = el('div', { class: 'ch-item' + (r.id === currentRoomId ? ' active' : ''), onclick: () => selectRoom(r.id, true) },
-      el('div', { class: 'avatar' }, '#'),
-      el('div', { class: 'meta' }, el('b', {}, r.name)),
-    );
+
+  // Axtarış sahəsi HƏR render-də yenidən qurulur, ona görə dəyəri
+  // `roomFilter`-dən bərpa olunur (əks halda yazarkən itərdi).
+  const search = el('input', {
+    class: 'cl-search', type: 'search', value: roomFilter,
+    placeholder: t('chat.search_conv'), 'aria-label': t('chat.search_conv'),
+  });
+  search.addEventListener('input', () => {
+    roomFilter = search.value;
+    renderRoomList();
+    // Fokus yenidən qurulmuş sahəyə qaytarılır — yazmaq kəsilməsin.
+    const nx = document.querySelector('#roomList .cl-search');
+    if(nx){ nx.focus(); nx.setSelectionRange(nx.value.length, nx.value.length); }
+  });
+  list.append(el('div', { class: 'cl-head' }, search));
+
+  const q = roomFilter.trim().toLowerCase();
+  const shown = rooms.filter(r => !q || (r.name || '').toLowerCase().includes(q));
+  if(!shown.length){ list.append(el('div', { class: 'cd-empty' }, t('cd.no_hits'))); return; }
+
+  shown.forEach(r => {
+    /* ⚠ Sətir artıq `<button>`-dur (klaviatura ilə seçim üçün), ona görə
+     *   silmə düyməsi ONUN İÇİNDƏ ola BİLMƏZ — iç-içə `<button>` etibarsız
+     *   HTML-dir və brauzerlər onu gözlənilməz şəkildə düzəldir.
+     *   Həll: `.ch-row` sarğısı, silmə düyməsi QARDAŞ element kimi. */
+    const row = el('div', { class: 'ch-row' });
+    row.append(conversationRow({
+      avatar: el('span', { class: 'avatar' }, '#'),
+      name: r.name,
+      preview: r.id === 'general' ? t('chat.room_sub') : '',
+      time: '',
+      active: r.id === currentRoomId,
+      onSelect: () => selectRoom(r.id, true),
+    }));
     if(state.isAdmin && r.id !== 'general'){
-      item.append(el('button', { class: 'btn-mini block', style: 'padding:3px 7px; font-size:.62rem;',
-        'aria-label': t('a11y.delete') + ' — ' + r.name, onclick: async e => {
+      row.append(el('button', {
+        type: 'button', class: 'ch-del',
+        'aria-label': t('a11y.delete') + ' — ' + r.name, title: t('a11y.delete'),
+        onclick: async e => {
           e.stopPropagation();
           if(await confirmDialog(t('dyn.room_del_conf').replace('"${r.name}"', `"${r.name}"`))){
             try{ await deleteRoom(r.id); toast(t('dyn.room_del')); }catch(err){ toast(t('dyn.del_fail'), 'err'); }
           }
-        } }, iconTrash()));
+        },
+      }, iconTrash()));
     }
-    list.append(item);
+    list.append(row);
   });
 }
 
@@ -180,12 +221,31 @@ function renderRoomList(){
 // Hover-də tam tarix `title` ilə; redaktə/sil alətləri əvvəlki kimi.
 function msgBubble(m){
   const mine = m.authorUid === state.authUser.uid;
-  const node = el('div', { class: 'msg ' + (mine ? 'out' : 'in'), title: fmtTime(m.createdAt) },
+  const node = el('div', {
+    class: 'msg ' + (mine ? 'out' : 'in') + (m.pinnedAt ? ' pinned' : ''),
+    title: fmtTime(m.createdAt),
+    // Paneldəki axtarış nəticəsindən mesaja tullanmaq üçün lövbər.
+    dataset: { mid: m.id },
+  },
     richContent(m),
     m.editedAt ? el('span', { class: 'edited-mark' }, ' ' + t('feed.edited')) : null,
   );
   if(mine || state.isAdmin){
     const tools = el('div', { class: 'msg-tools' });
+    // Sabitləmə OTAQDA yalnız admin üçündür (server də eyni qaydanı tətbiq edir):
+    // sabitlənmiş mesaj bütün otağa görünür → moderasiya əməliyyatıdır.
+    if(state.isAdmin){
+      tools.append(el('button', {
+        type: 'button',
+        title: m.pinnedAt ? t('chat.unpin') : t('chat.pin'),
+        'aria-label': m.pinnedAt ? t('chat.unpin') : t('chat.pin'),
+        'aria-pressed': String(!!m.pinnedAt),
+        onclick: async () => {
+          try{ await setRoomPin(currentRoomId, m.id, !m.pinnedAt); await loadPins(currentRoomId); }
+          catch(e){ toast(e?.message || t('chat.pin_fail'), 'err'); }
+        },
+      }, el('span', { class: 'ic', 'data-icon': 'pin', 'data-icon-size': '13' })));
+    }
     if(mine && (!m.type || m.type === 'text')) tools.append(el('button', {
       type: 'button', title: t('a11y.edit'), 'aria-label': t('a11y.edit'),
       onclick: () => openMsgEdit(m),
@@ -196,6 +256,7 @@ function msgBubble(m){
       }
     } }, iconTrash()));
     node.append(tools);
+    paintIcons(tools);
   }
   return node;
 }
@@ -215,6 +276,83 @@ function openMsgEdit(m){
   ]);
 }
 
+/* ══ Sabitlənmiş mesajlar + detallar paneli ═══════════════════════════════
+ * `lastMsgs` panelin AXTARIŞI üçün saxlanılır: axtarış yüklənmiş mesajlar
+ * üzərində LOKAL işləyir. Server tərəfli mesaj axtarışı ayrı endpoint + indeks
+ * tələb edərdi; panelin məqsədi isə "bayaq gördüyüm mesajı tap"-dır. */
+let pins = [];
+let aiSummary = null;
+let lastMsgs = [];
+
+async function loadPins(roomId){
+  try{
+    const r = await fetchRoomPins(roomId);
+    // Otaq bu arada dəyişmiş ola bilər — gec gələn cavab yenisini əzməsin.
+    if(roomId !== currentRoomId) return;
+    pins = r.pins || [];
+  }catch(e){ pins = []; }
+  paintPinStrip();
+  paintDetails();
+}
+
+function paintPinStrip(){
+  const strip = document.getElementById('chatPinStrip');
+  if(!strip) return;
+  clear(strip);
+  if(!pins.length){ strip.hidden = true; return; }
+  strip.hidden = false;
+  strip.append(
+    el('span', { class: 'ic', 'data-icon': 'pin', 'data-icon-size': '14' }),
+    el('span', { class: 'pin-text' }, previewOf(pins[0])),
+    el('button', {
+      type: 'button', class: 'cmp-btn',
+      onclick: () => setDetailsOpen(document.getElementById('chatWrap'), true),
+    }, pins.length > 1 ? `+${pins.length - 1}` : t('cd.pins')),
+  );
+  paintIcons(strip);
+}
+
+function paintDetails(){
+  const panel = document.getElementById('chatDetails');
+  const wrap = document.getElementById('chatWrap');
+  if(!panel || !wrap) return;
+  // Otaqda "iştirakçı" siyahısı yoxdur (qlobal otaqlar üzvlük saxlamır) —
+  // ən mənalı yaxınlaşma HAZIRDA ONLAYN olanlardır.
+  const people = [...state.users.values()].filter(u => !u.blocked && isOnline(u)).slice(0, 40);
+  renderDetailsPanel(panel, wrap, {
+    titleId: 'chatDetailsTitle',
+    people,
+    pins,
+    summary: aiSummary,
+    onSearch: q => lastMsgs
+      .filter(m => (m.text || '').toLowerCase().includes(q.toLowerCase()))
+      .map(m => ({ who: m.authorName, text: m.text, id: m.id })),
+    onJump: h => {
+      const node = document.querySelector(`[data-mid="${h.id}"]`);
+      node?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      node?.classList.add('msg-flash');
+      setTimeout(() => node?.classList.remove('msg-flash'), 1200);
+    },
+    // Sabitləməni ləğv etmək otaqda YALNIZ admin üçündür — server də məcbur edir.
+    onUnpin: state.isAdmin ? async p => {
+      try{ await setRoomPin(currentRoomId, p.id, false); await loadPins(currentRoomId); }
+      catch(e){ toast(t('chat.pin_fail'), 'err'); }
+    } : null,
+    onSummarize: async box => {
+      clear(box);
+      box.append(el('div', { class: 'cd-empty' }, t('ai.working')));
+      try{
+        const ctx = lastMsgs.slice(-40).map(m => `${m.authorName}: ${m.text || ''}`).join('\n');
+        aiSummary = await askAI(`Aşağıdakı söhbəti 3-5 cümlə ilə xülasə et. Kim nə dedi — qısa və konkret:\n\n${ctx}`);
+        paintDetails();
+      }catch(e){
+        clear(box);
+        box.append(el('div', { class: 'cd-empty' }, e?.message || t('ai.fail')));
+      }
+    },
+  });
+}
+
 // `openDetail`: yalnız istifadəçi KLİKindən true. Mount-dakı avtomatik seçim
 // false ötürür ki, mobildə chat açılanda əvvəlcə otaq SİYAHISI görünsün, birbaşa
 // mesaja tullanmasın (desktop-da fərq yoxdur — detail-open yalnız mobildə işləyir).
@@ -222,15 +360,19 @@ function selectRoom(roomId, openDetail = false){
   currentRoomId = roomId;
   renderRoomList();
   const room = rooms.find(r => r.id === roomId);
-  const head = document.getElementById('chatHead');
-  clear(head);
+  const wrap = document.getElementById('chatWrap');
   // TASK-8 mobil master-detail: geri düyməsi siyahıya qaytarır (yalnız mobildə
   // görünür, CSS idarə edir). Otaq seçiləndə mesaj sahəsi tam en sürüşür.
-  head.append(
-    el('button', { class: 'chat-back', 'aria-label': t('chat.back'), onclick: closeRoomDetail }, '‹'),
-    '# ' + (room ? room.name : roomId),
-    el('span', { class: 'sub' }, ' — hamı üçün açıqdır'),
-  );
+  buildChatHead(document.getElementById('chatHead'), {
+    title: '# ' + (room ? room.name : roomId),
+    sub: t('chat.room_sub'),
+    onBack: closeRoomDetail,
+    detailsBtn: detailsToggleButton(wrap, 'chatDetails'),
+  });
+  // Otaq dəyişdi → əvvəlki otağın sabitlənmişləri və xülasəsi qalmamalıdır.
+  pins = [];
+  aiSummary = null;
+  loadPins(roomId);
   if(openDetail) document.querySelector('#page-chat .chat-wrap')?.classList.add('detail-open');
   const box = document.getElementById('chatMessages');
   clear(box);
@@ -250,6 +392,8 @@ function selectRoom(roomId, openDetail = false){
     // "söhbətin başlanğıcı" və ya xəta — dördü də eyni yerdə.
     box.append(historyBar(hist, doLoad));
     const all = [...hist.older, ...liveMsgs];
+    // Panelin lokal axtarışı yüklənmiş mesajlar üzərində işləyir.
+    lastMsgs = all;
     if(!all.length){ box.append(emptyState('hash', t('chat.empty_chat'))); return; }
     renderGroupedMessages(box, all, {
       uidOf: m => m.authorUid,
@@ -336,7 +480,17 @@ export function initChat(){
   input.addEventListener('keydown', e => { if(e.key === 'Enter' && !e.defaultPrevented) send(); });
   input.addEventListener('input', maybeSendTyping);     // "typing…" siqnalı (throttle 2s)
   attachMentionAutocomplete(input);
-  attachRichControls(input.parentElement, payload => deliver(payload));
+  /* ⚠ SIRA VACİBDİR: `attachRichControls` düymələri `input.parentElement`-ə
+   *   əlavə edir. `enhanceComposer` girişi yeni `.cmp-shell` qabığına
+   *   KÖÇÜRDÜYÜ üçün əvvəlcə qabıq qurulur, sonra rich-control-lar alət
+   *   sətrinə (`tools`) yerləşdirilir — əks halda onlar köhnə valideyndə
+   *   qalıb qabığın xaricinə düşərdi. */
+  const composer = document.getElementById('chatComposer');
+  const enhanced = enhanceComposer(composer, {
+    getContext: () => lastMsgs.slice(-40).map(m => `${m.authorName}: ${m.text || ''}`).join('\n'),
+    onSummary: s => { aiSummary = s; paintDetails(); setDetailsOpen(document.getElementById('chatWrap'), true); },
+  });
+  attachRichControls(enhanced ? enhanced.tools : input.parentElement, payload => deliver(payload));
 }
 
 export function mountChat(){

@@ -75,6 +75,11 @@ export const ICONS = {
      emojisi işlədirdi — platformadan asılı görünüş, `currentColor`-a tabe olmur.
      Lucide "paperclip" (24×24 sətir üslubu, dəstin qalanı ilə eyni). */
   paperclip: '<path d="M13.234 20.252 21 12.3"/><path d="m16 6-8.414 8.586a2 2 0 0 0 0 2.828 2 2 0 0 0 2.828 0l8.414-8.586a4 4 0 0 0 0-5.656 4 4 0 0 0-5.656 0l-8.415 8.585a6 6 0 1 0 8.486 8.486"/>',
+  /* `x` və `send` `icons.js`-də FUNKSİYA kimi var idi (`iconX`, `iconSend`),
+     amma `data-icon` dəstində YOX idi — deklarativ `<span data-icon>` yolu
+     onları tapa bilmirdi. Çat redizaynı hər ikisini işlədir. */
+  x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  send: '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
 
   /* Şərh reaksiyaları (0039). Emoji YOX: `currentColor` ilə rənglənir, ona
      görə aktiv reaksiya tipinin öz rəngini ala bilir və dörd temada işləyir. */
