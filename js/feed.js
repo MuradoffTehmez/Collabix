@@ -293,10 +293,17 @@ function imageGalleryNode(urls, caption){
   const safe = (urls || []).filter(isSafeImageURL);
   if(!safe.length) return null;
   const grid = el('div', { class: 'img-gallery' + (safe.length === 1 ? ' single' : '') });
-  safe.forEach(u => {
+  safe.forEach((u, idx) => {
     const img = document.createElement('img');
-    img.src = u; img.alt = caption || ''; img.loading = 'lazy';
-    img.addEventListener('click', () => openImageModal(u));
+    img.src = u; img.alt = caption || '';
+    img.loading = 'lazy';        // ekrana yaxınlaşana qədər yüklənmir
+    img.decoding = 'async';      // dekodlaşdırma əsas ipliyi bloklamasın
+    // ⚠ Ölçü REZERVİ: şəkil yüklənənə qədər yeri boş qalırsa, gələndə
+    //   aşağıdakı məzmun sıçrayır (CLS). Faktiki nisbət bilinmir, ona görə
+    //   CSS-də `aspect-ratio` ilə sabit yer tutulur və şəkil ora oturur.
+    img.classList.add('gal-img');
+    // Bütün qalereya ötürülür → lightbox-da irəli/geri keçid mümkün olur.
+    img.addEventListener('click', () => openImageModal(safe, idx));
     grid.append(img);
   });
   const box = el('div', {}, grid);
@@ -1454,11 +1461,68 @@ function mountComments(box, p){
 // ⚠ Bu modal HƏM feed şəkilləri, HƏM DƏ söhbət əlavələri üçün işlədilir
 // (`richmsg.js` çağırır), ona görə burada `isSafeFileURL` lazımdır —
 // `isSafeImageURL` DM şəkil önizləməsini sındırardı (AUDIT-TASK-7 §5.2/tələ 2).
-export function openImageModal(src){
-  if(!isSafeFileURL(src)) return;
+/**
+ * Şəkil lightbox-u — qalereya naviqasiyası ilə.
+ *
+ * @param {string|string[]} src tək URL, VƏ YA qalereyanın bütün URL-ləri
+ * @param {number} [startIndex=0] qalereyada açılacaq şəkil
+ *
+ * ⚠ GERİYƏ UYĞUNLUQ: `richmsg.js` (söhbət əlavələri) bunu TƏK STRING ilə
+ *   çağırır. Ona görə massiv məcburi deyil — string verilsə tək şəkilli
+ *   qalereya kimi işləyir və naviqasiya düymələri gizlənir.
+ *
+ * Klaviatura: ← → keçid, Esc bağlayır (Esc `showModal`-ın öz fokus tələsindən
+ * gəlir — burada təkrar idarə olunmur).
+ */
+export function openImageModal(src, startIndex = 0){
+  const list = (Array.isArray(src) ? src : [src]).filter(isSafeFileURL);
+  if(!list.length) return;
+  let i = Math.min(Math.max(startIndex, 0), list.length - 1);
+
   const img = document.createElement('img');
-  img.className = 'modal-img'; img.src = src; img.alt = '';
-  showModal([img], { wide: true });
+  img.className = 'modal-img';
+  img.alt = '';
+  // `async` dekodlaşdırma: böyük şəkil əsas iplikdə kadr atlatmasın.
+  img.decoding = 'async';
+
+  const counter = el('span', { class: 'lb-counter' });
+  const prev = el('button', { type: 'button', class: 'lb-nav prev', 'aria-label': t('cm.prev_image') },
+    el('span', { class: 'ic', 'data-icon': 'chevron', 'data-icon-size': '20' }));
+  const next = el('button', { type: 'button', class: 'lb-nav next', 'aria-label': t('cm.next_image') },
+    el('span', { class: 'ic', 'data-icon': 'chevron', 'data-icon-size': '20' }));
+
+  const show = (n) => {
+    i = (n + list.length) % list.length;   // dövrə: sondan birinciyə
+    img.src = list[i];
+    counter.textContent = (i + 1) + ' / ' + list.length;
+  };
+
+  prev.addEventListener('click', e => { e.stopPropagation(); show(i - 1); });
+  next.addEventListener('click', e => { e.stopPropagation(); show(i + 1); });
+
+  const onKey = e => {
+    if(e.key === 'ArrowLeft'){ e.preventDefault(); show(i - 1); }
+    else if(e.key === 'ArrowRight'){ e.preventDefault(); show(i + 1); }
+  };
+  document.addEventListener('keydown', onKey);
+
+  // Toxunuş: üfüqi sürüşdürmə ilə keçid.
+  let touchX = null;
+  img.addEventListener('touchstart', e => { touchX = e.touches[0].clientX; }, { passive: true });
+  img.addEventListener('touchend', e => {
+    if(touchX === null) return;
+    const dx = e.changedTouches[0].clientX - touchX;
+    // 40px astana: adi toxunuşu sürüşdürmə saymasın (drag-threshold).
+    if(Math.abs(dx) > 40) show(i + (dx < 0 ? 1 : -1));
+    touchX = null;
+  });
+
+  const wrap = el('div', { class: 'lightbox' + (list.length > 1 ? ' multi' : '') }, prev, img, next, counter);
+  paintIcons(wrap);
+  show(i);
+  // `onClose` — qlobal klaviatura dinləyicisi modal bağlananda SİLİNMƏLİDİR,
+  // yoxsa hər açılışdan sonra bir dinləyici artıq qalar (sızma).
+  showModal([wrap], { wide: true, onClose: () => document.removeEventListener('keydown', onKey) });
 }
 
 /* ---------- mount ---------- */

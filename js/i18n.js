@@ -775,6 +775,8 @@ const D = {
   'cm.moderator': { az: 'Moderator', en: 'Moderator', ru: 'Модератор' },
   'cm.admin': { az: 'Admin', en: 'Admin', ru: 'Админ' },
   'cm.you': { az: 'Sən', en: 'You', ru: 'Вы' },
+  'cm.prev_image': { az: 'Əvvəlki şəkil', en: 'Previous image', ru: 'Предыдущее изображение' },
+  'cm.next_image': { az: 'Sonrakı şəkil', en: 'Next image', ru: 'Следующее изображение' },
   'cm.copy_link': { az: 'Linki kopyala', en: 'Copy link', ru: 'Копировать ссылку' },
   'cm.link_copied': { az: 'Şərh linki kopyalandı', en: 'Comment link copied', ru: 'Ссылка скопирована' },
   'cm.more': { az: 'Daha çox əməliyyat', en: 'More actions', ru: 'Ещё действия' },

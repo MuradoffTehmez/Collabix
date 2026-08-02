@@ -1979,3 +1979,83 @@
   }
   .feed-toolbar .csort-group::-webkit-scrollbar { display: none; }
 }
+
+/* ── Lightbox (qalereya naviqasiyası) ───────────────────────────────────── */
+.lightbox {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lightbox .modal-img {
+  max-width: 100%;
+  max-height: 78vh;
+  border-radius: var(--r-md);
+  display: block;
+}
+
+.lb-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;                 /* toxunuş hədəfi */
+  height: 44px;
+  display: none;               /* tək şəkildə gizli — `.multi` açır */
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  box-shadow: var(--sh-2);
+  transition: background var(--mo-fast) var(--mo-ease), transform var(--mo-fast) var(--mo-ease);
+}
+
+.lightbox.multi .lb-nav { display: inline-flex; }
+.lb-nav:hover { background: var(--surface-2); }
+.lb-nav:active { transform: translateY(-50%) scale(.92); }
+
+/* Şevron ikonu bir dəst olduğu üçün fırladılır — ayrıca ikon saxlamırıq. */
+.lb-nav.prev { left: 8px; }
+.lb-nav.prev .ic { transform: rotate(90deg); }
+.lb-nav.next { right: 8px; }
+.lb-nav.next .ic { transform: rotate(-90deg); }
+
+.lb-counter {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 12px;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--bg) 78%, transparent);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+}
+
+.lightbox:not(.multi) .lb-counter { display: none; }
+
+/* ⚠ CLS QARŞISI: qalereya şəkilləri `loading=lazy`-dir, yəni gec gəlir.
+   Yer əvvəlcədən tutulmasa, şəkil yüklənəndə altdakı məzmun sıçrayır.
+   Faktiki nisbət bilinmədiyi üçün sabit nisbət verilir və şəkil `cover`
+   ilə ora oturur. */
+.img-gallery .gal-img {
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  width: 100%;
+  background: var(--surface-2);   /* yüklənənə qədər boş ağ sahə olmasın */
+}
+
+.img-gallery.single .gal-img {
+  aspect-ratio: auto;
+  max-height: 520px;
+  object-fit: contain;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lb-nav { transition: none; }
+  .lb-nav:active { transform: translateY(-50%); }
+}
