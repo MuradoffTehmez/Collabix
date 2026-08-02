@@ -12,6 +12,7 @@ import { api } from './api.js';
 import { el, esc, emit, applyPercentWidths } from './util.js';
 import { t } from './i18n.js';
 import { showModal, closeModal, toast, confirmDialog } from './ui.js';
+import { iconAward } from './icons.js';
 import { markdownNode } from './markdown.js';
 import { state, watchRoomMessages, sendRoomMessage, uploadMessageFile, uploadTeamFile } from './store.js';
 import { sparklineBlock } from './sparkline.js';
@@ -784,8 +785,13 @@ async function renderTeamMembers(container, team) {
       actSlot.appendChild(kick);
     }
     if (team.isOwner && !isOwner) {
-      const transfer = el('button', { class: 'btn-text btn-mini', style: 'color:var(--text-sec);' }, '👑');
+      /* AUDIT-UI: '👑' emoji ikon kimi işlədilirdi — platformadan asılı görünür,
+       * `currentColor`-a tabe olmur. Üstəlik əlçatan ad MƏZMUNDAN gəlirdi
+       * (`title` nəzərə alınmır) → oxucu "kral tacı" deyirdi, əməliyyatı yox.
+       * SVG ikon qatı + açıq `aria-label`. */
+      const transfer = el('button', { class: 'btn-text btn-mini u-color-text-sec' }, iconAward());
       transfer.title = 'Sahibliyi köçür';
+      transfer.setAttribute('aria-label', `Sahibliyi köçür — ${displayName(m)}`);
       transfer.onclick = async () => {
         if (!(await confirmDialog(`Komandanın sahibliyi ${displayName(m)} şəxsinə keçsin? Siz Admin olacaqsınız.`))) return;
         try {

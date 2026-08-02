@@ -16,7 +16,8 @@
   margin-left: 6px;
   border-radius: 9px;
   background: var(--danger, #e5484d);
-  color: #fff;
+  /* AUDIT-UI: 11px/700 kiçik mətndir; ağ ilə dark temada 3.11:1 idi. */
+  color: var(--on-danger);
   font-size: 11px;
   font-weight: 700;
   line-height: 1;
@@ -95,7 +96,7 @@
 .team-chip.active {
   background: var(--primary);
   border-color: var(--primary);
-  color: #fff;
+  color: var(--on-accent);   /* AUDIT-UI: aktiv filtr çipi — bax `--on-accent`. */
 }
 
 /* Söhbət qutusu — hündürlüyü viewport-a bağlıdır ki, mobil klaviatura altında
@@ -130,7 +131,9 @@
 
 .team-chat-bubble.me {
   background: var(--primary);
-  color: #fff;
+  /* AUDIT-UI: öz mesajının GÖVDƏ mətnidir — ən çox oxunan yer. Ağ ilə dark
+     temada 3.15:1, matrix-də 1.67:1 idi. */
+  color: var(--on-accent);
   border-bottom-right-radius: 2px;
 }
 

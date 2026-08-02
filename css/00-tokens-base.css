@@ -57,6 +57,10 @@
   --bg-card: var(--surface);
   --bg-hover: var(--surface-2);
   --text-sec: var(--muted);
+  /* Eyni sinif qüsurun qalan üzvləri (85-teams.css:122, 90-utilities.css:17,20). */
+  --bg-page: var(--bg);
+  --bg-input: var(--surface-2);
+  --surface-1: var(--surface);
 
   /* Təhlükə (`--danger`) fonunun ÜSTÜNDƏ oxunan mətn — `--on-accent`-in eyni
      məntiqi. Ölçülmüş WCAG nisbətləri:
