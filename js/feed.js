@@ -303,8 +303,21 @@ function imageGalleryNode(urls, caption){
     //   aşağıdakı məzmun sıçrayır (CLS). Faktiki nisbət bilinmir, ona görə
     //   CSS-də `aspect-ratio` ilə sabit yer tutulur və şəkil ora oturur.
     img.classList.add('gal-img');
+    /* AUDIT-UI: KLAVİATURA ÇIXILMAZI. Şəkil `<img>`-dir və yalnız `click`
+     * dinləyicisi var idi: fokus ala bilmirdi, ona görə lightbox YALNIZ siçanla
+     * açılırdı (`keyboard-nav`, Severity: High). Ekran oxuyucusu da onu
+     * interaktiv saymırdı.
+     * Minimal müdaxilə: `role=button` + `tabindex=0` + Enter/Space.
+     * (`<button>`-a bükmək `.img-gallery img` seçicilərini sındırardı.) */
+    img.tabIndex = 0;
+    img.setAttribute('role', 'button');
+    img.setAttribute('aria-label', t('a11y.openImage').replace('{n}', String(idx + 1)));
+    const open = () => openImageModal(safe, idx);
     // Bütün qalereya ötürülür → lightbox-da irəli/geri keçid mümkün olur.
-    img.addEventListener('click', () => openImageModal(safe, idx));
+    img.addEventListener('click', open);
+    img.addEventListener('keydown', e => {
+      if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); open(); }
+    });
     grid.append(img);
   });
   const box = el('div', {}, grid);
@@ -426,7 +439,19 @@ export function postBodyNode(p){
     if(isSafeImageURL(p.imageURL)){
       const img = document.createElement('img');
       img.className = 'feed-img'; img.src = p.imageURL; img.alt = '';
-      img.addEventListener('click', () => openImageModal(p.imageURL));
+      /* AUDIT-UI: köhnə (tək şəkilli) yol qalereya yolundan geri qalmışdı —
+       * nə `loading=lazy`, nə `decoding=async`, nə də klaviatura girişi var idi.
+       * Hər üçü qalereya ilə eyniləşdirildi. */
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      img.tabIndex = 0;
+      img.setAttribute('role', 'button');
+      img.setAttribute('aria-label', t('a11y.openImage').replace('{n}', '1'));
+      const openSingle = () => openImageModal(p.imageURL);
+      img.addEventListener('click', openSingle);
+      img.addEventListener('keydown', e => {
+        if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); openSingle(); }
+      });
       body.append(img);
     }
   }

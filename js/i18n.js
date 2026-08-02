@@ -228,6 +228,8 @@ const D = {
   'a11y.more':          { az: 'Daha çox', en: 'More', ru: 'Ещё' },
   'a11y.collapse':      { az: 'Yığ', en: 'Collapse', ru: 'Свернуть' },
   'a11y.removeImage':   { az: 'Şəkli sil', en: 'Remove image', ru: 'Удалить изображение' },
+  /* AUDIT-UI: qalereya şəkilləri `role=button`+`tabindex` aldı — əlçatan ad lazımdır. */
+  'a11y.openImage':     { az: 'Şəkli böyüt ({n})', en: 'Open image ({n})', ru: 'Открыть изображение ({n})' },
 
   /* ---------- Auth & Landing ---------- */
   'auth.landing_h1': { az: 'Kod yaz.<br><span class="grad">Dil öyrən.</span><br>Yoldaş tap.', en: 'Write code.<br><span class="grad">Learn langs.</span><br>Find peers.', ru: 'Пиши код.<br><span class="grad">Учи языки.</span><br>Находи друзей.' },
@@ -912,6 +914,9 @@ const D = {
   'comp.down':      { az: 'Aşağı', en: 'Move down', ru: 'Вниз' },
   'comp.del':       { az: 'Sil', en: 'Delete', ru: 'Удалить' },
   'comp.img_fail':  { az: 'Şəkil oxuna bilmədi', en: 'Failed to read image', ru: 'Не удалось прочитать изображение' },
+  /* AUDIT-UI: kompozitor önbaxış şəkilləri üçün `alt` + hədd aşımı xəbərdarlığı. */
+  'comp.img_preview_alt': { az: 'Yüklənəcək şəkil {n}', en: 'Image {n} to upload', ru: 'Изображение {n} для загрузки' },
+  'comp.too_long':  { az: 'Mətn həddi aşıb: {n} / {max} simvol. Qısaldın və yenidən cəhd edin.', en: 'Text is too long: {n} / {max} characters. Shorten it and try again.', ru: 'Текст слишком длинный: {n} / {max} символов. Сократите и попробуйте снова.' },
 
   /* ---------- Share / Re-post / Quote ---------- */
   'share.title':    { az: 'Paylaş', en: 'Share', ru: 'Поделиться' },

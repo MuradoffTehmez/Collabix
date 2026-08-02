@@ -544,7 +544,8 @@ h1.page-title {
   border: none;
   border-radius: 9px;
   background: linear-gradient(100deg, var(--coral), var(--coral2));
-  color: #fff;
+  /* AUDIT-UI: `.btn-primary` ilə eyni kontrast qüsuru — bax 00-tokens-base.css. */
+  color: var(--on-accent);
   font-weight: 700;
   font-size: .82rem;
   flex-shrink: 0;

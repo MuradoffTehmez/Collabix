@@ -38,6 +38,25 @@
   --code-bg: rgba(11, 16, 32, .65);
   --primary: #4a8fff;
   --accent: #5eeaea;
+
+  /* ── AUDIT-UI: ÇATIŞMAYAN NİŞANLAR ──────────────────────────────────────
+   * `--bg-card`, `--bg-hover`, `--text-sec` 30+ yerdə (86-admin-ui, 85-teams,
+   * 90-utilities, admin.js, teams.js, threat.js, composer.js) İŞLƏDİLİRDİ,
+   * amma HEÇ VAXT TƏYİN OLUNMAMIŞDI. Nəticələr:
+   *   `background: var(--bg-card)`  → təyin olunmamış → `transparent`
+   *     (admin/komanda kartları fonsuz qalıb birbaşa səhifə fonunda "üzürdü")
+   *   `background: var(--bg-hover)` → transparent → HOVER TAMAMİLƏ GÖRÜNMÜRDÜ
+   *     (`state-clarity`: admin yan panelində hansı sətrin üstündə olduğun bilinmirdi)
+   *   `color: var(--text-sec)`      → color irsi olduğu üçün `inherit`
+   *     → ikinci dərəcəli mətn əsas mətnlə eyni görünürdü (ierarxiya itirdi)
+   *
+   * ⚠ Qəsdən `var()` ilə mövcud nişanlara bağlanır, sabit rəngə YOX:
+   *   `var()` əvəzlənməsi İSTİFADƏ yerində baş verir, ona görə
+   *   `[data-theme="matrix"]`/`light` `--surface`-i dəyişdikdə bunlar
+   *   avtomatik izləyir — hər tema üçün təkrar yazmaq lazım deyil. */
+  --bg-card: var(--surface);
+  --bg-hover: var(--surface-2);
+  --text-sec: var(--muted);
 }
 
 /* Breakpoint konvensiyası (RESPONSIVE.md): 360 / 480 / 768 / 1024 / 1280.
@@ -591,7 +610,13 @@ button {
   border: none;
   border-radius: 10px;
   background: linear-gradient(100deg, var(--coral), var(--coral2));
-  color: #fff;
+  /* AUDIT-UI: `#fff` idi — ÖZ nişan şərhimizdəki ölçmə ilə ziddiyyət təşkil
+     edirdi (dark #4a8fff üzərində ağ 3.15:1 ✗, matrix #00e676 üzərində 1.67:1 ✗).
+     Düymə mətni 700 çəkidə .92rem ≈ 14.7px-dir → "böyük mətn" (18.66px bold)
+     həddinə ÇATMIR, deməli AA üçün 4.5:1 tələb olunur. Qradiyentin açıq ucu
+     (--coral2 #7ab8ff) daha da pisdir (~2.2:1).
+     `--on-accent` məhz bunun üçün var: dark/matrix-də tünd, light-da ağ. */
+  color: var(--on-accent);
   font-weight: 700;
   font-size: .92rem;
   margin-top: 4px;

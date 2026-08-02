@@ -656,7 +656,12 @@
             </select>
           </label>
           <div class="cx-actions">
-            <button class="btn-primary cx-share" id="shareBtn" data-i18n="home.btn_share"></button>
+            <!-- AUDIT-UI: paylaş düyməsi yalnız `disabled` olurdu, GÖRÜNƏN
+                 yüklənmə siqnalı yox idi (`loading-buttons`). Giriş düyməsindəki
+                 mövcud idiom tətbiq olunur: `.btn-label` + `.btn-spinner.hidden`.
+                 `data-i18n` MÜTLƏQ daxili span-dadır — düymənin özündə olsaydı
+                 `applyI18n` textContent-i əvəz edib spinner-i silərdi. -->
+            <button class="btn-primary cx-share" id="shareBtn"><span class="btn-label" data-i18n="home.btn_share"></span><span class="btn-spinner hidden"></span></button>
             <div class="cx-more-wrap">
               <button type="button" class="cx-more" id="cxMoreBtn"
                       aria-haspopup="true" aria-expanded="false" data-i18n-aria="cx.more_aria">
@@ -698,8 +703,16 @@
         <div class="chat-main">
           <div class="chat-head" id="chatHead"># ümumi</div>
           <div class="chat-messages" id="chatMessages"></div>
+          <!-- AUDIT-UI: real-time çatda yeni mesajlar ekran oxuyucusuna HEÇ CÜR
+               bildirilmirdi. `#chatMessages`-in özünə `aria-live` qoymaq OLMAZ:
+               `paint()` hər mesajda bütün siyahını `clear()` edib yenidən qurur,
+               yəni canlı region BÜTÜN tarixçəni təkrar oxuyardı.
+               Ona görə ayrıca, yalnız ƏN SON mesajı saxlayan gizli region. -->
+          <div id="chatLive" class="sr-only" aria-live="polite" aria-atomic="true"></div>
           <div class="chat-input">
-            <input id="chatInput" data-i18n-ph="chat.ph" maxlength="2000">
+            <!-- AUDIT-UI: yalnız placeholder var idi (`input-labels` pozuntusu:
+                 placeholder etiket deyil — yazmağa başlayanda itir). -->
+            <input id="chatInput" data-i18n-ph="chat.ph" data-i18n-aria="chat.ph" maxlength="2000">
             <button id="chatSendBtn" data-i18n="chat.send"></button>
           </div>
         </div>
@@ -715,7 +728,8 @@
           <div class="chat-head" id="dmHead" data-i18n="dm.head"></div>
           <div class="chat-messages" id="dmMessages"><div class="empty-state"><div class="ic" data-icon="mail" data-icon-size="28"></div><span data-i18n="dm.empty"></span></div></div>
           <div class="chat-input">
-            <input id="dmInput" data-i18n-ph="chat.ph" maxlength="2000">
+            <!-- AUDIT-UI: `#chatInput` ilə eyni — placeholder etiket deyil. -->
+            <input id="dmInput" data-i18n-ph="chat.ph" data-i18n-aria="chat.ph" maxlength="2000">
             <button id="dmSendBtn" data-i18n="chat.send"></button>
           </div>
         </div>

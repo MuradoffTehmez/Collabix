@@ -235,8 +235,11 @@
   display: inline-block;
   width: 15px;
   height: 15px;
-  border: 2px solid rgba(255, 255, 255, .4);
-  border-top-color: #fff;
+  /* AUDIT-UI: sabit ağ idi. `.btn-primary` mətni `--on-accent`-ə keçdikdən sonra
+     (dark/matrix temada TÜND) ağ spinner aksent fonda demək olar görünmürdü.
+     `currentColor` düymənin öz mətn rəngini izləyir → hər üç temada oxunur. */
+  border: 2px solid color-mix(in srgb, currentColor 40%, transparent);
+  border-top-color: currentColor;
   border-radius: 50%;
   animation: spin .7s linear infinite;
   vertical-align: middle;

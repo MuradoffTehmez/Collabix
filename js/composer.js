@@ -195,10 +195,15 @@ function pollPayload(){
 
 function blockNode(b){
   const wrap = el('div', { class: 'c-block', dataset: { bid: b.id } });
+  // AUDIT-UI: ↑/↓ düymələrində yalnız `title` var idi. Əlçatan ad hesablanarkən
+  // MƏZMUN `title`-dan ÜSTÜNDÜR (accname spesifikasiyası), ona görə ekran
+  // oxuyucusu "yuxarı köçür" yox, sadəcə "↑" oxuyurdu. `aria-label` hər ikisini basır.
   const tools = el('div', { class: 'c-block-tools' },
-    el('button', { title: t('comp.up'), onclick: () => moveBlock(b.id, -1) }, '↑'),
-    el('button', { title: t('comp.down'), onclick: () => moveBlock(b.id, +1) }, '↓'),
-    el('button', { title: t('comp.del'), 'aria-label': t('comp.del'), class: 'del',
+    el('button', { type: 'button', title: t('comp.up'), 'aria-label': t('comp.up'),
+      onclick: () => moveBlock(b.id, -1) }, '↑'),
+    el('button', { type: 'button', title: t('comp.down'), 'aria-label': t('comp.down'),
+      onclick: () => moveBlock(b.id, +1) }, '↓'),
+    el('button', { type: 'button', title: t('comp.del'), 'aria-label': t('comp.del'), class: 'del',
       onclick: () => removeBlock(b.id) }, iconX()),
   );
 
@@ -260,8 +265,11 @@ function blockNode(b){
       else if(k === 'i'){ e.preventDefault(); wrapSel('*', '*', t('comp.md_italic_ph')); }
     });
 
+    // AUDIT-UI: `aria-label` əlavə edildi. Əvvəl əlçatan ad MƏZMUNDAN gəlirdi
+    // ("B", "I", "</>", "•", "“") — ekran oxuyucusunda "Qalın"/"Sitat" əvəzinə
+    // tək hərf/durğu işarəsi səslənirdi. `title` bu halda nəzərə alınmır.
     const tbBtn = (label, title, fn) =>
-      el('button', { type: 'button', class: 'md-tb-btn', title, onclick: fn }, label);
+      el('button', { type: 'button', class: 'md-tb-btn', title, 'aria-label': title, onclick: fn }, label);
 
     const previewBtn = el('button', {
       type: 'button', class: 'md-tb-btn md-tb-toggle', title: t('comp.md_preview'),
@@ -313,6 +321,9 @@ function blockNode(b){
       b.images.forEach((im, i) => {
         const img = document.createElement('img');
         img.src = im.previewURL;
+        // AUDIT-UI: `alt` YOX idi — ekran oxuyucusu fayl URL-ini (blob:…) oxuyurdu.
+        // Önbaxış şəkli məzmun deyil, redaktə obyektidir → sıra nömrəsi kifayətdir.
+        img.alt = t('comp.img_preview_alt').replace('{n}', String(i + 1));
         grid.append(el('div', { class: 'c-img-item' }, img,
           el('button', { class: 'img-remove-btn', 'aria-label': t('a11y.removeImage') + ' ' + (i + 1),
             onclick: () => { b.images.splice(i, 1); renderImgs(); } }, iconX())));
@@ -369,7 +380,7 @@ function renderBlocks(){
 function addBlock(type){
   blocks.push(newBlock(type));
   renderBlocks();
-  const last = document.querySelector('#blockList .c-block:last-child textarea, #blockList .c-block:last-child input[type=file]');
+  // AUDIT-UI: burada oxunmayan `last` dəyişəni var idi (ts6133 + eslint) — silindi.
   const ta = document.querySelector('#blockList .c-block:last-child textarea');
   if(ta) ta.focus();
 }
@@ -434,8 +445,18 @@ async function publish(){
   if(poll && !pollData){ toast(t('poll.incomplete'), 'err'); return; }
   // Sorğu tək başına da mənalı postdur (mətn məcburi deyil).
   if(!meaningful.length && !pollData){ toast(t('comp.empty'), 'err'); return; }
+  /* AUDIT-UI: hədd aşımı SƏSSİZ idi — sayğac qırmızıya keçirdi, amma paylaşım
+   * yenə də göndərilirdi və server 400 qaytarınca ümumi "alınmadı" toast-ı
+   * çıxırdı (`error-clarity`: səbəb bilinmirdi). İndi səbəb dəqiq deyilir. */
+  const used = blocks.reduce((s, b) => s + (b.content || '').length, 0);
+  if(used > TEXT_CAP){
+    toast(t('comp.too_long').replace('{n}', String(used)).replace('{max}', String(TEXT_CAP)), 'err');
+    return;
+  }
   const btn = document.getElementById('shareBtn');
+  const spin = btn.querySelector('.btn-spinner');
   btn.disabled = true;
+  spin?.classList.remove('hidden');   // görünən yüklənmə siqnalı (`loading-buttons`)
   try{
     const tags = [...document.querySelectorAll('#composerTags .pp.sel')].map(b => b.textContent);
     await createPost({
@@ -459,6 +480,7 @@ async function publish(){
     toast(t('comp.fail'), 'err');
   }
   btn.disabled = false;
+  spin?.classList.add('hidden');
 }
 
 export function initComposer(){
@@ -510,7 +532,13 @@ export function initComposer(){
     moreBtn.setAttribute('aria-expanded', String(!menu.hidden));
   });
   document.addEventListener('click', closeMenu);
-  menu?.addEventListener('keydown', e => { if(e.key === 'Escape') closeMenu(); });
+  /* AUDIT-UI: `keydown` YALNIZ `menu`-nun üzərində idi. Menyu açılanda fokus
+   * hələ `cxMoreBtn`-də qalır (menyuya köçürülmür), ona görə Escape HEÇ NƏ
+   * etmirdi — `escape-routes` pozuntusu. Dinləyici sənəd səviyyəsinə qaldırıldı
+   * və fokus açan düyməyə qaytarılır (klaviatura istifadəçisi "itmir"). */
+  document.addEventListener('keydown', e => {
+    if(e.key === 'Escape' && menu && !menu.hidden){ closeMenu(); moreBtn?.focus(); }
+  });
 
   document.getElementById('cxScheduleBtn')?.addEventListener('click', () => {
     closeMenu();
