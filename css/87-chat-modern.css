@@ -22,9 +22,53 @@
 .chat-wrap {
   display: grid;
   grid-template-columns: 288px minmax(0, 1fr) 0;
+  /* 🔴 `grid-template-rows` MÜTLƏQ AÇIQ VERİLMƏLİDİR.
+   * Yalnız sütunlar təyin ediləndə implicit sətir `auto` olur və qrid
+   * elementinin `min-height: auto` default-u ilə birləşib MƏZMUNA görə şişir:
+   * 80 mesajla sətir 665px yerinə 4140px olurdu, `.chat-main` konteynerdən
+   * daşırdı, `.chat-messages` isə heç vaxt sürüşmə hündürlüyünə çatmadığı üçün
+   * `overflow-y:auto` İŞLƏMİRDİ və mesaj yazma sahəsi görünən sahədən
+   * 3476px aşağıda `overflow:hidden` ilə kəsilirdi.
+   * Köhnə `display:flex` layoutunda bu problem yox idi, çünki `align-items:
+   * stretch` elementi konteynerin sabit hündürlüyünə sıxırdı.
+   * `minmax(0, 1fr)` — bir sətir, məzmun onu genişləndirə bilmir. */
+  grid-template-rows: minmax(0, 1fr);
   background: var(--surface);
   border-radius: var(--card-radius);
   transition: grid-template-columns .25s ease;
+}
+
+/* Qrid elementlərində `min-height: auto` → `0`. Bu olmasa yuxarıdakı
+   `minmax(0,1fr)` sətri belə elementin özü məzmun boyu uzanardı. */
+.chat-wrap > .chat-list,
+.chat-wrap > .chat-main,
+.chat-wrap > .chat-details {
+  min-height: 0;
+}
+
+/* `.chat-main` sütun-flex-dir; `.chat-messages` onun `flex:1` uşağıdır.
+   Flex uşaqda da `min-height: auto` default-u sürüşməni bloklayır. */
+.chat-main > .chat-messages {
+  min-height: 0;
+}
+
+/* Hündürlük `20-feed.css`-dən `calc(100vh - 190px)` kimi gəlir.
+   ⚠ Mobil brauzerlərdə `100vh` ünvan sətri gizlənəndə/görünəndə DƏYİŞMİR —
+     həmişə ƏN BÖYÜK hündürlüyü bildirir. Nəticə eyni sinifdən qüsurdur:
+     qutu ekrandan hündür olur və kompozitor aşağıda qalır.
+     `dvh` (dynamic viewport height) real görünən sahəni verir.
+   ⚠ İki qayda QƏSDƏN ardıcıldır: `dvh` dəstəkləməyən brauzer ikinci
+     bəyannaməni ATIR və birincidəki `vh` qüvvədə qalır. */
+.chat-wrap {
+  height: calc(100vh - 190px);
+  height: calc(100dvh - 190px);
+}
+
+@media (max-width: 768px) {
+  .chat-wrap {
+    height: calc(100vh - 210px);
+    height: calc(100dvh - 210px);
+  }
 }
 
 .chat-wrap[data-details="open"] {
@@ -398,7 +442,15 @@
 
 .cmp-tools .spacer { flex: 1; }
 
-.cmp-btn {
+/* 🔴 SEÇİCİ QƏSDƏN `.chat-input`-la BAŞLAYIR.
+ * `30-chat.css`-dəki `.chat-input button` qaydası (0,1,1) GÖNDƏR düyməsi üçün
+ * yazılıb: aksent qradiyenti + qalın mətn. Sadəcə `.cmp-btn` (0,1,0) yazsaq o
+ * qayda qalib gəlir və əlavə/kod/emoji/AI düymələrinin HAMISI göndər düyməsi
+ * kimi mavi dolğun görünür (ilk qaçışda məhz bu baş verdi).
+ * `.chat-input .cmp-btn` = (0,2,0) → üstələyir.
+ * Eyni səbəbdən pop-up daxilindəki düymələr də açıq şəkildə sıfırlanır —
+ * onlar da `.chat-input`-un içindədir. */
+.chat-input .cmp-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -408,15 +460,24 @@
   border: none;
   border-radius: 8px;
   background: none;
+  background-image: none;      /* `.btn-primary`-dən gələn qradiyenti də söndürür */
   color: var(--muted);
   font: inherit;
   font-size: .74rem;
+  font-weight: 500;
   cursor: pointer;
   transition: background-color .15s ease, color .15s ease;
 }
 
-.cmp-btn:hover { background: var(--bg-hover); color: var(--text); }
-.cmp-btn[aria-expanded="true"] { background: var(--coral-dim); color: var(--coral); }
+.chat-input .cmp-btn:hover { background: var(--bg-hover); color: var(--text); }
+.chat-input .cmp-btn[aria-expanded="true"] { background: var(--coral-dim); color: var(--coral); }
+
+/* Pop-up-lardakı düymələr (emoji şəbəkəsi, AI menyusu) da `.chat-input`
+   nəslindədir → eyni sıfırlama lazımdır. */
+.chat-input .cmp-pop button {
+  background-image: none;
+  font-weight: 400;
+}
 
 /* Göndər — dairəvi, kompozitorun sağında. */
 .chat-input .cmp-send {
