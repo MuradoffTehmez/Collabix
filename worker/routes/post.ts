@@ -511,22 +511,61 @@ export async function bookmarkDelete(c: Ctx, id: string) {
 // cavablar (thread), rəyə bəyənmə, sıralama (ən yeni / ən çox bəyənilən), limit ilə
 // "daha çox yüklə". Polling ilə uzlaşsın deyə səhifələmə `limit`-lə aparılır: müştəri
 // cari limit-i saxlayır, "daha çox" onu artırır, hər poll cari limit-i gətirir.
-const mapComment = (r: any, myLikes: Set<string>) => ({
+/** İcazə verilən reaksiya tipləri — 0039 miqrasiyasındakı CHECK ilə EYNİ olmalıdır. */
+export const REACTION_TYPES = ['like', 'love', 'laugh', 'wow', 'fire', 'clap'] as const;
+export type ReactionType = typeof REACTION_TYPES[number];
+const isReaction = (v: unknown): v is ReactionType =>
+  typeof v === 'string' && (REACTION_TYPES as readonly string[]).includes(v);
+
+/**
+ * @param myReacts commentId → mənim verdiyim reaksiya tipi
+ * @param reactCounts commentId → { type: say }
+ *
+ * ⚠ `likeCount`/`likedByMe` SAXLANILIR: mövcud UI və e2e testləri onlara
+ *   baxır. `reactions` onların üstünə əlavədir, əvəzi deyil.
+ */
+const mapComment = (
+  r: any,
+  myLikes: Set<string>,
+  myReacts?: Map<string, string>,
+  reactCounts?: Map<string, Record<string, number>>,
+) => ({
   id: r.id, postId: r.post_id, parentId: r.parent_comment_id || null,
   authorUid: r.author_id, authorName: r.author_name, text: r.text,
   createdAt: r.created_at, editedAt: r.edited_at || null,
   likeCount: r.like_count || 0, likedByMe: myLikes.has(r.id),
+  reactions: reactCounts?.get(r.id) || {},
+  myReaction: myReacts?.get(r.id) || null,
+  pinnedAt: r.pinned_at || null,
+  hiddenAt: r.hidden_at || null,
 });
+/**
+ * Sıralama açarı → SQL `ORDER BY` (ALLOWLIST).
+ * ⚠ Dəyər BİRBAŞA SQL-ə yapışdırılır, ona görə istifadəçi girişi heç vaxt
+ *   buraya düşməməlidir — yalnız bu cədvəldəki sabitlər.
+ */
+const COMMENT_ORDER: Record<string, string> = {
+  new: 'cm.created_at DESC',
+  old: 'cm.created_at ASC',
+  top: 'cm.like_count DESC, cm.created_at DESC',
+  // "Ən çox cavab" — alt sorğu ilə cavab sayı.
+  replies: '(SELECT COUNT(*) FROM comments r WHERE r.parent_comment_id = cm.id) DESC, cm.created_at DESC',
+};
+
 export async function listComments(c: Ctx, postId: string) {
-  const sort = c.url.searchParams.get('sort') === 'top' ? 'top' : 'new';
+  const sortRaw = c.url.searchParams.get('sort') || 'new';
+  const sort = Object.prototype.hasOwnProperty.call(COMMENT_ORDER, sortRaw) ? sortRaw : 'new';
   const limit = Math.min(Math.max(parseInt(c.url.searchParams.get('limit') || '20', 10) || 20, 5), 200);
   // JOIN əlavə olunduğu üçün sütunlar açıq prefiksli olmalıdır (M-10).
-  const order = sort === 'top' ? 'cm.like_count DESC, cm.created_at DESC' : 'cm.created_at DESC';
+  // Sancaqlanmış şərh HƏMİŞƏ birinci — seçilmiş sıralamadan asılı olmayaraq.
+  const order = `(cm.pinned_at IS NULL), cm.pinned_at DESC, ${COMMENT_ORDER[sort]}`;
+  // Gizlədilmiş şərhlər yalnız moderatorlara görünür (onlar "Bərpa et" edə bilsin).
+  const hiddenFilter = c.isAdmin ? '' : ' AND cm.hidden_at IS NULL';
   // Üst səviyyə rəylər (limit+1 → daha çoxu var?).
   // M-10: bloklanmış müəllifin rəyləri gizlədilir (feed ilə eyni qayda).
   const topRows = await D(c).prepare(
     `SELECT cm.* FROM comments cm JOIN users u ON cm.author_id = u.id
-      WHERE cm.post_id = ? AND cm.parent_comment_id IS NULL AND u.blocked = 0
+      WHERE cm.post_id = ? AND cm.parent_comment_id IS NULL AND u.blocked = 0${hiddenFilter}
       ORDER BY ${order} LIMIT ?`,
   ).bind(postId, limit + 1).all<any>();
   const hasMore = topRows.results.length > limit;
@@ -557,12 +596,40 @@ export async function listComments(c: Ctx, postId: string) {
     ).bind(c.user!.id, ...chunk).all<any>();
     for (const r of lr.results) myLikes.add(r.comment_id as string);
   }
+  // ── Reaksiyalar ──────────────────────────────────────────────────────────
+  // İki sorğu: (a) mənim reaksiyam, (b) tip üzrə ümumi bölgü.
+  // ⚠ `chunkForD1` MƏCBURİDİR — `allIds` yuxarıdakı bəyənmə sorğusundakı kimi
+  //   praktikada sərhədsizdir və D1-in 100 dəyişən limitini aşardı.
+  const myReacts = new Map<string, string>();
+  const reactCounts = new Map<string, Record<string, number>>();
+  for (const chunk of chunkForD1(allIds, 1)) {
+    const mine = await D(c).prepare(
+      `SELECT comment_id, type FROM comment_reactions
+        WHERE user_id = ? AND comment_id IN (${placeholders(chunk.length)})`,
+    ).bind(c.user!.id, ...chunk).all<any>();
+    for (const r of mine.results) myReacts.set(r.comment_id as string, r.type as string);
+  }
+  for (const chunk of chunkForD1(allIds)) {
+    const agg = await D(c).prepare(
+      `SELECT comment_id, type, COUNT(*) AS n FROM comment_reactions
+        WHERE comment_id IN (${placeholders(chunk.length)}) GROUP BY comment_id, type`,
+    ).bind(...chunk).all<any>();
+    for (const r of agg.results) {
+      const bucket = reactCounts.get(r.comment_id as string) || {};
+      bucket[r.type as string] = r.n as number;
+      reactCounts.set(r.comment_id as string, bucket);
+    }
+  }
+
   const replies: Record<string, any[]> = {};
-  for (const r of replyRows) (replies[r.parent_comment_id] ||= []).push(mapComment(r, myLikes));
+  for (const r of replyRows) (replies[r.parent_comment_id] ||= []).push(mapComment(r, myLikes, myReacts, reactCounts));
   const cnt = await D(c).prepare(
-    'SELECT COUNT(*) AS n FROM comments WHERE post_id = ? AND parent_comment_id IS NULL',
+    `SELECT COUNT(*) AS n FROM comments WHERE post_id = ? AND parent_comment_id IS NULL${c.isAdmin ? '' : ' AND hidden_at IS NULL'}`,
   ).bind(postId).first<any>();
-  return json({ comments: top.map(r => mapComment(r, myLikes)), replies, total: cnt?.n || 0, hasMore });
+  return json({
+    comments: top.map(r => mapComment(r, myLikes, myReacts, reactCounts)),
+    replies, total: cnt?.n || 0, hasMore,
+  });
 }
 export async function addComment(c: Ctx, postId: string) {
   const b = await readJson(c.req);
@@ -672,6 +739,119 @@ export async function commentLikeDelete(c: Ctx, _postId: string, cid: string) {
   if (r.meta.changes > 0) {
     await D(c).prepare('UPDATE comments SET like_count = MAX(0, like_count - 1) WHERE id = ?').bind(cid).run();
   }
+  return json({ ok: true });
+}
+
+/* ================= ŞƏRH: REAKSİYA / MODERASİYA / ŞİKAYƏT (0039) ================= */
+
+/**
+ * Reaksiya qoy və ya dəyiş (PUT — idempotent).
+ *
+ * ⚠ `like` tipi HƏM `comment_reactions`-a, HƏM DƏ köhnə `comment_likes` +
+ *   `comments.like_count`-a yazılır. Səbəb: mövcud UI/`likedByMe`/e2e hələ
+ *   köhnə yolu oxuyur. İki cədvəlin sinxron qalması bu funksiyanın
+ *   məsuliyyətidir — birini yeniləyib digərini unutmaq sayğacı sürüşdürər.
+ */
+export async function commentReactionPut(c: Ctx, postId: string, cid: string) {
+  const b = await readJson(c.req);
+  if (!isReaction(b.type)) return badReq('Naməlum reaksiya tipi.');
+  const row = await D(c).prepare('SELECT author_id FROM comments WHERE id = ? AND post_id = ?')
+    .bind(cid, postId).first<any>();
+  if (!row) return err('Şərh tapılmadı.', 404);
+
+  const prev = await D(c).prepare('SELECT type FROM comment_reactions WHERE comment_id = ? AND user_id = ?')
+    .bind(cid, c.user!.id).first<any>();
+  if (prev?.type === b.type) return json({ ok: true, type: b.type });   // dəyişiklik yoxdur
+
+  await D(c).prepare(
+    `INSERT INTO comment_reactions (comment_id, user_id, type, created_at) VALUES (?,?,?,?)
+       ON CONFLICT(comment_id, user_id) DO UPDATE SET type = excluded.type`,
+  ).bind(cid, c.user!.id, b.type, now()).run();
+
+  // Köhnə `like` yolunu sinxron saxla.
+  const wasLike = prev?.type === 'like';
+  const nowLike = b.type === 'like';
+  if (nowLike && !wasLike) {
+    const ins = await D(c).prepare('INSERT OR IGNORE INTO comment_likes (comment_id, user_id, created_at) VALUES (?,?,?)')
+      .bind(cid, c.user!.id, now()).run();
+    if (ins.meta.changes > 0) await D(c).prepare('UPDATE comments SET like_count = like_count + 1 WHERE id = ?').bind(cid).run();
+  } else if (!nowLike && wasLike) {
+    const del = await D(c).prepare('DELETE FROM comment_likes WHERE comment_id = ? AND user_id = ?').bind(cid, c.user!.id).run();
+    if (del.meta.changes > 0) await D(c).prepare('UPDATE comments SET like_count = MAX(0, like_count - 1) WHERE id = ?').bind(cid).run();
+  }
+  // Bildiriş yalnız YENİ reaksiyada — tip dəyişməsi spam yaratmamalıdır.
+  if (!prev) await notify(c, row.author_id, 'like', 'şərhinə reaksiya verdi', postId);
+  return json({ ok: true, type: b.type });
+}
+
+export async function commentReactionDelete(c: Ctx, _postId: string, cid: string) {
+  const prev = await D(c).prepare('SELECT type FROM comment_reactions WHERE comment_id = ? AND user_id = ?')
+    .bind(cid, c.user!.id).first<any>();
+  if (!prev) return json({ ok: true });
+  await D(c).prepare('DELETE FROM comment_reactions WHERE comment_id = ? AND user_id = ?').bind(cid, c.user!.id).run();
+  if (prev.type === 'like') {
+    const del = await D(c).prepare('DELETE FROM comment_likes WHERE comment_id = ? AND user_id = ?').bind(cid, c.user!.id).run();
+    if (del.meta.changes > 0) await D(c).prepare('UPDATE comments SET like_count = MAX(0, like_count - 1) WHERE id = ?').bind(cid).run();
+  }
+  return json({ ok: true });
+}
+
+/** Sancaq: yalnız POST müəllifi və ya admin. Bir postda yalnız BİR sancaq. */
+export async function commentPin(c: Ctx, postId: string, cid: string) {
+  const post = await D(c).prepare('SELECT author_id FROM posts WHERE id = ?').bind(postId).first<any>();
+  if (!post) return err('Post tapılmadı.', 404);
+  if (post.author_id !== c.user!.id && !c.isAdmin) return err('İcazə yoxdur.', 403, 'forbidden');
+  const row = await D(c).prepare('SELECT id FROM comments WHERE id = ? AND post_id = ?').bind(cid, postId).first<any>();
+  if (!row) return err('Şərh tapılmadı.', 404);
+  // Əvvəlki sancaq götürülür — "ən üstdə bir şərh" qaydası.
+  await D(c).prepare('UPDATE comments SET pinned_at = NULL WHERE post_id = ? AND pinned_at IS NOT NULL').bind(postId).run();
+  await D(c).prepare('UPDATE comments SET pinned_at = ? WHERE id = ?').bind(now(), cid).run();
+  return json({ ok: true, pinned: true });
+}
+
+export async function commentUnpin(c: Ctx, postId: string, cid: string) {
+  const post = await D(c).prepare('SELECT author_id FROM posts WHERE id = ?').bind(postId).first<any>();
+  if (!post) return err('Post tapılmadı.', 404);
+  if (post.author_id !== c.user!.id && !c.isAdmin) return err('İcazə yoxdur.', 403, 'forbidden');
+  await D(c).prepare('UPDATE comments SET pinned_at = NULL WHERE id = ? AND post_id = ?').bind(cid, postId).run();
+  return json({ ok: true, pinned: false });
+}
+
+/**
+ * Gizlət (moderasiya) — yalnız admin.
+ * ⚠ SİLMƏ DEYİL: sətir qalır, `hidden_at` qoyulur. Beləliklə "Bərpa et"
+ *   mümkündür və moderasiya qərarı auditdə izlənir (kim, nə vaxt).
+ */
+export async function commentHide(c: Ctx, postId: string, cid: string) {
+  if (!c.isAdmin) return err('İcazə yoxdur.', 403, 'forbidden');
+  const r = await D(c).prepare('UPDATE comments SET hidden_at = ?, hidden_by = ? WHERE id = ? AND post_id = ?')
+    .bind(now(), c.user!.id, cid, postId).run();
+  if (!r.meta.changes) return err('Şərh tapılmadı.', 404);
+  return json({ ok: true, hidden: true });
+}
+
+export async function commentRestore(c: Ctx, postId: string, cid: string) {
+  if (!c.isAdmin) return err('İcazə yoxdur.', 403, 'forbidden');
+  const r = await D(c).prepare('UPDATE comments SET hidden_at = NULL, hidden_by = NULL WHERE id = ? AND post_id = ?')
+    .bind(cid, postId).run();
+  if (!r.meta.changes) return err('Şərh tapılmadı.', 404);
+  return json({ ok: true, hidden: false });
+}
+
+/** Şikayət — hər istifadəçi bir şərhi bir dəfə (UNIQUE index 409 verir). */
+export async function commentReport(c: Ctx, postId: string, cid: string) {
+  const b = await readJson(c.req);
+  const reason = clampStr(b.reason, 300).trim();
+  if (!reason) return badReq('Səbəb boş ola bilməz.');
+  const row = await D(c).prepare('SELECT id FROM comments WHERE id = ? AND post_id = ?').bind(cid, postId).first<any>();
+  if (!row) return err('Şərh tapılmadı.', 404);
+  const ins = await D(c).prepare(
+    `INSERT OR IGNORE INTO comment_reports (id, comment_id, post_id, reporter_id, reporter_name, reason, created_at)
+     VALUES (?,?,?,?,?,?,?)`,
+  ).bind(uuid(), cid, postId, c.user!.id, c.user!.name, reason, now()).run();
+  // `OR IGNORE` + UNIQUE → təkrar şikayət səssizcə udulur; istifadəçiyə
+  // "artıq şikayət etmisən" demək daha dürüstdür.
+  if (!ins.meta.changes) return err('Bu şərhi artıq şikayət etmisən.', 409, 'already_reported');
   return json({ ok: true });
 }
 

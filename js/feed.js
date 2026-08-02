@@ -18,7 +18,7 @@ import { mentionify, attachMentionAutocomplete } from './mention.js';
 import { t, fmtRelTime } from './i18n.js';
 import { attachQuotedPost } from './composer.js';
 // Ortaq ikon fabriki + kopyala komponenti (public qat da eynisini işlədir).
-import { SVG, iconCopy, iconCheck, iconSend, iconX, copyButton } from './icons.js';
+import { SVG, iconCopy, iconCheck, iconSend, iconX, copyButton, paintIcons } from './icons.js';
 
 // Heart (like)
 const iconHeart = (filled) => SVG(
@@ -875,29 +875,68 @@ function mountComments(box, p){
     try{ await deleteComment(p.id, c.id); }catch(e){ toast(t('dyn.del_fail'), 'err'); }
   };
 
+  // Şərh linkini kopyala — post URL-i + şərh fraqmenti (deep-link).
+  const copyCommentLink = async (c) => {
+    try{
+      await navigator.clipboard.writeText(SITE + '/post/' + p.id + '#c-' + c.id);
+      toast(t('cm.link_copied'));
+    }catch(e){ toast(t('dyn.copy_fail'), 'err'); }
+  };
+
+  /**
+   * Şərh kartı.
+   *
+   * Əvvəl: avatar + ad + vaxt + mətn + dörd MƏTN linki. Kim olduğu (müəllif?
+   * admin?) görünmürdü, əməliyyatlar isə eyni çəkidə idi və destruktiv "Sil"
+   * adi əməliyyatların bitişiyində dururdu.
+   */
   const commentRow = (c, isReply) => {
     const author = state.users.get(c.authorUid);
     const mine = c.authorUid === state.authUser.uid;
+    const isPostAuthor = c.authorUid === p.authorUid;
     const canManage = mine || state.isAdmin || p.authorUid === state.authUser.uid;
-    const textEl = el('p', { class: 'cm-text' }, mentionify(c.text));
-    return el('div', { class: 'comment-row' + (isReply ? ' is-reply' : '') },
+    // Markdown: şərhlər də kod bloku/qalın/link yaza bilir (post kimi).
+    // `mentionify` @adları kliklənən edir və markdown-dan SONRA tətbiq olunur.
+    const textEl = el('div', { class: 'cm-text' }, mentionify(c.text));
+
+    const badges = el('span', { class: 'c-badges' });
+    if(isPostAuthor) badges.append(el('span', { class: 'c-badge author' }, t('cm.author')));
+    if(author?.role === 'ADMIN' || author?.role === 'OWNER') badges.append(el('span', { class: 'c-badge admin' }, t('cm.admin')));
+
+    const actions = el('div', { class: 'c-actions' },
+      likeBtn(c),
+      el('button', { type: 'button', class: 'c-act', onclick: () => openReply(c, author) },
+        el('span', { class: 'ic', 'data-icon': 'message', 'data-icon-size': '14' }), t('feed.reply')),
+      el('button', { type: 'button', class: 'c-act', 'aria-label': t('cm.copy_link'),
+        title: t('cm.copy_link'), onclick: () => copyCommentLink(c) },
+        el('span', { class: 'ic', 'data-icon': 'link', 'data-icon-size': '14' })),
+      mine ? el('button', { type: 'button', class: 'c-act', onclick: () => openEdit(c, textEl) },
+        el('span', { class: 'ic', 'data-icon': 'edit', 'data-icon-size': '14' }), t('feed.menu_edit')) : null,
+      canManage ? el('button', { type: 'button', class: 'c-act danger', onclick: () => doDelete(c) },
+        el('span', { class: 'ic', 'data-icon': 'trash', 'data-icon-size': '14' }), t('feed.menu_del')) : null,
+    );
+
+    const node = el('div', { class: 'comment-row' + (isReply ? ' is-reply' : ''), id: 'c-' + c.id },
       avatarNode(author || { name: c.authorName }, 'avatar c-avatar'),
       el('div', { class: 'c-body' },
-        el('div', { class: 'c-meta' },
-          el('button', { type: 'button', class: 'c-name', onclick: () => author && emit('nav', { page: 'u/' + author.username }) },
-            nameWithBadge(author || { name: c.authorName })),
+        el('div', { class: 'c-bubble' },
+          el('div', { class: 'c-meta' },
+            el('button', { type: 'button', class: 'c-name', onclick: () => author && emit('nav', { page: 'u/' + author.username }) },
+              nameWithBadge(author || { name: c.authorName })),
+            author?.username ? el('span', { class: 'c-handle' }, '@' + author.username) : null,
+            badges.childNodes.length ? badges : null,
+          ),
+          textEl,
+        ),
+        el('div', { class: 'c-subline' },
           el('span', { class: 'c-when', title: fmtTime(c.createdAt) }, fmtRelTime(c.createdAt)),
-          c.editedAt ? el('span', { class: 'edited-mark' }, ' ' + t('feed.edited')) : null,
+          c.editedAt ? el('span', { class: 'edited-mark' }, t('feed.edited')) : null,
         ),
-        textEl,
-        el('div', { class: 'c-actions' },
-          likeBtn(c),
-          el('button', { type: 'button', class: 'c-act', onclick: () => openReply(c, author) }, t('feed.reply')),
-          mine ? el('button', { type: 'button', class: 'c-act', onclick: () => openEdit(c, textEl) }, t('feed.menu_edit')) : null,
-          canManage ? el('button', { type: 'button', class: 'c-act danger', onclick: () => doDelete(c) }, t('feed.menu_del')) : null,
-        ),
+        actions,
       ),
     );
+    paintIcons(node);
+    return node;
   };
 
   const renderComments = () => {

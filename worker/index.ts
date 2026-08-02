@@ -154,6 +154,18 @@ const ROUTES: Route[] = [
   { method: 'DELETE', pattern: /^\/api\/posts\/([\w-]+)\/comments\/([\w-]+)$/, handler: R.deleteComment, auth: true, rl: 'write' },
   { method: 'PUT', pattern: /^\/api\/posts\/([\w-]+)\/comments\/([\w-]+)\/like$/, handler: R.commentLikePut, auth: true, rl: 'write' },
   { method: 'DELETE', pattern: /^\/api\/posts\/([\w-]+)\/comments\/([\w-]+)\/like$/, handler: R.commentLikeDelete, auth: true, rl: 'write' },
+  // Şərh sistemi (0039) — reaksiya / moderasiya / şikayət.
+  // ⚠ `reaction` marşrutu `like`-dan SONRA gəlir; naxışlar kəsişmir, amma
+  //   sıra oxunaqlılıq üçün məntiqi qruplaşdırılıb.
+  { method: 'PUT', pattern: /^\/api\/posts\/([\w-]+)\/comments\/([\w-]+)\/reaction$/, handler: R.commentReactionPut, auth: true, rl: 'write' },
+  { method: 'DELETE', pattern: /^\/api\/posts\/([\w-]+)\/comments\/([\w-]+)\/reaction$/, handler: R.commentReactionDelete, auth: true, rl: 'write' },
+  { method: 'PUT', pattern: /^\/api\/posts\/([\w-]+)\/comments\/([\w-]+)\/pin$/, handler: R.commentPin, auth: true, rl: 'write' },
+  { method: 'DELETE', pattern: /^\/api\/posts\/([\w-]+)\/comments\/([\w-]+)\/pin$/, handler: R.commentUnpin, auth: true, rl: 'write' },
+  // Gizlət/bərpa: `perm` YOX, handler-in özü `c.isAdmin` yoxlayır — moderasiya
+  // qərarı post müəllifinə DEYİL, yalnız platforma admininə aiddir.
+  { method: 'PUT', pattern: /^\/api\/posts\/([\w-]+)\/comments\/([\w-]+)\/hide$/, handler: R.commentHide, auth: true, rl: 'admin' },
+  { method: 'DELETE', pattern: /^\/api\/posts\/([\w-]+)\/comments\/([\w-]+)\/hide$/, handler: R.commentRestore, auth: true, rl: 'admin' },
+  { method: 'POST', pattern: /^\/api\/posts\/([\w-]+)\/comments\/([\w-]+)\/report$/, handler: R.commentReport, auth: true, rl: 'write' },
 
   // rooms
   { method: 'GET', pattern: /^\/api\/rooms$/, handler: R.listRooms, auth: true, rl: 'read' },

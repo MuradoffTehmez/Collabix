@@ -583,21 +583,17 @@ function logLine(lg){
     detailEl = detailTxt || '—';
   }
 
-  const actionMenu = el('div', { class: 'action-menu-wrap' },
-    el('button', { class: 'btn-ghost' }, '...'),
-    el('div', { class: 'action-menu-dropdown' },
-      el('button', { onclick: () => console.log('Detallar', lg.id) }, 'Detallar'),
-      el('button', { class: 'danger', onclick: () => console.log('Sil', lg.id) }, 'Sil')
-    )
-  );
-
+  // AUDIT-UI: burada "..." menyusu var idi — "Detallar" və "Sil" bəndləri
+  // YALNIZ `console.log` çağırırdı. İşləməyən, üstəlik DESTRUKTİV görünən
+  // ("Sil") menyu göstərmək onu heç göstərməməkdən pisdir: istifadəçi audit
+  // jurnalı sətrinin silinə biləcəyini düşünür. Jurnal onsuz da yalnız-oxunur
+  // qeyddir. Menyu silindi; sütun da götürüldü (başlığı aşağıda uyğunlaşdı).
   return el('tr', {},
     el('td', {}, el('span', { class: badgeClass }, lvl.toUpperCase())),
     el('td', {}, ts),
     el('td', {}, lg.action || '—'),
     el('td', {}, '@' + (lg.byName || '?')),
     el('td', {}, detailEl),
-    el('td', {}, actionMenu)
   );
 }
 

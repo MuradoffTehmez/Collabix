@@ -102,6 +102,8 @@ export {
   likePut, likeDelete, bookmarkPut, bookmarkDelete,
   listComments, addComment, editComment, deleteComment,
   commentLikePut, commentLikeDelete,
+  commentReactionPut, commentReactionDelete,
+  commentPin, commentUnpin, commentHide, commentRestore, commentReport,
 } from './routes/post';
 
 export {

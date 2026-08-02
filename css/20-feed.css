@@ -942,7 +942,7 @@
 }
 
 .comment-row .c-meta span {
-  font-size: .68rem;
+  font-size: var(--fs-xs);
   color: var(--muted);
 }
 
@@ -1063,16 +1063,66 @@
 .c-name:hover {
   text-decoration: underline;
 }
+/* AUDIT-UI: .68rem = 10.9px idi — layihənin öz sənədləşdirilmiş minimumu
+   `--fs-xs: 12px`-dir (15-components.css: "ƏN KİÇİK ÖLÇÜ 12px", AUDIT-9 bunu
+   P0 text-clip qüsuru saymışdı). Şərh metası o həddin altında qalmışdı. */
 .c-when {
-  font-size: .68rem;
+  font-size: var(--fs-xs);
   color: var(--muted);
 }
+/* ── ŞƏRH BALONU (AUDIT-UI) ──────────────────────────────────────────────
+ * Əvvəl ad / vaxt / mətn / əməliyyatlar EYNİ vizual çəkidə düz siyahı idi —
+ * harada bir şərhin bitib digərinin başladığı yalnız nazik `border-top`-dan
+ * bilinirdi. İndi məzmun yumşaq səthdə qruplaşır (whitespace-balance):
+ * balon = kim + nə dedi; əməliyyatlar balondan KƏNARDA, sönük qalır. */
+.comment-row .c-body > .c-meta,
+.comment-row .c-body > .cm-text {
+  position: relative;
+}
+
+.comment-row .c-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sp-1);
+}
+
+.comment-row .c-meta,
+.comment-row .cm-text {
+  /* İkisi bir balonun içindədir → fon yalnız birinə verilsə qırılardı.
+     Ona görə sarğı yox, ortaq fon "davamlı" görünsün deyə eyni padding. */
+  padding-inline: var(--sp-3);
+}
+
+.comment-row .c-meta {
+  padding-top: var(--sp-2);
+  background: var(--surface-2);
+  border-radius: var(--r-md) var(--r-md) 0 0;
+  width: 100%;
+}
+
 .comment-row .cm-text {
   color: var(--text);
   line-height: 1.5;
   word-break: break-word;
   white-space: pre-wrap;
-  margin-top: 2px;
+  margin-top: 0;
+  padding-bottom: var(--sp-2);
+  background: var(--surface-2);
+  border-radius: 0 0 var(--r-md) var(--r-md);
+  width: 100%;
+}
+
+/* Əməliyyatlar balondan kənarda və sönükdür — mətnlə diqqət üçün yarışmır. */
+.comment-row .c-actions {
+  padding-inline: var(--sp-2);
+}
+
+/* Destruktiv əməliyyat adi əməliyyatlardan AYRILIR (HIG: destructive
+   emphasis/separation) — əvvəl "Sil" "Redaktə et"-in bitişiyində idi. */
+.c-act.danger {
+  margin-left: var(--sp-3);
+  color: color-mix(in srgb, var(--danger) 70%, var(--muted));
 }
 .c-actions {
   display: flex;
@@ -1085,9 +1135,9 @@
   background: none;
   color: var(--muted);
   font: inherit;
-  font-size: .7rem;
+  font-size: var(--fs-xs);
   font-weight: 600;
-  padding: 3px 7px;
+  padding: var(--sp-1) var(--sp-2);
   border-radius: 7px;
   cursor: pointer;
   transition: background 140ms ease, color 140ms ease;
@@ -1107,9 +1157,9 @@
   background: none;
   color: var(--muted);
   font: inherit;
-  font-size: .7rem;
+  font-size: var(--fs-xs);
   font-weight: 600;
-  padding: 3px 7px;
+  padding: var(--sp-1) var(--sp-2);
   border-radius: 7px;
   cursor: pointer;
   transition: color 140ms ease, background 140ms ease;
@@ -1125,10 +1175,12 @@
   color: var(--danger);
 }
 
+/* Cavab zənciri: 2px sərt xətt əvəzinə 1px yumşaq bağlayıcı — iyerarxiyanı
+   göstərir, amma şərh mətni ilə diqqət üçün yarışmır (trend-emphasis). */
 .c-replies {
   margin-left: 22px;
-  padding-left: 12px;
-  border-left: 2px solid var(--card-border);
+  padding-left: var(--sp-4);
+  border-left: 1px solid var(--card-border);
 }
 .c-reply-holder:empty {
   display: none;

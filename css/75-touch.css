@@ -30,6 +30,18 @@
     min-height: 44px;
   }
 
+  /* AUDIT-UI: şərh əməliyyatları (Bəyən / Cavab / Redaktə / Sil) siyahıdan
+     KƏNARDA qalmışdı — 11px mətn + 3px padding ilə təxminən 17px hündürlüyü
+     var idi və mobil toxunuşda demək olar hədəflənə bilmirdi.
+     Kvadrat 44×44 YOX: bunlar mətn düymələridir, yan-yana durur və kvadrat
+     onları sıxışdırardı — yalnız hündürlük 44-ə qaldırılır, en məzmuna görə. */
+  .c-act,
+  .c-like {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+
   /* Pill/çip seçicilər — hündürlük 44px, en məzmuna görə. */
   .pp,
   .cmp-chip,
