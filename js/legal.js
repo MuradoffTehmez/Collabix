@@ -59,71 +59,10 @@ export const SITE = {
 };
 
 export const LEGAL = {
-  about: {
-    az: `## Missiyamız
-
-Collabix — proqramlaşdırma və xarici dilləri **birlikdə** öyrənmək istəyən 18+ gənclər üçün icma platformasıdır. İnanırıq ki, öyrənmə tək yox, icma içində daha sürətli və daha maraqlıdır.
-
-## Nə edirik?
-
-- Study-partner, mentor və layihə komandası tapmağa kömək edirik;
-- Kod paylaşımı, tapşırıq həlli və XP sistemi ilə praktik öyrənməni stimullaşdırırıq;
-- Gündəlik seriya (🔥) və aktivlik xəritəsi ilə davamlılığı vərdiş halına gətiririk.
-
-## Hekayəmiz
-
-Collabix kiçik bir öyrənmə qrupunun "birlikdə öyrənək" ideyasından doğdu və indi çoxdilli, açıq icmaya çevrilir. Platforma daim istifadəçi rəyləri əsasında inkişaf etdirilir.
-
-## Komanda
-
-Collabix hazırda **müstəqil, tək nəfərlik layihədir** — Tahmaz Muradov (fərdi sahibkar) tərəfindən qurulur və idarə olunur. Komanda böyüdükcə bu bölmə real adlarla yenilənəcək.
-
-## Dəyərlərimiz
-
-**Açıqlıq** — hər səviyyədən öyrənənə hörmət. **Təhlükəsizlik** — 18+ icma, moderasiya və şikayət sistemi. **Davamlılıq** — kiçik gündəlik addımların gücü.`,
-    en: `## Our mission
-
-Collabix is a community platform for people 18+ who want to learn programming and languages **together**. We believe learning is faster and more fun in a community than alone.
-
-## What we do
-
-- Help you find study partners, mentors and project teams;
-- Encourage hands-on learning with code sharing, tasks and an XP system;
-- Build consistency with daily streaks (🔥) and an activity heatmap.
-
-## Our story
-
-Collabix grew out of a small study group's "let's learn together" idea and is becoming a multilingual open community, shaped continuously by user feedback.
-
-## Team
-
-Collabix is currently an **independent, one-person project**, built and maintained by Tahmaz Muradov (sole proprietor). This section will be updated with real names as the team grows.
-
-## Values
-
-**Openness** — respect for learners at every level. **Safety** — an 18+ community with moderation and reporting. **Consistency** — the power of small daily steps.`,
-    ru: `## Наша миссия
-
-Collabix — платформа-сообщество для людей 18+, которые хотят изучать программирование и языки **вместе**. Мы верим, что учиться в сообществе быстрее и интереснее, чем в одиночку.
-
-## Что мы делаем
-
-- Помогаем найти партнёров по учёбе, менторов и команды;
-- Стимулируем практику через обмен кодом, задания и систему XP;
-- Формируем привычку с помощью ежедневных серий (🔥) и карты активности.
-
-## Наша история
-
-Collabix вырос из идеи небольшой учебной группы «давайте учиться вместе» и превращается в многоязычное открытое сообщество.
-
-## Команда
-
-Collabix — **независимый проект одного человека**: его создаёт и поддерживает Тахмаз Мурадов (индивидуальный предприниматель). Раздел будет обновлён реальными именами по мере роста команды.
-
-## Ценности
-
-**Открытость**, **безопасность** (18+, модерация), **последовательность**.`,
-  },
+  // ⚠ `about` AÇARI SİLİNDİ — ölü məzmun idi.
+  //   "Haqqımızda" səhifəsi artıq markdown deyil, struktur datadır:
+  //   `js/about-content.js` → `ABOUT`. Burada qalsaydı, iki mənbə görünərdi
+  //   və köhnə mətn (ikon kimi 🔥 emoji daxil) canlı sanılardı.
 
   privacy: {
     az: `*Son yenilənmə: 2026-07-28*

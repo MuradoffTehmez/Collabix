@@ -393,17 +393,41 @@ function renderFaqList(){
     box.append(el('p', { class: 'faq-empty' }, t('faq.empty')));
     return;
   }
-  list.forEach(f => {
-    const answer = el('div', { class: 'faq-a' }, el('p', {}, tf(f.a)));
-    const item = el('div', { class: 'faq-item' },
-      el('button', { class: 'faq-q', onclick: e => {
+  list.forEach((f, i) => {
+    // ⚠ `aria-controls` üçün sabit id lazımdır: ekran oxuyucusu düymənin
+    //   HANSI bölməni açdığını bilməlidir. `aria-expanded` təkbaşına bunu
+    //   demir.
+    const aId = 'faqA' + i;
+    // ⚠ İKİ QAT: xarici `.faq-a` grid sətridir (0fr↔1fr açılma), daxili
+    //   `.faq-a-in` isə `overflow: hidden` daşıyıcısıdır. Tək qatda `<p>`-nin
+    //   `padding-bottom`-u yığılmış halda da yer tuturdu — ölçüldü: hündürlük
+    //   0 yox, 15px idi, yəni bağlı akkordeonlar arasında izahsız boşluq.
+    const answer = el('div', { class: 'faq-a', id: aId },
+      el('div', { class: 'faq-a-in' }, el('p', {}, tf(f.a))));
+    // ⚠ `inert` — CSS `visibility` OYUNU DEYİL. Əvvəlcə `visibility: hidden`
+    //   sınandı, lakin kaskadda gözlənilməz davrandı (ölçüldü: `.open`
+    //   qaydası uyğun gəlsə də hesablanan dəyər `hidden` qalırdı). `inert`
+    //   atribut səviyyəsindədir: yığılmış cavabı həm erişilebilirlik
+    //   ağacından, həm də tab sırasından çıxarır və animasiyaya toxunmur.
+    answer.inert = true;
+    const btn = el('button', {
+      class: 'faq-q', type: 'button',
+      'aria-expanded': 'false', 'aria-controls': aId,
+      onclick: () => {
         const open = item.classList.toggle('open');
-        e.currentTarget.setAttribute('aria-expanded', open);
-      }, 'aria-expanded': 'false' }, el('span', {}, tf(f.q)), el('span', { class: 'faq-arrow' }, '⌄')),
-      answer,
-    );
+        btn.setAttribute('aria-expanded', String(open));
+        answer.inert = !open;
+      },
+    },
+    el('span', {}, tf(f.q)),
+    // ⚠ Əvvəl burada `'⌄'` MƏTN QLİFİ vardı — şriftdən asılı olaraq bəzi
+    //   sistemlərdə ya çox kiçik, ya da tamamilə fərqli çəkilirdi və
+    //   `currentColor`-a tabe deyildi. İndi reyestrdəki SVG.
+    el('span', { class: 'faq-arrow ic', 'data-icon': 'chevron', 'data-icon-size': '16' }));
+    const item = el('div', { class: 'faq-item' }, btn, answer);
     box.append(item);
   });
+  paintIcons(box);
 }
 
 /* ---------- contact ---------- */
@@ -414,8 +438,18 @@ function renderContactInfo(){
     el('div', { class: 'ci-row' }, el('b', {}, t('contact.addr')), el('span', {}, SITE.address)),
     el('div', { class: 'ci-row' }, el('b', {}, 'E-poçt'), el('a', { href: 'mailto:' + SITE.email }, SITE.email)),
     el('div', { class: 'ci-row' }, el('b', {}, t('contact.hours')), el('span', {}, SITE.hours)),
-    el('a', { class: 'btn-mini dismiss', href: SITE.mapsURL, target: '_blank', rel: 'noopener noreferrer' }, '📍 ' + t('contact.map')),
+    // ⚠ Əvvəl etiketin qarşısında `'📍 '` emoji-si vardı. Emoji ikon kimi
+    //   işlədilməməlidir: platformadan asılı görünür, `currentColor`-a tabe
+    //   deyil (dörd temanın heç birinə uyğunlaşmır) və ekran oxuyucusu onu
+    //   "yerləşmə nişanı" kimi ucadan oxuyur. `ICONS` reyestrindəki SVG.
+    el('a', {
+      class: 'btn-mini dismiss ci-map', href: SITE.mapsURL,
+      target: '_blank', rel: 'noopener noreferrer',
+    },
+    el('span', { class: 'ic', 'data-icon': 'pin', 'data-icon-size': '14' }),
+    el('span', {}, t('contact.map'))),
   );
+  paintIcons(box);
 }
 
 /* ---------- footer ---------- */
@@ -453,8 +487,15 @@ function renderFooterStatic(){
     el('span', {}, SITE.address),
     el('a', { href: 'mailto:' + SITE.email }, SITE.email),
     el('span', {}, SITE.hours),
-    el('a', { href: SITE.mapsURL, target: '_blank', rel: 'noopener noreferrer' }, '📍 Google Maps'),
+    // Emoji → SVG (səbəb: yuxarıdakı `renderContactInfo()` şərhi).
+    el('a', {
+      class: 'ci-map', href: SITE.mapsURL,
+      target: '_blank', rel: 'noopener noreferrer',
+    },
+    el('span', { class: 'ic', 'data-icon': 'pin', 'data-icon-size': '13' }),
+    el('span', {}, 'Google Maps')),
   );
+  paintIcons(pc);
 }
 
 /* ================= init ================= */

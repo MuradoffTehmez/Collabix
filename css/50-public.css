@@ -513,22 +513,43 @@
 }
 
 .faq-arrow {
-  transition: transform .25s;
+  display: inline-flex;
+  font-size: 0;          /* mətn qalığı yox — içərisi SVG-dir */
   color: var(--muted);
+  flex: 0 0 auto;
+  transition: transform .25s ease;
 }
 
 .faq-item.open .faq-arrow {
   transform: rotate(180deg);
 }
 
+/* 🔴 `max-height` SEHRLİ RƏQƏMİ SİLİNDİ.
+ *
+ *   Əvvəl açıq hal `max-height: 400px` idi. İki problemi vardı:
+ *     1. 400px-dən uzun cavab SƏSSİZCƏ KƏSİLİRDİ — mətnin qalanı görünmürdü.
+ *     2. Qısa cavabda keçid faktiki yüksəkliyə görə deyil, 400px-ə görə
+ *        hesablandığı üçün animasiya "tələsik" başlayıb yarıda dayanırdı.
+ *
+ *   `grid-template-rows: 0fr → 1fr` məzmunun ÖZ hündürlüyünə görə açılır:
+ *   nə kəsilmə, nə sehrli rəqəm. */
 .faq-a {
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height .3s ease;
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows .28s ease;
 }
 
 .faq-item.open .faq-a {
-  max-height: 400px;
+  grid-template-rows: 1fr;
+}
+
+/* Daşıyıcı: `min-height: 0` olmadan grid sətri məzmundan kiçilə bilmir və
+   `0fr` heç bir təsir göstərmir. `overflow: hidden` isə açılma zamanı mətni
+   kəsir ki, sətir hündürlüyü ilə birlikdə hamar görünsün.
+   ⚠ Padding BURADA DEYİL, `<p>`-dədir — əks halda yığılmış halda da yer tutur. */
+.faq-a-in {
+  min-height: 0;
+  overflow: hidden;
 }
 
 .faq-a p {
@@ -536,6 +557,13 @@
   color: var(--muted);
   font-size: .85rem;
   line-height: 1.6;
+}
+
+/* A11y `inert` atributu ilə həll olunur (bax `renderFaqList()`), CSS ilə yox. */
+
+@media (prefers-reduced-motion: reduce) {
+  .faq-a,
+  .faq-arrow { transition: none; }
 }
 
 .faq-empty {
@@ -1233,4 +1261,20 @@
   width: auto;
   padding: 13px 34px;
   font-size: .95rem;
+}
+
+/* Xəritə linki: ikon + mətn eyni sətirdə düzülsün.
+   ⚠ Əvvəl burada `'📍 '` emoji mətn kimi yazılırdı; SVG-yə keçiddən sonra
+     hizalama üçün flex lazımdır (emoji öz-özünə sətir içində otururdu). */
+.ci-map {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ci-map .ic {
+  display: inline-flex;
+  font-size: 0;          /* qlif qalığını gizlədir */
+  color: currentColor;   /* emoji ilə mümkün olmayan şey */
+  flex: 0 0 auto;
 }
