@@ -19,7 +19,7 @@ import {
   // ⚠ `previewText` BURADAN alınmır — o, `chat-message.js`-dədir (yuxarıda
   //   idxal olunub). Buradakı analoq `previewOf`-dur; ikisini qarışdırmaq
   //   təkrar bəyan xətası verirdi.
-  pinBanner, matchesFilter, collectShared,
+  pinBanner, matchesFilter, collectShared, listSkeleton, messagesSkeleton,
 } from './chat-ui.js';
 
 let threads = [];
@@ -75,6 +75,8 @@ function renderThreadList(){
    *   destrukturu onu bu blok daxilində KÖLGƏLƏYİRDİ — ona görə burada
    *   tərcümə çağırmaq mümkün deyildi və "sən: " sabit azərbaycanca qalmışdı. */
   bindListKeyboardNav(list);
+  // Bax `chat.js`-dəki eyni şərh: ilk yüklənmədə skeleton, boş ekran yox.
+  if(!items.length && !threads.length){ list.append(listSkeleton(5)); return; }
   const prefs = convPrefs();
   // Sabitlənmişlər yuxarıda (otaq siyahısı ilə eyni qayda).
   items.sort((a, b) => {
@@ -380,6 +382,7 @@ function selectPeer(uid, openDetail = false){  // openDetail: yalnız klikdən (
   if(openDetail) document.querySelector('#page-dm .chat-wrap')?.classList.add('detail-open');
   const box = document.getElementById('dmMessages');
   clear(box);
+  box.append(messagesSkeleton(6));
   if(unsubMsgs) unsubMsgs();
 
   // AUDIT-TASK-8 §8.4 — arxiv tarixçəsi (chat.js ilə EYNİ modul, `js/history.js`).

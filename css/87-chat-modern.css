@@ -1753,6 +1753,60 @@
   white-space: pre-wrap;
 }
 
+/* ══ 7b. SKELETON YÜKLƏNMƏ ═════════════════════════════════════════════════
+ * ⚠ Skeleton HƏQİQİ elementlə EYNİ ölçüdədir (sətir hündürlüyü, avatar
+ *   ölçüsü). Fərqli olsaydı data gələndə layout sıçrayardı (CLS) — skeleton-un
+ *   məqsədi məhz bunun qarşısını almaqdır.
+ * ⚠ Animasiya `background-position` ilədir: `width`/`left` animasiyası
+ *   layout hesablamasını hər kadrda təkrarladardı. */
+@keyframes skelShimmer {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+
+.skel {
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--muted) 14%, transparent) 25%,
+    color-mix(in srgb, var(--muted) 26%, transparent) 37%,
+    color-mix(in srgb, var(--muted) 14%, transparent) 50%
+  );
+  background-size: 200% 100%;
+  animation: skelShimmer 1.4s ease-in-out infinite;
+}
+
+/* Söhbət siyahısı skeleton-u — real `.ch-item` ilə eyni 3 sətirli grid. */
+.skel-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 10px;
+  row-gap: 6px;
+  padding: 9px 10px;
+  align-items: center;
+}
+
+.skel-row .skel-av { grid-row: 1 / 4; width: 42px; height: 42px; border-radius: 13px; }
+.skel-row .skel-l1 { height: 11px; width: 62%; }
+.skel-row .skel-l2 { height: 9px;  width: 40%; }
+.skel-row .skel-l3 { height: 9px;  width: 80%; }
+
+/* Mesaj skeleton-u — balon ölçüsündə. */
+.skel-msg {
+  height: 38px;
+  margin: 8px 16px;
+  border-radius: 16px;
+  max-width: 62%;
+}
+
+.skel-msg.out { margin-left: auto; max-width: 48%; }
+
+@media (prefers-reduced-motion: reduce) {
+  /* ⚠ Animasiya söndürülür, amma skeleton GÖRÜNƏN qalır — yüklənmə
+     göstəricisi məlumat daşıyır, sırf bəzək deyil. */
+  .skel { animation: none; }
+}
+
 /* ══ 8. UYĞUNLAŞAN GÖRÜNÜŞ ═════════════════════════════════════════════════
  * ⚠ `60-responsive.css` mobildə `.chat-list`/`.chat-main`-i `position:absolute`
  *   + `translateX` ilə master-detail edir. Grid ora TOXUNMUR (absolute uşaqlar
@@ -1783,7 +1837,16 @@
   .ch-icon-btn,
   .cmp-btn,
   .cd-pin .unpin,
-  .emoji-grid button {
+  .emoji-grid button,
+  /* ⚠ Göndər düyməsi 42×42-dir və bu siyahıda YOX idi — ölçmə zamanı üzə
+   *   çıxdı. Çatın ƏN ÇOX basılan düyməsidir, toxunuş həddindən aşağı
+   *   qalması qəbuledilməzdir. */
+  .chat-input .cmp-send,
+  /* Mesaj alət paneli və reaksiya seçicisi də toxunuşla işlədilir. */
+  .mx-btn,
+  .mx-react-opt,
+  .pin-bar-count,
+  .cd-chip {
     min-width: 44px;
     min-height: 44px;
   }

@@ -132,6 +132,34 @@ export function bindListKeyboardNav(list){
   });
 }
 
+/* ══ 2b. SKELETON ════════════════════════════════════════════════════════
+ * ⚠ Boş ekran əvəzinə skeleton: yüklənmə 300ms-dən uzun olanda istifadəçi
+ *   "donub" qərarına gəlir (`loading-states`). Skeleton həm də real elementlə
+ *   EYNİ ölçüdədir, ona görə data gələndə layout sıçramır.
+ * ⚠ `aria-busy` + `aria-hidden`: ekran oxuyucusu mənasız boş qutuları
+ *   oxumamalıdır, amma sahənin MƏŞĞUL olduğunu bilməlidir. */
+export function listSkeleton(n = 5){
+  const box = el('div', { 'aria-busy': 'true', 'aria-hidden': 'true' });
+  for(let i = 0; i < n; i++){
+    box.append(el('div', { class: 'skel-row' },
+      el('span', { class: 'skel skel-av' }),
+      el('span', { class: 'skel skel-l1' }),
+      el('span', { class: 'skel skel-l2' }),
+      el('span', { class: 'skel skel-l3' }),
+    ));
+  }
+  return box;
+}
+
+export function messagesSkeleton(n = 6){
+  const box = el('div', { 'aria-busy': 'true', 'aria-hidden': 'true' });
+  for(let i = 0; i < n; i++){
+    // Növbələşən istiqamət — real söhbətə oxşasın.
+    box.append(el('div', { class: 'skel skel-msg' + (i % 3 === 0 ? ' out' : '') }));
+  }
+  return box;
+}
+
 /* ══ 3. BAŞLIQ ═══════════════════════════════════════════════════════════ */
 /**
  * Söhbət başlığı.

@@ -19,7 +19,7 @@ import {
   conversationRow, buildChatHead, detailsToggleButton, setDetailsOpen,
   enhanceComposer, renderDetailsPanel, askAI, headerActions, bindListKeyboardNav,
   // `previewText` `chat-message.js`-dədir (bax dm.js-dəki eyni qeyd).
-  pinBanner, matchesFilter, collectShared,
+  pinBanner, matchesFilter, collectShared, listSkeleton, messagesSkeleton,
 } from './chat-ui.js';
 
 let rooms = [];
@@ -189,6 +189,10 @@ function renderRoomList(){
   list.append(el('div', { class: 'cl-head' }, search));
 
   bindListKeyboardNav(list);
+  /* ⚠ İlk yüklənmədə (`rooms` hələ boşdur) SKELETON göstərilir, boş ekran yox.
+   *   Filtr nəticəsi boş olanda isə skeleton YANLIŞ olardı — orada "nəticə
+   *   yoxdur" mesajı düzgündür, ona görə şərt `roomFilter`-i də yoxlayır. */
+  if(!rooms.length && !roomFilter){ list.append(listSkeleton(4)); return; }
   const prefs = convPrefs();
   const q = roomFilter.trim().toLowerCase();
   const shown = rooms
@@ -550,6 +554,8 @@ function selectRoom(roomId, openDetail = false){
   if(openDetail) document.querySelector('#page-chat .chat-wrap')?.classList.add('detail-open');
   const box = document.getElementById('chatMessages');
   clear(box);
+  // Mesajlar gələnə qədər skeleton — boş qara sahə "sınıq" təsiri verirdi.
+  box.append(messagesSkeleton(6));
   const tp = document.getElementById('chatTyping');
   if(tp) tp.classList.remove('show');           // otaq dəyişdi → köhnə typing gizlət
   connectRoomWs(roomId);                          // realtime siqnal kanalı
