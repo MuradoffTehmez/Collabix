@@ -411,8 +411,19 @@ export function initPublic(){
   });
 
   // nav linkləri (header + mobil + footer)
+  //
+  // ⚠ Bu `<a>`-ların indi REAL `href`-i var (`PUB_PATHS`). Səbəb ölçülüb:
+  //   href-siz `<a>` nə crawl olunur (PageSpeed SEO: "Links are not crawlable"),
+  //   nə də klaviatura ilə fokuslana bilir — yəni həm SEO, həm a11y qüsuru idi.
+  //   href SPA-nı əvəz etmir, onu YEDƏKLƏYİR: JS işləməsə də səhifə açılır.
   document.querySelectorAll('[data-pub]').forEach(a => {
-    a.addEventListener('click', () => emit('pub-nav', { page: a.dataset.pub }));
+    a.addEventListener('click', /** @param {MouseEvent} e */ e => {
+      // Modifikatorlu klik (Ctrl/Cmd/Shift/orta düymə) brauzerin öz işidir —
+      // "yeni tabda aç" gözləntisini sındırmırıq.
+      if(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+      e.preventDefault();
+      emit('pub-nav', { page: a.dataset.pub });
+    });
   });
   document.getElementById('pubLogo').addEventListener('click', () => emit('pub-nav', { page: 'welcome' }));
   document.getElementById('burgerBtn').addEventListener('click', () => {

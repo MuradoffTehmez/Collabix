@@ -640,7 +640,11 @@
   gap: 26px;
 }
 
-.pf-col h4 {
+/* ⚠ `h3`, `h4` DEYİL: səhifədə iyerarxiya h1 → h2 (pub-h2) gedir, footer
+   h4 olsaydı h3 səviyyəsi atlanardı (PageSpeed a11y: "Heading elements are
+   not in a sequentially-descending order"). Ölçü açıq təyin olunduğu üçün
+   teqin dəyişməsi görünüşə TƏSİR ETMİR — yalnız semantik səviyyə düzəlir. */
+.pf-col h3 {
   font-family: var(--display);
   font-size: .88rem;
   margin-bottom: 12px;

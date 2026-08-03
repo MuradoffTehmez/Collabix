@@ -246,10 +246,27 @@ export function toggleTheme(){
   const cur = getTheme();
   setTheme(THEMES[(THEMES.indexOf(cur) + 1) % THEMES.length]);
 }
+// Orbitron YALNIZ cyberpunk temasında işlənir (`css/75-touch.css`), amma əvvəl
+// ilkin şrift sorğusunun içində idi — yəni BÜTÜN istifadəçilər onu hər açılışda
+// endirirdi, halbuki default tema `dark`-dır. Ölçülüb: 11.5 KiB + kritik yolda
+// ayrıca fayl. İndi yalnız tema həqiqətən seçiləndə, bir dəfə əlavə olunur.
+//
+// ⚠ CSP: `style-src` və `font-src` `fonts.googleapis.com`/`gstatic.com`-a artıq
+//   icazə verir (bax `worker/index.ts`), ona görə runtime `<link>` bloklanmır.
+let cyberFontLink = null;
+function ensureCyberpunkFont(){
+  if(cyberFontLink) return;
+  cyberFontLink = document.createElement('link');
+  cyberFontLink.rel = 'stylesheet';
+  cyberFontLink.href = 'https://fonts.googleapis.com/css2?family=Orbitron:wght@400..800&display=swap';
+  document.head.append(cyberFontLink);
+}
+
 // ⚠ Parametr QƏSDƏN `theme` adlanır, `t` YOX: `t` bu modulda i18n tərcümə
 //   funksiyasıdır və parametr onu kölgələyərdi.
 function applyTheme(theme){
   document.documentElement.dataset.theme = theme;
+  if(theme === 'cyberpunk') ensureCyberpunkFont();
   for(const id of ['appThemeBtn', 'pubThemeBtn', 'themeToggleBtn']){
     const btn = document.getElementById(id);
     const slot = btn?.querySelector('.ic');

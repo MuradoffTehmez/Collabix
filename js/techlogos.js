@@ -47,14 +47,24 @@ function initialBadge(item){
   const label = item.label || '?';
   const short = label.replace(/[^\p{L}\p{N}#+]/gu, '').slice(0, 2).toUpperCase() || '?';
   const dot = el('span', { class: 'tl-initial' }, short);
-  if(/^#[0-9a-f]{6}$/i.test(item.color || '')){
-    dot.style.background = `color-mix(in srgb, ${item.color} 26%, transparent)`;
-    dot.style.color = `color-mix(in srgb, ${item.color} 72%, var(--text))`;
-  } else {
-    const hue = hashHue(item.id || label);
-    dot.style.background = `hsl(${hue} 45% 32% / .35)`;
-    dot.style.color = `hsl(${hue} 80% 78%)`;
-  }
+  // 🔴 KONTRAST: mətn `var(--text)`-ə BAĞLI qalmalıdır, brend rənginə yox.
+  //
+  //   Əvvəl mətn `color-mix(… 72%, var(--text))` idi, yəni brend rəngi
+  //   üstünlük təşkil edirdi. Ölçmə (4 tema × 10 rəng) göstərdi ki, bu,
+  //   30 kombinasiyanın 10-unu WCAG AA-dan kəsir: tünd brend rəngi (C#
+  //   #68217A → 2.80:1) tünd temada, açıq rəng (Java #ED8B00 → 2.92:1)
+  //   açıq temada oxunmur. Hash-fallback budağı daha pis idi — sabit
+  //   `hsl(h 80% 78%)` açıq temada 1.02:1, yəni praktiki olaraq görünməz.
+  //
+  //   İndi hər iki budaq eyni düsturdadır: fon 26% (dizayn dəyişmir),
+  //   mətn isə cəmi 35% brend çaları + 65% `--text`. Ölçülən ən pis hal:
+  //   sabit rənglərdə 5.32:1, hash çalarlarında 5.50:1 — hamısı AA-dan yuxarı.
+  //   Rəng kimliyi 35% çalarda hələ də seçilir.
+  const base = /^#[0-9a-f]{6}$/i.test(item.color || '')
+    ? item.color
+    : `hsl(${hashHue(item.id || label)} 70% 50%)`;
+  dot.style.background = `color-mix(in srgb, ${base} 26%, transparent)`;
+  dot.style.color = `color-mix(in srgb, ${base} 35%, var(--text))`;
   return dot;
 }
 

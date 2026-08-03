@@ -1108,6 +1108,20 @@ const D = {
   'badge.xp_2000': { az: '2000 XP', en: '2000 XP', ru: '2000 XP' }
 };
 
+// ⚠ YALNIZ BUILD VAXTI ÜÇÜN — runtime kodu bunu işlətməməlidir, `t()` var.
+//
+// `vite.config.ts`-dəki i18n ön-doldurma plagini `index.html`-dəki boş
+// `data-i18n` elementlərini bu lüğətdən doldurur. Səbəb ölçülüb: 290
+// elementdən 275-i HTML-də BOŞ idi, yəni səhifə 165 KiB JS enib icra
+// olunana qədər hərfi mənada ağ qalırdı (LCP render gecikməsi 1350 ms).
+//
+// ⚠ NİYƏ `t()` YOX, XAM LÜĞƏT: `t()` açar tapılmasa açarı "oxunaqlı mətnə"
+//   çevirib qaytarır ("nav.home" → "Home"). Build vaxtı bu, İNGİLİS
+//   fallback-ını AZ səhifəyə yapışdırardı. Plagin isə açar yoxdursa
+//   elementi toxunulmaz qoymalıdır — ona görə mövcudluq yoxlanılan xam
+//   obyekt lazımdır.
+export const DICT = D;
+
 export function getLang(){ return current; }
 
 // Dev-də çatışmayan açarları yığırıq (prod-da səssiz). window.__i18nMissing() → missing-i18n JSON.

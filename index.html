@@ -17,9 +17,13 @@
 <meta name="google-site-verification" content="placeholder-for-gsc-verification-code">
 <meta name="msvalidate.01" content="placeholder-for-bing-verification-code">
 
-<!-- Performance Resource Hints -->
-<link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
-<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+<!-- Performance Resource Hints
+     ⚠ `cdnjs.cloudflare.com` dns-prefetch-i SİLİNDİ: kod bazasında cdnjs-ə
+       heç bir istinad yoxdur (yoxlanılıb) — ölü hint boş yerə DNS açırdı.
+     ⚠ `crossorigin` yalnız gstatic-də olmalıdır: şrift FAYLLARI CORS ilə
+       gəlir, googleapis-dəki CSS isə yox. Hər ikisinə qoysaq brauzer AYRI
+       bağlantı hovuzu açır və preconnect öz məqsədini itirir. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
 <!-- SEO: Hreflang for multi-language -->
@@ -65,14 +69,21 @@
 <meta name="twitter:creator" content="@collabix">
 <meta name="twitter:site" content="@collabix">
 
-<!-- Performance: Preconnect & DNS Prefetch -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="dns-prefetch" href="https://fonts.googleapis.com">
-<link rel="dns-prefetch" href="https://fonts.gstatic.com">
+<!-- ⚠ Təkrar preconnect/dns-prefetch bloku SİLİNDİ — eyni iki origin yuxarıda
+     onsuz da elan olunub. Təkrar elan yeni bağlantı yaratmır, sadəcə
+     PageSpeed-in "no more than 4 preconnect" büdcəsini yeyirdi. -->
 
-<!-- Fonts -->
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Orbitron:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- Fonts
+     ⚠ `Orbitron` BU SİYAHIDA DEYİL: o, yalnız cyberpunk temasında işlənir və
+       `js/ui.js`-dəki `ensureCyberpunkFont()` onu tema seçiləndə yükləyir.
+       Default `dark` istifadəçisi 11.5 KiB + bir sorğu qazanır.
+     ⚠ Space Grotesk-də `800` YOXDUR: təkbaşına sorğu HTTP 400 verir, birləşmiş
+       sorğuda isə Google onu SƏSSİZCƏ atırdı (cavabda yalnız 400–700 gəlir).
+       CSS-dəki `font-weight:800` onsuz da brauzer tərəfindən sintez olunur,
+       ona görə keçərsiz çəki sorğudan çıxarıldı.
+     ⚠ `wght@a..b` diapazon sintaksisi bayt qazandırmır (ölçülüb: eyni fayl,
+       eyni ölçü) — yalnız URL-i qısaldır və çəki aralığını dəqiq ifadə edir. -->
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=Inter:wght@400..700&family=JetBrains+Mono:wght@400..600&display=swap" rel="stylesheet">
 
 <!-- Styles — AUDIT-TASK-10 / Faza 3.4: monolit `styles.css` (182 KB) 19 modula
      bölündü. `css/main.css` yalnız sıralı `@import` barrel-idir; Vite onları
@@ -262,10 +273,10 @@
     <div class="ph-inner">
       <a class="brand ph-logo" id="pubLogo"><span class="dot"></span>Collabix</a>
       <nav class="ph-nav" id="pubNav">
-        <a data-pub="welcome" data-i18n="nav.home"></a>
-        <a data-pub="about" data-i18n="nav.about"></a>
-        <a data-pub="faq" data-i18n="nav.faq"></a>
-        <a data-pub="contact" data-i18n="nav.contact"></a>
+        <a href="/" data-pub="welcome" data-i18n="nav.home"></a>
+        <a href="/about" data-pub="about" data-i18n="nav.about"></a>
+        <a href="/faq" data-pub="faq" data-i18n="nav.faq"></a>
+        <a href="/contact" data-pub="contact" data-i18n="nav.contact"></a>
       </nav>
       <div class="ph-actions">
         <input class="ph-search" id="pubSearch" data-i18n-ph="search.ph">
@@ -280,10 +291,10 @@
       </div>
     </div>
     <div class="ph-mobile" id="mobileMenu">
-      <a data-pub="welcome" data-i18n="nav.home"></a>
-      <a data-pub="about" data-i18n="nav.about"></a>
-      <a data-pub="faq" data-i18n="nav.faq"></a>
-      <a data-pub="contact" data-i18n="nav.contact"></a>
+      <a href="/" data-pub="welcome" data-i18n="nav.home"></a>
+      <a href="/about" data-pub="about" data-i18n="nav.about"></a>
+      <a href="/faq" data-pub="faq" data-i18n="nav.faq"></a>
+      <a href="/contact" data-pub="contact" data-i18n="nav.contact"></a>
       <div class="ph-mobile-cta">
         <button class="btn-mini ph-guest" id="pubLoginBtnM" data-i18n="cta.login"></button>
         <button class="btn-small ph-guest" id="pubRegBtnM" data-i18n="cta.register"></button>
@@ -295,7 +306,7 @@
   <nav class="breadcrumb" id="pubBreadcrumb" aria-label="Breadcrumb navigation">
     <ol itemscope itemtype="https://schema.org/BreadcrumbList">
       <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
-        <a itemprop="item" data-pub="welcome"><span itemprop="name" data-i18n="nav.home"></span></a>
+        <a href="/" itemprop="item" data-pub="welcome"><span itemprop="name" data-i18n="nav.home"></span></a>
         <meta itemprop="position" content="1">
       </li>
       <li id="breadcrumbCurrent" class="hidden" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
@@ -448,26 +459,26 @@
         <div class="pf-social" id="pfSocial"></div>
       </div>
       <div class="pf-col">
-        <h4 data-i18n="ft.nav"></h4>
-        <a data-pub="welcome" data-i18n="nav.home"></a>
-        <a data-pub="about" data-i18n="nav.about"></a>
-        <a data-pub="faq" data-i18n="nav.faq"></a>
-        <a data-pub="contact" data-i18n="nav.contact"></a>
+        <h3 data-i18n="ft.nav"></h3>
+        <a href="/" data-pub="welcome" data-i18n="nav.home"></a>
+        <a href="/about" data-pub="about" data-i18n="nav.about"></a>
+        <a href="/faq" data-pub="faq" data-i18n="nav.faq"></a>
+        <a href="/contact" data-pub="contact" data-i18n="nav.contact"></a>
       </div>
       <div class="pf-col">
-        <h4 data-i18n="ft.legal"></h4>
-        <a data-pub="privacy" data-i18n="ft.privacy"></a>
-        <a data-pub="terms" data-i18n="ft.terms"></a>
-        <a data-pub="security" data-i18n="ft.security"></a>
-        <a data-pub="cookies" data-i18n="ft.cookies"></a>
-        <a data-pub="changelog" data-i18n="ft.changelog"></a>
+        <h3 data-i18n="ft.legal"></h3>
+        <a href="/privacy" data-pub="privacy" data-i18n="ft.privacy"></a>
+        <a href="/terms" data-pub="terms" data-i18n="ft.terms"></a>
+        <a href="/security" data-pub="security" data-i18n="ft.security"></a>
+        <a href="/cookies" data-pub="cookies" data-i18n="ft.cookies"></a>
+        <a href="/changelog" data-pub="changelog" data-i18n="ft.changelog"></a>
       </div>
       <div class="pf-col">
-        <h4 data-i18n="ft.contact"></h4>
+        <h3 data-i18n="ft.contact"></h3>
         <div class="pf-contact" id="pfContact"></div>
       </div>
       <div class="pf-col pf-news">
-        <h4 data-i18n="ft.newsTitle"></h4>
+        <h3 data-i18n="ft.newsTitle"></h3>
         <p data-i18n="ft.newsSub"></p>
         <form class="pf-news-form" id="newsletterForm">
           <input id="newsEmail" type="email" data-i18n-ph="ft.newsPh" maxlength="120" required>
@@ -972,8 +983,8 @@
       <!-- İdarəetmə bölmələri — PRD §12 (moderator namizədliyi) və §6 (dəvət).
            ⚠ Profil səhifəsindədir, ayrıca səhifə DEYİL: hər ikisi istifadəçinin
               öz hesabına aiddir və naviqasiyada üçüncü bənd yaratmaq lazım deyil. -->
-      <div id="govModeratorBox" style="margin-top:24px"></div>
-      <div id="govInviteBox" style="margin-top:16px"></div>
+      <div id="govModeratorBox" class="u-margin-top-24px"></div>
+      <div id="govInviteBox" class="u-margin-top-16px"></div>
 
       <div class="section-title" data-i18n="prof.myposts"></div>
       <div id="myPosts"></div>
@@ -1201,7 +1212,7 @@
 
           <!-- TAB: Platforma rolları və moderator namizədləri -->
           <div class="admin-tab-pane" id="tab-governance">
-            <div class="c-panel" style="margin-bottom:24px">
+            <div class="c-panel u-margin-bottom-24px">
               <div class="c-panel__head">
                 <div>
                   <h2 class="c-panel__title">Platforma rolları</h2>
@@ -1280,9 +1291,9 @@
     <footer class="app-footer">
       <span>© <span id="afYear"></span> Collabix</span>
       <span class="af-links">
-        <a data-pub="privacy" data-i18n="ft.privacy"></a> ·
-        <a data-pub="terms" data-i18n="ft.terms"></a> ·
-        <a data-pub="faq">FAQ</a>
+        <a href="/privacy" data-pub="privacy" data-i18n="ft.privacy"></a> ·
+        <a href="/terms" data-pub="terms" data-i18n="ft.terms"></a> ·
+        <a href="/faq" data-pub="faq">FAQ</a>
       </span>
     </footer>
   </div>

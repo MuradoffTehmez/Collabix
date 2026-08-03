@@ -292,15 +292,28 @@ button {
   }
 }
 
+/* 🔴 `box-shadow` DEYİL, `transform`+`opacity` — kompozit qatda qalsın.
+ *
+ *   Əvvəl bu keyframe birbaşa `box-shadow`-u animasiya edirdi. `box-shadow`
+ *   kompozit oluna bilməyən xassədir: hər kadrda yenidən boyama (paint) tələb
+ *   edir. Animasiya `infinite` olduğu üçün bu, səhifə açıq qaldığı MÜDDƏTCƏ
+ *   əsas ipdə davamlı iş demək idi (PageSpeed: "Avoid non-composited
+ *   animations"). Zəif telefonda batareya və sürüşmə hamarlığı bunu hiss edir.
+ *
+ *   İndi parıltı `::after` psevdo-elementindədir: `box-shadow` SABİTDİR,
+ *   animasiya isə yalnız `transform: scale()` + `opacity` oynadır — hər
+ *   ikisi GPU-da, yenidən boyama olmadan işləyir. Vizual nəticə eynidir. */
 @keyframes dotPulse {
 
   0%,
   100% {
-    box-shadow: 0 0 6px var(--coral);
+    transform: scale(.7);
+    opacity: .45;
   }
 
   50% {
-    box-shadow: 0 0 16px 4px var(--coral);
+    transform: scale(1);
+    opacity: .9;
   }
 }
 
@@ -314,8 +327,23 @@ button {
   animation: cardPop .4s ease both;
 }
 
+/* Nöqtənin özü sabitdir; nəbz ayrıca qatda döyünür (bax: `dotPulse` şərhi). */
 .brand .dot {
+  position: relative;
+}
+
+.brand .dot::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  box-shadow: 0 0 14px 3px var(--coral);
   animation: dotPulse 2.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand .dot::after { animation: none; }
 }
 
 .btn-primary,

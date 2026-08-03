@@ -483,14 +483,22 @@ body.theme-transitioning {
   animation: globalThemeIntro 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
+/* ⚠ `filter: blur()` QƏSDƏN SİLİNİB — yalnız `opacity` qalır.
+ *
+ *   Blur bütün `<body>`-ə tətbiq olunurdu, yəni tema dəyişəndə 400 ms boyu
+ *   HƏR KADRDA tam səhifə yenidən boyanırdı (PageSpeed: "Filter-related
+ *   property may move pixels"). `opacity` isə kompozit qatda işləyir və
+ *   eyni "yumşaq keçid" hissini zəif cihazda da kəkələmədən verir.
+ *
+ *   ⚠ `transform` ƏLAVƏ ETMƏ: `<body>`-də transform yeni containing-block
+ *     yaradır və içindəki `position: fixed` elementləri (sticky header,
+ *     modallar) sındırar. Ona görə burada yalnız `opacity` işlədilir. */
 @keyframes globalThemeIntro {
   0% {
-    filter: blur(4px);
     opacity: 0.6;
   }
 
   100% {
-    filter: blur(0);
     opacity: 1;
   }
 }
