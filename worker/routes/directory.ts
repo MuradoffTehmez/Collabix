@@ -373,6 +373,54 @@ export async function suggestedUsers(c: Ctx) {
   });
 }
 
+/* ═══════════════════════ PUBLİK PROFİL ═══════════════════════ */
+
+/**
+ * `#u/{username}` səhifəsinin datası.
+ *
+ * 🔴 NİYƏ AYRICA ENDPOINT: səhifə ƏVVƏL YALNIZ client keşindən
+ *    (`state.users`) oxuyurdu. Keş `listUsers()`-dan gəlir və `LIMIT 500`
+ *    daşıyır — 500-dən sonrakı istifadəçinin profil linki "tapılmadı"
+ *    verirdi. Üstəlik keş dolmamış açılan dərin link (bildirişdən,
+ *    paylaşılmış URL-dən) həmişə boş səhifə göstərirdi. Bu, məlumatın
+ *    olmaması deyil, YANLIŞ MƏNBƏDƏN oxunması idi.
+ *
+ * ⚠ `mapUser(r)` `self=false` ilə çağırılır — `settings` çıxmır, yalnız
+ *   `publicSettings` ağ siyahısı gedir (AUDIT M-9).
+ */
+export async function publicProfile(c: Ctx, username: string) {
+  const me = c.user!.id;
+  const row = await D(c).prepare(
+    'SELECT * FROM users WHERE username = ? AND blocked = 0',
+  ).bind(String(username || '').toLowerCase()).first<any>();
+  if (!row) return err('İstifadəçi tapılmadı.', 404, 'user_not_found');
+
+  const u: any = mapUser(row);
+  const social = await enrichSocial(c, [row.id], me);
+  u.teamsCount = social.teams.get(row.id) || 0;
+  u.projectsCount = social.projects.get(row.id) || 0;
+  u.mutualTeams = social.mutualTeams.get(row.id) || 0;
+  u.mutualProjects = social.mutualProjects.get(row.id) || 0;
+  u.iFollow = social.iFollow.has(row.id);
+  u.followsMe = social.followingMe.has(row.id);
+  u.isSelf = row.id === me;
+
+  // Ortaq komandaların ADLARI — yalnız ortaqlıq varsa (əks halda boş sorğu).
+  let sharedTeams: Array<{ id: string; name: string; slug: string }> = [];
+  if (u.mutualTeams > 0) {
+    const tr = await D(c).prepare(
+      `SELECT t.id, t.name, t.slug FROM teams t
+        WHERE t.status = 'active'
+          AND t.id IN (SELECT team_id FROM team_members WHERE user_id = ?1 AND status = 'active')
+          AND t.id IN (SELECT team_id FROM team_members WHERE user_id = ?2 AND status = 'active')
+        LIMIT 6`,
+    ).bind(me, row.id).all<any>();
+    sharedTeams = tr.results.map(x => ({ id: x.id, name: x.name, slug: x.slug }));
+  }
+
+  return json({ user: u, sharedTeams });
+}
+
 /* ═══════════════════════ KATALOQ XÜLASƏSİ ═══════════════════════ */
 
 /**

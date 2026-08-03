@@ -15,113 +15,19 @@ import {
 } from './store.js';
 import {
   el, clear, avatarNode, nameWithBadge, isOnline, lastSeenText, debounce,
-  bus, emit, updateDynamicSEO, hashParams, levelFromXP, LEVEL_THRESHOLDS,
-  prefersReducedMotion, countUp,
+  bus, emit, updateDynamicSEO, resetDynamicSEO, hashParams, prefersReducedMotion, countUp,
 } from './util.js';
-import { showModal, closeModal, toast, emptyState, skeletons } from './ui.js';
+import { showModal, closeModal, toast, emptyState, skeletons, openPopover, closePopover } from './ui.js';
 import { paintIcons } from './icon-set.js';
-import { t, fmtDate } from './i18n.js';
+import { t, fmtMonthYear } from './i18n.js';
 import { tax } from './taxonomy.js';
+// Rank/status/kateqoriya məntiqi SAF moduldadır — profil səhifəsi də onu
+// işlədir və eyni istifadəçi iki ekranda eyni görünməlidir.
+import { rankOf, xpProgress, statusOf, skillCatClass, rebuildCatIndex } from './profile-kit.js';
 import { renderHeatmapInto } from './heatmap.js';
 
 let feedCache = []; // Filled by feed.js
 export function setFeedCache(posts){ feedCache = posts; }
-
-/* ═══════════════════════ RANK VƏ XP ═══════════════════════
- *
- * ⚠ RANK YENİ MƏLUMAT DEYİL — mövcud səviyyədən (`levelFromXP`) törəyir.
- *   Ayrıca sütun əlavə etsəydik iki həqiqət mənbəyi olardı və XP dəyişəndə
- *   onlar ayrıla bilərdi. Astanalar `util.js`-dədir (orada üç nüsxə xəbərdarlığı).
- */
-const RANKS = [
-  { max: 2,  key: 'bronze',  tone: 'bronze' },
-  { max: 4,  key: 'silver',  tone: 'silver' },
-  { max: 6,  key: 'gold',    tone: 'gold' },
-  { max: 8,  key: 'diamond', tone: 'diamond' },
-  { max: 9,  key: 'master',  tone: 'master' },
-  { max: 99, key: 'legend',  tone: 'legend' },
-];
-
-function rankOf(xp){
-  const lvl = levelFromXP(xp);
-  const r = RANKS.find(x => lvl <= x.max) || RANKS[RANKS.length - 1];
-  return { lvl, key: r.key, tone: r.tone, label: t('users.rk_' + r.key) };
-}
-
-/** Cari səviyyə daxilində irəliləyiş — {pct, remaining, isMax}. */
-function xpProgress(xp){
-  const x = Math.max(0, xp || 0);
-  const lvl = levelFromXP(x);
-  const base = LEVEL_THRESHOLDS[lvl - 1] ?? 0;
-  const next = LEVEL_THRESHOLDS[lvl];
-  if(next === undefined) return { pct: 100, remaining: 0, isMax: true };
-  const span = next - base;
-  return {
-    // `span` sıfır ola bilməz (astanalar artandır), amma müdafiə ucuzdur.
-    pct: span > 0 ? Math.min(100, Math.round(((x - base) / span) * 100)) : 100,
-    remaining: Math.max(0, next - x),
-    isMax: false,
-  };
-}
-
-/* ═══════════════════════ STATUS ═══════════════════════
- *
- * 🔴 İKİ MƏNBƏ BİRLƏŞİR:
- *    • presence (`isOnline`) — ölçülür, "bağlıdırmı"
- *    • `u.status`            — istifadəçi özü qoyur, "nə demək istəyir"
- *    Oflayn istifadəçinin `busy` statusu GÖSTƏRİLMİR: əl ilə qoyulmuş etiket
- *    bağlantı faktını əvəz etmir və "Məşğul" yazısı onlayn olduğu təəssüratı
- *    yaradardı. YEGANƏ istisna `hiring`-dir — o, bağlantıdan asılı olmayan
- *    uzunmüddətli niyyətdir (LinkedIn "Open to work" ilə eyni məntiq).
- */
-const STATUS_META = {
-  online:  { tone: 'online',  key: 'users.st_online' },
-  offline: { tone: 'offline', key: 'users.st_offline' },
-  away:    { tone: 'away',    key: 'users.st_away' },
-  busy:    { tone: 'busy',    key: 'users.st_busy' },
-  dnd:     { tone: 'dnd',     key: 'users.st_dnd' },
-  hiring:  { tone: 'hiring',  key: 'users.st_hiring' },
-};
-
-function statusOf(u){
-  const online = isOnline(u);
-  const manual = u.status || '';
-  if(manual === 'hiring') return { ...STATUS_META.hiring, online };
-  if(online && manual && STATUS_META[manual]) return { ...STATUS_META[manual], online };
-  return { ...(online ? STATUS_META.online : STATUS_META.offline), online };
-}
-
-/* ═══════════════════════ BACARIQ KATEQORİYALARI ═══════════════════════
- *
- * ⚠ KATEQORİYA SERVERDƏN GƏLİR (`taxonomies.category`, miqrasiya 0050).
- *   Client-də sabit cədvəl yazsaydıq admin yeni skill əlavə edən kimi o,
- *   kateqoriyasız qalardı — məlumat bir yerdə, görünüş başqa yerdə idarə
- *   olunardı. Burada YALNIZ kateqoriya → rəng tonu uyğunluğu var.
- */
-const SKILL_CATS = {
-  lang:     'cat-lang',
-  web:      'cat-web',
-  db:       'cat-db',
-  devops:   'cat-devops',
-  cloud:    'cat-cloud',
-  design:   'cat-design',
-  security: 'cat-security',
-  embedded: 'cat-embedded',
-  spoken:   'cat-spoken',
-};
-
-/** label → kateqoriya sinfi. Taksonomiya bir dəfə indekslənir. */
-let catIndex = null;
-function rebuildCatIndex(){
-  catIndex = new Map();
-  for(const item of [...tax.prog, ...tax.spoken]){
-    catIndex.set(item.label, SKILL_CATS[item.category] || 'cat-other');
-  }
-}
-function skillCatClass(label){
-  if(!catIndex) rebuildCatIndex();
-  return catIndex.get(label) || 'cat-other';
-}
 
 /* ═══════════════════════ İZLƏMƏ DÜYMƏSİ ═══════════════════════ */
 
@@ -214,7 +120,6 @@ const dir = {
 let view = 'grid';
 let stats = null;
 let suggest = null;
-let openMenu = null;
 let hoverCard = null;
 let hoverTimer = 0;
 
@@ -357,19 +262,21 @@ function skillChips(u, max){
     el('div', { class: 'ud-skillpop__t' }, t('users.all_skills')),
     el('div', { class: 'ud-skillpop__b' }, all.map(chip)));
 
+  // ⚠ HOVER İLƏ AÇILMIR, yalnız KLİKLƏ: (a) toxunuş cihazında hover yoxdur
+  //   (`hover-vs-tap`), (b) panel `body`-yə portal edilir və hover-la
+  //   idarə olunan portal siçan paneldən çıxanda ilişib qalırdı.
   const more = el('button', {
     class: 'ud-skill ud-skill--more', type: 'button',
     'aria-label': t('users.more_skills').replace('{0}', String(rest.length)),
     'aria-expanded': 'false',
     onclick: e => {
       e.stopPropagation();
-      const open = wrap.classList.toggle('open');
-      more.setAttribute('aria-expanded', String(open));
+      more.setAttribute('aria-expanded', 'true');
+      openPopover(more, pop, { align: 'left' });
     },
   }, '+' + rest.length);
 
-  const wrap = el('span', { class: 'ud-morewrap' }, more, pop);
-  row.append(wrap);
+  row.append(el('span', { class: 'ud-morewrap' }, more));
   return row;
 }
 
@@ -414,7 +321,7 @@ function metaRow(u){
   // ⚠ `month: 'short'` İŞLƏDİLMİR: `az-AZ` ICU məlumatında qısa ay adı
   //   "M07" formasındadır və kartda "Qoşulub 2026 M07" kimi oxunmaz çıxırdı.
   //   `long` hər üç dildə düzgün ay adı verir.
-  if(!bits.length && u.joinedAt) bits.push(['calendar', t('users.c_joined').replace('{d}', fmtDate(u.joinedAt, { month: 'long', year: 'numeric' }))]);
+  if(!bits.length && u.joinedAt) bits.push(['calendar', t('users.c_joined').replace('{d}', fmtMonthYear(u.joinedAt))]);
   if(!bits.length) return null;
   return el('div', { class: 'ud-meta' }, bits.map(([ic, txt]) =>
     el('span', { class: 'ud-meta__i' },
@@ -535,7 +442,7 @@ function scheduleHover(anchor, u){
 
 function cancelHover(){
   clearTimeout(hoverTimer);
-  if(hoverCard){ hoverCard.remove(); hoverCard = null; }
+  if(hoverCard){ hoverCard = null; closePopover(); }
 }
 
 function showHover(anchor, u){
@@ -562,14 +469,20 @@ function showHover(anchor, u){
       followBtn(u),
     ),
   );
-  // Kartın içinə yerləşir — sürüşmə zamanı onunla birlikdə hərəkət edir.
-  anchor.append(hoverCard);
+  // ⚠ Kartın İÇİNƏ qoyula BİLMƏZ: `content-visibility: auto` paint
+  //   containment tətbiq edir və kartdan kənara çıxan panel kəsilir
+  //   (menyu ilə eyni səbəb). Portal + `position: fixed`.
   paintIcons(hoverCard);
+  openPopover(anchor, hoverCard, { align: 'left', gap: 8 });
 }
 
 /* ═══════════════════════ "DAHA ÇOX" MENYUSU ═══════════════════════ */
 
-function closeMenu(){ if(openMenu){ openMenu.remove(); openMenu = null; } }
+// 🔴 Menyu BODY-yə portal edilir. `.ud-card` `content-visibility: auto`
+//    işlədir və o, HƏMİŞƏ `contain: paint` tətbiq edir — kartdan kənara çıxan
+//    `absolute` panel KƏSİLİR. Menyu DOM-da var idi, ekranda yox idi.
+//    Açıq panelin vəziyyətini `ui.js` portalı saxlayır — yerli dəyişən yox.
+function closeMenu(){ closePopover(); }
 
 function openUserMenu(anchor, u){
   closeMenu();
@@ -589,12 +502,8 @@ function openUserMenu(anchor, u){
       el('span', {}, t(it.key)),
     )),
   );
-  anchor.parentElement.append(menu);
   paintIcons(menu);
-  openMenu = menu;
-  const first = menu.querySelector('button');
-  if(first) first.focus();
-  setTimeout(() => document.addEventListener('click', closeMenu, { once: true }), 0);
+  openPopover(anchor, menu);
 }
 
 const profileUrl = u => location.origin + '/#u/' + u.username;
@@ -1118,16 +1027,6 @@ export function mountUsers(){
 
   initStickyWatcher();
 
-  // "+N" popover-ini və menyunu kənara klikləyəndə bağla.
-  const onDocClick = e => {
-    document.querySelectorAll('#userGrid .ud-morewrap.open').forEach(w => {
-      if(w.contains(e.target)) return;
-      w.classList.remove('open');
-      w.querySelector('.ud-skill--more')?.setAttribute('aria-expanded', 'false');
-    });
-  };
-  document.addEventListener('click', onDocClick);
-
   return () => {
     io.disconnect();
     if(stickyRO){ stickyRO.disconnect(); stickyRO = null; }
@@ -1149,120 +1048,227 @@ export function mountUsers(){
     exportBtn.removeEventListener('click', exportCsv);
     window.removeEventListener('scroll', onScroll);
     toTop.removeEventListener('click', onToTop);
-    document.removeEventListener('click', onDocClick);
     bus.removeEventListener('follows-updated', onSoft);
     bus.removeEventListener('presence-updated', onSoft);
     bus.removeEventListener('taxonomy-updated', rebuildSkillFilter);
   };
 }
 
-/* ---------- public profil səhifəsi (#u/{username}) ---------- */
+/* ═══════════════════════ PUBLİK PROFİL (#u/{username}) ═══════════════════════
+ *
+ * 🔴 MƏNBƏ DƏYİŞDİ: səhifə ƏVVƏL `state.users` keşindən oxuyurdu. Keş
+ *    `listUsers()`-dan gəlir və `LIMIT 500` daşıyır — 500-dən kənarda qalan
+ *    hesabın profil linki "tapılmadı" verirdi; keş dolmamış açılan dərin link
+ *    (bildirişdən, paylaşılmış URL-dən) isə HƏMİŞƏ boş səhifə göstərirdi.
+ *    İndi `/api/users/:username/profile` çağırılır — sosial saylar, komanda
+ *    və ortaqlıqlar da həmin cavabdadır.
+ *
+ * ⚠ `el()` NULL-LARI SÜZÜR, xam `node.append()` isə YOX — o, `null`-u
+ *   `"null"` MƏTNİNƏ çevirir. Əvvəlki versiyada məhz bu səbəbdən səhifədə
+ *   üç yerdə "null" yazısı görünürdü. Bu funksiya artıq HƏR ŞEYİ `el()` ilə
+ *   qurur; xam `append` yalnız NULL OLA BİLMƏYƏN qovşaqlar üçün işlədilir.
+ */
 export function mountPubProfile(username){
   const box = document.getElementById('pubProfile');
   clear(box);
-  skeletons(box, 2);
+  skeletons(box, 3);
 
-  const render = () => {
-    const u = [...state.users.values()].find(x => x.username === username);
+  let stopped = false;
+  let heatBox = null;
+
+  const render = (u, sharedTeams) => {
     clear(box);
-    if(!u){ box.append(emptyState('userSearch', '@' + (username || '?') + ' tapılmadı')); return; }
+    const isSelf = !!u.isSelf;
+    const r = rankOf(u.xp);
+    const p = xpProgress(u.xp);
+    const s = statusOf(u);
+    const loc = [u.city, u.country].filter(Boolean).join(', ');
 
     updateDynamicSEO({
       title: u.name + ' (@' + u.username + ')',
       description: u.bio || ('Collabix profile of ' + u.name),
       url: location.origin + '/#u/' + u.username,
       schema: {
-        "@context": "https://schema.org",
-        "@type": "ProfilePage",
-        "dateCreated": new Date(u.joinedAt || Date.now()).toISOString(),
-        "mainEntity": {
-          "@type": "Person",
-          "name": u.name,
-          "alternateName": u.username,
-          "description": u.bio || "",
-          "image": location.origin + (u.avatar ? "/files/" + u.avatar : "/favicon.svg")
-        }
-      }
+        '@context': 'https://schema.org',
+        '@type': 'ProfilePage',
+        dateCreated: new Date(u.joinedAt || Date.now()).toISOString(),
+        mainEntity: {
+          '@type': 'Person',
+          name: u.name,
+          alternateName: u.username,
+          description: u.bio || '',
+          image: location.origin + (u.photoURL ? u.photoURL : '/favicon.svg'),
+        },
+      },
     });
 
-    const isSelf = u.uid === state.authUser.uid;
-    const levels = { ...(u.progLevels || {}), ...(u.langLevels || {}) };
-    const loc = [u.city, u.country].filter(Boolean).join(', ');
+    /* ── Başlıq kartı ───────────────────────────────────────────────── */
+    const avatar = el('div', { class: 'pp-avatar' }, avatarNode(u, 'avatar'),
+      el('span', { class: 'ud-status ud-s--' + s.tone, title: t(s.key), 'aria-label': t(s.key) }));
 
-    const chips = el('div', { class: 'skill-pick', style: 'margin-top:10px;' });
-    [...(u.prog || []), ...(u.langs || [])].forEach(label => {
-      chips.append(el('span', { class: 'skill-chip-view' }, label,
-        levels[label] ? el('span', { class: 'lvl' }, '· ' + levels[label]) : null));
-    });
-    (u.lookingFor || []).forEach(x => chips.append(el('span', { class: 'tag on' }, '⌕ ' + x)));
+    const metaBits = [];
+    if(u.company) metaBits.push(['building', u.company]);
+    if(loc) metaBits.push(['mapPin', loc]);
+    if(u.joinedAt) metaBits.push(['calendar', t('users.c_joined').replace('{d}', fmtMonthYear(u.joinedAt))]);
+    const seen = lastSeenText(u);
+    if(seen) metaBits.push(['clock', seen]);
 
+    const xpFill = el('span', { class: 'ud-xp__fill ud-r--' + r.tone });
+    // CSSOM — CSP HTML `style="…"` atributunu bloklayır (layihə qeydi).
+    xpFill.style.setProperty('--ud-xp-pct', p.pct + '%');
+
+    const actions = isSelf
+      ? el('div', { class: 'pp-actions' },
+        el('button', { class: 'c-btn c-btn--primary c-btn--sm', onclick: () => emit('nav', { page: 'profil' }) },
+          el('span', { class: 'ic', 'data-icon': 'edit', 'data-icon-size': '15' }), t('pub.edit')))
+      : el('div', { class: 'pp-actions' },
+        el('button', { class: 'c-btn c-btn--primary c-btn--sm', onclick: () => tryOpenDM(u) },
+          el('span', { class: 'ic', 'data-icon': 'send', 'data-icon-size': '15' }), t('users.a_msg')),
+        followBtn(u),
+        el('button', {
+          class: 'c-icon-btn', type: 'button', 'aria-label': t('users.a_more'),
+          onclick: function(e){ e.stopPropagation(); openUserMenu(this, u); },
+        }, el('span', { class: 'ic', 'data-icon': 'more', 'data-icon-size': '16' })));
+
+    box.append(el('section', { class: 'pp-card' },
+      el('div', { class: 'pp-cover' }),
+      el('div', { class: 'pp-head' },
+        avatar,
+        el('div', { class: 'pp-id' },
+          el('h1', { class: 'pp-name' }, nameWithBadge(u)),
+          el('div', { class: 'pp-handle' },
+            el('span', {}, '@' + u.username),
+            s.tone === 'hiring' ? el('span', { class: 'ud-badge ud-s--hiring' }, t('users.st_hiring')) : null,
+            u.followsMe && !isSelf ? el('span', { class: 'ud-mutual ud-mutual--f' }, t('users.c_follows_you')) : null,
+          ),
+          metaBits.length ? el('div', { class: 'ud-meta pp-meta' }, metaBits.map(([ic, txt]) =>
+            el('span', { class: 'ud-meta__i' },
+              el('span', { class: 'ic', 'data-icon': ic, 'data-icon-size': '13' }), txt))) : null,
+          u.bio ? el('p', { class: 'pp-bio' }, u.bio) : null,
+          u.goals ? el('p', { class: 'pp-goals' },
+            el('span', { class: 'ic', 'data-icon': 'flag', 'data-icon-size': '13' }), u.goals) : null,
+          el('div', { class: 'ud-xp pp-xp' },
+            el('div', { class: 'ud-xp__top' },
+              el('span', { class: 'ud-rank ud-r--' + r.tone },
+                el('span', { class: 'ic', 'data-icon': 'crown', 'data-icon-size': '11' }),
+                r.label, el('i', {}, 'Lv' + r.lvl)),
+              el('span', { class: 'ud-xp__num' },
+                p.isMax ? t('users.rk_max') : t('users.rk_next').replace('{n}', String(p.remaining))),
+            ),
+            el('div', {
+              class: 'ud-xp__bar', role: 'progressbar',
+              'aria-valuenow': String(p.pct), 'aria-valuemin': '0', 'aria-valuemax': '100',
+            }, xpFill),
+          ),
+        ),
+        actions,
+      ),
+    ));
+
+    /* ── Sosial saylar ──────────────────────────────────────────────── */
+    const countBtn = (n, key, onclick) => el('button', {
+      class: 'pp-stat', type: 'button', onclick,
+    }, el('b', {}, String(n || 0)), el('span', {}, t(key)));
+
+    box.append(el('div', { class: 'pp-stats' },
+      countBtn(u.followersCount, 'soc.followers', () => openFollowList(u.uid, 'followers')),
+      countBtn(u.followingCount, 'soc.followingOf', () => openFollowList(u.uid, 'following')),
+      el('div', { class: 'pp-stat pp-stat--static' }, el('b', {}, String(u.teamsCount || 0)), el('span', {}, t('users.c_teams'))),
+      el('div', { class: 'pp-stat pp-stat--static' }, el('b', {}, String(u.projectsCount || 0)), el('span', {}, t('users.c_projects'))),
+      el('div', { class: 'pp-stat pp-stat--static' }, el('b', {}, String(u.streak || 0)), el('span', {}, t('usr.streak'))),
+      el('div', { class: 'pp-stat pp-stat--static' }, el('b', {}, String(u.tasksCompleted || 0)), el('span', {}, t('usr.tasks'))),
+    ));
+
+    /* ── Ortaq kontekst ─────────────────────────────────────────────── */
+    if(!isSelf && (sharedTeams.length || u.mutualProjects)){
+      box.append(el('section', { class: 'pp-block' },
+        el('h2', { class: 'pp-h' }, t('pub.shared')),
+        el('div', { class: 'pp-chips' },
+          sharedTeams.map(x => el('button', {
+            class: 'ud-mutual pp-teamchip', type: 'button',
+            onclick: () => emit('nav', { page: 'team/' + x.slug }),
+          }, el('span', { class: 'ic', 'data-icon': 'users', 'data-icon-size': '11' }), x.name)),
+          u.mutualProjects ? el('span', { class: 'ud-mutual' },
+            el('span', { class: 'ic', 'data-icon': 'folder', 'data-icon-size': '11' }),
+            t('users.c_mutual_p').replace('{n}', String(u.mutualProjects))) : null,
+        ),
+      ));
+    }
+
+    /* ── Bacarıqlar ─────────────────────────────────────────────────── */
+    const chips = skillChips(u, 99);
+    if(chips || (u.lookingFor || []).length){
+      box.append(el('section', { class: 'pp-block' },
+        el('h2', { class: 'pp-h' }, t('users.all_skills')),
+        chips,
+        (u.lookingFor || []).length ? el('div', { class: 'pp-chips' },
+          (u.lookingFor || []).map(x => el('span', { class: 'ud-skill cat-spoken' },
+            el('span', { class: 'ic', 'data-icon': 'search', 'data-icon-size': '11' }), x))) : null,
+      ));
+    }
+
+    /* ── Sosial linklər ─────────────────────────────────────────────── */
     const socials = [
-      ['Instagram', u.instagram], ['GitHub', u.github],
-      ['LinkedIn', u.linkedin], ['Telegram', u.telegram], ['Sayt', u.website],
-    ].filter(([, v]) => v);
+      ['GitHub', 'github', u.github], ['LinkedIn', 'linkedin', u.linkedin],
+      ['Instagram', 'instagram', u.instagram], ['Telegram', 'telegram', u.telegram],
+      ['Website', 'website', u.website],
+    ].filter(x => x[2]);
+    if(socials.length){
+      box.append(el('section', { class: 'pp-block' },
+        el('h2', { class: 'pp-h' }, t('pub.links')),
+        el('div', { class: 'pp-chips' }, socials.map(([label, , val]) =>
+          el('span', { class: 'pp-social' }, el('b', {}, label), String(val)))),
+      ));
+    }
 
-    const heatBox = el('div', { class: 'heatmap' });
-    const posts = feedCache.filter(p => p.authorUid === u.uid).slice(0, 10);
-
-    const followCounts = el('div', { class: 'follow-counts' });
-    Promise.all([fetchFollowersOf(u.uid).catch(() => []), fetchFollowingOf(u.uid).catch(() => [])]).then(([fers, fing]) => {
-      clear(followCounts);
-      followCounts.append(
-        el('button', { onclick: () => openFollowList(u.uid, 'followers') }, el('b', {}, fers.length), ' ' + t('soc.followers')),
-        el('button', { onclick: () => openFollowList(u.uid, 'following') }, el('b', {}, fing.length), ' ' + t('soc.followingOf')),
-        isMutual(u.uid) && !isSelf ? el('span', { class: 'mutual-tag' }, '⇄ ' + t('soc.mutual')) : null,
-      );
-    });
-
-    box.append(
-      el('div', { class: 'profile-card pub-cover' },
-        avatarNode(u, 'avatar', isOnline(u)),
-        el('div', { style: 'flex:1; min-width:220px;' },
-          el('h2', {}, nameWithBadge(u)),
-          el('span', { class: 'code-tag' },
-            '@' + u.username + (loc ? ' · ' + loc : '') + ' · ' + (lastSeenText(u) || '')),
-          u.bio ? el('div', { class: 'profile-bio' }, u.bio) : null,
-          u.goals ? el('div', { class: 'profile-bio', style: 'margin-top:4px;' }, '🎯 ' + u.goals) : null,
-          chips,
-          followCounts,
-        ),
-        isSelf ? null : el('div', { style: 'display:flex; flex-direction:column; gap:8px;' },
-          followBtn(u, 'btn-small'),
-          el('button', { class: 'btn-mini', onclick: () => tryOpenDM(u) }, '✉ Mesaj yaz'),
-          el('button', { class: 'btn-mini block', onclick: () => openReportForm(u) }, '⚑ Şikayət'),
-        ),
-      ),
-      el('div', { class: 'stat-row' },
-        el('div', { class: 'stat-card flame' }, el('div', { class: 'num' }, u.streak || 0), el('div', { class: 'lbl' }, t('usr.streak'))),
-        el('div', { class: 'stat-card' }, el('div', { class: 'num' }, u.xp || 0), el('div', { class: 'lbl' }, 'XP')),
-        el('div', { class: 'stat-card' }, el('div', { class: 'num' }, u.tasksCompleted || 0), el('div', { class: 'lbl' }, t('usr.tasks'))),
-      ),
-      socials.length ? el('div', { class: 'social-row' },
-        socials.map(([plat, v]) => el('span', { class: 'social-chip' }, el('span', { class: 'plat' }, plat), ' ' + v))) : null,
-      el('div', { class: 'section-title' }, t('usr.act_map')),
-      heatBox,
-      el('div', { class: 'section-title' }, t('usr.posts')),
-      posts.length ? null : emptyState('message', t('usr.no_posts')),
-    );
-    // Keşdən ani render, sonra normalized cədvəldən dəqiq data (Bənd 9).
+    /* ── Aktivlik xəritəsi ──────────────────────────────────────────── */
+    heatBox = el('div', { class: 'heatmap' });
+    box.append(el('section', { class: 'pp-block' },
+      el('h2', { class: 'pp-h' }, t('usr.act_map')), heatBox));
     renderHeatmapInto(heatBox, u.activityDays || {});
     api('/users/' + encodeURIComponent(u.username) + '/activity')
-      .then(d => renderHeatmapInto(heatBox, d.activityDays || {}))
+      .then(d => { if(!stopped) renderHeatmapInto(heatBox, d.activityDays || {}); })
       .catch(() => {});
+
+    /* ── Paylaşımlar ────────────────────────────────────────────────── */
+    const posts = feedCache.filter(x => x.authorUid === u.uid).slice(0, 10);
+    const postBox = el('div', {});
+    box.append(el('section', { class: 'pp-block' },
+      el('h2', { class: 'pp-h' }, t('usr.posts')), postBox));
     if(posts.length){
       import('./feed.js').then(({ postCard }) => {
-        posts.forEach(p => box.append(postCard(p)));
+        if(stopped) return;
+        posts.forEach(x => postBox.append(postCard(x)));
       });
+    } else {
+      postBox.append(emptyState('message', t('usr.no_posts')));
     }
+
+    paintIcons(box);
   };
 
-  render();
-  const rerender = () => { if(document.getElementById('page-u').classList.contains('active')) render(); };
-  bus.addEventListener('users-updated', rerender);
-  bus.addEventListener('follows-updated', rerender);
+  api('/users/' + encodeURIComponent(username || '') + '/profile')
+    .then(d => {
+      if(stopped) return;
+      // Keşi də yenilə — DM/mention kimi başqa ekranlar ondan oxuyur.
+      if(d.user && d.user.uid) state.users.set(d.user.uid, { ...(state.users.get(d.user.uid) || {}), ...d.user });
+      render(d.user, d.sharedTeams || []);
+    })
+    .catch(e => {
+      if(stopped) return;
+      clear(box);
+      box.append(emptyState('userSearch',
+        e && e.status === 404 ? t('pub.not_found').replace('{u}', '@' + (username || '?')) : t('users.err')));
+    });
+
+  // İzləmə dəyişəndə yalnız düymə vəziyyəti dəyişir — bütün səhifəni yenidən
+  // çəkmək sürüşmə mövqeyini itirərdi.
   return () => {
-    bus.removeEventListener('users-updated', rerender);
-    bus.removeEventListener('follows-updated', rerender);
+    stopped = true;
+    // 🔴 SEO SIFIRLANIR: `updateDynamicSEO` başlığı dəyişirdi, lakin heç nə
+    //    onu geri qaytarmırdı — profildən çıxdıqdan sonra da tab başlığı
+    //    "@filan | Collabix" qalırdı və əlfəcin YANLIŞ adla saxlanılırdı.
+    resetDynamicSEO();
   };
 }
 

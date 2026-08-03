@@ -305,3 +305,82 @@ export function notifToast(node){
   wrap.append(node);
   setTimeout(() => { node.classList.add('out'); setTimeout(() => node.remove(), 300); }, 1400);
 }
+
+/* ═══════════════════════ POPOVER PORTAL ═══════════════════════
+ *
+ * 🔴 NİYƏ PORTAL, `position: absolute` YOX:
+ *    Kataloq və bildiriş kartları performans üçün `content-visibility: auto`
+ *    işlədir. Həmin xüsusiyyət elementə HƏMİŞƏ `contain: paint` tətbiq edir,
+ *    yəni kartın sərhədindən KƏNARA çıxan hər şey KƏSİLİR — eynilə
+ *    `overflow: hidden` kimi. Nəticədə `⋯` menyusu DOM-da yaranırdı, lakin
+ *    EKRANDA GÖRÜNMÜRDÜ (istifadəçi bildirdi: "menyu açılmır").
+ *
+ *    `absolute` + `z-index` bunu HƏLL ETMİR: paint containment stacking
+ *    context-dən asılı deyil, qutuya görə kəsir. Yeganə düzgün yol qovşağı
+ *    həmin ağacdan ÇIXARMAQDIR.
+ *
+ * ⚠ `position: fixed` + `getBoundingClientRect()`: viewport koordinatları
+ *   sürüşmə ilə dəyişdiyi üçün panel `scroll`/`resize`-da BAĞLANIR (yenidən
+ *   hesablamaq əvəzinə) — sadə, proqnozlaşdırılan və "uçan panel" effekti
+ *   yaratmır.
+ */
+let openPop = null;
+
+export function closePopover(){
+  if(!openPop) return;
+  const { node, off } = openPop;
+  openPop = null;
+  off();
+  node.remove();
+}
+
+/**
+ * @param {HTMLElement} anchor mövqe hesablanan element
+ * @param {HTMLElement} node   göstəriləcək panel (body-yə əlavə olunur)
+ * @param {{align?: 'left'|'right', gap?: number}} [opts]
+ * @returns {() => void} bağlayıcı
+ */
+export function openPopover(anchor, node, opts = {}){
+  closePopover();
+  const gap = opts.gap ?? 6;
+  node.classList.add('c-pop');
+  document.body.append(node);
+
+  const place = () => {
+    const a = anchor.getBoundingClientRect();
+    const n = node.getBoundingClientRect();
+    // Şaquli: aşağıda yer yoxdursa yuxarı çevrilir.
+    let top = a.bottom + gap;
+    if(top + n.height > window.innerHeight - 8) top = Math.max(8, a.top - n.height - gap);
+    // Üfüqi: default olaraq sağ kənarlar üst-üstə düşür, ekrandan çıxarsa sıxılır.
+    let left = opts.align === 'left' ? a.left : a.right - n.width;
+    left = Math.min(Math.max(8, left), window.innerWidth - n.width - 8);
+    node.style.top = Math.round(top) + 'px';
+    node.style.left = Math.round(left) + 'px';
+  };
+  place();
+
+  const onScroll = () => closePopover();
+  const onKey = e => { if(e.key === 'Escape'){ e.preventDefault(); closePopover(); } };
+  // ⚠ `capture: true` sürüşməni İSTƏNİLƏN konteynerdə tutur (səhifə gövdəsi
+  //   deyil, daxili sürüşən panel də ola bilər).
+  window.addEventListener('scroll', onScroll, { capture: true, passive: true });
+  window.addEventListener('resize', onScroll);
+  document.addEventListener('keydown', onKey, true);
+  // Kənara klik — `setTimeout` açan klikin özünü tutmasın deyə.
+  const onDoc = e => { if(!node.contains(e.target)) closePopover(); };
+  const timer = setTimeout(() => document.addEventListener('click', onDoc), 0);
+
+  const off = () => {
+    clearTimeout(timer);
+    window.removeEventListener('scroll', onScroll, { capture: true });
+    window.removeEventListener('resize', onScroll);
+    document.removeEventListener('keydown', onKey, true);
+    document.removeEventListener('click', onDoc);
+  };
+  openPop = { node, off };
+
+  const first = node.querySelector('button, [tabindex]');
+  if(first) first.focus();
+  return closePopover;
+}

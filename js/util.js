@@ -313,7 +313,48 @@ export function authErrMessage(e, t_func){
   return (e && e.message) ? e.message : (t_func ? t_func('dyn.err_generic') : 'Xəta baş verdi.');
 }
 
+/**
+ * Səhifəyə xas SEO meta-larının ilkin (statik) dəyərləri.
+ *
+ * 🔴 NİYƏ LAZIMDIR: `updateDynamicSEO` publik profildə başlığı dəyişir, lakin
+ *    heç nə onu GERİ QAYTARMIRDI. Nəticədə istifadəçi profildən çıxdıqdan
+ *    sonra da tab başlığı "MFA Tester (@e2e_mfa) | Collabix" qalırdı —
+ *    əlfəcin edilən və ya paylaşılan link YANLIŞ adla saxlanılırdı.
+ *    Snapshot BİR DƏFƏ, ilk dinamik yazıdan ƏVVƏL götürülür.
+ */
+let seoBaseline = null;
+
+function captureSeoBaseline(){
+  if(seoBaseline) return;
+  const read = sel => { const n = document.querySelector(sel); return n ? n.getAttribute('content') : null; };
+  seoBaseline = {
+    title: document.title,
+    ogTitle: read('meta[property="og:title"]'),
+    twTitle: read('meta[name="twitter:title"]'),
+    desc: read('meta[name="description"]'),
+    ogDesc: read('meta[property="og:description"]'),
+    twDesc: read('meta[name="twitter:description"]'),
+    ogUrl: read('meta[property="og:url"]'),
+  };
+}
+
+/** Dinamik SEO-nu ilkin vəziyyətə qaytarır (səhifədən çıxarkən). */
+export function resetDynamicSEO(){
+  if(!seoBaseline) return;
+  const put = (sel, v) => { const n = document.querySelector(sel); if(n && v !== null) n.setAttribute('content', v); };
+  document.title = seoBaseline.title;
+  put('meta[property="og:title"]', seoBaseline.ogTitle);
+  put('meta[name="twitter:title"]', seoBaseline.twTitle);
+  put('meta[name="description"]', seoBaseline.desc);
+  put('meta[property="og:description"]', seoBaseline.ogDesc);
+  put('meta[name="twitter:description"]', seoBaseline.twDesc);
+  put('meta[property="og:url"]', seoBaseline.ogUrl);
+  const script = document.getElementById('dynamic-seo-schema');
+  if(script) script.remove();
+}
+
 export function updateDynamicSEO(meta) {
+  captureSeoBaseline();
   if (meta.title) {
     document.title = meta.title + ' | Collabix';
     const ogTitle = document.querySelector('meta[property="og:title"]');

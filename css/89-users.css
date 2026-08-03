@@ -675,25 +675,18 @@
 .ud-skill--more:hover { color: var(--text); }
 .ud-skill--more:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
 
+/* Mövqe `.c-pop`-dadır (portal) — bax `.ud-menu` şərhi. */
 .ud-skillpop {
-  position: absolute;
-  bottom: calc(100% + 6px);
-  left: 0;
-  z-index: 30;
   min-width: 220px;
   max-width: 300px;
+  max-height: 260px;
+  overflow-y: auto;
   padding: var(--sp-3);
   border: 1px solid var(--border);
   border-radius: var(--r-md);
   background: var(--surface);
   box-shadow: var(--sh-3);
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity var(--mo-fast) var(--mo-ease);
 }
-.ud-morewrap:hover .ud-skillpop,
-.ud-morewrap.open .ud-skillpop,
-.ud-morewrap:focus-within .ud-skillpop { opacity: 1; visibility: visible; }
 
 .ud-skillpop__t { font-size: 11px; color: var(--muted); font-weight: 600; margin-bottom: var(--sp-2); }
 .ud-skillpop__b { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -737,11 +730,10 @@
 
 .ud-more { width: 36px; height: 36px; }
 
+/* ⚠ MÖVQE ELANI YOXDUR: panel `body`-yə portal edilir (`.c-pop` mövqeyi
+   verir). Burada `position: absolute` qalsaydı, o, sonra yükləndiyi üçün
+   `.c-pop { position: fixed }`-i BASARDI və panel yenidən kəsilərdi. */
 .ud-menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  z-index: 40;
   min-width: 190px;
   padding: var(--sp-1);
   border: 1px solid var(--border);
@@ -804,11 +796,8 @@
 
 /* ═══════════════════════ HOVER MİNİ-PROFİL ═══════════════════════ */
 
+/* Mövqe `.c-pop`-dadır (portal) — bax `.ud-menu` şərhi. */
 .ud-hover {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  z-index: 50;
   width: 280px;
   padding: var(--sp-3);
   border: 1px solid var(--border);
@@ -960,6 +949,249 @@
 }
 .ud-totop[hidden] { display: none; }
 .ud-totop:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+
+/* ═══════════════════════ PUBLİK PROFİL (#u/{username}) ═══════════════════════
+ *
+ * ⚠ Kataloq nişanlarını (`--ud-*`) TƏKRAR TƏYİN ETMİR — `#page-u` ayrı
+ *   səhifədir, ona görə nişanlar burada elan olunur. Dəyərlər `#page-users`
+ *   ilə EYNİDİR: rank/status/kateqoriya rəngləri iki səhifədə fərqli olsaydı
+ *   eyni istifadəçi iki yerdə iki cür görünərdi.
+ */
+#page-u {
+  --ud-online: #22c55e;
+  --ud-away: #f59e0b;
+  --ud-busy: #ef4444;
+  --ud-dnd: #dc2626;
+  --ud-hiring: #0ea5e9;
+  --ud-offline: var(--muted);
+  --ud-bronze: #b45309;
+  --ud-silver: #94a3b8;
+  --ud-gold: #eab308;
+  --ud-diamond: #22d3ee;
+  --ud-master: #a855f7;
+  --ud-legend: var(--coral);
+  --ud-cat-lang: #3b82f6;
+  --ud-cat-web: #f97316;
+  --ud-cat-db: #8b5cf6;
+  --ud-cat-devops: #14b8a6;
+  --ud-cat-cloud: #0ea5e9;
+  --ud-cat-design: #ec4899;
+  --ud-cat-security: #ef4444;
+  --ud-cat-embedded: #84cc16;
+  --ud-cat-spoken: #06b6d4;
+  --ud-cat-other: var(--muted);
+  --ud-follow: #6366f1;
+}
+
+:root[data-theme="light"] #page-u {
+  --ud-online: #15803d;
+  --ud-away: #b45309;
+  --ud-hiring: #0369a1;
+  --ud-silver: #64748b;
+  --ud-gold: #a16207;
+  --ud-diamond: #0e7490;
+  --ud-master: #7e22ce;
+  --ud-cat-lang: #1d63d1;
+  --ud-cat-web: #c2410c;
+  --ud-cat-db: #6d28d9;
+  --ud-cat-devops: #0f766e;
+  --ud-cat-cloud: #0369a1;
+  --ud-cat-design: #be185d;
+  --ud-cat-security: #b91c1c;
+  --ud-cat-embedded: #4d7c0f;
+  --ud-cat-spoken: #0e7490;
+  --ud-follow: #4338ca;
+}
+
+#page-u .ic svg { color: inherit; }
+
+.pp-card {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--sh-1);
+  overflow: hidden;
+  margin-bottom: var(--sp-3);
+}
+
+/* İncə örtük zolağı — «kartlar eyni görünməsin» tələbi, lakin ağır qradiyent
+   olmadan: iki addımlı, aşağı alfa. */
+.pp-cover {
+  height: 96px;
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--coral) 22%, var(--surface)),
+    color-mix(in srgb, var(--teal) 16%, var(--surface)));
+}
+
+.pp-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-4);
+  padding: 0 var(--sp-5) var(--sp-5);
+  /* Avatar örtüyün üstünə çıxır. */
+  margin-top: -38px;
+}
+
+.pp-avatar { position: relative; flex: 0 0 auto; }
+.pp-avatar .avatar {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  border: 4px solid var(--surface);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--fs-xl);
+  font-weight: 700;
+}
+.pp-avatar .avatar img { width: 100%; height: 100%; object-fit: cover; }
+.pp-avatar .ud-status { width: 20px; height: 20px; border-width: 4px; right: 4px; bottom: 4px; }
+
+.pp-id { flex: 1 1 auto; min-width: 0; padding-top: 44px; }
+
+.pp-name {
+  margin: 0;
+  font-family: var(--display);
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  line-height: var(--lh-tight);
+  overflow-wrap: anywhere;
+}
+
+.pp-handle {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  margin-top: 2px;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+
+.pp-meta { margin-top: var(--sp-2); }
+
+.pp-bio {
+  margin: var(--sp-3) 0 0;
+  font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
+  color: var(--text-sec);
+  max-width: 72ch;
+}
+
+.pp-goals {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: var(--sp-2) 0 0;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  max-width: 72ch;
+}
+.pp-goals .ic { flex: 0 0 auto; margin-top: 2px; color: var(--coral); }
+
+.pp-xp { margin-top: var(--sp-3); max-width: 420px; }
+
+.pp-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  flex: 0 0 auto;
+  padding-top: 44px;
+  position: relative;
+}
+
+/* ── Sosial saylar ── */
+.pp-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-3);
+}
+
+.pp-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--sh-1);
+  font-family: var(--body);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--mo-fast) var(--mo-ease), transform var(--mo-fast) var(--mo-ease);
+}
+.pp-stat:hover { border-color: var(--coral2); transform: translateY(-1px); }
+.pp-stat:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+/* Kliklənməyən say — düymə görünüşü yanıltıcı olmamalıdır. */
+.pp-stat--static { cursor: default; }
+.pp-stat--static:hover { border-color: var(--border); transform: none; }
+
+.pp-stat b {
+  font-family: var(--display);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.pp-stat span { font-size: var(--fs-xs); color: var(--muted); }
+
+/* ── Bloklar ── */
+.pp-block {
+  padding: var(--sp-4) var(--sp-5);
+  margin-bottom: var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--sh-1);
+}
+
+.pp-h {
+  margin: 0 0 var(--sp-3);
+  font-family: var(--display);
+  font-size: var(--fs-md);
+  font-weight: 700;
+}
+
+.pp-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: var(--sp-2); }
+
+.pp-teamchip {
+  border: none;
+  cursor: pointer;
+  font-family: var(--body);
+  min-height: 26px;
+}
+.pp-teamchip:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+
+.pp-social {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  background: var(--bg);
+  font-size: var(--fs-xs);
+  color: var(--text-sec);
+  overflow-wrap: anywhere;
+}
+.pp-social b { color: var(--muted); font-weight: 700; }
+
+@media (max-width: 768px) {
+  .pp-head { flex-direction: column; gap: var(--sp-3); padding: 0 var(--sp-4) var(--sp-4); }
+  .pp-id, .pp-actions { padding-top: 0; }
+  .pp-actions { width: 100%; }
+  .pp-actions .c-btn { flex: 1 1 auto; }
+  .pp-avatar .avatar { width: 76px; height: 76px; }
+  .pp-cover { height: 76px; }
+  .pp-head { margin-top: -30px; }
+  .pp-block { padding: var(--sp-3) var(--sp-4); }
+}
 
 /* ═══════════════════════ ANİMASİYALAR ═══════════════════════ */
 

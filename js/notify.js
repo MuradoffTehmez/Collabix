@@ -16,7 +16,7 @@ import {
 import {
   el, clear, tsToMillis, avatarNode, emit, debounce, prefersReducedMotion, countUp,
 } from './util.js';
-import { toast, undoToast, showModal, closeModal, notifToast } from './ui.js';
+import { toast, undoToast, showModal, closeModal, notifToast, openPopover, closePopover } from './ui.js';
 import { paintIcons } from './icon-set.js';
 import { t, fmtRelTime, fmtDate } from './i18n.js';
 
@@ -104,7 +104,6 @@ const selection = new Set();
 const expanded = new Set();      // açılmış qruplar (groupKey|bucket)
 const previews = new Map();      // postId -> { excerpt, image } | null
 let observer = null;
-let openMenu = null;             // açıq "daha çox" menyusu
 
 /** Yüklənmiş sətirlərin tavanı — bax `trimIfNeeded()`. */
 const MAX_LOADED = 400;
@@ -781,19 +780,15 @@ function openMoreMenu(anchorBtn, n, ids){
       el('span', {}, t(it.key)),
     )),
   );
-  // Kartın içində yerləşir — `position: absolute` valideynə görə hesablanır,
-  // ona görə sürüşmə zamanı menyu kartla birlikdə hərəkət edir.
-  anchorBtn.closest('.nc-card__side').append(menu);
+  // 🔴 BODY-yə portal. `.nc-card` `content-visibility: auto` işlədir və o,
+  //    HƏMİŞƏ `contain: paint` tətbiq edir — kartdan kənara çıxan `absolute`
+  //    panel KƏSİLİR (kataloq menyusunda ölçülmüş eyni qüsur).
   paintIcons(menu);
-  openMenu = menu;
-  const first = menu.querySelector('button');
-  if(first) first.focus();
-  setTimeout(() => document.addEventListener('click', closeMenu, { once: true }), 0);
+  openPopover(anchorBtn, menu);
 }
 
-function closeMenu(){
-  if(openMenu){ openMenu.remove(); openMenu = null; }
-}
+// Açıq panelin vəziyyətini `ui.js` portalı saxlayır — yerli dəyişən yox.
+function closeMenu(){ closePopover(); }
 
 async function copyLink(n){
   const url = location.origin + '/#post/' + n.postId;

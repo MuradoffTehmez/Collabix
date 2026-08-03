@@ -696,11 +696,10 @@
 .nc-act:focus-visible { outline: 2px solid var(--coral); outline-offset: 1px; }
 
 /* ── "Daha çox" menyusu ── */
+/* ⚠ MÖVQE ELANI YOXDUR: panel `body`-yə portal edilir (`.c-pop`).
+   `position: absolute` burada qalsaydı `.c-pop { position: fixed }`-i basardı
+   və panel yenidən `content-visibility` tərəfindən kəsilərdi. */
 .nc-menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  z-index: 40;
   min-width: 208px;
   padding: var(--sp-1);
   border: 1px solid var(--border);
@@ -960,7 +959,7 @@
      qalan əməliyyatlar sürüşdürmə jesti ilə əlçatandır (hər ikisi mövcuddur —
      `gesture-alternative` qaydası jest-only həllə icazə vermir). */
   .nc-actions .nc-act:not(:last-child) { display: none; }
-  .nc-menu { right: auto; left: 0; min-width: 180px; }
+  .nc-menu { min-width: 180px; }
 
   .nc-searchrow { flex-wrap: wrap; }
   .nc-selectbtn { width: 100%; }

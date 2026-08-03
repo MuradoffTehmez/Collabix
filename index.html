@@ -1190,24 +1190,40 @@
     <div class="page" id="page-profil">
       <h1 class="page-title" data-i18n="nav.profile"></h1>
       <p class="page-sub" data-i18n="prof.sub"></p>
-      <div class="profile-card">
-        <div class="avatar u-width-74px u-height-74px u-border-radius-18px u-font-size-1-4rem" id="profAvatar">?</div>
-        <div class="u-flex-1 u-min-width-220px">
-          <h2 id="profName" data-i18n="app.guest"></h2>
-          <span class="code-tag" id="profTag"></span>
-          <div class="profile-bio" id="profBio"></div>
-          <div class="skill-pick u-margin-top-10px" id="profSkillChips"></div>
-          <div class="follow-counts" id="profFollowCounts"></div>
-          <div class="streak-track" id="profStreakTrack"></div>
+      <!-- ⚠ Publik profillə EYNİ `pp-*` qatını işlədir: eyni istifadəçi öz
+           səhifəsində və kənar baxışda FƏRQLİ görünməməlidir. Fərq yalnız
+           əməliyyat sütunundadır (redaktə vs izlə/mesaj). -->
+      <section class="pp-card">
+        <div class="pp-cover"></div>
+        <div class="pp-head">
+          <div class="pp-avatar" id="profAvatarWrap">
+            <div class="avatar" id="profAvatar">?</div>
+          </div>
+          <div class="pp-id">
+            <h2 class="pp-name" id="profName" data-i18n="app.guest"></h2>
+            <div class="pp-handle" id="profTag"></div>
+            <div class="ud-meta pp-meta" id="profMeta"></div>
+            <div class="profile-bio pp-bio" id="profBio"></div>
+            <div class="ud-xp pp-xp" id="profXp"></div>
+            <div class="pp-chips" id="profSkillChips"></div>
+            <div class="streak-track" id="profStreakTrack"></div>
+          </div>
+          <div class="pp-actions">
+            <button class="c-btn c-btn--primary c-btn--sm" id="profEditBtn"><span class="ic" data-icon="edit" data-icon-size="15"></span><span data-i18n="prof.edit"></span></button>
+          </div>
         </div>
-        <button class="btn-small" id="profEditBtn"><span class="ic" data-icon="edit" data-icon-size="14"></span><span data-i18n="prof.edit"></span></button>
-      </div>
+      </section>
+      <div class="pp-stats" id="profFollowCounts"></div>
       <!-- TASK-8 / Bənd 6 — profil tamlığı + XP nudge (100%-də gizlənir) -->
       <div id="profCompleteness" class="cmp-host"></div>
-      <div class="stat-row">
-        <div class="stat-card flame"><div class="num" id="profStreakNum">0</div><div class="lbl"><span class="ic" data-icon="flame" data-icon-size="14"></span><span data-i18n="home.lbl_streak"></span></div></div>
-        <div class="stat-card"><div class="num" id="profXPNum">0</div><div class="lbl"><span class="ic" data-icon="zap" data-icon-size="14"></span><span data-i18n="home.lbl_xp"></span> · <span id="profLevel">Lv 1</span></div></div>
-        <div class="stat-card"><div class="num" id="profTaskNum">0</div><div class="lbl" data-i18n="prof.tasks_done"></div></div>
+      <!-- ⚠ KÖHNƏ `.stat-row` SİLİNDİ: seriya, XP və tapşırıq sayı artıq
+           `#profFollowCounts` (pp-stats) sətrində və rank zolağındadır — eyni
+           üç rəqəm ekranda İKİ dəfə görünürdü. `renderCard()` hələ də bu
+           id-ləri yazır, ona görə onlar gizli qutuda saxlanılır (kod
+           dəyişikliyi minimal, davranış eyni). -->
+      <div class="u-display-none" aria-hidden="true">
+        <span id="profStreakNum"></span><span id="profXPNum"></span>
+        <span id="profLevel"></span><span id="profTaskNum"></span>
       </div>
       <div class="section-title"><span class="ic" data-icon="award" data-icon-size="16"></span><span data-i18n="prof.badges"></span></div>
       <div class="badge-row" id="badgeRow"></div>

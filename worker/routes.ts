@@ -85,7 +85,7 @@ export {
    sosial zənginləşdirməsi, tövsiyə və ixracı var). `index.ts` marşrut cədvəli
    `R.usersDirectory` adını işlədir, ona görə RE-EXPORT saxlanılır. */
 export {
-  usersDirectory, suggestedUsers, directoryStats, exportDirectory,
+  usersDirectory, suggestedUsers, directoryStats, exportDirectory, publicProfile,
 } from './routes/directory';
 export {
   listRooms, createRoom, deleteRoom, patchRoom, roomMessages, sendRoomMessage,

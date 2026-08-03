@@ -11,7 +11,9 @@ import {
   authErrMessage, bus,
 } from './util.js';
 import { toast, showModal, closeModal, emptyState, setTheme, getTheme, THEMES } from './ui.js';
-import { t, setLang, getLang, LANGS } from './i18n.js';
+import { t, setLang, getLang, LANGS, fmtMonthYear } from './i18n.js';
+// Rank/status/kateqoriya — kataloqla ORTAQ saf modul (bax həmin faylın başlığı).
+import { rankOf, xpProgress, statusOf, skillCatClass } from './profile-kit.js';
 import { getPosts, postCard } from './feed.js';
 import { openFollowList } from './users.js';
 import { paintIcons } from './icon-set.js';
@@ -23,41 +25,116 @@ import { renderHeatmapInto } from './heatmap.js';
 let unsubTasks = null, unsubSubs = null;
 let cachedTasks = [], cachedSubs = [];
 
+/* ═══════════════════════ ÖZ PROFİL KARTI ═══════════════════════
+ *
+ * ⚠ PUBLİK PROFİLLƏ EYNİ VİZUAL QATI (`pp-*`) və EYNİ endpoint-i işlədir
+ *   (`/api/users/:username/profile`). Əvvəl iki səhifə iki ayrı koddan
+ *   çəkilirdi: burada `state.myFollowers.size`, orada ayrıca fetch — nəticədə
+ *   eyni hesab iki yerdə iki fərqli izləyici sayı göstərə bilirdi.
+ *
+ * ⚠ İKİ MƏRHƏLƏLİ RENDER: əvvəlcə `state.me` ilə ANİ çəkilir (səhifə boş
+ *   qalmasın), sonra server cavabı ilə saylar dəqiqləşir.
+ */
+let profExtra = null;   // { teamsCount, projectsCount, followersCount, followingCount }
+
+function profMetaBits(me){
+  const bits = [];
+  if(me.company) bits.push(['building', me.company]);
+  const loc = [me.city, me.country].filter(Boolean).join(', ');
+  if(loc) bits.push(['mapPin', loc]);
+  if(me.joinedAt) bits.push(['calendar', t('users.c_joined').replace('{d}', fmtMonthYear(me.joinedAt))]);
+  return bits;
+}
+
 function renderCard(){
   const me = state.me;
-  const av = document.getElementById('profAvatar');
-  av.replaceWith(Object.assign(avatarNode(me, 'avatar'), { id: 'profAvatar' }));
-  document.getElementById('profAvatar').style.cssText = 'width:74px;height:74px;border-radius:18px;font-size:1.4rem;';
+
+  // Avatar — `replaceWith` ƏVƏZİNƏ sabit örtük: əvvəlki üsul hər render-də
+  // element kimliyini dəyişirdi və ölçü inline stillə bərpa olunmalı idi.
+  const wrap = document.getElementById('profAvatarWrap');
+  clear(wrap);
+  const av = avatarNode(me, 'avatar');
+  av.id = 'profAvatar';
+  wrap.append(av);
+  const st = statusOf(me);
+  wrap.append(el('span', {
+    class: 'ud-status ud-s--' + st.tone, title: t(st.key), 'aria-label': t(st.key),
+  }));
+
   const nameEl = document.getElementById('profName');
   clear(nameEl);
   nameEl.append(nameWithBadge(me));
-  const loc = [me.city, me.country].filter(Boolean).join(', ');
+
+  // ⚠ Əvvəl bu sətir `<user @ad · Bakı />` kimi psevdo-XML idi. Dekorativ
+  //   sintaksis istifadəçi adını mətndən ayırmırdı və ekran oxuyucusu onu
+  //   "kiçikdir user at ad" kimi oxuyurdu.
   const tag = document.getElementById('profTag');
   clear(tag);
-  tag.append('<user @', me.username || '', loc ? ` · ${loc}` : '', ' />');
-  
+  tag.append(el('span', {}, '@' + (me.username || '')));
+  if(st.tone === 'hiring') tag.append(el('span', { class: 'ud-badge ud-s--hiring' }, t('users.st_hiring')));
+
+  const metaBox = document.getElementById('profMeta');
+  clear(metaBox);
+  profMetaBits(me).forEach(pair => metaBox.append(
+    el('span', { class: 'ud-meta__i' },
+      el('span', { class: 'ic', 'data-icon': pair[0], 'data-icon-size': '13' }), pair[1])));
+  paintIcons(metaBox);
+
   const bioContainer = document.getElementById('profBio');
   clear(bioContainer);
   bioContainer.textContent = me.bio || '';
-  
+
   if (me.showProjectOnProfile && me.activeProjectId) {
-    bioContainer.appendChild(el('div', { style: 'margin-top:10px; font-size:0.9rem; color:var(--primary); font-weight:500;' }, 
+    bioContainer.appendChild(el('div', { class: 'prof-active-project' },
       el('span', { class: 'ic', 'data-icon': 'zap', 'data-icon-size': '14' }),
       ' ' + t('prof.active_project'),
     ));
+    paintIcons(bioContainer);
   }
 
-  // İzləyənlər / izlədiklərim sayğacları (klik → siyahı)
+  /* ── Rank + XP tərəqqi ── */
+  const xpBox = document.getElementById('profXp');
+  clear(xpBox);
+  const r = rankOf(me.xp);
+  const p = xpProgress(me.xp);
+  const fill = el('span', { class: 'ud-xp__fill ud-r--' + r.tone });
+  // CSSOM — CSP HTML `style="…"` atributunu bloklayır (layihə qeydi).
+  fill.style.setProperty('--ud-xp-pct', p.pct + '%');
+  xpBox.append(
+    el('div', { class: 'ud-xp__top' },
+      el('span', { class: 'ud-rank ud-r--' + r.tone },
+        el('span', { class: 'ic', 'data-icon': 'crown', 'data-icon-size': '11' }),
+        r.label, el('i', {}, 'Lv' + r.lvl)),
+      el('span', { class: 'ud-xp__num' },
+        p.isMax ? t('users.rk_max') : t('users.rk_next').replace('{n}', String(p.remaining))),
+    ),
+    el('div', {
+      class: 'ud-xp__bar', role: 'progressbar',
+      'aria-valuenow': String(p.pct), 'aria-valuemin': '0', 'aria-valuemax': '100',
+    }, fill),
+  );
+  paintIcons(xpBox);
+
+  /* ── Sosial saylar ── */
+  // Mənbə sırası: server cavabı (dəqiq) → client keşi (ani).
+  const followers = profExtra ? profExtra.followersCount : state.myFollowers.size;
+  const following = profExtra ? profExtra.followingCount : state.myFollowing.size;
   const fc = document.getElementById('profFollowCounts');
   clear(fc);
+  const statBtn = (n, key, onclick) => el('button', { class: 'pp-stat', type: 'button', onclick },
+    el('b', {}, String(n || 0)), el('span', {}, t(key)));
+  const statBox = (n, key) => el('div', { class: 'pp-stat pp-stat--static' },
+    el('b', {}, String(n || 0)), el('span', {}, t(key)));
   fc.append(
-    el('button', { onclick: () => openFollowList(me.uid, 'followers') },
-      el('b', {}, state.myFollowers.size), ' ' + t('soc.followers')),
-    el('button', { onclick: () => openFollowList(me.uid, 'following') },
-      el('b', {}, state.myFollowing.size), ' ' + t('soc.following')),
+    statBtn(followers, 'soc.followers', () => openFollowList(me.uid, 'followers')),
+    statBtn(following, 'soc.following', () => openFollowList(me.uid, 'following')),
+    statBox(profExtra ? profExtra.teamsCount : 0, 'users.c_teams'),
+    statBox(profExtra ? profExtra.projectsCount : 0, 'users.c_projects'),
+    statBox(me.streak || 0, 'usr.streak'),
+    statBox(me.tasksCompleted || 0, 'usr.tasks'),
   );
 
-  // Səviyyəli skill çipləri
+  /* ── Bacarıq nişanları (kataloqla eyni kateqoriya rəngləri) ── */
   const chips = document.getElementById('profSkillChips');
   clear(chips);
   const levels = { ...(me.progLevels || {}), ...(me.langLevels || {}) };
@@ -66,11 +143,14 @@ function renderCard(){
   plain.forEach(label => {
     if(shown.has(label)) return;
     shown.add(label);
-    chips.append(el('span', { class: 'skill-chip-view' }, label,
-      levels[label] ? el('span', { class: 'lvl' }, '· ' + levels[label]) : null));
+    chips.append(el('span', {
+      class: 'ud-skill ' + skillCatClass(label),
+      title: levels[label] ? label + ' · ' + levels[label] : label,
+    }, label, levels[label] ? el('i', {}, levels[label].slice(0, 1)) : null));
   });
-  (me.lookingFor || []).forEach(x => chips.append(el('span', { class: 'tag on' },
-    el('span', { class: 'ic', 'data-icon': 'userSearch', 'data-icon-size': '12' }), x)));
+  (me.lookingFor || []).forEach(x => chips.append(el('span', { class: 'ud-skill cat-spoken' },
+    el('span', { class: 'ic', 'data-icon': 'search', 'data-icon-size': '11' }), x)));
+  paintIcons(chips);
 
   document.getElementById('profStreakNum').textContent = me.streak || 0;
   document.getElementById('profXPNum').textContent = me.xp || 0;
@@ -94,9 +174,32 @@ function renderCard(){
   const socials = [
     ['Instagram', me.instagram], ['GitHub', me.github],
     ['LinkedIn', me.linkedin], ['Telegram', me.telegram], ['Sayt', me.website],
-  ].filter(([, v]) => v);
-  socials.forEach(([plat, v]) => social.append(el('span', { class: 'social-chip' }, el('span', { class: 'plat' }, plat), ' ' + v)));
-  if(!socials.length) social.append(el('span', { class: 'social-chip' }, el('span', { class: 'plat' }, '—'), ' hələ sosial hesab əlavə edilməyib'));
+  ].filter(pair => pair[1]);
+  socials.forEach(pair => social.append(
+    el('span', { class: 'pp-social' }, el('b', {}, pair[0]), ' ' + pair[1])));
+  if(!socials.length) social.append(
+    el('span', { class: 'pp-social' }, el('b', {}, '—'), ' ' + t('prof.no_social')));
+}
+
+/**
+ * Server tərəfli sayları çəkir (komanda/layihə/izləyici) və kartı yeniləyir.
+ * ⚠ Uğursuzluq SƏSSİZ udulur: saylar bəzəkdir, profil onsuz da tam işləkdir.
+ */
+function loadProfExtra(){
+  const me = state.me;
+  if(!me || !me.username) return;
+  api('/users/' + encodeURIComponent(me.username) + '/profile')
+    .then(d => {
+      if(!d || !d.user) return;
+      profExtra = {
+        teamsCount: d.user.teamsCount || 0,
+        projectsCount: d.user.projectsCount || 0,
+        followersCount: d.user.followersCount || 0,
+        followingCount: d.user.followingCount || 0,
+      };
+      renderCard();
+    })
+    .catch(() => {});
 }
 
 function renderBadges(){
@@ -458,6 +561,9 @@ export function initProfile(){
 function renderAll(){
   if(!document.getElementById('page-profil').classList.contains('active')) return;
   renderCard(); renderBadges(); renderHeatmap(); renderProgress(); renderMyPosts();
+  // Server tərəfli saylar (komanda/layihə/izləyici) — ANİ render-dən sonra
+  // gəlir və `renderCard()`-u bir daha çağırır.
+  loadProfExtra();
   // TASK-8 / Bənd 6 — tamlıq indikatoru. Çatışmayan sahə çipi redaktoru açır.
   renderCompleteness(document.getElementById('profCompleteness'), state.me, () => openEditModal());
 }

@@ -142,6 +142,12 @@ const ROUTES: Route[] = [
   { method: 'PATCH', pattern: /^\/api\/me$/, handler: R.patchMe, auth: true, rl: 'write' },
   { method: 'PATCH', pattern: /^\/api\/me\/settings$/, handler: R.patchSettings, auth: true, rl: 'write' },
   { method: 'GET', pattern: /^\/api\/me\/social$/, handler: R.mySocial, auth: true, rl: 'read' },
+  /* Publik profil (`#u/{username}`) — səhifə əvvəl YALNIZ client keşindən
+     oxuyurdu və `LIMIT 500`-dən kənarda qalan hesabın linki "tapılmadı"
+     verirdi (bax `publicProfile` şərhi).
+     ⚠ Naxış `[\w.]+`-dir, `[\w-]+` YOX: istifadəçi adında nöqtə ola bilər
+       (`validUsername`: `[a-z0-9._]`) və defis ola bilməz. */
+  { method: 'GET', pattern: /^\/api\/users\/([\w.]+)\/profile$/, handler: R.publicProfile, auth: true, rl: 'read' },
   { method: 'GET', pattern: /^\/api\/users\/([\w-]+)\/follow-lists$/, handler: R.followLists, auth: true, rl: 'read' },
   { method: 'GET', pattern: /^\/api\/users\/([\w-]+)\/progress$/, handler: R.progressOf, auth: true, rl: 'read' },
   { method: 'PUT', pattern: /^\/api\/follows\/([\w-]+)$/, handler: R.followPut, auth: true, rl: 'write' },

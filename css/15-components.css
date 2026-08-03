@@ -554,3 +554,22 @@
   height: 16px;
   color: var(--muted);
 }
+
+/* ══════════════════════════ POPOVER PORTAL ══════════════════════════
+ *
+ * 🔴 `body`-yə portal edilən panellər (bax `ui.js` → `openPopover`).
+ *    Kart qatları `content-visibility: auto` işlədir və o, HƏMİŞƏ
+ *    `contain: paint` tətbiq edir — kartın içində qalan `absolute` panel
+ *    kartdan kənara çıxan kimi KƏSİLİR. Portal həmin ağacdan çıxır.
+ *
+ * ⚠ `position: fixed` və koordinatlar JS-də CSSOM ilə yazılır (CSP HTML
+ *   `style="…"` atributunu bloklayır).
+ */
+.c-pop {
+  position: fixed;
+  z-index: 1200;
+  /* Mövqe hesablanana qədər sol-üst küncdə görünməsin. */
+  top: -9999px;
+  left: -9999px;
+  margin: 0;
+}

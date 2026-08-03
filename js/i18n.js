@@ -559,6 +559,14 @@ const D = {
   'users.export_ok':  { az: 'CSV endirilir', en: 'Downloading CSV', ru: 'Загрузка CSV' },
   'users.export_empty': { az: 'İxrac ediləcək nəticə yoxdur', en: 'Nothing to export', ru: 'Нечего экспортировать' },
 
+  'prof.no_social': { az: 'hələ sosial hesab əlavə edilməyib', en: 'no social links yet', ru: 'соцсети пока не добавлены' },
+
+  /* Publik profil (#u/{username}) */
+  'pub.edit':      { az: 'Profili redaktə et', en: 'Edit profile', ru: 'Редактировать профиль' },
+  'pub.shared':    { az: 'Ortaq nöqtələr', en: 'What you share', ru: 'Общее с вами' },
+  'pub.links':     { az: 'Linklər', en: 'Links', ru: 'Ссылки' },
+  'pub.not_found': { az: '{u} tapılmadı', en: '{u} not found', ru: '{u} не найден' },
+
   /* Profil parametrləri — yeni sahələr */
   'set.company':      { az: 'İş yeri / şirkət', en: 'Company', ru: 'Компания' },
   'set.company_ph':   { az: 'Məsələn: Collabix', en: 'e.g. Collabix', ru: 'Например: Collabix' },
@@ -1436,6 +1444,27 @@ export function tf(obj){
 const _localeTag = { az: 'az-AZ', en: 'en-US', ru: 'ru-RU' };
 function localeTag(){ return _localeTag[current] || 'az-AZ'; }
 export function getLocaleTag(){ return localeTag(); }
+
+/* ⚠ AZ AY ADLARI ƏL İLƏ: brauzerin `az-AZ` ICU məlumatı natamam ola bilər və
+   `month:'long'` üçün "M07" kimi xam nişan qaytarır (Chrome-da ölçüldü; Node
+   eyni çağırışda "avqust" verir). Profil kartında "Qoşulub 2026 M07" çıxırdı.
+   Cədvəl yalnız GERİ DÜŞMƏ yoludur — nəticə düzgün görünürsə ona toxunulmur. */
+const AZ_MONTHS = ['yanvar','fevral','mart','aprel','may','iyun',
+  'iyul','avqust','sentyabr','oktyabr','noyabr','dekabr'];
+
+/**
+ * "iyul 2026" / "July 2026" / "июль 2026".
+ * @param {number|Date} ts
+ */
+export function fmtMonthYear(ts){
+  const d = ts instanceof Date ? ts : new Date(Number(ts));
+  if(isNaN(d.getTime())) return '';
+  let month = '';
+  try{ month = new Intl.DateTimeFormat(localeTag(), { month: 'long' }).format(d); }catch(e){}
+  // ICU nişanı (`M07`, `L07`) və ya boş nəticə → əl ilə cədvəl.
+  if(!month || /^[ML]\d{1,2}$/.test(month)) month = AZ_MONTHS[d.getMonth()] || String(d.getMonth() + 1);
+  return month + ' ' + d.getFullYear();
+}
 
 export function fmtDate(ts, opts){
   const d = ts instanceof Date ? ts : new Date(Number(ts));
