@@ -54,3 +54,6 @@ legacy/
 
 .vscode
 .vs
+
+# Əl ilə çıxarılan git log dump-ları (repoya aid deyil)
+commits_*.txt
