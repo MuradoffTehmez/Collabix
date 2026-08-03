@@ -3,9 +3,10 @@ import {
   state, watchRooms, watchRoomMessages, sendRoomMessage, editRoomMessage, deleteRoomMessage, deleteRoom,
   fetchOlderRoomMessages, fetchRoomPins, setRoomPin,
   setMessageReaction, setMessageBookmark, forwardMessage, convPrefs, setConvPref,
+  setRoomIcon,
 } from './store.js';
 import { createHistory, historyBar, loadOlder } from './history.js';
-import { el, clear, emit, isOnline } from './util.js';
+import { el, clear, emit, isOnline, avatarNode } from './util.js';
 import { toast, confirmDialog, showModal, closeModal, emptyState } from './ui.js';
 import { openProfileModal } from './users.js';
 import { attachMentionAutocomplete } from './mention.js';
@@ -203,7 +204,10 @@ function renderRoomList(){
      *   Həll: `.ch-row` sarğısı, silmə düyməsi QARDAŞ element kimi. */
     const row = el('div', { class: 'ch-row' });
     row.append(conversationRow({
-      avatar: el('span', { class: 'avatar' }, '#'),
+      /* Otaq avatarı: yüklənmiş ikon varsa o, yoxsa otaq adından DETERMİNİST
+       * inisial avatarı (`avatarNode` psevdo-istifadəçi obyekti ilə işləyir).
+       * `uid: r.id` — çalar otağa bağlı sabit qalsın deyə. */
+      avatar: avatarNode({ uid: r.id, name: r.name, photoURL: r.iconUrl }, 'avatar'),
       name: r.name,
       username: r.id,                    // otaqda "username" rolunu slug oynayır
       preview: r.id === 'general' ? t('chat.room_sub') : '',
@@ -293,6 +297,33 @@ function openMsgEdit(m){
       catch(e){ toast(t('dyn.upd_fail'), 'err'); }
     } }, t('dyn.save')),
   ]);
+}
+
+/* ══ Otaq ikonu (miqrasiya 0048) ══════════════════════════════════════════
+ * ⚠ Şəkil `kind=avatar` ilə yüklənir — server orada 1 MB həddi və yalnız-şəkil
+ *   yoxlaması tətbiq edir, prefiks isə `canReadKey`-də onsuz da publikdir. */
+function pickRoomIcon(roomId){
+  const inp = el('input', { type: 'file', accept: 'image/*', style: 'display:none;' });
+  inp.addEventListener('change', async e => {
+    const f = e.target.files[0];
+    if(!f) return;
+    try{
+      await setRoomIcon(roomId, f);
+      toast(t('room.icon_updated'));
+      // Otaq siyahısı abunəsi yeniləməni gətirir; başlıq dərhal yenilənsin.
+      selectRoom(roomId);
+    }catch(err){ toast(err?.message || t('dyn.fail'), 'err'); }
+  });
+  inp.click();
+}
+
+async function clearRoomIcon(roomId){
+  if(!await confirmDialog(t('room.clear_icon_conf'))) return;
+  try{
+    await setRoomIcon(roomId, null);
+    toast(t('room.icon_updated'));
+    selectRoom(roomId);
+  }catch(err){ toast(err?.message || t('dyn.fail'), 'err'); }
 }
 
 /* ══ Mesaj render konteksti ═══════════════════════════════════════════════
@@ -429,9 +460,15 @@ function paintDetails(){
 // `openDetail`: yalnız istifadəçi KLİKindən true. Mount-dakı avtomatik seçim
 // false ötürür ki, mobildə chat açılanda əvvəlcə otaq SİYAHISI görünsün, birbaşa
 // mesaja tullanmasın (desktop-da fərq yoxdur — detail-open yalnız mobildə işləyir).
-function selectRoom(roomId, openDetail = false){
-  currentRoomId = roomId;
-  renderRoomList();
+/**
+ * Otaq başlığını çəkir.
+ *
+ * ⚠ AYRICA FUNKSİYADIR, çünki İKİ dəfə çağırılır: otaq seçiləndə və otaq
+ *   SİYAHISI gələndə. `selectRoom` mount-da siyahıdan ƏVVƏL işləyir, o an
+ *   `rooms.find(...)` `undefined` verir və başlıq otağın adı əvəzinə id-sinə
+ *   düşür ("general" vs "ümumi"), avatar da yüklənmiş ikonu göstərmir.
+ */
+function paintRoomHead(roomId){
   const room = rooms.find(r => r.id === roomId);
   const wrap = document.getElementById('chatWrap');
   // TASK-8 mobil master-detail: geri düyməsi siyahıya qaytarır (yalnız mobildə
@@ -440,6 +477,10 @@ function selectRoom(roomId, openDetail = false){
   const isPinned = prefs.pinned.includes(roomId);
   const isMuted = prefs.muted.includes(roomId);
   buildChatHead(document.getElementById('chatHead'), {
+    /* Otaq da başlıqda avatar alır (DM ilə eyni görünüş dili).
+     * `verified`/`xp`/`role` YOXDUR → `buildChatHead` onları çəkmir, yalnız
+     * avatar + ad + alt sətir görünür. */
+    user: { uid: roomId, name: room ? room.name : roomId, photoURL: room ? room.iconUrl : null },
     title: '# ' + (room ? room.name : roomId),
     sub: t('chat.room_sub'),
     onBack: closeRoomDetail,
@@ -465,9 +506,24 @@ function selectRoom(roomId, openDetail = false){
             catch(e){ toast(e?.message || t('dyn.fail'), 'err'); }
           },
         },
+        // Otaq ikonu — YALNIZ admin (server `MANAGE_ROOMS` icazəsini tələb edir).
+        ...(state.isAdmin ? [
+          { icon: 'image', label: t('room.set_icon'), onClick: () => pickRoomIcon(roomId) },
+          ...(room && room.iconUrl
+            ? [{ icon: 'trash', label: t('room.clear_icon'), danger: true, onClick: () => clearRoomIcon(roomId) }]
+            : []),
+        ] : []),
       ],
     }),
   });
+}
+
+// `openDetail`: yalnız istifadəçi KLİKindən true. Mount-dakı avtomatik seçim
+// false ötürür ki, mobildə chat açılanda əvvəlcə otaq SİYAHISI görünsün.
+function selectRoom(roomId, openDetail = false){
+  currentRoomId = roomId;
+  renderRoomList();
+  paintRoomHead(roomId);
   // Otaq dəyişdi → əvvəlki otağın sabitlənmişləri və xülasəsi qalmamalıdır.
   pins = [];
   aiSummary = null;
@@ -614,6 +670,12 @@ export function mountChat(){
     rooms = list;
     if(!rooms.find(r => r.id === currentRoomId)) currentRoomId = rooms[0] ? rooms[0].id : 'general';
     renderRoomList();
+    /* ⚠ BAŞLIQ DA YENİLƏNİR: `selectRoom` otaq siyahısı GƏLMƏMİŞDƏN əvvəl
+     *   işləyir, ona görə `rooms.find(...)` `undefined` qaytarır və başlıq
+     *   otağın ADI əvəzinə İD-sinə düşür ("general" vs "ümumi"), avatar da
+     *   yüklənmiş ikonu yox, id-dən çıxarılan inisialları göstərir.
+     *   Siyahı gələn kimi başlıq düzgün adla yenidən qurulur. */
+    if(rooms.length) paintRoomHead(currentRoomId);
   });
   selectRoom(currentRoomId);
   return () => {

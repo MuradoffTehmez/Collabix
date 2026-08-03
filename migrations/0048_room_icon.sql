@@ -1,0 +1,18 @@
+-- Otaq profil şəkli (söhbət başlığındakı ikon).
+--
+-- ⚠ NİYƏ AYRICA PREFİKS YOX, `avatars/`:
+--   `worker/files-auth.ts` `canReadKey`-də prefiks siyahısı saxlayır və
+--   faylın başlığında AÇIQ xəbərdarlıq var: "yeni prefiks əlavə edən hər kəs
+--   onu bu funksiyada da nəzərə almalıdır". Otaq ikonu semantik olaraq
+--   avatardır və PUBLİK oxunmalıdır (otağı görən hər kəs ikonu da görür).
+--   Mövcud `avatars/` prefiksi məhz bu davranışdadır (publik, DB sorğusu yox),
+--   ona görə yeni prefiks açıb təhlükəsizlik yolunu genişləndirmək əvəzinə
+--   həmin prefiks TƏKRAR İSTİFADƏ olunur. Nəticədə `canReadKey` TOXUNULMUR.
+--
+-- ⚠ `icon_key` R2 AÇARIDIR, tam URL deyil: URL sxemi (`/files/...`) serverdə
+--   `fileUrl()` ilə qurulur. Açarı saxlamaq domen/marşrut dəyişikliyinə
+--   davamlıdır — `posts.image_keys` və `users.photo_url` ilə eyni yanaşma.
+--
+-- NULL = ikon yoxdur → UI otaq adından determinist inisial avatarı çəkir
+-- (yükləmə tələb olunmur, boş dairə görünmür).
+ALTER TABLE rooms ADD COLUMN icon_key TEXT;

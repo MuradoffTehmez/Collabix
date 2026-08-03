@@ -5,7 +5,7 @@
 //   sisteminin izahı).
 import {
   Ctx, json, err, readJson, uuid, now, clampStr, fromJSON,
-  pairIdFor, mapMsg, 
+  pairIdFor, mapMsg, fileUrl,
 } from '../util';
 import { sanitizeMsg } from '../msg';
 import { readArchive, deletedUidSet } from '../archive';
@@ -25,7 +25,35 @@ export async function listRooms(c: Ctx) {
       WHERE NOT EXISTS (SELECT 1 FROM team_chat_rooms t WHERE t.id = r.id)
       ORDER BY r.created_at ASC`
   ).all<any>();
-  return json({ rooms: rows.results.map(r => ({ id: r.id, name: r.name, createdAt: r.created_at })) });
+  // `icon_key` R2 açarıdır; URL serverdə qurulur (bax miqrasiya 0048).
+  return json({ rooms: rows.results.map(r => ({
+    id: r.id, name: r.name, createdAt: r.created_at,
+    iconUrl: r.icon_key ? fileUrl(r.icon_key) : null,
+  })) });
+}
+
+/**
+ * Otaq ikonunu dəyişir (yalnız `MANAGE_ROOMS` icazəsi olanlar — marşrutda).
+ *
+ * ⚠ Açar CLIENT-DƏN gəlir, ona görə FORMAT MƏCBURİ yoxlanılır: yalnız
+ *   `avatars/…` prefiksi qəbul edilir. Əks halda istifadəçi ixtiyari R2
+ *   açarını (məs. `archive/…` və ya başqasının `msgfiles/…` faylını) otaq
+ *   ikonu kimi yazıb onu PUBLİK oxunan yerə bağlaya bilərdi — `avatars/`
+ *   `canReadKey`-də publik sürətli yoldur.
+ * ⚠ `null` göndərmək ikonu SİLİR (inisial avatarına qayıdır).
+ */
+export async function patchRoom(c: Ctx, roomId: string) {
+  const b = await readJson(c.req);
+  const raw = b?.iconKey;
+  if (raw !== null && typeof raw !== 'string') return badReq('iconKey sətir və ya null olmalıdır.');
+  const iconKey = raw === null ? null : String(raw);
+  if (iconKey !== null && !/^avatars\/[\w-]+\/[\w.-]+$/.test(iconKey)) {
+    return badReq('Yalnız `avatars/` açarı qəbul olunur.');
+  }
+  const room = await D(c).prepare('SELECT id FROM rooms WHERE id = ?').bind(roomId).first<any>();
+  if (!room) return err('Tapılmadı.', 404);
+  await D(c).prepare('UPDATE rooms SET icon_key = ? WHERE id = ?').bind(iconKey, roomId).run();
+  return json({ ok: true, iconUrl: iconKey ? fileUrl(iconKey) : null });
 }
 export async function createRoom(c: Ctx) {
   const b = await readJson(c.req);

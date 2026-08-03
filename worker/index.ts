@@ -181,6 +181,8 @@ const ROUTES: Route[] = [
   { method: 'GET', pattern: /^\/api\/rooms$/, handler: R.listRooms, auth: true, rl: 'read' },
   { method: 'POST', pattern: /^\/api\/rooms$/, handler: R.createRoom, auth: true, perm: 'MANAGE_ROOMS', rl: 'write' },
   { method: 'DELETE', pattern: /^\/api\/rooms\/([\w-]+)$/, handler: R.deleteRoom, auth: true, perm: 'MANAGE_ROOMS', rl: 'write' },
+  // Otaq ikonu (0048) — silmə ilə eyni icazə: otağın görünüşünü dəyişməkdir.
+  { method: 'PATCH', pattern: /^\/api\/rooms\/([\w-]+)$/, handler: R.patchRoom, auth: true, perm: 'MANAGE_ROOMS', rl: 'write' },
   { method: 'GET', pattern: /^\/api\/rooms\/([\w-]+)\/messages$/, handler: R.roomMessages, auth: true, rl: 'read' },
   { method: 'POST', pattern: /^\/api\/rooms\/([\w-]+)\/messages$/, handler: R.sendRoomMessage, auth: true, rl: 'write' },
   { method: 'PATCH', pattern: /^\/api\/rooms\/([\w-]+)\/messages\/([\w-]+)$/, handler: R.editRoomMessage, auth: true, rl: 'write' },

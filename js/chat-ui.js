@@ -149,11 +149,18 @@ export function buildChatHead(host, {
   const main = el('div', { class: 'ch-head-main' });
   if(user){
     const nameLine = el('span', { class: 'ch-head-title' }, nameWithBadge(user));
-    const lvl = levelFromXP(user.xp);
-    // Səviyyə nişanı — rəqəm MƏTNDƏDİR, yalnız rəngdən asılı deyil.
-    nameLine.append(el('span', {
-      class: 'ch-lvl', 'aria-label': t('hdr.level').replace('{n}', String(lvl)),
-    }, 'Lv ' + lvl));
+    /* ⚠ Səviyyə YALNIZ `xp` sahəsi OLANDA göstərilir. Otaq da bu funksiyanı
+     *   işlədir (avatar + ad üçün), amma otağın XP-si yoxdur —
+     *   `levelFromXP(undefined)` 1 qaytarır və başlıqda mənasız "Lv 1"
+     *   görünərdi. `typeof` yoxlaması 0 XP-li real istifadəçini də düzgün
+     *   göstərir (`user.xp` falsy olsa belə sahə mövcuddur). */
+    if(typeof user.xp === 'number'){
+      const lvl = levelFromXP(user.xp);
+      // Səviyyə nişanı — rəqəm MƏTNDƏDİR, yalnız rəngdən asılı deyil.
+      nameLine.append(el('span', {
+        class: 'ch-lvl', 'aria-label': t('hdr.level').replace('{n}', String(lvl)),
+      }, 'Lv ' + lvl));
+    }
     /* Rol nişanı yalnız ADİ istifadəçidən FƏRQLİDİRSƏ göstərilir:
      * hər sətirdə "USER" yazmaq məlumat daşımır, yalnız səs-küydür.
      * ⚠ `users.role` sütununun default-u kiçik hərflə `'user'`-dir (bax

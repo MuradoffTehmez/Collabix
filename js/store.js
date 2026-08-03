@@ -400,6 +400,26 @@ export async function deleteRoomMessage(roomId, msgId){
   emit('refresh-msgs-' + roomId);
 }
 
+/**
+ * Otaq ikonunu təyin edir / silir (miqrasiya 0048).
+ *
+ * ⚠ Şəkil `kind=avatar` ilə yüklənir: server o prefiksi PUBLİK oxunan kimi
+ *   tanıyır (`canReadKey` sürətli yolu) və 1 MB + yalnız-şəkil məhdudiyyəti
+ *   tətbiq edir. Yeni prefiks açmaq təhlükəsizlik yolunu genişləndirərdi.
+ * @param {string} roomId
+ * @param {File|null} file  `null` → ikonu silir
+ */
+export async function setRoomIcon(roomId, file){
+  let iconKey = null;
+  if(file){
+    const d = await uploadFile(file, 'avatar', file.name);
+    iconKey = d.key;
+  }
+  await api(`/rooms/${roomId}`, { method: 'PATCH', body: { iconKey } });
+  emit('rooms-updated');
+  return iconKey;
+}
+
 /* ---- Sabitlənmiş mesajlar (miqrasiya 0046) ----
  * ⚠ Otaqda sabitləmə YALNIZ admin üçündür (server məcbur edir) — UI düyməni
  *   də yalnız adminə göstərir, amma qərar serverdədir. */

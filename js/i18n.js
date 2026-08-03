@@ -925,6 +925,10 @@ const D = {
 
   /* Başlıq + söhbət tərcihləri (pin/mute) */
   'hdr.level':   { az: 'Səviyyə {n}', en: 'Level {n}', ru: 'Уровень {n}' },
+  'room.set_icon':   { az: 'Otaq şəklini dəyiş', en: 'Change room picture', ru: 'Изменить фото комнаты' },
+  'room.clear_icon': { az: 'Otaq şəklini sil', en: 'Remove room picture', ru: 'Удалить фото комнаты' },
+  'room.clear_icon_conf': { az: 'Otaq şəkli silinsin?', en: 'Remove the room picture?', ru: 'Удалить фото комнаты?' },
+  'room.icon_updated': { az: 'Otaq şəkli yeniləndi', en: 'Room picture updated', ru: 'Фото комнаты обновлено' },
   'hdr.search':  { az: 'Söhbətdə axtar', en: 'Search conversation', ru: 'Поиск в чате' },
   'conv.pin':    { az: 'Söhbəti sabitlə', en: 'Pin conversation', ru: 'Закрепить чат' },
   'conv.unpin':  { az: 'Sabitləməni ləğv et', en: 'Unpin conversation', ru: 'Открепить чат' },

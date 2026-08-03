@@ -114,7 +114,7 @@ export {
   followLists, followPut, followDelete, progressOf, userStats, activityFor,
 } from './routes/user';
 export {
-  listRooms, createRoom, deleteRoom, roomMessages, sendRoomMessage,
+  listRooms, createRoom, deleteRoom, patchRoom, roomMessages, sendRoomMessage,
   editRoomMessage, deleteRoomMessage, listThreads, dmMessages, sendDM,
   editDM, deleteDMMsg, markThreadRead, heartbeat, presenceMap,
   // Sabitlənmiş mesajlar (0046)
