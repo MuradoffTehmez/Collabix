@@ -241,7 +241,9 @@ export function detailsToggleButton(wrap, panelId){
     'aria-controls': panelId,
     'aria-label': t('cd.toggle'),
     title: t('cd.toggle'),
-  }, el('span', { class: 'ic', 'data-icon': 'more', 'data-icon-size': '18' }));
+    /* ⚠ İkon `more` DEYİL, `info`-dur: `headerActions`-dakı "daha çox"
+     *   menyusu da `more` işlədir və başlıqda iki eyni `⋯` görünürdü. */
+  }, el('span', { class: 'ic', 'data-icon': 'info', 'data-icon-size': '18' }));
   btn.addEventListener('click', () => setDetailsOpen(wrap, wrap.dataset.details !== 'open'));
   return btn;
 }
