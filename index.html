@@ -714,11 +714,18 @@
                Ona görə ayrıca, yalnız ƏN SON mesajı saxlayan gizli region. -->
           <div id="chatLive" class="sr-only" aria-live="polite" aria-atomic="true"></div>
           <div class="typing-indicator" id="chatTyping"></div>
+          <!-- Cavab hədəfi zolağı — kompozitorun ÜSTÜNDƏ, çünki o, yazılacaq
+               mesajın kontekstidir və göndərmədən əvvəl görünməlidir. -->
+          <div class="reply-bar" id="chatReplyBar" hidden></div>
           <div class="chat-input" id="chatComposer">
             <!-- AUDIT-UI: yalnız placeholder var idi (`input-labels` pozuntusu:
                  placeholder etiket deyil — yazmağa başlayanda itir). -->
             <input id="chatInput" data-i18n-ph="chat.ph" data-i18n-aria="chat.ph" maxlength="2000">
-            <button id="chatSendBtn" data-i18n="chat.send"></button>
+            <!-- ⚠ `data-i18n` QƏSDƏN YOXDUR: `applyI18n` onu `textContent` kimi
+                 tətbiq edir və `enhanceComposer`-in qoyduğu SVG ikonu silərdi
+                 (dil dəyişəndə düymə yenidən "Göndər" mətninə çevrilirdi).
+                 Ad və tooltip JS-də `aria-label`/`title` ilə verilir. -->
+            <button id="chatSendBtn"></button>
           </div>
         </div>
         <aside class="chat-details" id="chatDetails" aria-labelledby="chatDetailsTitle"></aside>
@@ -735,10 +742,12 @@
           <div class="chat-pinstrip" id="dmPinStrip" hidden></div>
           <div class="chat-messages" id="dmMessages"><div class="empty-state"><div class="ic" data-icon="mail" data-icon-size="28"></div><span data-i18n="dm.empty"></span></div></div>
           <div id="dmLive" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+          <div class="reply-bar" id="dmReplyBar" hidden></div>
           <div class="chat-input" id="dmComposer">
             <!-- AUDIT-UI: `#chatInput` ilə eyni — placeholder etiket deyil. -->
             <input id="dmInput" data-i18n-ph="chat.ph" data-i18n-aria="chat.ph" maxlength="2000">
-            <button id="dmSendBtn" data-i18n="chat.send"></button>
+            <!-- `#chatSendBtn` ilə eyni səbəb — bax oradakı şərh. -->
+            <button id="dmSendBtn"></button>
           </div>
         </div>
         <aside class="chat-details" id="dmDetails" aria-labelledby="dmDetailsTitle"></aside>

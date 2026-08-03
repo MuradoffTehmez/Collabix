@@ -882,6 +882,32 @@ const D = {
   'chat.someone': { az: 'Kimsə', en: 'Someone', ru: 'Кто-то' },
 
   /* ── Çat redizaynı: siyahı, detallar paneli, emoji, AI ─────────────────── */
+  /* ── Mesaj əməliyyatları · reaksiyalar · thread (0047) ─────────────────── */
+  'msg.actions':     { az: 'Mesaj əməliyyatları', en: 'Message actions', ru: 'Действия с сообщением' },
+  'msg.react':       { az: 'Reaksiya ver', en: 'React', ru: 'Реакция' },
+  'msg.reply':       { az: 'Cavabla', en: 'Reply', ru: 'Ответить' },
+  'msg.copy':        { az: 'Mətni kopyala', en: 'Copy text', ru: 'Копировать текст' },
+  'msg.copy_link':   { az: 'Mesaj linkini kopyala', en: 'Copy message link', ru: 'Скопировать ссылку' },
+  'msg.forward':     { az: 'Yönləndir', en: 'Forward', ru: 'Переслать' },
+  'msg.bookmark':    { az: 'Əlfəcinə əlavə et', en: 'Bookmark', ru: 'В закладки' },
+  'msg.unbookmark':  { az: 'Əlfəcindən çıxar', en: 'Remove bookmark', ru: 'Убрать из закладок' },
+  'msg.reply_gone':  { az: 'Cavablanan mesaj artıq yoxdur', en: 'The replied message is gone', ru: 'Исходное сообщение недоступно' },
+  'msg.jump_to_reply': { az: '{who} adlı şəxsin mesajına keç', en: 'Jump to message by {who}', ru: 'Перейти к сообщению {who}' },
+  'msg.replying_to': { az: 'Cavab verilir:', en: 'Replying to:', ru: 'Ответ на:' },
+  'msg.cancel_reply': { az: 'Cavabı ləğv et', en: 'Cancel reply', ru: 'Отменить ответ' },
+  'msg.forward_to':  { az: 'Hansı söhbətə yönləndirilsin?', en: 'Forward to which conversation?', ru: 'Переслать в какой чат?' },
+  'msg.forwarded':   { az: 'Yönləndirildi', en: 'Forwarded', ru: 'Переслано' },
+  'msg.link_copied': { az: 'Mesaj linki kopyalandı', en: 'Message link copied', ru: 'Ссылка скопирована' },
+
+  'react.like':   { az: 'Bəyəndim', en: 'Like', ru: 'Нравится' },
+  'react.love':   { az: 'Sevdim', en: 'Love', ru: 'Люблю' },
+  'react.laugh':  { az: 'Güldüm', en: 'Haha', ru: 'Смешно' },
+  'react.wow':    { az: 'Təəccübləndim', en: 'Wow', ru: 'Ого' },
+  'react.fire':   { az: 'Alov', en: 'Fire', ru: 'Огонь' },
+  'react.clap':   { az: 'Alqış', en: 'Clap', ru: 'Аплодисменты' },
+  'react.party':  { az: 'Təbrik', en: 'Party', ru: 'Праздник' },
+  'react.rocket': { az: 'Raket', en: 'Rocket', ru: 'Ракета' },
+
   'chat.unread_n':   { az: '{n} oxunmamış mesaj', en: '{n} unread messages', ru: '{n} непрочитанных сообщений' },
   /* Say bilinmədikdə (DM siyahısı — server yalnız `readAt` damğası verir). */
   'chat.unread_any': { az: 'Oxunmamış mesaj var', en: 'Has unread messages', ru: 'Есть непрочитанные' },

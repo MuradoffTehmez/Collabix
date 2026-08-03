@@ -2,15 +2,17 @@
 import {
   state, watchThreads, watchDMMessages, sendDM, editDM, deleteDM,
   markThreadRead, pairIdFor, fetchOlderDMMessages, fetchDMPins, setDMPin,
+  setMessageReaction, setMessageBookmark, forwardMessage,
 } from './store.js';
 import { createHistory, historyBar, loadOlder } from './history.js';
-import { el, clear, avatarNode, nameWithBadge, fmtTime, tsToMillis, isOnline, lastSeenText, bus, emit } from './util.js';
+import { el, clear, avatarNode, tsToMillis, isOnline, lastSeenText, bus, emit } from './util.js';
 import { toast, confirmDialog, showModal, closeModal, emptyState } from './ui.js';
 import { openProfileModal } from './users.js';
-import { mentionify, attachMentionAutocomplete } from './mention.js';
-import { richContent, attachRichControls, renderGroupedMessages } from './richmsg.js';
+import { attachMentionAutocomplete } from './mention.js';
+import { attachRichControls } from './richmsg.js';
+import { renderMessageList, bindMessagePopClosers, previewText } from './chat-message.js';
 import { t } from './i18n.js';
-import { iconEdit, iconTrash, paintIcons } from './icons.js';
+import { paintIcons } from './icons.js';
 import {
   conversationRow, buildChatHead, detailsToggleButton, setDetailsOpen,
   enhanceComposer, renderDetailsPanel, previewOf, shortTime, askAI,
@@ -89,58 +91,105 @@ function renderThreadList(){
   });
 }
 
-// Bubble (ad/avatar/vaxt QRUP başında — renderGroupedMessages); hover-də tam tarix.
-function msgBubble(m, pairId){
-  const mine = m.fromUid === state.authUser.uid;
-  const node = el('div', {
-    class: 'msg ' + (mine ? 'out' : 'in') + (m.pinnedAt ? ' pinned' : ''),
-    title: fmtTime(m.createdAt),
-    dataset: { mid: m.id },        // paneldəki axtarışdan tullanmaq üçün lövbər
-  },
-    richContent(m),
-    m.editedAt ? el('span', { class: 'edited-mark' }, ' ' + t('feed.edited')) : null,
-  );
-  /* Sabitləmə DM-də HƏR İKİ tərəf üçündür (şəxsi söhbətdə moderasiya yoxdur),
-   * ona görə `mine` şərtindən KƏNARDA — qarşı tərəfin mesajını da sabitləmək
-   * mümkündür (əslində ən çox lazım olan hal budur). */
-  const pinBtn = el('button', {
-    type: 'button',
-    title: m.pinnedAt ? t('chat.unpin') : t('chat.pin'),
-    'aria-label': m.pinnedAt ? t('chat.unpin') : t('chat.pin'),
-    'aria-pressed': String(!!m.pinnedAt),
-    onclick: async () => {
-      try{ await setDMPin(pairId, m.id, !m.pinnedAt); await loadPins(pairId); }
+/* REDİZAYN: DM-in öz balon nüsxəsi SİLİNDİ — balon, alət paneli, reaksiya
+ * sətri və cavab sitatı artıq `chat-message.js`-dədir və otaq ilə ORTAQDIR.
+ * Əvvəl iki nüsxə vardı və düzəlişlər birində unudulurdu (audit bunu DM-də
+ * emoji ikonlar və tərcümə olunmayan `title`-lar şəklində tapmışdı). */
+function dmCtx(pairId){
+  return {
+    uidOf: m => m.fromUid,
+    isMine: m => m.fromUid === state.authUser.uid,
+    userOf: m => state.users.get(m.fromUid),
+    nameOf: m => (state.users.get(m.fromUid) || {}).name || '',
+    onName: uid => openProfileModal(uid),
+    isAdmin: state.isAdmin,
+    // ⚠ DM-də sabitləmə HƏR İKİ tərəf üçündür — şəxsi söhbətdə moderasiya
+    //   anlayışı yoxdur (server də eyni qaydadadır).
+    canPin: true,
+    toast,
+    onReact: async (m, type, on) => {
+      try{ await setMessageReaction('dm', pairId, m.id, type, on); }
+      catch(e){ toast(e?.message || t('dyn.fail'), 'err'); }
+    },
+    onReply: m => { replyTarget = m; paintReplyBar(); },
+    onEdit: m => openDMEdit(pairId, m),
+    onDelete: async m => {
+      if(await confirmDialog(t('dyn.msg_del_conf'))){
+        try{ await deleteDM(pairId, m.id); }catch(e){ toast(t('dyn.del_fail'), 'err'); }
+      }
+    },
+    onPin: async (m, on) => {
+      try{ await setDMPin(pairId, m.id, on); await loadPins(pairId); }
       catch(e){ toast(e?.message || t('chat.pin_fail'), 'err'); }
     },
-  }, el('span', { class: 'ic', 'data-icon': 'pin', 'data-icon-size': '13' }));
+    onBookmark: async (m, on) => {
+      try{ await setMessageBookmark('dm', pairId, m.id, on); m.bookmarked = on; paintNow(); }
+      catch(e){ toast(e?.message || t('dyn.fail'), 'err'); }
+    },
+    onCopyLink: async m => {
+      const url = `${location.origin}/#dm?peer=${encodeURIComponent(currentPeerUid)}&m=${encodeURIComponent(m.id)}`;
+      try{ await navigator.clipboard.writeText(url); toast(t('msg.link_copied')); }
+      catch(e){ toast(t('dyn.copy_fail'), 'err'); }
+    },
+    onForward: m => openForwardPicker(m, 'dm', pairId),
+    onJump: id => {
+      const node = document.querySelector(`[data-mid="${id}"]`);
+      node?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      node?.classList.add('msg-flash');
+      setTimeout(() => node?.classList.remove('msg-flash'), 1200);
+    },
+  };
+}
 
-  if(!mine){
-    const tools = el('div', { class: 'msg-tools' }, pinBtn);
-    node.append(tools);
-    paintIcons(tools);
-  }
-  if(mine){
-    /* AUDIT-UI: üç qüsur bir yerdə idi —
-     *   1) '✎' / '🗑' EMOJİ ikon kimi (`no-emoji-icons`): platformadan asılı
-     *      görünür, `currentColor`-a tabe olmur, tema ilə dəyişmir.
-     *      Layihədə onsuz da SVG ikon qatı var (`icons.js` §21 şərhi məhz bu
-     *      köçürmədən danışır — DM bölməsi qaçırılmışdı).
-     *   2) `title` SABİT AZƏRBAYCANCA idi — rus/ingilis dildə tərcümə olunmurdu.
-     *   3) Əlçatan ad məzmundan (emoji) gəlirdi → oxucu "✎" deyirdi.
-     *      `aria-label` hər üçünü həll edir. */
-    node.append(el('div', { class: 'msg-tools' },
-      (!m.type || m.type === 'text')
-        ? el('button', { type: 'button', title: t('a11y.edit'), 'aria-label': t('a11y.edit'),
-            onclick: () => openDMEdit(pairId, m) }, iconEdit())
-        : null,
-      el('button', { type: 'button', title: t('a11y.delete'), 'aria-label': t('a11y.delete'), onclick: async () => {
-        if(await confirmDialog(t('dyn.msg_del_conf'))){
-          try{ await deleteDM(pairId, m.id); }catch(e){ toast(t('dyn.del_fail'), 'err'); }
-        }
-      } }, iconTrash()),
-    ));
-  }
-  return node;
+let replyTarget = null;
+let paintNow = () => {};
+
+function paintReplyBar(){
+  const host = document.getElementById('dmReplyBar');
+  if(!host) return;
+  clear(host);
+  if(!replyTarget){ host.hidden = true; return; }
+  host.hidden = false;
+  host.append(
+    el('span', { class: 'ic', 'data-icon': 'message', 'data-icon-size': '14' }),
+    el('div', { class: 'rb-body' },
+      el('span', { class: 'rb-who' },
+        t('msg.replying_to') + ' ' + ((state.users.get(replyTarget.fromUid) || {}).name || '')),
+      el('span', { class: 'rb-txt' }, previewText(replyTarget)),
+    ),
+    el('button', {
+      type: 'button', class: 'ch-icon-btn', 'aria-label': t('msg.cancel_reply'), title: t('msg.cancel_reply'),
+      onclick: () => { replyTarget = null; paintReplyBar(); },
+    }, el('span', { class: 'ic', 'data-icon': 'x', 'data-icon-size': '14' })),
+  );
+  paintIcons(host);
+}
+
+/** Yönləndirmə seçicisi — DM siyahısındakı söhbətlərə. */
+function openForwardPicker(m, fromScope, fromId){
+  const box = el('div', { class: 'fwd-list' });
+  threads.forEach(th => {
+    const uid = otherUid(th);
+    const u = state.users.get(uid);
+    if(!u) return;
+    box.append(el('button', {
+      type: 'button', class: 'fwd-item',
+      onclick: async () => {
+        try{
+          await forwardMessage({
+            fromScope, fromId, toScope: 'dm',
+            toId: pairIdFor(state.authUser.uid, uid), messageId: m.id,
+          });
+          closeModal(); toast(t('msg.forwarded'));
+        }catch(e){ toast(e?.message || t('dyn.fail'), 'err'); }
+      },
+    }, avatarNode(u, 'avatar avatar-mini'), el('span', {}, u.name)));
+  });
+  showModal([
+    el('div', { class: 'section-title' }, t('msg.forward_to')),
+    el('p', { class: 'c-report-quote' }, previewText(m)),
+    box,
+  ]);
 }
 
 function openDMEdit(pairId, m){
@@ -292,15 +341,13 @@ function selectPeer(uid, openDetail = false){  // openDetail: yalnız klikdən (
     const all = [...hist.older, ...liveMsgs];
     lastMsgs = all;                       // paneldəki lokal axtarış üçün
     if(!all.length){ box.append(emptyState('mail', t('chat.empty_dm_msgs'))); return; }
-    renderGroupedMessages(box, all, {
-      uidOf: m => m.fromUid,
-      mineOf: m => m.fromUid === state.authUser.uid,
-      userOf: m => state.users.get(m.fromUid),
-      nameOf: m => (state.users.get(m.fromUid) || {}).name || '',
-      onName: uid => openProfileModal(uid),
-      bubbleOf: m => msgBubble(m, pairId),
-    });
+    // ⚠ `historyBar` yuxarıda əlavə olunub, `renderMessageList` isə `clear(box)`
+    //   edir — zolaq render-DƏN SONRA yenidən başa qoyulur.
+    const bar = box.firstElementChild;
+    renderMessageList(box, all, dmCtx(pairId));
+    if(bar) box.prepend(bar);
   };
+  paintNow = paint;
   const doLoad = () => loadOlder(hist, box, ts => fetchOlderDMMessages(pairId, ts), paint);
 
   unsubMsgs = watchDMMessages(pairId, (msgs, meta) => {
@@ -327,7 +374,12 @@ async function send(){
   sending = true;
   if(btn) btn.disabled = true;
   input.value = '';
-  try{ await sendDM(currentPeerUid, text); }
+  const payload = replyTarget ? { type: 'text', text, replyTo: replyTarget.id } : text;
+  try{
+    await sendDM(currentPeerUid, payload);
+    replyTarget = null;
+    paintReplyBar();
+  }
   catch(e){ console.error(e); toast(t('dyn.msg_send_fail'), 'err'); input.value = text; }
   finally{
     sending = false;
@@ -340,6 +392,7 @@ export function initDM(){
   const input = document.getElementById('dmInput');
   input.addEventListener('keydown', e => { if(e.key === 'Enter' && !e.defaultPrevented) send(); });
   attachMentionAutocomplete(input);
+  bindMessagePopClosers();
   /* ⚠ SIRA VACİBDİR (chat.js ilə eyni): `enhanceComposer` girişi yeni
    *   `.cmp-shell` qabığına köçürür, ona görə rich-control düymələri
    *   ONDAN SONRA və alət sətrinə əlavə olunmalıdır. */

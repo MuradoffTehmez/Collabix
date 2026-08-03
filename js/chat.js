@@ -2,15 +2,17 @@
 import {
   state, watchRooms, watchRoomMessages, sendRoomMessage, editRoomMessage, deleteRoomMessage, deleteRoom,
   fetchOlderRoomMessages, fetchRoomPins, setRoomPin,
+  setMessageReaction, setMessageBookmark, forwardMessage,
 } from './store.js';
 import { createHistory, historyBar, loadOlder } from './history.js';
-import { el, clear, fmtTime, emit, isOnline } from './util.js';
+import { el, clear, emit, isOnline } from './util.js';
 import { toast, confirmDialog, showModal, closeModal, emptyState } from './ui.js';
 import { openProfileModal } from './users.js';
-import { mentionify, attachMentionAutocomplete } from './mention.js';
-import { richContent, attachRichControls, renderGroupedMessages } from './richmsg.js';
+import { attachMentionAutocomplete } from './mention.js';
+import { attachRichControls } from './richmsg.js';
+import { renderMessageList, bindMessagePopClosers, previewText } from './chat-message.js';
 import { t } from './i18n.js';
-import { iconTrash, iconEdit } from './icons.js';
+import { iconTrash } from './icons.js';
 import { paintIcons } from './icons.js';
 import {
   conversationRow, buildChatHead, detailsToggleButton, setDetailsOpen,
@@ -217,48 +219,55 @@ function renderRoomList(){
   });
 }
 
-// Mesaj bubble-ı (ad/avatar/vaxt artıq QRUP başında — renderGroupedMessages).
-// Hover-də tam tarix `title` ilə; redaktə/sil alətləri əvvəlki kimi.
-function msgBubble(m){
-  const mine = m.authorUid === state.authUser.uid;
-  const node = el('div', {
-    class: 'msg ' + (mine ? 'out' : 'in') + (m.pinnedAt ? ' pinned' : ''),
-    title: fmtTime(m.createdAt),
-    // Paneldəki axtarış nəticəsindən mesaja tullanmaq üçün lövbər.
-    dataset: { mid: m.id },
-  },
-    richContent(m),
-    m.editedAt ? el('span', { class: 'edited-mark' }, ' ' + t('feed.edited')) : null,
+/* AUDIT/REDİZAYN: `msgBubble` SİLİNDİ — balon, alət paneli, reaksiya sətri və
+ * cavab sitatı artıq `chat-message.js`-dədir və otaq/DM ORTAQ işlədir.
+ * Əvvəl hər iki fayl öz nüsxəsini saxlayırdı və düzəlişlər birində unudulurdu. */
+
+/* ── Cavab zolağı (kompozitorun üstündə) ─────────────────────────────────
+ * Hansı mesaja cavab yazıldığını GÖSTƏRİR — əks halda istifadəçi göndərəndən
+ * sonra kontekstin bağlandığını yalnız nəticədə görərdi. */
+function paintReplyBar(){
+  const host = document.getElementById('chatReplyBar');
+  if(!host) return;
+  clear(host);
+  if(!replyTarget){ host.hidden = true; return; }
+  host.hidden = false;
+  host.append(
+    el('span', { class: 'ic', 'data-icon': 'message', 'data-icon-size': '14' }),
+    el('div', { class: 'rb-body' },
+      el('span', { class: 'rb-who' }, t('msg.replying_to') + ' ' + (replyTarget.authorName || '')),
+      el('span', { class: 'rb-txt' }, previewText(replyTarget)),
+    ),
+    el('button', {
+      type: 'button', class: 'ch-icon-btn', 'aria-label': t('msg.cancel_reply'), title: t('msg.cancel_reply'),
+      onclick: () => { replyTarget = null; paintReplyBar(); },
+    }, el('span', { class: 'ic', 'data-icon': 'x', 'data-icon-size': '14' })),
   );
-  if(mine || state.isAdmin){
-    const tools = el('div', { class: 'msg-tools' });
-    // Sabitləmə OTAQDA yalnız admin üçündür (server də eyni qaydanı tətbiq edir):
-    // sabitlənmiş mesaj bütün otağa görünür → moderasiya əməliyyatıdır.
-    if(state.isAdmin){
-      tools.append(el('button', {
-        type: 'button',
-        title: m.pinnedAt ? t('chat.unpin') : t('chat.pin'),
-        'aria-label': m.pinnedAt ? t('chat.unpin') : t('chat.pin'),
-        'aria-pressed': String(!!m.pinnedAt),
-        onclick: async () => {
-          try{ await setRoomPin(currentRoomId, m.id, !m.pinnedAt); await loadPins(currentRoomId); }
-          catch(e){ toast(e?.message || t('chat.pin_fail'), 'err'); }
-        },
-      }, el('span', { class: 'ic', 'data-icon': 'pin', 'data-icon-size': '13' })));
-    }
-    if(mine && (!m.type || m.type === 'text')) tools.append(el('button', {
-      type: 'button', title: t('a11y.edit'), 'aria-label': t('a11y.edit'),
-      onclick: () => openMsgEdit(m),
-    }, iconEdit()));
-    tools.append(el('button', { type: 'button', title: t('a11y.delete'), 'aria-label': t('a11y.delete'), onclick: async () => {
-      if(await confirmDialog(t('dyn.msg_del_conf'))){
-        try{ await deleteRoomMessage(currentRoomId, m.id); }catch(e){ toast(t('dyn.del_fail'), 'err'); }
-      }
-    } }, iconTrash()));
-    node.append(tools);
-    paintIcons(tools);
-  }
-  return node;
+  paintIcons(host);
+}
+
+/**
+ * Yönləndirmə seçicisi — hədəf söhbəti seçdirir.
+ * ⚠ Fayl köçürməsi SERVERDƏDİR (`forwardMessage`, routes/room.ts): client
+ *   yalnız hədəfi göstərir, açarı özü YAZMIR.
+ */
+function openForwardPicker(m, fromScope, fromId){
+  const box = el('div', { class: 'fwd-list' });
+  rooms.forEach(r => box.append(el('button', {
+    type: 'button', class: 'fwd-item',
+    onclick: async () => {
+      try{
+        await forwardMessage({ fromScope, fromId, toScope: 'room', toId: r.id, messageId: m.id });
+        closeModal(); toast(t('msg.forwarded'));
+      }catch(e){ toast(e?.message || t('dyn.fail'), 'err'); }
+    },
+  }, el('span', { class: 'ic', 'data-icon': 'hash', 'data-icon-size': '15' }), el('span', {}, r.name))));
+  showModal([
+    el('div', { class: 'section-title' }, t('msg.forward_to')),
+    el('p', { class: 'c-report-quote' }, previewText(m)),
+    box,
+  ]);
+  paintIcons(box);
 }
 
 function openMsgEdit(m){
@@ -275,6 +284,60 @@ function openMsgEdit(m){
     } }, t('dyn.save')),
   ]);
 }
+
+/* ══ Mesaj render konteksti ═══════════════════════════════════════════════
+ * Bütün əməliyyat davranışı BURADA yığılır və `chat-message.js`-ə ötürülür.
+ * Modul çat/DM-dən asılı olmadığı üçün fərqlər yalnız bu obyektdədir. */
+let replyTarget = null;      // hansı mesaja cavab yazılır (null = yox)
+
+function chatCtx(){
+  return {
+    uidOf: m => m.authorUid,
+    isMine: m => m.authorUid === state.authUser.uid,
+    userOf: m => state.users.get(m.authorUid),
+    nameOf: m => m.authorName || (state.users.get(m.authorUid) || {}).name || '',
+    onName: uid => openProfileModal(uid),
+    isAdmin: state.isAdmin,
+    // Otaqda sabitləmə YALNIZ admin üçündür — server də bunu tətbiq edir.
+    canPin: state.isAdmin,
+    toast,
+    onReact: async (m, type, on) => {
+      try{ await setMessageReaction('room', currentRoomId, m.id, type, on); }
+      catch(e){ toast(e?.message || t('dyn.fail'), 'err'); }
+    },
+    onReply: m => { replyTarget = m; paintReplyBar(); },
+    onEdit: m => openMsgEdit(m),
+    onDelete: async m => {
+      if(await confirmDialog(t('dyn.msg_del_conf'))){
+        try{ await deleteRoomMessage(currentRoomId, m.id); }catch(e){ toast(t('dyn.del_fail'), 'err'); }
+      }
+    },
+    onPin: async (m, on) => {
+      try{ await setRoomPin(currentRoomId, m.id, on); await loadPins(currentRoomId); }
+      catch(e){ toast(e?.message || t('chat.pin_fail'), 'err'); }
+    },
+    onBookmark: async (m, on) => {
+      try{ await setMessageBookmark('room', currentRoomId, m.id, on); m.bookmarked = on; paintNow(); }
+      catch(e){ toast(e?.message || t('dyn.fail'), 'err'); }
+    },
+    onCopyLink: async m => {
+      // Dərin link: otaq + mesaj id-si. Naviqasiya `#chat` marşrutundadır.
+      const url = `${location.origin}/#chat?room=${encodeURIComponent(currentRoomId)}&m=${encodeURIComponent(m.id)}`;
+      try{ await navigator.clipboard.writeText(url); toast(t('msg.link_copied')); }
+      catch(e){ toast(t('dyn.copy_fail'), 'err'); }
+    },
+    onForward: m => openForwardPicker(m, 'room', currentRoomId),
+    onJump: id => {
+      const node = document.querySelector(`[data-mid="${id}"]`);
+      node?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      node?.classList.add('msg-flash');
+      setTimeout(() => node?.classList.remove('msg-flash'), 1200);
+    },
+  };
+}
+
+/** Cari otağın mesajlarını yenidən çəkir (reaksiya/əlfəcin sonrası). */
+let paintNow = () => {};
 
 /* ══ Sabitlənmiş mesajlar + detallar paneli ═══════════════════════════════
  * `lastMsgs` panelin AXTARIŞI üçün saxlanılır: axtarış yüklənmiş mesajlar
@@ -395,15 +458,14 @@ function selectRoom(roomId, openDetail = false){
     // Panelin lokal axtarışı yüklənmiş mesajlar üzərində işləyir.
     lastMsgs = all;
     if(!all.length){ box.append(emptyState('hash', t('chat.empty_chat'))); return; }
-    renderGroupedMessages(box, all, {
-      uidOf: m => m.authorUid,
-      mineOf: m => m.authorUid === state.authUser.uid,
-      userOf: m => state.users.get(m.authorUid),
-      nameOf: m => m.authorName,
-      onName: uid => openProfileModal(uid),
-      bubbleOf: m => msgBubble(m),
-    });
+    /* ⚠ `historyBar` yuxarıda `box`-a əlavə olunub, `renderMessageList` isə
+     *   `clear(box)` edir — ona görə zolaq render-DƏN SONRA yenidən qoyulur. */
+    const bar = box.firstElementChild;
+    renderMessageList(box, all, chatCtx());
+    if(bar) box.prepend(bar);
   };
+  // Reaksiya/əlfəcin dəyişikliyi serverdən siqnal gözləmədən dərhal çəkilsin.
+  paintNow = paint;
   const doLoad = () => loadOlder(hist, box, ts => fetchOlderRoomMessages(roomId, ts), paint);
 
   unsubMsgs = watchRoomMessages(roomId, (msgs, meta) => {
@@ -466,7 +528,13 @@ async function send(){
   sending = true;
   if(btn) btn.disabled = true;
   input.value = '';
-  try{ await deliver(text); }
+  // Cavab hədəfi varsa `replyTo` payload-a qoşulur (thread, miqrasiya 0047).
+  const payload = replyTarget ? { type: 'text', text, replyTo: replyTarget.id } : text;
+  try{
+    await deliver(payload);
+    replyTarget = null;
+    paintReplyBar();
+  }
   catch(e){ toast(t('dyn.msg_send_fail'), 'err'); input.value = text; }
   finally{
     sending = false;
@@ -480,6 +548,8 @@ export function initChat(){
   input.addEventListener('keydown', e => { if(e.key === 'Enter' && !e.defaultPrevented) send(); });
   input.addEventListener('input', maybeSendTyping);     // "typing…" siqnalı (throttle 2s)
   attachMentionAutocomplete(input);
+  // Mesaj pop-larını (reaksiya seçicisi / "daha çox") bayır klik və Escape bağlayır.
+  bindMessagePopClosers();
   /* ⚠ SIRA VACİBDİR: `attachRichControls` düymələri `input.parentElement`-ə
    *   əlavə edir. `enhanceComposer` girişi yeni `.cmp-shell` qabığına
    *   KÖÇÜRDÜYÜ üçün əvvəlcə qabıq qurulur, sonra rich-control-lar alət

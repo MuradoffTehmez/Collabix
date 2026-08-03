@@ -644,16 +644,38 @@ export async function forwardMessage(c: Ctx) {
  * ⚠ Nəticə formatı UI üçün HAZIR gəlir: `[{type, count, mine}]` — client
  *   sayğac hesablamamalıdır.
  */
+/* 🔴 SQLITE DƏYİŞƏN HƏDDİ — `IN (…)` PARÇALANMALIDIR.
+ *
+ * İlk versiya bütün səhifəni TƏK `IN (?,?,…)` sorğusuna yığırdı və istehsalda
+ * dərhal sındı:
+ *   `D1_ERROR: too many SQL variables at offset 289: SQLITE_ERROR`
+ * Səbəb: mesaj səhifəsi 120 (default) – 200 (maks) elementdir, SQLite-ın
+ * `SQLITE_MAX_VARIABLE_NUMBER` həddi isə 100-dür. Yəni qüsur BOŞ otaqda
+ * görünmür, yalnız real söhbətdə çıxır — məhz ona görə burada açıq yazılır.
+ *
+ * `CHUNK` 90-dır: hər sorğuda əlavə bağlanan parametrlər var (`scope`, əlfəcin
+ * sorğusunda həm də `user_id`), ona görə 100-ə qədər ehtiyat pay saxlanılır. */
+const IN_CHUNK = 90;
+const chunk = <T>(arr: T[], n: number): T[][] => {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n));
+  return out;
+};
+
 async function attachReactions(c: Ctx, scope: 'room' | 'dm', msgs: any[]) {
   if (!msgs.length) return msgs;
   const ids = msgs.map(m => m.id);
-  const ph = ids.map(() => '?').join(',');
-  const [reacts, bms] = await Promise.all([
-    D(c).prepare(`SELECT message_id, type, user_id FROM message_reactions WHERE scope = ? AND message_id IN (${ph})`)
-      .bind(scope, ...ids).all<any>(),
-    D(c).prepare(`SELECT message_id FROM message_bookmarks WHERE scope = ? AND user_id = ? AND message_id IN (${ph})`)
-      .bind(scope, c.user!.id, ...ids).all<any>(),
+  const parts = chunk(ids, IN_CHUNK);
+  const [reactChunks, bmChunks] = await Promise.all([
+    Promise.all(parts.map(p => D(c)
+      .prepare(`SELECT message_id, type, user_id FROM message_reactions WHERE scope = ? AND message_id IN (${p.map(() => '?').join(',')})`)
+      .bind(scope, ...p).all<any>())),
+    Promise.all(parts.map(p => D(c)
+      .prepare(`SELECT message_id FROM message_bookmarks WHERE scope = ? AND user_id = ? AND message_id IN (${p.map(() => '?').join(',')})`)
+      .bind(scope, c.user!.id, ...p).all<any>())),
   ]);
+  const reacts = { results: reactChunks.flatMap(r => r.results) };
+  const bms = { results: bmChunks.flatMap(r => r.results) };
   const byMsg = new Map<string, Map<string, { type: string; count: number; mine: boolean }>>();
   for (const r of reacts.results) {
     if (!byMsg.has(r.message_id)) byMsg.set(r.message_id, new Map());

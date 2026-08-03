@@ -395,6 +395,315 @@
   .msg-tools { opacity: 1; }
 }
 
+/* ══ 5b. MESAJ BALONU — YENİDƏN DİZAYN ═════════════════════════════════════
+ * Balon indi `position: relative` konteynerdir: alət paneli, vaxt və reaksiya
+ * sətri onun daxilində yerləşir. */
+.chat-messages .msg {
+  position: relative;
+  max-width: min(72ch, 100%);
+  padding: 9px 13px 6px;
+  border-radius: 16px;
+  line-height: 1.5;
+  font-size: .89rem;
+  overflow-wrap: anywhere;
+  /* Yumşaq dərinlik — kölgə İNCƏdir, kart kimi ağır deyil. */
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .06);
+}
+
+/* Göndərən / alan fərqi: fon + künc "quyruğu" + mətn rəngi. */
+.chat-messages .msg.in {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 5px;
+}
+
+.chat-messages .msg.out {
+  background: var(--coral);
+  color: var(--on-accent);
+  border: 1px solid transparent;
+  border-bottom-right-radius: 5px;
+}
+
+/* Öz balonundakı ikinci dərəcəli mətnlər aksent fonda oxunmalıdır. */
+.chat-messages .msg.out .msg-time,
+.chat-messages .msg.out .edited-mark { color: var(--on-accent); opacity: .75; }
+
+.chat-messages .msg .msg-body > * + * { margin-top: 6px; }
+
+.msg-time {
+  float: right;
+  margin: 2px 0 0 10px;
+  font-size: .64rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+
+.edited-mark {
+  font-size: .64rem;
+  color: var(--muted);
+  margin-left: 6px;
+}
+
+/* Sabitlənmiş / əlfəcinli — rəng TƏK siqnal deyil, kənar zolağı da var. */
+.chat-messages .msg.pinned { box-shadow: inset 3px 0 0 var(--teal), 0 1px 2px rgba(0,0,0,.06); }
+.chat-messages .msg.bookmarked { box-shadow: inset 3px 0 0 var(--violet), 0 1px 2px rgba(0,0,0,.06); }
+
+/* ── Cavab sitatı ── */
+.msg-reply {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  margin-bottom: 6px;
+  padding: 5px 9px;
+  border: none;
+  border-left: 3px solid currentColor;
+  border-radius: 7px;
+  background: color-mix(in srgb, currentColor 10%, transparent);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.msg-reply.gone {
+  cursor: default;
+  opacity: .7;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+
+.msg-reply .rq-who { font-size: .7rem; font-weight: 700; }
+.msg-reply .rq-txt {
+  font-size: .74rem;
+  opacity: .85;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Reaksiya sətri ── */
+.msg-reacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 7px;
+}
+
+.msg-react {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: .72rem;
+  cursor: pointer;
+  transition: transform .15s ease, background-color .15s ease, border-color .15s ease;
+}
+
+.msg-react .rc { font-size: .82rem; line-height: 1; }
+.msg-react .rn { font-variant-numeric: tabular-nums; font-weight: 600; }
+
+.msg-react:hover { transform: translateY(-1px); }
+
+/* Öz reaksiyam — aksent haşiyə. */
+.msg-react.mine {
+  border-color: var(--coral);
+  background: var(--coral-dim);
+  color: var(--coral);
+}
+
+/* Yeni reaksiya əlavə olunanda qısa "pop" — `transform` (kompozit), layout yox. */
+@keyframes reactPop {
+  0% { transform: scale(.6); opacity: 0; }
+  60% { transform: scale(1.12); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.msg-react { animation: reactPop .18s ease-out; }
+
+/* ── Əməliyyat paneli ── */
+.msg-actions {
+  position: absolute;
+  top: -14px;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .18);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s ease;
+  z-index: 5;
+}
+
+.msg.in .msg-actions { right: 6px; }
+.msg.out .msg-actions { left: 6px; }
+
+.msg:hover .msg-actions,
+.msg:focus-within .msg-actions { opacity: 1; pointer-events: auto; }
+
+@media (hover: none) {
+  .msg-actions { opacity: 1; pointer-events: auto; }
+}
+
+.mx-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 7px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background-color .15s ease, color .15s ease;
+}
+
+.mx-btn:hover { background: var(--bg-hover); color: var(--text); }
+
+.mx-pop-wrap { position: relative; }
+
+/* Reaksiya seçicisi */
+.mx-react-pop {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  right: 0;
+  display: flex;
+  gap: 1px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .24);
+  z-index: 20;
+}
+
+.mx-react-pop[hidden] { display: none; }
+
+.mx-react-opt {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform .15s ease, background-color .15s ease;
+}
+
+.mx-react-opt:hover { transform: scale(1.18); background: var(--bg-hover); }
+.mx-react-opt.on { background: var(--coral-dim); }
+
+/* "Daha çox" menyusu */
+.mx-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 188px;
+  padding: 5px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .26);
+  z-index: 20;
+}
+
+.mx-menu[hidden] { display: none; }
+
+.mx-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: .8rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mx-menu-item:hover { background: var(--bg-hover); }
+.mx-menu-item.danger { color: var(--danger); }
+.mx-menu-item.danger:hover { background: color-mix(in srgb, var(--danger) 12%, transparent); }
+
+@media (prefers-reduced-motion: reduce) {
+  .msg-react,
+  .msg-actions,
+  .mx-react-opt,
+  .mx-btn { animation: none; transition: none; }
+}
+
+/* ── Cavab zolağı (kompozitorun üstündə) ── */
+.reply-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--coral) 6%, var(--surface));
+}
+
+.reply-bar[hidden] { display: none; }
+
+.reply-bar .ic { color: var(--coral); flex-shrink: 0; }
+
+.reply-bar .rb-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.reply-bar .rb-who { font-size: .7rem; font-weight: 700; color: var(--coral); }
+.reply-bar .rb-txt {
+  font-size: .76rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Yönləndirmə seçicisi (modal içində) */
+.fwd-list { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
+
+.fwd-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: .84rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fwd-item:hover { border-color: var(--coral); background: var(--coral-dim); }
+
 /* ══ 6. KOMPOZİTOR ═════════════════════════════════════════════════════════ */
 .chat-input {
   padding: 12px 16px 14px;
