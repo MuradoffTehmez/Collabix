@@ -9,7 +9,7 @@ import { el, clear, avatarNode, tsToMillis, isOnline, lastSeenText, bus, emit } 
 import { toast, confirmDialog, showModal, closeModal, emptyState } from './ui.js';
 import { openProfileModal } from './users.js';
 import { attachMentionAutocomplete } from './mention.js';
-import { attachRichControls } from './richmsg.js';
+import { attachRichControls, sendFiles } from './richmsg.js';
 import { renderMessageList, bindMessagePopClosers, previewText } from './chat-message.js';
 import { t } from './i18n.js';
 import { paintIcons } from './icons.js';
@@ -425,7 +425,12 @@ async function send(){
 export function initDM(){
   document.getElementById('dmSendBtn').addEventListener('click', send);
   const input = document.getElementById('dmInput');
-  input.addEventListener('keydown', e => { if(e.key === 'Enter' && !e.defaultPrevented) send(); });
+  // Bax `chat.js`-dəki eyni şərh: Enter göndərir, Shift+Enter yeni sətir.
+  input.addEventListener('keydown', e => {
+    if(e.key !== 'Enter' || e.shiftKey || e.defaultPrevented) return;
+    e.preventDefault();
+    send();
+  });
   attachMentionAutocomplete(input);
   bindMessagePopClosers();
   /* ⚠ SIRA VACİBDİR (chat.js ilə eyni): `enhanceComposer` girişi yeni
@@ -435,6 +440,10 @@ export function initDM(){
     getContext: () => lastMsgs.slice(-40)
       .map(m => `${(state.users.get(m.fromUid) || {}).name || ''}: ${m.text || ''}`).join('\n'),
     onSummary: s => { aiSummary = s; paintDetails(); setDetailsOpen(document.getElementById('dmWrap'), true); },
+    onFiles: files => sendFiles(files, payload => {
+      if(!currentPeerUid) return Promise.reject(new Error('Söhbət seçilməyib'));
+      return sendDM(currentPeerUid, payload);
+    }),
   });
   attachRichControls(enhanced ? enhanced.tools : input.parentElement, payload => {
     if(!currentPeerUid) return Promise.reject(new Error('Söhbət seçilməyib'));

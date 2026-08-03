@@ -948,6 +948,15 @@ const D = {
   'cd.summary':    { az: 'AI xülasə', en: 'AI summary', ru: 'AI-сводка' },
   'cd.summarize':  { az: 'Söhbəti xülasə et', en: 'Summarize conversation', ru: 'Сделать сводку' },
 
+  /* Kompozitor */
+  'cmp.bold':        { az: 'Qalın (Ctrl+B)', en: 'Bold (Ctrl+B)', ru: 'Жирный (Ctrl+B)' },
+  'cmp.inline_code': { az: 'Kod (Ctrl+E)', en: 'Code (Ctrl+E)', ru: 'Код (Ctrl+E)' },
+  'cmp.link':        { az: 'Link əlavə et', en: 'Insert link', ru: 'Вставить ссылку' },
+  'cmp.preview':     { az: 'Önbaxış (markdown)', en: 'Preview (markdown)', ru: 'Предпросмотр (markdown)' },
+  'cmp.preview_empty': { az: 'Önbaxış üçün mətn yazın.', en: 'Type something to preview.', ru: 'Введите текст для предпросмотра.' },
+  'cmp.drop_here':   { az: 'Faylı bura buraxın', en: 'Drop files here', ru: 'Перетащите файлы сюда' },
+  'cmp.uploading':   { az: 'Yüklənir…', en: 'Uploading…', ru: 'Загрузка…' },
+
   'emoji.open':        { az: 'Emoji əlavə et', en: 'Add emoji', ru: 'Добавить эмодзи' },
   'emoji.cat_smiley':  { az: 'Üzlər', en: 'Smileys', ru: 'Смайлы' },
   'emoji.cat_gesture': { az: 'Jestlər', en: 'Gestures', ru: 'Жесты' },

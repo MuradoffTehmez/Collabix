@@ -40,7 +40,84 @@ function signature(m){
     m.fileUrl || '', m.replyTo || '', rx].join('|');
 }
 
-/* ══ 3. ƏMƏLİYYAT PANELİ ══════════════════════════════════════════════════ */
+/* ══ 3. AÇILAN PANELLƏRİN YERLƏŞDİRİLMƏSİ ════════════════════════════════
+ *
+ * 🔴 NİYƏ `position: fixed` VƏ JS İLƏ HESABLAMA:
+ *    Pop-lar əvvəl `position: absolute` idi və mesaj balonuna nisbətən
+ *    yerləşirdi. İki qüsur verdi (istifadəçi bildirdi):
+ *      1) `.chat-messages` sürüşmə konteyneridir (`overflow: auto`) — o,
+ *         hüdudundan kənara çıxan hər şeyi KƏSİR. Öz mesajlarında alət
+ *         paneli balonun SOL kənarındadır, `right: 0` ilə lövbərlənən 273px-lik
+ *         reaksiya seçicisi sola açılıb konteynerdən çıxırdı və GÖRÜNMÜRDÜ.
+ *      2) Siyahının yuxarı/aşağı kənarındakı mesajlarda pop yuxarı/aşağı
+ *         daşıb yenə kəsilirdi.
+ *    `fixed` pop-u sürüşmə konteynerindən TAMAMİLƏ çıxarır; koordinatlar
+ *    açılış anında hesablanır və ekran hüdudlarına SIXILIR (clamp).
+ *
+ * ⚠ Sürüşəndə pop BAĞLANIR: `fixed` element səhifə ilə birlikdə sürüşmür,
+ *   ona görə açıq qalsaydı lövbərindən "qopardı". Bağlamaq yenidən
+ *   hesablamaqdan sadə və gözləniləndir (Slack/Discord da belə edir).
+ */
+const VIEWPORT_PAD = 8;
+
+function placeFixed(pop, anchor, { prefer = 'top' } = {}){
+  // Ölçmək üçün əvvəlcə görünən olmalıdır, amma titrəməsin deyə şəffaf.
+  pop.style.visibility = 'hidden';
+  pop.style.position = 'fixed';
+  pop.style.left = '0px';
+  pop.style.top = '0px';
+  pop.hidden = false;
+
+  const a = anchor.getBoundingClientRect();
+  const p = pop.getBoundingClientRect();
+
+  // Üfüqi: lövbərin mərkəzinə görə, sonra ekrana sıxılır.
+  let left = a.left + a.width / 2 - p.width / 2;
+  left = Math.max(VIEWPORT_PAD, Math.min(left, window.innerWidth - p.width - VIEWPORT_PAD));
+
+  // Şaquli: üstdə yer yoxdursa ALTA çevrilir (flip).
+  let top = prefer === 'top' ? a.top - p.height - 6 : a.bottom + 6;
+  if(top < VIEWPORT_PAD) top = a.bottom + 6;
+  if(top + p.height > window.innerHeight - VIEWPORT_PAD) top = a.top - p.height - 6;
+  top = Math.max(VIEWPORT_PAD, top);
+
+  pop.style.left = Math.round(left) + 'px';
+  pop.style.top = Math.round(top) + 'px';
+  pop.style.visibility = '';
+}
+
+/** Açıq pop-u bağlayır və mesajın "açıq" vəziyyətini sıfırlayır. */
+function closePop(pop, btn){
+  pop.hidden = true;
+  btn.setAttribute('aria-expanded', 'false');
+  btn.closest('.msg')?.classList.remove('actions-open');
+}
+
+/** Bütün açıq pop-ları bağlayır. */
+function closeAllPops(){
+  document.querySelectorAll('.mx-react-pop, .mx-menu').forEach(p => { p.hidden = true; });
+  document.querySelectorAll('.mx-btn[aria-expanded="true"], .ch-icon-btn[aria-expanded="true"]')
+    .forEach(b => b.setAttribute('aria-expanded', 'false'));
+  document.querySelectorAll('.msg.actions-open').forEach(m => m.classList.remove('actions-open'));
+}
+
+/**
+ * Pop-u açır/bağlayır: yerləşdirmə, digərlərinin bağlanması və
+ * "alət paneli görünən qalsın" vəziyyəti bir yerdə.
+ */
+function togglePop(pop, btn, prefer){
+  const willOpen = pop.hidden;
+  closeAllPops();
+  if(!willOpen) return;
+  placeFixed(pop, btn, { prefer });
+  btn.setAttribute('aria-expanded', 'true');
+  /* 🔴 "TEZ İTİR" QÜSURUNUN DÜZƏLİŞİ: panel yalnız `:hover`/`:focus-within`
+   *    ilə görünürdü, ona görə siçan balondan çıxan kimi — hətta pop AÇIQ
+   *    olanda belə — panel yox olurdu. Bu sinif onu açıq saxlayır. */
+  btn.closest('.msg')?.classList.add('actions-open');
+}
+
+/* ══ 4. ƏMƏLİYYAT PANELİ ══════════════════════════════════════════════════ */
 const actionBtn = (icon, label, onclick, extra = {}) =>
   el('button', {
     type: 'button', class: 'mx-btn', title: label, 'aria-label': label, onclick, ...extra,
@@ -73,13 +150,9 @@ function actionBar(m, ctx){
   const reactWrap = el('div', { class: 'mx-pop-wrap' });
   const reactBtn = actionBtn('smile', t('msg.react'), e => {
     e.stopPropagation();
-    const open = pop.hidden;
-    document.querySelectorAll('.mx-react-pop').forEach(p => { p.hidden = true; });
-    pop.hidden = !open;
-    reactBtn.setAttribute('aria-expanded', String(!pop.hidden));
+    togglePop(pop, reactBtn, 'top');
   }, { 'aria-expanded': 'false', 'aria-haspopup': 'true' });
-  const closePop = () => { pop.hidden = true; reactBtn.setAttribute('aria-expanded', 'false'); };
-  const pop = reactionPicker(m, ctx, closePop);
+  const pop = reactionPicker(m, ctx, () => closePop(pop, reactBtn));
   pop.hidden = true;
   reactWrap.append(reactBtn, pop);
   bar.append(reactWrap);
@@ -95,12 +168,10 @@ function actionBar(m, ctx){
   const menu = el('div', { class: 'mx-menu', role: 'menu', hidden: true });
   const moreBtn = actionBtn('more', t('a11y.more'), e => {
     e.stopPropagation();
-    const open = menu.hidden;
-    document.querySelectorAll('.mx-menu').forEach(p => { p.hidden = true; });
-    menu.hidden = !open;
-    moreBtn.setAttribute('aria-expanded', String(!menu.hidden));
+    // Menyu ALTA üstünlük verir — o, siyahıda adətən aşağı açılır.
+    togglePop(menu, moreBtn, 'bottom');
   }, { 'aria-expanded': 'false', 'aria-haspopup': 'true' });
-  const closeMenu = () => { menu.hidden = true; moreBtn.setAttribute('aria-expanded', 'false'); };
+  const closeMenu = () => closePop(menu, moreBtn);
   const item = (icon, label, fn, cls = '') => el('button', {
     type: 'button', role: 'menuitem', class: 'mx-menu-item' + (cls ? ' ' + cls : ''),
     onclick: () => { closeMenu(); fn(); },
@@ -288,15 +359,17 @@ export function renderMessageList(box, msgs, ctx){
   return shown.length < msgs.length ? msgs.length - shown.length : 0;
 }
 
-/** Bayıra klik hər açıq mesaj pop-unu bağlayır (tək qlobal dinləyici). */
+/** Bayıra klik / Escape / sürüşmə hər açıq mesaj pop-unu bağlayır. */
 let popCloserBound = false;
 export function bindMessagePopClosers(){
   if(popCloserBound) return;
   popCloserBound = true;
-  const closeAll = () => {
-    document.querySelectorAll('.mx-react-pop, .mx-menu').forEach(p => { p.hidden = true; });
-    document.querySelectorAll('.mx-btn[aria-expanded="true"]').forEach(b => b.setAttribute('aria-expanded', 'false'));
-  };
-  document.addEventListener('click', closeAll);
-  document.addEventListener('keydown', e => { if(e.key === 'Escape') closeAll(); });
+  document.addEventListener('click', closeAllPops);
+  document.addEventListener('keydown', e => { if(e.key === 'Escape') closeAllPops(); });
+  /* ⚠ SÜRÜŞMƏDƏ BAĞLANIR: pop `position: fixed`-dir, yəni siyahı ilə birlikdə
+   *   sürüşmür və açıq qalsaydı lövbərindən qoparaq "havada" asılardı.
+   *   `capture: true` — hadisə sürüşən DAXİLİ konteynerdən (`.chat-messages`)
+   *   gəlir və `document`-ə qabarmır (scroll qabarmayan hadisədir). */
+  document.addEventListener('scroll', closeAllPops, { capture: true, passive: true });
+  window.addEventListener('resize', closeAllPops);
 }

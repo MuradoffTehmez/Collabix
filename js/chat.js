@@ -9,7 +9,7 @@ import { el, clear, emit, isOnline } from './util.js';
 import { toast, confirmDialog, showModal, closeModal, emptyState } from './ui.js';
 import { openProfileModal } from './users.js';
 import { attachMentionAutocomplete } from './mention.js';
-import { attachRichControls } from './richmsg.js';
+import { attachRichControls, sendFiles } from './richmsg.js';
 import { renderMessageList, bindMessagePopClosers, previewText } from './chat-message.js';
 import { t } from './i18n.js';
 import { iconTrash } from './icons.js';
@@ -581,7 +581,14 @@ async function send(){
 export function initChat(){
   document.getElementById('chatSendBtn').addEventListener('click', send);
   const input = document.getElementById('chatInput');
-  input.addEventListener('keydown', e => { if(e.key === 'Enter' && !e.defaultPrevented) send(); });
+  /* ⚠ Giriş artıq `<textarea>`-dır: Enter GÖNDƏRİR, Shift+Enter YENİ SƏTİR
+   *   yazır (çat konvensiyası). `preventDefault` olmasa Enter həm göndərər,
+   *   həm də sahəyə sətir keçidi əlavə edərdi. */
+  input.addEventListener('keydown', e => {
+    if(e.key !== 'Enter' || e.shiftKey || e.defaultPrevented) return;
+    e.preventDefault();
+    send();
+  });
   input.addEventListener('input', maybeSendTyping);     // "typing…" siqnalı (throttle 2s)
   attachMentionAutocomplete(input);
   // Mesaj pop-larını (reaksiya seçicisi / "daha çox") bayır klik və Escape bağlayır.
@@ -595,6 +602,8 @@ export function initChat(){
   const enhanced = enhanceComposer(composer, {
     getContext: () => lastMsgs.slice(-40).map(m => `${m.authorName}: ${m.text || ''}`).join('\n'),
     onSummary: s => { aiSummary = s; paintDetails(); setDetailsOpen(document.getElementById('chatWrap'), true); },
+    // Sürüklə-burax və şəklin yapışdırılması — əlavə düyməsi ilə eyni yol.
+    onFiles: files => sendFiles(files, payload => deliver(payload)),
   });
   attachRichControls(enhanced ? enhanced.tools : input.parentElement, payload => deliver(payload));
 }

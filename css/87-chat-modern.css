@@ -643,8 +643,12 @@
 .msg.in .msg-actions { right: 6px; }
 .msg.out .msg-actions { left: 6px; }
 
+/* `.actions-open` — pop AÇIQ olduqda panel görünən qalır.
+   ⚠ Bu olmadan siçan balondan çıxan kimi panel yox olurdu, hətta reaksiya
+     seçicisi açıq olsa belə ("tez itir" qüsuru). */
 .msg:hover .msg-actions,
-.msg:focus-within .msg-actions { opacity: 1; pointer-events: auto; }
+.msg:focus-within .msg-actions,
+.msg.actions-open .msg-actions { opacity: 1; pointer-events: auto; }
 
 @media (hover: none) {
   .msg-actions { opacity: 1; pointer-events: auto; }
@@ -669,11 +673,13 @@
 
 .mx-pop-wrap { position: relative; }
 
-/* Reaksiya seçicisi */
+/* Reaksiya seçicisi.
+   🔴 `position: fixed` — koordinatlar JS-də hesablanır (`placeFixed`).
+      `absolute` olanda `.chat-messages` sürüşmə konteyneri (overflow:auto)
+      pop-u KƏSİRDİ: öz mesajlarında panel balonun solunda olduğu üçün
+      273px-lik seçici konteynerdən çıxıb görünmürdü. */
 .mx-react-pop {
-  position: absolute;
-  bottom: calc(100% + 6px);
-  right: 0;
+  position: fixed;
   display: flex;
   gap: 1px;
   padding: 4px;
@@ -702,11 +708,9 @@
 .mx-react-opt:hover { transform: scale(1.18); background: var(--bg-hover); }
 .mx-react-opt.on { background: var(--coral-dim); }
 
-/* "Daha çox" menyusu */
+/* "Daha çox" menyusu — reaksiya seçicisi ilə eyni səbəbdən `fixed`. */
 .mx-menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
+  position: fixed;
   min-width: 188px;
   padding: 5px;
   border: 1px solid var(--border);
@@ -823,11 +827,83 @@
   box-shadow: 0 0 0 3px var(--coral-dim);
 }
 
-.chat-input .cmp-shell input {
+/* Giriş artıq `<textarea>`-dır (avto-genişlənən, çoxsətirli). */
+.chat-input .cmp-shell textarea {
   border: none;
   background: none;
   padding: 11px 14px 4px;
+  color: var(--text);
+  font: inherit;
+  font-size: .88rem;
+  line-height: 1.5;
+  resize: none;                 /* hündürlüyü `autoGrow` idarə edir */
+  overflow-y: auto;
+  min-height: 0;
+  width: 100%;
 }
+
+/* Markdown önbaxışı — giriş sahəsini əvəz etmir, altında görünür. */
+.cmp-preview {
+  margin: 0 14px 8px;
+  padding: 9px 11px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  font-size: .84rem;
+  line-height: 1.55;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.cmp-preview[hidden] { display: none; }
+.cmp-preview > * + * { margin-top: 6px; }
+
+/* Markdown düymələri qrupu — emoji/AI-dan incə ayırıcı ilə ayrılır. */
+.cmp-md {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding-left: 4px;
+  margin-left: 2px;
+  border-left: 1px solid var(--border);
+}
+
+.chat-input .cmp-btn.on { background: var(--coral-dim); color: var(--coral); }
+
+/* Simvol sayğacı — yalnız hədd yaxınlaşanda mətn qoyulur. */
+.cmp-count {
+  font-family: var(--mono);
+  font-size: .66rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  padding-right: 4px;
+}
+
+/* Hədd aşılıb — rəng TƏK siqnal deyil, rəqəm onsuz da limiti göstərir. */
+.cmp-count.over { color: var(--danger); font-weight: 700; }
+
+/* Sürüklə-burax örtüyü */
+.chat-input { position: relative; }
+
+.cmp-drop {
+  position: absolute;
+  inset: 6px;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 2px dashed var(--coral);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--coral) 12%, var(--surface));
+  color: var(--coral);
+  font-size: .84rem;
+  font-weight: 600;
+  pointer-events: none;         /* `drop` hadisəsi ALTDAKI konteynerə çatsın */
+}
+
+.cmp-drop[hidden] { display: none; }
 
 /* Fokus halqası QUTUYA keçdi (`:focus-within`), giriş özü konturunu itirir —
    amma qlobal `:focus-visible` mühafizəsi `!important`-dir, ona görə burada

@@ -16,6 +16,7 @@ import { toast } from './ui.js';
 import { api } from './api.js';
 import { paintIcons } from './icons.js';
 import { state } from './store.js';
+import { markdownNode } from './markdown.js';
 
 /* ══ 1. VAXT FORMATI ══════════════════════════════════════════════════════
  * Söhbət siyahısında tam tarix çox yer tutur. Messenger konvensiyası:
@@ -173,13 +174,17 @@ export function buildChatHead(host, {
     if(sub) main.append(el('span', { class: 'ch-head-sub' + (subOnline ? ' online' : '') }, sub));
   }
 
-  host.append(
+  /* ⚠ `null`-lar SÜZÜLÜR: `host.append()` NATİV DOM metodudur və `null`-u
+   *   `"null"` SƏTRİNƏ çevirir (`el()` isə onu atır). Otaq başlığında `user`
+   *   olmadığı üçün ekranda hərfi "null" yazısı çıxırdı. */
+  const parts = [
     // Mobil master-detail geri düyməsi (CSS yalnız mobildə göstərir).
     el('button', { class: 'chat-back', type: 'button', 'aria-label': t('chat.back'), onclick: onBack }, '‹'),
     user ? avatarNode(user, 'avatar ch-head-av', subOnline) : null,
     main,
     el('div', { class: 'ch-head-actions' }, actions || detailsBtn || null),
-  );
+  ].filter(Boolean);
+  host.append(...parts);
   paintIcons(host);
 }
 
@@ -354,8 +359,8 @@ function aiPreview(popHost, outText, onApply, close){
  *   - getContext(): son mesajları mətn kimi qaytarır (xülasə üçün)
  *   - onSummary(text): xülasəni panelə ötürür
  */
-export function enhanceComposer(composer, opts = /** @type {{getContext?:()=>string, onSummary?:(s:string)=>void}} */ ({})){
-  const input = composer.querySelector('input');
+export function enhanceComposer(composer, opts = /** @type {{getContext?:()=>string, onSummary?:(s:string)=>void, onFiles?:(f:File[])=>void}} */ ({})){
+  const input = /** @type {HTMLTextAreaElement} */ (composer.querySelector('textarea'));
   const sendBtn = composer.querySelector('button');
   if(!input || !sendBtn || composer.dataset.enhanced === '1') return;
   composer.dataset.enhanced = '1';
@@ -366,7 +371,43 @@ export function enhanceComposer(composer, opts = /** @type {{getContext?:()=>str
   const shell = el('div', { class: 'cmp-shell' });
   const tools = el('div', { class: 'cmp-tools' });
   input.replaceWith(shell);
-  shell.append(input, tools);
+
+  /* ── Markdown önbaxışı ────────────────────────────────────────────────
+   * Göndərmədən ƏVVƏL nəticəni görmək üçün. Giriş sahəsini ƏVƏZ ETMİR,
+   * yanında/altında görünür — istifadəçi yazmağa davam edə bilsin. */
+  const preview = el('div', { class: 'cmp-preview', hidden: true });
+
+  shell.append(input, preview, tools);
+
+  /* ── Avto-genişlənmə ──────────────────────────────────────────────────
+   * ⚠ `height='auto'` ÖNCƏ verilir: `scrollHeight` cari hündürlüklə
+   *   məhdudlaşdığı üçün sıfırlamadan kiçilmə İŞLƏMİR (mətn silinəndə
+   *   sahə böyük qalardı). Yuxarı hədd 40vh — kompozitor ekranı yeməsin. */
+  const MAX_H = () => Math.round(window.innerHeight * 0.4);
+  const autoGrow = () => {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, MAX_H()) + 'px';
+  };
+
+  /* ── Simvol sayğacı ───────────────────────────────────────────────────
+   * Yalnız hədd YAXINLAŞANDA görünür — daim göstərmək səs-küydür
+   * (`composer.js`-dəki eyni qərar). */
+  const CAP = Number(input.getAttribute('maxlength')) || 2000;
+  const counter = el('span', { class: 'cmp-count', 'aria-live': 'polite' });
+  const syncCounter = () => {
+    const n = input.value.length;
+    counter.textContent = n > CAP * 0.8 ? `${n} / ${CAP}` : '';
+    counter.classList.toggle('over', n >= CAP);
+  };
+
+  input.addEventListener('input', () => { autoGrow(); syncCounter(); if(!preview.hidden) paintPreview(); });
+  requestAnimationFrame(autoGrow);
+
+  function paintPreview(){
+    clear(preview);
+    const v = input.value.trim();
+    preview.append(v ? markdownNode(v) : el('span', { class: 'cd-empty' }, t('cmp.preview_empty')));
+  }
 
   sendBtn.classList.add('cmp-send');
   clear(sendBtn);
@@ -459,7 +500,86 @@ export function enhanceComposer(composer, opts = /** @type {{getContext?:()=>str
   });
   aiWrap.append(aiBtn, aiPop);
 
-  tools.append(emojiWrap, aiWrap, el('span', { class: 'spacer' }));
+  /* ── Markdown alət düymələri ──────────────────────────────────────────
+   * Seçili mətni sintaksislə əhatələyir. `composer.js`-dəki eyni yanaşma,
+   * amma burada kompakt ikon dəsti (çat sətri dardır). */
+  const wrapSel = (before, after = before, placeholder = '') => {
+    const s = input.selectionStart, e = input.selectionEnd;
+    const sel = input.value.slice(s, e) || placeholder;
+    input.value = input.value.slice(0, s) + before + sel + after + input.value.slice(e);
+    input.focus();
+    // Seçim əhatələnmiş mətnin İÇİNDƏ qalır ki, yazmağa davam etmək mümkün olsun.
+    input.setSelectionRange(s + before.length, s + before.length + sel.length);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  };
+
+  const mdBtn = (icon, labelKey, fn) => el('button', {
+    type: 'button', class: 'cmp-btn', title: t(labelKey), 'aria-label': t(labelKey), onclick: fn,
+  }, el('span', { class: 'ic', 'data-icon': icon, 'data-icon-size': '15' }));
+
+  const mdWrap = el('div', { class: 'cmp-md' },
+    mdBtn('type', 'cmp.bold', () => wrapSel('**', '**', t('comp.md_bold_ph'))),
+    mdBtn('code', 'cmp.inline_code', () => wrapSel('`', '`', 'code')),
+    mdBtn('link', 'cmp.link', () => wrapSel('[', '](https://)', t('comp.md_link_ph'))),
+  );
+
+  /* Önbaxış açarı — `aria-pressed` vəziyyəti bildirir. */
+  const prevBtn = el('button', {
+    type: 'button', class: 'cmp-btn', 'aria-pressed': 'false',
+    title: t('cmp.preview'), 'aria-label': t('cmp.preview'),
+    onclick: () => {
+      preview.hidden = !preview.hidden;
+      prevBtn.setAttribute('aria-pressed', String(!preview.hidden));
+      prevBtn.classList.toggle('on', !preview.hidden);
+      if(!preview.hidden) paintPreview();
+    },
+  }, el('span', { class: 'ic', 'data-icon': 'eye', 'data-icon-size': '15' }));
+
+  tools.append(emojiWrap, aiWrap, mdWrap, prevBtn, el('span', { class: 'spacer' }), counter);
+
+  /* ── Klaviatura qısayolları ───────────────────────────────────────────
+   * ⚠ Enter/Shift+Enter BURADA idarə OLUNMUR: göndərmə məntiqi `chat.js`/
+   *   `dm.js`-dədir (onlar `send()`-i bilir). Burada yalnız formatlaşdırma
+   *   qısayolları var ki, iki yerdə eyni davranış təkrarlanmasın. */
+  input.addEventListener('keydown', e => {
+    if(!(e.ctrlKey || e.metaKey)) return;
+    const k = e.key.toLowerCase();
+    if(k === 'b'){ e.preventDefault(); wrapSel('**', '**', t('comp.md_bold_ph')); }
+    else if(k === 'i'){ e.preventDefault(); wrapSel('*', '*', t('comp.md_italic_ph')); }
+    else if(k === 'e'){ e.preventDefault(); wrapSel('`', '`', 'code'); }
+  });
+
+  /* ── Şəkli birbaşa YAPIŞDIRMA (paste) ─────────────────────────────────
+   * Ekran şəkli çəkib Ctrl+V etmək çatda ən çox istifadə olunan yoldur. */
+  input.addEventListener('paste', e => {
+    const files = [...(e.clipboardData?.items || [])]
+      .filter(i => i.kind === 'file' && i.type.startsWith('image/'))
+      .map(i => i.getAsFile())
+      .filter(Boolean);
+    if(!files.length) return;
+    e.preventDefault();          // şəkil MƏTN kimi yapışdırılmasın
+    opts.onFiles?.(files);
+  });
+
+  /* ── Drag & Drop ──────────────────────────────────────────────────────
+   * ⚠ `dragenter`/`dragleave` sayğacla izlənilir: uşaq elementlərin üzərindən
+   *   keçəndə `dragleave` yalançı şəkildə işə düşür və örtük titrəyərdi. */
+  let dragDepth = 0;
+  const overlay = el('div', { class: 'cmp-drop', hidden: true },
+    el('span', { class: 'ic', 'data-icon': 'image', 'data-icon-size': '22' }),
+    el('span', {}, t('cmp.drop_here')));
+  composer.append(overlay);
+  const showDrop = on => { overlay.hidden = !on; composer.classList.toggle('dragging', on); };
+
+  composer.addEventListener('dragenter', e => { e.preventDefault(); if(++dragDepth === 1) showDrop(true); });
+  composer.addEventListener('dragover', e => e.preventDefault());
+  composer.addEventListener('dragleave', () => { if(--dragDepth <= 0){ dragDepth = 0; showDrop(false); } });
+  composer.addEventListener('drop', e => {
+    e.preventDefault();
+    dragDepth = 0; showDrop(false);
+    const files = [...(e.dataTransfer?.files || [])];
+    if(files.length) opts.onFiles?.(files);
+  });
 
   /* Bayıra klik / Escape — hər iki pop üçün.
    * ⚠ Escape SƏNƏD səviyyəsindədir: fokus pop-un içində olmaya bilər

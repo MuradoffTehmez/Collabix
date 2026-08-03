@@ -53,20 +53,35 @@ export function richContent(m){
 }
 
 // Input sətrinə 📎 və </> düymələri əlavə edir; send(payload) callback-i ilə göndərir.
-export function attachRichControls(inputRow, send){
-  const fileIn = el('input', { type: 'file', style: 'display:none;',
-    accept: 'image/*,.pdf,.txt,.zip,.json,.csv' });
-  fileIn.addEventListener('change', async e => {
-    const f = e.target.files[0];
-    e.target.value = '';
-    if(!f) return;
-    if(f.size > MSG_FILE_MAX){ toast(t('msg.tooBig'), 'err'); return; }
+/**
+ * Faylları yükləyib mesaj kimi göndərir.
+ *
+ * ⚠ AYRICA İXRAC OLUNUR, çünki eyni məntiq ÜÇ giriş nöqtəsindən çağırılır:
+ *   əlavə düyməsi, sürüklə-burax (drag&drop) və şəklin yapışdırılması (paste).
+ *   Əvvəl o, `attachRichControls`-un içində qapalı idi və digər iki yol üçün
+ *   təkrarlanmalı olardı.
+ * ⚠ Fayllar ARDICIL göndərilir: paralel göndərsək mesaj sırası pozula bilər
+ *   (server `created_at` ilə sıralayır və eyni millisaniyəyə düşə bilərlər).
+ */
+export async function sendFiles(files, send){
+  for(const f of files){
+    if(f.size > MSG_FILE_MAX){ toast(t('msg.tooBig'), 'err'); continue; }
     try{
       const meta = await uploadMessageFile(f);
       await send(meta);
     }catch(err){
       toast(err.message === 'Bu fayl tipi dəstəklənmir' ? t('msg.badType') : (err.message || t('msg.badType')), 'err');
     }
+  }
+}
+
+export function attachRichControls(inputRow, send){
+  const fileIn = el('input', { type: 'file', style: 'display:none;', multiple: true,
+    accept: 'image/*,.pdf,.txt,.zip,.json,.csv' });
+  fileIn.addEventListener('change', async e => {
+    const files = [...e.target.files];
+    e.target.value = '';
+    if(files.length) await sendFiles(files, send);
   });
   /* AUDIT-UI + çat redizaynı: düymələr '📎' və '</>' MƏTN qlifləri idi —
    * emoji ikon kimi (`no-emoji-icons`) və əlçatan ad məzmundan gəlirdi
