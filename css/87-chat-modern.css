@@ -787,15 +787,24 @@
 
 .msg-link-card:hover { background: color-mix(in srgb, currentColor 14%, transparent); }
 
-/* Sabit kvadrat eskiz — yüklənənə qədər yer TUTULUR (CLS sıfır), şəkil
-   gəlmirsə (`error` ilə silinir) kart mətnlə normal qalır. */
+/* Eskiz — yüklənənə qədər yer TUTULUR (CLS sıfır), şəkil gəlmirsə
+   (`error` ilə silinir) kart mətnlə normal qalır.
+   🔴 `object-fit: contain`, `cover` YOX: OG şəkilləri demək olar həmişə
+      1.91:1 BANNERdir (1200×630) və onları dar kvadrata `cover` ilə kəsmək
+      mərkəzdən kiçik bir parça götürür — logo/mətn tanınmaz olurdu
+      (istifadəçi "natamam görünür" dedi).
+      `contain` bütöv şəkli saxlayır; kvadrat logolar da əzilmir.
+   ⚠ Eni 88 → 120: banner nisbətində `contain` ilə çox dar qutu şəkli
+      oxunmaz kiçildərdi. */
 .msg-link-card img {
-  width: 88px;
+  width: 120px;
   flex-shrink: 0;
   align-self: stretch;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
-  background: color-mix(in srgb, currentColor 10%, transparent);
+  padding: 6px;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  border-right: 1px solid color-mix(in srgb, currentColor 14%, transparent);
 }
 
 .lc-body {
@@ -809,7 +818,7 @@
 
 /* Dar ekranda eskiz daha kiçik — mətnə yer qalsın. */
 @media (max-width: 480px) {
-  .msg-link-card img { width: 68px; }
+  .msg-link-card img { width: 86px; }
 }
 
 .lc-site {

@@ -383,7 +383,14 @@ export function postBodyNode(p){
   const body = el('div', { class: 'post-body' });
   if(Array.isArray(p.blocks) && p.blocks.length){
     p.blocks.forEach(b => {
-      if(b.type === 'text' && b.content) body.append(markdownNode(b.content));
+      if(b.type === 'text' && b.content){
+        const tb = markdownNode(b.content);
+        body.append(tb);
+        /* ⚠ ÖNİZLƏMƏ BURADA DA LAZIMDIR: ilk versiyada yalnız aşağıdakı
+         * KÖHNƏ (`p.text`) yoluna qoşulmuşdu, müasir postlar isə BLOK
+         * modelindədir — nəticədə postda önizləmə heç vaxt görünmürdü. */
+        attachLinkPreview(body, tb, firstUrl(b.content));
+      }
       else if(b.type === 'code' && b.content) body.append(codeBlockNode(b.content, b.language));
       else if(b.type === 'image'){
         const g = imageGalleryNode(b.urls, b.caption);
