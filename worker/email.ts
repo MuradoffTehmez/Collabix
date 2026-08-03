@@ -1,7 +1,13 @@
-// Transactional email — Cloudflare Email Sending (TASK-8 / FAZA 2 / Bənd 4).
+// Transactional email — İKİ NƏQLİYYAT dəstəklənir.
 //
-// Binding modeli seçilib (REST API yox): Worker-in içindən API açarı ümumiyyətlə
-// lazım gəlmir, yəni saxlanacaq/sızacaq bir sirr də olmur.
+// 1) Cloudflare Email Sending binding-i (`EMAIL`) — ÜSTÜNLÜKLÜDÜR: Worker-in
+//    içindən API açarı lazım gəlmir, yəni saxlanacaq/sızacaq sirr olmur.
+// 2) Resend HTTP API (`RESEND_API_KEY` secret-i) — binding yoxdursa işə düşür.
+//
+// ⚠ Nəqliyyat 2 sonradan əlavə olundu, çünki binding domenin Cloudflare-də
+//   onboard olunmasını tələb edir; layihənin domeni (`collabix.az`) DNS-də
+//   hazır deyil və bu, parol bərpası zəncirini TAM SÖNDÜRÜRDÜ
+//   (`emailEnabled` false → `magicLink: false` → bərpa modalı heç açılmırdı).
 //
 // GRACEFUL DEGRADATION: `EMAIL` binding-i və ya `EMAIL_FROM` var-ı yoxdursa
 // göndərmə ATLANIR (`skipped: true`) və çağıran tərəf axını normal davam etdirir.
@@ -18,12 +24,46 @@ export interface Mail {
   text: string;   // MƏCBURİ: bəzi client-lər yalnız mətn göstərir + spam balına müsbət təsir edir
 }
 
-export const emailEnabled = (env: Env) => !!env.EMAIL && !!env.EMAIL_FROM;
+// İki nəqliyyatdan BİRİ kifayətdir: Cloudflare binding-i və ya Resend açarı.
+// Hər ikisi üçün göndərən ünvan (`EMAIL_FROM`) məcburidir.
+export const emailEnabled = (env: Env) =>
+  (!!env.EMAIL || !!env.RESEND_API_KEY) && !!env.EMAIL_FROM;
+
+/**
+ * Resend HTTP API ilə göndərmə.
+ *
+ * ⚠ `resend` NPM PAKETİ QƏSDƏN İSTİFADƏ OLUNMUR: o, Node hədəfli SDK-dır və
+ *   Workers bundle-ına lazımsız çəki gətirir. HTTP API tək `fetch` çağırışıdır.
+ *
+ * ⚠ Cavab gövdəsi XƏTADA da oxunur: Resend 4xx-i JSON izahı ilə qaytarır
+ *   (məsələn "domain is not verified"). Onu udsaq, konfiqurasiya səhvi
+ *   "səbəbsiz göndərilmədi" kimi görünərdi.
+ */
+async function sendViaResend(env: Env, mail: Mail): Promise<SendResult> {
+  const from = env.APP_NAME ? `${env.APP_NAME} <${env.EMAIL_FROM}>` : env.EMAIL_FROM!;
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from, to: [mail.to], subject: mail.subject,
+      html: mail.html, text: mail.text,
+    }),
+  });
+  if (res.ok) return { ok: true, skipped: false };
+  const detail = await res.text().catch(() => '');
+  return { ok: false, skipped: false, error: `resend_${res.status}: ${detail.slice(0, 200)}` };
+}
 
 export async function sendEmail(env: Env, mail: Mail): Promise<SendResult> {
   if (!emailEnabled(env)) return { ok: false, skipped: true, error: 'email_not_configured' };
   try {
-    await env.EMAIL!.send({
+    // Binding varsa ona üstünlük verilir — Cloudflare daxilindədir, xarici
+    // şəbəkə sorğusu və üçüncü tərəf asılılığı yoxdur.
+    if (!env.EMAIL) return await sendViaResend(env, mail);
+    await env.EMAIL.send({
       to: mail.to,
       from: { email: env.EMAIL_FROM!, name: env.APP_NAME || 'Collabix' },
       subject: mail.subject,
@@ -224,6 +264,7 @@ const RESET_LANG = {
     cta: 'Yeni şifrə təyin et',
     warn: 'Bərpanı siz istəməmisinizsə, məktubu nəzərə almayın — şifrəniz dəyişməyəcək.',
     revoke: '⚠ Yeni şifrə təyin ediləndə BÜTÜN cihazlardakı sessiyalar bağlanacaq.',
+    codeLbl: 'Və ya bu təsdiq kodunu saytda daxil edin:',
   },
   en: {
     subject: 'Collabix — password reset',
@@ -232,6 +273,7 @@ const RESET_LANG = {
     cta: 'Set a new password',
     warn: 'If you did not request this, ignore this email — your password will not change.',
     revoke: '⚠ Setting a new password signs you out of ALL devices.',
+    codeLbl: 'Or enter this confirmation code on the site:',
   },
   ru: {
     subject: 'Collabix — сброс пароля',
@@ -240,6 +282,7 @@ const RESET_LANG = {
     cta: 'Задать новый пароль',
     warn: 'Если вы не запрашивали сброс, просто проигнорируйте письмо — пароль не изменится.',
     revoke: '⚠ После установки нового пароля все сессии на всех устройствах будут закрыты.',
+    codeLbl: 'Или введите этот код подтверждения на сайте:',
   },
 } as const;
 
@@ -249,9 +292,13 @@ const RESET_LANG = {
  * ⚠ Mətn sessiya ləğvini AÇIQ xəbər verir: istifadəçi digər cihazlarından
  *   çıxarıldığını gözlənilməz sürpriz kimi yox, qəsdli qoruma kimi görməlidir.
  */
-export function passwordResetMail(name: string, url: string, lang: MailLang): Mail {
+export function passwordResetMail(name: string, url: string, code: string, lang: MailLang): Mail {
   const L = RESET_LANG[lang];
   const safeUrl = esc(url);
+  // ⚠ Kod LİNKƏ ƏLAVƏDİR, onu əvəz etmir: bəzi poçt client-ləri linkləri
+  //   yenidən yazır və ya ön-yükləyir (birdəfəlik token vaxtından əvvəl
+  //   yanır). Belə halda istifadəçi kodu əl ilə daxil edə bilir.
+  const safeCode = esc(code);
   return {
     to: '',
     subject: L.subject,
@@ -261,11 +308,13 @@ export function passwordResetMail(name: string, url: string, lang: MailLang): Ma
     <p style="font-size:15px;line-height:1.6;margin:0 0 14px;">${L.hi}, ${esc(name)}</p>
     <p style="font-size:15px;line-height:1.6;margin:0 0 22px;color:#b6bcc9;">${L.body}</p>
     <a href="${safeUrl}" style="display:inline-block;background:#5b8cff;color:#fff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 22px;border-radius:9px;">${L.cta}</a>
+    <p style="font-size:13px;line-height:1.6;margin:24px 0 8px;color:#8b93a3;">${L.codeLbl}</p>
+    <div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:26px;font-weight:700;letter-spacing:6px;color:#fff;background:#0f1115;border:1px solid #262b36;border-radius:10px;padding:14px 18px;text-align:center;margin:0 0 20px;">${safeCode}</div>
     <p style="font-size:13px;line-height:1.6;margin:22px 0 6px;color:#8b93a3;">${L.revoke}</p>
     <p style="font-size:12px;word-break:break-all;margin:0 0 20px;color:#5b8cff;">${safeUrl}</p>
     <p style="font-size:12px;line-height:1.6;margin:0;color:#6e7688;border-top:1px solid #262b36;padding-top:16px;">${L.warn}</p>
   </div>
 </body></html>`,
-    text: `${L.hi}, ${name}\n\n${L.body.replace(/<\/?b>/g, '')}\n\n${url}\n\n${L.revoke}\n${L.warn}`,
+    text: `${L.hi}, ${name}\n\n${L.body.replace(/<\/?b>/g, '')}\n\n${L.codeLbl}\n${code}\n\n${url}\n\n${L.revoke}\n${L.warn}`,
   };
 }

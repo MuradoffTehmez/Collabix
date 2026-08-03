@@ -41,6 +41,24 @@
   "vars": {
     "ENVIRONMENT": "production",
 
+    // Transactional e-poçtun GÖNDƏRƏN ünvanı.
+    //
+    // ⚠ BU DƏYƏR OLMADAN bütün e-poçt axını SÖNÜR: `emailEnabled()` false
+    //   qaytarır → `publicConfig.magicLink` false olur → "Şifrəni unutmusan?"
+    //   modalı ümumiyyətlə açılmır. Qüsur səssizdir, ona görə burada qeyd
+    //   olunur.
+    //
+    // 🔴 `onboarding@resend.dev` RESEND-in TEST GÖNDƏRİCİSİDİR:
+    //    məktub YALNIZ Resend hesabının öz təsdiqlənmiş ünvanına çatır.
+    //    Real istifadəçilərə göndərmək üçün Resend-də domen təsdiqlənməli və
+    //    bu sətir həmin domendəki ünvana dəyişdirilməlidir
+    //    (məsələn "no-reply@collabix.az").
+    //
+    // ⚠ API açarı BURADA DEYİL — sirrdir:
+    //      wrangler secret put RESEND_API_KEY
+    "EMAIL_FROM": "onboarding@resend.dev",
+    "APP_NAME": "Collabix",
+
     // Saytın KANONİK origin-i — domenin TƏK HƏQİQƏT MƏNBƏYİ
     // (AUDIT-TASK-2 / struktur borcu #14).
     //

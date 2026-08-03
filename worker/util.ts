@@ -32,6 +32,14 @@ export interface Env {
     text?: string;
   }): Promise<unknown> };
   EMAIL_FROM?: string;          // vars — göndərən ünvan (domen onboard olunmalıdır)
+  // Resend HTTP API açarı — `wrangler secret put RESEND_API_KEY` ilə qoyulur.
+  //
+  // ⚠ SECRET-dir, `vars` DEYİL: `wrangler.jsonc`-yə yazılsaydı repoda düz
+  //   mətnlə qalardı. Konfiqurasiyada bu açarın adı belə görünməməlidir.
+  // ⚠ `EMAIL` binding-i ilə ALTERNATİVDİR — ikisindən biri kifayətdir
+  //   (bax `emailEnabled`). İkisi də varsa binding üstünlük alır, çünki o,
+  //   Cloudflare daxilindədir və xarici sorğu tələb etmir.
+  RESEND_API_KEY?: string;
   // Arxivləmə (Bənd 12) — D1-də saxlanılan "isti pəncərə", gün. Default 90.
   ARCHIVE_HOT_DAYS?: string;
   // Cloudflare Queues (Bənd 18) — asinxron fan-out.

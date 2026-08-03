@@ -583,9 +583,21 @@ const D = {
     ru: 'Произошла непредвиденная ошибка. Обновите страницу.',
   },
   // AUDIT-TASK-10 / Faza 5/#5 — parol bərpası axını.
-  'reset.title':      { az: '🔑 Şifrəni unutmusan?', en: '🔑 Forgot your password?', ru: '🔑 Забыли пароль?' },
-  'reset.sub':        { az: 'E-poçt ünvanını yaz — sıfırlama linki göndərəcəyik.', en: 'Enter your email — we will send a reset link.', ru: 'Укажите e-mail — мы отправим ссылку для сброса.' },
-  'reset.send':       { az: 'Link göndər', en: 'Send link', ru: 'Отправить ссылку' },
+  // ⚠ `🔑` emojisi SİLİNDİ — başlıqda ikon kimi işlədilirdi (platformadan
+  //   asılı, temaya uyğunlaşmır). İkon indi `data-icon="lock"` ilə verilir.
+  'reset.title':      { az: 'Şifrəni unutmusan?', en: 'Forgot your password?', ru: 'Забыли пароль?' },
+  'reset.sub':        { az: 'Hesabına bağlı e-poçt ünvanını yaz — 6 rəqəmli təsdiq kodu göndərəcəyik.', en: 'Enter the e-mail linked to your account — we will send a 6-digit confirmation code.', ru: 'Укажите e-mail, привязанный к аккаунту — мы отправим 6-значный код подтверждения.' },
+  'reset.send':       { az: 'Kod göndər', en: 'Send code', ru: 'Отправить код' },
+  /* Kod addımı (2026-08-03). Mətn QƏSDƏN "əgər hesab varsa" formasındadır:
+     server hesabın mövcudluğunu açmır (hesab sadalanmasının qarşısı), ona
+     görə UI da bunu iddia etməməlidir. */
+  'reset.code_title': { az: 'Təsdiq kodunu daxil et', en: 'Enter the confirmation code', ru: 'Введите код подтверждения' },
+  'reset.code_sub':   { az: 'Əgər bu ünvanla hesab varsa, 6 rəqəmli kod göndərildi. Kod 15 dəqiqə etibarlıdır.', en: 'If an account exists for that address, a 6-digit code has been sent. It is valid for 15 minutes.', ru: 'Если аккаунт с этим адресом существует, отправлен 6-значный код. Он действует 15 минут.' },
+  'reset.code_lbl':   { az: 'Təsdiq kodu', en: 'Confirmation code', ru: 'Код подтверждения' },
+  'reset.err_code':   { az: '6 rəqəmli kodu daxil et.', en: 'Enter the 6-digit code.', ru: 'Введите 6-значный код.' },
+  'reset.new_pass':   { az: 'Yeni şifrə', en: 'New password', ru: 'Новый пароль' },
+  'reset.new_pass2':  { az: 'Yeni şifrə (təkrar)', en: 'New password (repeat)', ru: 'Новый пароль (повтор)' },
+  'reset.resend':     { az: 'Kod gəlmədi? Yenidən göndər', en: 'No code? Send again', ru: 'Код не пришёл? Отправить снова' },
   'reset.err_email':  { az: 'E-poçt düzgün deyil.', en: 'Invalid email address.', ru: 'Некорректный e-mail.' },
   // ⚠ Mətn QƏSDƏN şərtlidir ("əgər hesab varsa"): server neytral cavab verir
   //   və UI onu təkzib etməməlidir — əks halda hesab sadalanması siqnalı olardı.

@@ -13,6 +13,77 @@ import { showModal, closeModal, toast } from './ui.js';
 import { t } from './i18n.js';
 import { siteConfig, tokenFor, ensureWidget, resetWidget } from './turnstile.js';
 
+// Modal sahələri eyni görünüşü paylaşır. `el()` `style`-ı CSSOM ilə qoyur,
+// yəni CSP inline-stil qadağası buna aid deyil (bax `js/util.js`).
+const FIELD_CSS = 'width:100%; background:var(--surface-2); border:1px solid var(--border); '
+  + 'color:var(--text); padding:10px 12px; border-radius:9px;';
+const modalInput = (attrs) => el('input', { style: FIELD_CSS, ...attrs });
+const labelled = (text, node) => el('div', { style: 'margin-bottom:10px;' },
+  el('label', { style: 'display:block; font-size:.78rem; color:var(--muted); margin-bottom:4px;' }, text),
+  node);
+
+/**
+ * 2-ci addım: e-poçta gələn 6 rəqəmli kod + yeni parol.
+ *
+ * 🔵 NİYƏ KOD, TƏK LİNK DEYİL:
+ *   Bəzi poçt client-ləri və korporativ skanerlər məktubdakı linkləri
+ *   ÖN-YÜKLƏYİR. Bərpa tokeni birdəfəlikdir, ona görə istifadəçi klikləməmiş
+ *   "istifadə olunmuş" sayılır və axın ölür. Kod bu halda yeganə çıxışdır.
+ *   İki yol PARALEL işləyir — link hələ də etibarlıdır.
+ *
+ * ⚠ Server hesabın mövcudluğunu AÇMIR. Kod səhv olanda ümumi xəta qayıdır,
+ *   yəni bu ekran "belə hesab yoxdur" deyə bilməz — bu, qəsdli qorumadır
+ *   (hesab sadalanmasının qarşısını alır).
+ */
+function showCodeStep(email) {
+  const code = modalInput({
+    type: 'text', inputMode: 'numeric', autocomplete: 'one-time-code',
+    maxLength: 6, placeholder: '000000',
+  });
+  // Yalnız rəqəm: istifadəçi kopyalayanda boşluq/defis gələ bilər.
+  code.addEventListener('input', () => { code.value = code.value.replace(/\D/g, '').slice(0, 6); });
+
+  const pass = modalInput({ type: 'password', autocomplete: 'new-password', placeholder: '••••••••' });
+  const again = modalInput({ type: 'password', autocomplete: 'new-password', placeholder: '••••••••' });
+  const status = el('div', { class: 'form-err', role: 'alert' });
+
+  const submit = async e => {
+    if (code.value.length !== 6) { status.textContent = t('reset.err_code'); code.focus(); return; }
+    if (pass.value !== again.value) { status.textContent = t('reset.err_match'); return; }
+    e.target.disabled = true;
+    status.textContent = '';
+    try {
+      await api('/auth/password-reset/confirm', {
+        method: 'POST', body: { email, code: code.value, password: pass.value },
+      });
+      closeModal();
+      toast(t('reset.done'));
+      location.reload();   // server yeni sessiya verdi
+    } catch (ex) {
+      status.textContent = ex.message;
+      e.target.disabled = false;
+    }
+  };
+
+  showModal([
+    el('div', { class: 'section-title' }, t('reset.code_title')),
+    el('p', { style: 'color:var(--muted); font-size:.84rem; line-height:1.6; margin-bottom:14px;' },
+      t('reset.code_sub')),
+    labelled(t('reset.code_lbl'), code),
+    el('p', { style: 'color:var(--warn, #f7bf06); font-size:.8rem; line-height:1.5; margin:2px 0 12px;' },
+      t('reset.revoke_warn')),
+    labelled(t('reset.new_pass'), pass),
+    labelled(t('reset.new_pass2'), again),
+    status,
+    el('button', { class: 'btn-primary', style: 'width:100%;', onclick: submit }, t('reset.save')),
+    // Kod gəlməyibsə axını yenidən başlat (yeni kod köhnəni əvəz edir və
+    // cəhd sayğacını sıfırlayır — bax serverdəki `pwtry:` açarı).
+    el('button', { class: 'link-btn', type: 'button', onclick: () => openPasswordResetModal() },
+      t('reset.resend')),
+  ]);
+  code.focus();
+}
+
 /**
  * "Şifrəni unutmusan?" — e-poçt istəyən modal.
  *
@@ -46,8 +117,11 @@ export async function openPasswordResetModal() {
       // ⚠ Server QƏSDƏN neytral cavab verir (hesab var/yox bilinmir), ona görə
       //   UI da "göndərdik" deyil, "əgər hesab varsa göndərildi" deyir —
       //   əks halda mesajın özü hesab sadalanması siqnalı olardı.
-      closeModal();
-      toast(t('reset.sent'));
+      //
+      // Kod addımına keçirik. Modal BAĞLANMIR: istifadəçi eyni pəncərədə
+      // kodu daxil edir — poçtdan qayıdıb yenidən axını başlatmaq lazım
+      // gəlmir (linki klikləmək də hələ mümkündür, ikisi paraleldir).
+      showCodeStep(email);
     } catch (ex) {
       resetWidget('reset');   // token birdəfəlikdir
       status.textContent = ex.message;

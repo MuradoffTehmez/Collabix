@@ -489,9 +489,33 @@ export async function passwordResetRequest(c: Ctx) {
     { expirationTtl: RESET_TTL },
   );
 
+  /* 6 rəqəmli təsdiq kodu — LİNKƏ ƏLAVƏ, əvəz DEYİL.
+   *
+   * ⚠ NİYƏ LAZIMDIR: bəzi poçt client-ləri və korporativ skanerlər məktubdakı
+   *   linkləri ön-yükləyir; birdəfəlik token istifadəçi klikləməmiş yanır.
+   *   Kod bu halda yeganə çıxış yoludur.
+   *
+   * ⚠ Açar KODUN ÖZÜ deyil, `sha256(email + ':' + kod)`-dur: KV-də düz kod
+   *   saxlanmır və açar yalnız DÜZGÜN e-poçtu bilən tərəfindən hesablana
+   *   bilər — yəni kodu təsadüfi sınayan üçün e-poçt da lazımdır.
+   *
+   * ⚠ `crypto.getRandomValues` işlədilir, `Math.random` YOX: sonuncu
+   *   kriptoqrafik deyil və təxmin edilə bilər.
+   */
+  const buf = new Uint32Array(1);
+  crypto.getRandomValues(buf);
+  const code = String(buf[0] % 1_000_000).padStart(6, '0');
+  await c.env.SESSIONS.put(
+    `pwcode:${await sha256Hex(email + ':' + code)}`,
+    JSON.stringify({ uid: row.id, email }),
+    { expirationTtl: RESET_TTL },
+  );
+  // Kod cəhdlərinin sayğacı sıfırlanır (yeni kod = yeni 5 cəhd).
+  await c.env.SESSIONS.delete(`pwtry:${await sha256Hex(email)}`);
+
   const lang = mailLang(fromJSON<any>(row.settings, {})?.lang);
   const url = `${c.url.origin}/?reset=${token}`;
-  const mail = passwordResetMail(row.name || '', url, lang);
+  const mail = passwordResetMail(row.name || '', url, code, lang);
   await sendEmail(c.env, { ...mail, to: email });
 
   await logSecurityEvent(c.env, c.req, {
@@ -511,24 +535,61 @@ export async function passwordResetRequest(c: Ctx) {
 export async function passwordResetConfirm(c: Ctx) {
   const b = await readJson(c.req);
   const token = String(b.token || '');
-  if (!token) return badReq('Token yoxdur.');
+  const email = String(b.email || '').trim().toLowerCase().slice(0, 160);
+  const code = String(b.code || '').replace(/\D/g, '');
+
+  /* İKİ GİRİŞ YOLU: linkdəki `token` VƏ YA `email` + 6 rəqəmli `code`.
+   * Hər ikisi eyni nəticəyə gətirir; aşağıdakı məntiq dəyişmir. */
+  if (!token && !(email && code.length === 6)) return badReq('Token və ya kod yoxdur.');
 
   const pw = checkPasswordStrength(b.password);
   if (!pw.ok) return badReq(pw.error!);
 
-  const key = `pwreset:${await sha256Hex(token)}`;
+  /* 🔴 KOD YOLU ÜÇÜN BRUTE-FORCE QORUMASI.
+   *   6 rəqəm = 1 000 000 variant. Marşrutun öz `rl: 'auth'` limiti ilə
+   *   yanaşı, HƏR E-POÇT üçün ayrıca cəhd sayğacı saxlanılır: 5 səhv
+   *   cəhddən sonra kod yolu bağlanır (link yolu təsirlənmir).
+   *   Sayğac yeni kod istənəndə sıfırlanır.
+   * ⚠ Sayğac ARTIRILIR, sonra yoxlanılır — əks halda paralel sorğular
+   *   həddi keçə bilərdi. */
+  let tryKey = '';
+  if (!token) {
+    tryKey = `pwtry:${await sha256Hex(email)}`;
+    const tries = parseInt((await c.env.SESSIONS.get(tryKey)) || '0', 10) + 1;
+    await c.env.SESSIONS.put(tryKey, String(tries), { expirationTtl: RESET_TTL });
+    if (tries > 5) {
+      await logSecurityEvent(c.env, c.req, {
+        type: 'login_failed', severity: 'warning',
+        meta: { flow: 'password_reset', reason: 'code_attempts_exceeded' },
+      });
+      return err('Çox sayda səhv cəhd. Yeni kod istəyin.', 429, 'reset_locked');
+    }
+  }
+
+  // ⚠ Kod açarı `sha256(email + ':' + kod)`-dur — bax `passwordResetRequest`.
+  const key = token
+    ? `pwreset:${await sha256Hex(token)}`
+    : `pwcode:${await sha256Hex(email + ':' + code)}`;
   const raw = await c.env.SESSIONS.get(key);
   if (!raw) {
     await logSecurityEvent(c.env, c.req, {
       type: 'login_failed', severity: 'warning',
       meta: { flow: 'password_reset', reason: 'invalid_or_used' },
     });
-    return err('Bərpa linki etibarsız və ya vaxtı bitib.', 400, 'reset_invalid');
+    return err(
+      token ? 'Bərpa linki etibarsız və ya vaxtı bitib.' : 'Kod səhvdir və ya vaxtı bitib.',
+      400, 'reset_invalid',
+    );
   }
   // BİRDƏFƏLİK — oxunan kimi silinir (magic link ilə eyni qayda).
   await c.env.SESSIONS.delete(key);
+  // Uğurlu təsdiqdən sonra cəhd sayğacı da təmizlənir.
+  if (tryKey) await c.env.SESSIONS.delete(tryKey);
 
-  const { uid, email } = JSON.parse(raw) as { uid: string; email: string };
+  // ⚠ `storedEmail` — yuxarıdakı `email` (istifadəçinin YAZDIĞI) ilə
+  //   qarışdırılmamalıdır. Bazaya yazılan həmişə KV-də saxlanılan, yəni
+  //   sorğu anında DOĞRULANMIŞ ünvandır.
+  const { uid, email: storedEmail } = JSON.parse(raw) as { uid: string; email: string };
   const row = await D(c).prepare('SELECT id, blocked FROM users WHERE id = ?')
     .bind(uid).first<any>();
   if (!row || row.blocked) return err('Hesab əlçatmazdır.', 403, 'account_blocked');
@@ -537,7 +598,7 @@ export async function passwordResetConfirm(c: Ctx) {
   await D(c).prepare(
     `UPDATE users SET pass_hash = ?, pass_salt = ?, pass_iter = ?,
             must_reset_password = 0, email = ?, email_verified = 1 WHERE id = ?`,
-  ).bind(hash, salt, iterations, email, uid).run();
+  ).bind(hash, salt, iterations, storedEmail, uid).run();
 
   await revokeAllSessions(c.env, uid, 'password');
   c.ctx.waitUntil(kickEverywhere(c.env, uid));
