@@ -410,6 +410,33 @@ export function enhanceComposer(composer, opts = /** @type {{getContext?:()=>str
   input.addEventListener('input', () => { autoGrow(); syncCounter(); if(!preview.hidden) paintPreview(); });
   requestAnimationFrame(autoGrow);
 
+  /* 🔴 PROQRAMLA DƏYİŞİKLİYİ DƏ TUTMAQ (istifadəçi bildirdi: "uzun mesaj
+   * yazandan sonra ölçü düzəlmir").
+   *
+   * Göndərmə kodu `input.value = ''` yazır. Bu, `input` hadisəsini
+   * TETİKLƏMİR (yalnız istifadəçi girişi tetikləyir), ona görə `autoGrow`
+   * işə düşmür və sahə böyük qalırdı; simvol sayğacı da köhnə rəqəmi
+   * göstərirdi.
+   *
+   * Həlli çağıran tərəfə (chat.js/dm.js) buraxmaq olardı, amma o zaman HƏR
+   * yeni göndərmə yolu bunu xatırlamalı olardı. Onun əvəzinə `value`
+   * setter-i BURADA sarınır — sahə hansı yolla dəyişilsə də ölçü sinxron
+   * qalır. */
+  const proto = Object.getPrototypeOf(input);
+  const desc = Object.getOwnPropertyDescriptor(proto, 'value');
+  if(desc && desc.set){
+    Object.defineProperty(input, 'value', {
+      configurable: true,
+      get(){ return desc.get.call(this); },
+      set(v){
+        desc.set.call(this, v);
+        autoGrow();
+        syncCounter();
+        if(!preview.hidden) paintPreview();
+      },
+    });
+  }
+
   function paintPreview(){
     clear(preview);
     const v = input.value.trim();
@@ -695,36 +722,73 @@ export function renderDetailsPanel(panel, wrap, {
     body,
   );
 
-  /* ── Axtarış ── */
+  /* ── Axtarış + tip filtrləri ──────────────────────────────────────────
+   * ⚠ Filtr mesajın TİPİNƏ görədir (`type`), mətnə görə yox. "Link" istisnadır:
+   *   ayrıca tip yoxdur, ona görə mətndə URL naxışı axtarılır.
+   * ⚠ Filtr seçiləndə axtarış sorğusu MƏCBURİ DEYİL: "bütün şəkillər" kimi
+   *   sırf gözdən keçirmə ssenarisi ən çox istifadə olunandır. */
+  const FILTERS = [
+    { key: 'all', label: 'cd.f_all' },
+    { key: 'text', label: 'cd.f_msg' },
+    { key: 'image', label: 'cd.f_img' },
+    { key: 'file', label: 'cd.f_file' },
+    { key: 'code', label: 'cd.f_code' },
+    { key: 'link', label: 'cd.f_link' },
+  ];
+  let activeFilter = 'all';
+
   const hits = el('div');
   const search = el('input', {
     class: 'cd-search', type: 'search', placeholder: t('cd.search_ph'), 'aria-label': t('cd.search_ph'),
   });
-  search.addEventListener('input', () => {
+
+  const filterRow = el('div', { class: 'cd-filters', role: 'group', 'aria-label': t('cd.filters') });
+  FILTERS.forEach(f => filterRow.append(el('button', {
+    type: 'button', class: 'cd-chip' + (f.key === 'all' ? ' on' : ''),
+    'aria-pressed': String(f.key === 'all'),
+    onclick: e => {
+      activeFilter = f.key;
+      filterRow.querySelectorAll('.cd-chip').forEach(b => {
+        b.classList.remove('on'); b.setAttribute('aria-pressed', 'false');
+      });
+      e.currentTarget.classList.add('on');
+      e.currentTarget.setAttribute('aria-pressed', 'true');
+      runSearch();
+    },
+  }, t(f.label))));
+
+  function runSearch(){
     const q = search.value.trim();
     clear(hits);
-    if(q.length < 2) return;                   // 1 hərf bütün söhbəti qaytarardı
-    const found = onSearch ? onSearch(q) : [];
+    // Filtr "hamısı"dırsa ən azı 2 hərf lazımdır — əks halda bütün söhbət qayıdar.
+    if(activeFilter === 'all' && q.length < 2) return;
+    const found = (onSearch ? onSearch(q, activeFilter) : []);
     if(!found.length){ hits.append(el('div', { class: 'cd-empty' }, t('cd.no_hits'))); return; }
-    found.slice(0, 30).forEach(h => {
+    found.slice(0, 40).forEach(h => {
       const btn = el('button', { class: 'cd-hit', type: 'button', onclick: () => onJump?.(h) });
-      btn.append(el('span', { class: 'who' }, h.who || ''));
+      btn.append(el('span', { class: 'who' },
+        el('span', { class: 'cd-hit-kind', 'data-icon': kindIcon(h.kind), 'data-icon-size': '11' }),
+        h.who || ''));
       const txt = el('span', { class: 'txt' });
-      // Uyğun hissə <mark> ilə işarələnir — `textContent` ilə qurulur,
-      // yəni istifadəçi mətni HEÇ VAXT HTML kimi şərh olunmur.
-      const i = (h.text || '').toLowerCase().indexOf(q.toLowerCase());
+      /* Uyğun hissə <mark> ilə işarələnir — `textContent` ilə qurulur, yəni
+       * istifadəçi mətni HEÇ VAXT HTML kimi şərh olunmur.
+       * ⚠ Sorğu boş ola bilər (yalnız filtr seçilib) → vurğulama atlanır. */
+      const i = q ? (h.text || '').toLowerCase().indexOf(q.toLowerCase()) : -1;
       if(i >= 0){
         txt.append(h.text.slice(0, i), el('mark', {}, h.text.slice(i, i + q.length)), h.text.slice(i + q.length));
       }else{ txt.textContent = h.text || ''; }
       btn.append(txt);
       hits.append(btn);
     });
-  });
+    paintIcons(hits);
+  }
+
+  search.addEventListener('input', runSearch);
 
   body.append(el('div', { class: 'cd-section' },
     el('div', { class: 'cd-section-title' },
       el('span', { class: 'ic', 'data-icon': 'search', 'data-icon-size': '13' }), t('cd.search')),
-    search, hits,
+    search, filterRow, hits,
   ));
 
   /* ── İştirakçılar ── */
@@ -780,6 +844,22 @@ export function renderDetailsPanel(panel, wrap, {
   ));
 
   paintIcons(panel);
+}
+
+/** Axtarış nəticəsində tipi bildirən ikon — rəng tək siqnal olmasın. */
+const kindIcon = k => ({ image: 'image', file: 'paperclip', code: 'code', link: 'link' })[k] || 'message';
+
+/**
+ * Mesajı axtarış filtri ilə uzlaşdırır.
+ * ⚠ AYRICA İXRAC OLUNUR ki, `chat.js` və `dm.js` eyni məntiqi təkrarlamasın.
+ */
+export const LINK_RE = /https?:\/\/\S+/i;
+export function matchesFilter(m, filter){
+  if(filter === 'all') return true;
+  if(filter === 'link') return LINK_RE.test(m.text || '');
+  // `type` boş olanda mesaj mətndir (sxem default-u).
+  const type = m.type || 'text';
+  return type === filter;
 }
 
 /** Mesajın siyahı/panel önbaxışı — tipdən asılı qısa mətn. */

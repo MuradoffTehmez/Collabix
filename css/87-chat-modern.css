@@ -1051,8 +1051,13 @@
   padding: 12px 16px 14px;
   border-top: 1px solid var(--border);
   background: var(--surface);
-  gap: 8px;
+  gap: 10px;
   align-items: flex-end;
+  /* Çox geniş ekranda kompozitor bütün eni tutmasın — oxu xətti kimi
+     mesajlar da mərkəzləşir (`line-length-control`). */
+  max-width: 1100px;
+  width: 100%;
+  margin: 0 auto;
 }
 
 /* Giriş sahəsi + alət sətri bir "qutu" kimi görünür. */
@@ -1076,15 +1081,20 @@
 .chat-input .cmp-shell textarea {
   border: none;
   background: none;
-  padding: 11px 14px 4px;
+  padding: 10px 14px 2px;
   color: var(--text);
   font: inherit;
   font-size: .88rem;
   line-height: 1.5;
   resize: none;                 /* hündürlüyü `autoGrow` idarə edir */
   overflow-y: auto;
-  min-height: 0;
   width: 100%;
+  /* ⚠ ÖLÇÜ HƏDLƏRİ (istifadəçi istəyi):
+   *   min — bir sətirlik sahə çox yastı görünürdü (barmaqla toxunmaq da çətin);
+   *   max — `autoGrow` JS-də 40vh-ə qədər böyüdür, amma CSS həddi ehtiyat
+   *         qapıdır: JS işləməsə belə kompozitor ekranı yeməsin. */
+  min-height: 38px;
+  max-height: 40vh;
 }
 
 /* Markdown önbaxışı — giriş sahəsini əvəz etmir, altında görünür. */
@@ -1150,11 +1160,23 @@
 
 .cmp-drop[hidden] { display: none; }
 
-/* Fokus halqası QUTUYA keçdi (`:focus-within`), giriş özü konturunu itirir —
-   amma qlobal `:focus-visible` mühafizəsi `!important`-dir, ona görə burada
-   açıq şəkildə söndürülmür: iki halqa görünməsin deyə giriş `outline-offset`
-   ilə qutunun içinə yığılır. */
-.chat-input .cmp-shell input:focus-visible { outline-offset: -2px; }
+/* 🔴 İKİQAT HALQA DÜZƏLİŞİ (istifadəçi bildirdi).
+ *
+ * `65-a11y-seo.css` qlobal `:focus-visible { outline: 2px … !important }`
+ * mühafizəsi qoyur. Kompozitorda fokus göstəricisi ARTIQ QABIQDADIR
+ * (`.cmp-shell:focus-within` → 2px aksent sərhəd + 3px halqa), ona görə
+ * sahənin ÖZ konturu ikinci, içəridə "qutu" kimi görünürdü.
+ *
+ * ⚠ Əvvəlki düzəliş `input:focus-visible` seçicisi ilə idi; sahə `<textarea>`-ya
+ *   keçəndə seçici uyğun gəlməyi dayandırdı və qüsur qayıtdı.
+ * ⚠ `!important` MƏCBURDUR — rəqib qayda da `!important`-dir.
+ * ⚠ ƏLÇATANLIQ POZULMUR: fokus hələ də AYDIN görünür, sadəcə göstərici
+ *   qabığa aiddir (WCAG 2.4.11 elementin ÖZÜNÜN konturunu tələb etmir,
+ *   fokusun görünən olmasını tələb edir). */
+.chat-input .cmp-shell textarea:focus,
+.chat-input .cmp-shell textarea:focus-visible {
+  outline: none !important;
+}
 
 .cmp-tools {
   display: flex;

@@ -16,7 +16,10 @@ import { paintIcons } from './icons.js';
 import {
   conversationRow, buildChatHead, detailsToggleButton, setDetailsOpen,
   enhanceComposer, renderDetailsPanel, shortTime, askAI, headerActions, bindListKeyboardNav,
-  pinBanner,
+  // ⚠ `previewText` BURADAN alınmır — o, `chat-message.js`-dədir (yuxarıda
+  //   idxal olunub). Buradakı analoq `previewOf`-dur; ikisini qarışdırmaq
+  //   təkrar bəyan xətası verirdi.
+  pinBanner, matchesFilter,
 } from './chat-ui.js';
 
 let threads = [];
@@ -287,9 +290,16 @@ function paintDetails(){
     people,
     pins,
     summary: aiSummary,
-    onSearch: q => lastMsgs
-      .filter(m => (m.text || '').toLowerCase().includes(q.toLowerCase()))
-      .map(m => ({ who: (state.users.get(m.fromUid) || {}).name || '', text: m.text, id: m.id })),
+    // Bax `chat.js`-dəki eyni şərh: həm mətn, həm tip üzrə süzülür.
+    onSearch: (q, filter) => lastMsgs
+      .filter(m => matchesFilter(m, filter))
+      .filter(m => !q || (m.text || '').toLowerCase().includes(q.toLowerCase())
+        || (m.fileName || '').toLowerCase().includes(q.toLowerCase()))
+      .map(m => ({
+        who: (state.users.get(m.fromUid) || {}).name || '', id: m.id,
+        kind: m.type || 'text',
+        text: m.text || previewText(m),
+      })),
     onJump: h => {
       const node = document.querySelector(`[data-mid="${h.id}"]`);
       node?.scrollIntoView({ block: 'center', behavior: 'smooth' });

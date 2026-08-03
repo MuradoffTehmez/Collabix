@@ -18,7 +18,8 @@ import { paintIcons } from './icons.js';
 import {
   conversationRow, buildChatHead, detailsToggleButton, setDetailsOpen,
   enhanceComposer, renderDetailsPanel, askAI, headerActions, bindListKeyboardNav,
-  pinBanner,
+  // `previewText` `chat-message.js`-dədir (bax dm.js-dəki eyni qeyd).
+  pinBanner, matchesFilter,
 } from './chat-ui.js';
 
 let rooms = [];
@@ -434,9 +435,19 @@ function paintDetails(){
     people,
     pins,
     summary: aiSummary,
-    onSearch: q => lastMsgs
-      .filter(m => (m.text || '').toLowerCase().includes(q.toLowerCase()))
-      .map(m => ({ who: m.authorName, text: m.text, id: m.id })),
+    /* Axtarış LOKAL-dır (yüklənmiş mesajlar üzərində) və həm mətnə, həm
+     * TİPƏ görə süzür. Şəkil/fayl mesajlarında `text` boş olur, ona görə
+     * onlar üçün önbaxış mətni `previewText` ilə qurulur — əks halda
+     * nəticə sətri boş görünərdi. */
+    onSearch: (q, filter) => lastMsgs
+      .filter(m => matchesFilter(m, filter))
+      .filter(m => !q || (m.text || '').toLowerCase().includes(q.toLowerCase())
+        || (m.fileName || '').toLowerCase().includes(q.toLowerCase()))
+      .map(m => ({
+        who: m.authorName, id: m.id,
+        kind: m.type || 'text',
+        text: m.text || previewText(m),
+      })),
     onJump: h => {
       const node = document.querySelector(`[data-mid="${h.id}"]`);
       node?.scrollIntoView({ block: 'center', behavior: 'smooth' });
