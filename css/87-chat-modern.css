@@ -459,6 +459,28 @@
   background: var(--coral);
 }
 
+/* Seqment göstəricisi — hansı sabitlənmişdə olduğun BİR BAXIŞDA görünür.
+   `pin-bar-accent`-i əvəz edir (ikisi eyni yeri tutur). */
+.pin-bar-seg {
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pin-bar-seg .pseg {
+  flex: 1;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--coral) 30%, transparent);
+  transition: background-color .15s ease;
+}
+
+.pin-bar-seg .pseg.on { background: var(--coral); }
+
 .pin-bar-ic { color: var(--coral); flex-shrink: 0; display: inline-flex; }
 
 .pin-bar-body {
@@ -489,19 +511,21 @@
 /* Sayğac — birdən çox sabitlənmiş varsa paneli açır. */
 .pin-bar-count {
   flex-shrink: 0;
-  min-width: 22px;
-  height: 22px;
-  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
   border: none;
-  border-radius: 999px;
-  background: var(--coral);
-  color: var(--on-accent);
-  font: inherit;
-  font-size: .68rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
+  border-radius: 8px;
+  background: none;
+  color: var(--coral);
   cursor: pointer;
+  transition: background-color .15s ease;
 }
+
+.pin-bar-count:hover { background: color-mix(in srgb, var(--coral) 20%, transparent); }
 
 /* ══ 5. MESAJ SAHƏSİ ═══════════════════════════════════════════════════════ */
 .chat-messages {

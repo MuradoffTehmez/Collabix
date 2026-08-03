@@ -15,7 +15,8 @@ import { t } from './i18n.js';
 import { paintIcons } from './icons.js';
 import {
   conversationRow, buildChatHead, detailsToggleButton, setDetailsOpen,
-  enhanceComposer, renderDetailsPanel, previewOf, shortTime, askAI, headerActions, bindListKeyboardNav,
+  enhanceComposer, renderDetailsPanel, shortTime, askAI, headerActions, bindListKeyboardNav,
+  pinBanner,
 } from './chat-ui.js';
 
 let threads = [];
@@ -240,6 +241,8 @@ function announceLatest(msgs){
 let pins = [];
 let aiSummary = null;
 let lastMsgs = [];
+// Banner-də göstərilən sabitlənmişin indeksi (söhbət dəyişəndə sıfırlanır).
+let pinIndex = 0;
 
 async function loadPins(pairId){
   try{
@@ -258,31 +261,17 @@ function paintPinStrip(){
   clear(strip);
   if(!pins.length){ strip.hidden = true; return; }
   strip.hidden = false;
-  // Bax `chat.js`-dəki eyni şərh: bütöv zolaq kliklənir və mesaja tullandırır.
   const pairId = pairIdFor(state.authUser.uid, currentPeerUid);
-  const jump = () => dmCtx(pairId).onJump?.(pins[0].id);
-  const bar = el('div', {
-    class: 'pin-bar', role: 'button', tabIndex: 0,
-    'aria-label': t('chat.jump_pinned'),
-    onclick: jump,
-    onkeydown: e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); jump(); } },
-  },
-    el('span', { class: 'pin-bar-accent' }),
-    el('span', { class: 'ic pin-bar-ic', 'data-icon': 'pin', 'data-icon-size': '15' }),
-    el('span', { class: 'pin-bar-body' },
-      el('span', { class: 'pin-bar-label' }, t('chat.pinned_one')),
-      el('span', { class: 'pin-text' }, previewOf(pins[0])),
-    ),
-  );
-  if(pins.length > 1){
-    bar.append(el('button', {
-      type: 'button', class: 'pin-bar-count',
-      'aria-label': t('chat.pinned_count').replace('{n}', String(pins.length)),
-      onclick: e => { e.stopPropagation(); setDetailsOpen(document.getElementById('dmWrap'), true); },
-    }, String(pins.length)));
-  }
-  strip.append(bar);
-  paintIcons(strip);
+  strip.append(pinBanner({
+    pins,
+    index: pinIndex,
+    onJump: (cur) => {
+      dmCtx(pairId).onJump?.(cur.id);
+      pinIndex += 1;                 // növbəti sabitlənmişə keç
+      paintPinStrip();
+    },
+    onShowAll: () => setDetailsOpen(document.getElementById('dmWrap'), true),
+  }));
 }
 
 function paintDetails(){
@@ -374,6 +363,7 @@ function selectPeer(uid, openDetail = false){  // openDetail: yalnız klikdən (
   });
   // Söhbət dəyişdi → əvvəlkinin sabitlənmişləri/xülasəsi qalmamalıdır.
   pins = [];
+  pinIndex = 0;
   aiSummary = null;
   loadPins(pairId);
   if(openDetail) document.querySelector('#page-dm .chat-wrap')?.classList.add('detail-open');

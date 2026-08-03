@@ -603,6 +603,69 @@ export function enhanceComposer(composer, opts = /** @type {{getContext?:()=>str
   return { tools, input, sendBtn };
 }
 
+/* ══ 5b. SABİTLƏNMİŞ BANNER-İ ═════════════════════════════════════════════
+ *
+ * ⚠ PAYLAŞILAN FUNKSİYADIR: `chat.js` və `dm.js` əvvəl öz nüsxələrini
+ *   saxlayırdı. Bu fayl boyu təkrarlanan dərs budur — iki nüsxə vaxtla
+ *   ayrılır və düzəliş birində unudulur (audit bunu emoji ikonlar və
+ *   tərcümə olunmayan `title`-lar şəklində tapmışdı).
+ *
+ * NAVİQASİYA MODELİ (Telegram-dakı kimi):
+ *   Banner HƏMİŞƏ BİR sabitlənmiş mesajı göstərir. Klik → həmin mesaja
+ *   tullanır və NÖVBƏTİSİNƏ keçir (sona çatanda əvvələ dövr edir).
+ *   Sağdakı sayğac isə paneldəki tam siyahını açır.
+ * ⚠ Sıra köhnədən yeniyə: server `pinned_at DESC` qaytarır, ona görə massiv
+ *   TƏRSİNƏ gəzilir — istifadəçi ən köhnə sabitlənmişdən başlayıb irəli
+ *   gedir, bu, oxu sırası ilə üst-üstə düşür.
+ */
+export function pinBanner({ pins, index, onJump, onShowAll }){
+  const total = pins.length;
+  const i = ((index % total) + total) % total;      // mənfi/aşan indeksi normallaşdırır
+  const cur = pins[total - 1 - i];                  // köhnədən yeniyə
+  const jump = () => onJump(cur, i);
+
+  const bar = el('div', {
+    class: 'pin-bar', role: 'button', tabIndex: 0,
+    'aria-label': total > 1
+      ? t('chat.jump_pinned_n').replace('{i}', String(i + 1)).replace('{n}', String(total))
+      : t('chat.jump_pinned'),
+    onclick: jump,
+    onkeydown: e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); jump(); } },
+  });
+
+  /* Çoxlu sabitlənmiş varsa sol tərəfdə seqment göstəricisi olur — hansında
+   * olduğun BİR BAXIŞDA görünür (rəqəm oxumaq lazım gəlmir).
+   * ⚠ 6-dan çox olduqda seqmentlər oxunmaz nazikləşir → yalnız rəqəm qalır. */
+  if(total > 1 && total <= 6){
+    const seg = el('span', { class: 'pin-bar-seg', 'aria-hidden': 'true' });
+    for(let k = 0; k < total; k++) seg.append(el('span', { class: 'pseg' + (k === i ? ' on' : '') }));
+    bar.append(seg);
+  }else{
+    bar.append(el('span', { class: 'pin-bar-accent' }));
+  }
+
+  bar.append(
+    el('span', { class: 'ic pin-bar-ic', 'data-icon': 'pin', 'data-icon-size': '15' }),
+    el('span', { class: 'pin-bar-body' },
+      el('span', { class: 'pin-bar-label' },
+        t('chat.pinned_one') + (total > 1 ? ` · ${i + 1}/${total}` : '')),
+      el('span', { class: 'pin-text' }, previewOf(cur)),
+    ),
+  );
+
+  if(total > 1){
+    bar.append(el('button', {
+      type: 'button', class: 'pin-bar-count',
+      'aria-label': t('chat.pinned_count').replace('{n}', String(total)),
+      title: t('chat.pinned_count').replace('{n}', String(total)),
+      onclick: e => { e.stopPropagation(); onShowAll(); },
+    }, el('span', { class: 'ic', 'data-icon': 'menu', 'data-icon-size': '13' })));
+  }
+
+  paintIcons(bar);
+  return bar;
+}
+
 /* ══ 6. DETALLAR PANELİ ═══════════════════════════════════════════════════ */
 
 /**

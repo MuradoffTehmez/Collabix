@@ -919,6 +919,7 @@ const D = {
   'chat.pinned_by':  { az: 'Sabitləyib: {who}', en: 'Pinned by {who}', ru: 'Закрепил(а): {who}' },
   'chat.pinned_count': { az: '{n} sabitlənmiş mesaj — hamısını göstər', en: '{n} pinned messages — show all', ru: '{n} закреплённых — показать все' },
   'chat.jump_pinned': { az: 'Sabitlənmiş mesaja keç', en: 'Jump to pinned message', ru: 'Перейти к закреплённому' },
+  'chat.jump_pinned_n': { az: 'Sabitlənmiş {i}/{n} — keç və növbətiyə adla', en: 'Pinned {i} of {n} — jump and go to next', ru: 'Закреплённое {i}/{n} — перейти и далее' },
   'chat.pin':        { az: 'Sabitlə', en: 'Pin', ru: 'Закрепить' },
   'chat.unpin':      { az: 'Sabitləməni ləğv et', en: 'Unpin', ru: 'Открепить' },
   'chat.pin_fail':   { az: 'Sabitlənmədi', en: 'Could not pin', ru: 'Не удалось закрепить' },

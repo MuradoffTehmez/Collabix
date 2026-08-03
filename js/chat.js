@@ -17,7 +17,8 @@ import { iconTrash } from './icons.js';
 import { paintIcons } from './icons.js';
 import {
   conversationRow, buildChatHead, detailsToggleButton, setDetailsOpen,
-  enhanceComposer, renderDetailsPanel, previewOf, askAI, headerActions, bindListKeyboardNav,
+  enhanceComposer, renderDetailsPanel, askAI, headerActions, bindListKeyboardNav,
+  pinBanner,
 } from './chat-ui.js';
 
 let rooms = [];
@@ -387,6 +388,9 @@ let paintNow = () => {};
 let pins = [];
 let aiSummary = null;
 let lastMsgs = [];
+/* Banner-də hazırda göstərilən sabitlənmişin indeksi. Otaq dəyişəndə
+   sıfırlanır — əks halda yeni otaqda mənasız mövqedən başlayardı. */
+let pinIndex = 0;
 
 async function loadPins(roomId){
   try{
@@ -405,35 +409,17 @@ function paintPinStrip(){
   clear(strip);
   if(!pins.length){ strip.hidden = true; return; }
   strip.hidden = false;
-  /* Bütöv zolaq KLİKLƏNİR və mesaja tullandırır — əvvəl yalnız sağdakı kiçik
-   * düymə paneli açırdı, zolağın özü isə ölü sahə idi.
-   * ⚠ `<button>` DEYİL, `<div role="button">`: içində ikinci düymə (sayğac)
-   *   var və iç-içə `<button>` etibarsız HTML-dir. Klaviatura davranışı
-   *   `tabindex` + Enter/Space ilə əl ilə verilir. */
-  const jump = () => chatCtx().onJump?.(pins[0].id);
-  const bar = el('div', {
-    class: 'pin-bar', role: 'button', tabIndex: 0,
-    'aria-label': t('chat.jump_pinned'),
-    onclick: jump,
-    onkeydown: e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); jump(); } },
-  },
-    el('span', { class: 'pin-bar-accent' }),
-    el('span', { class: 'ic pin-bar-ic', 'data-icon': 'pin', 'data-icon-size': '15' }),
-    el('span', { class: 'pin-bar-body' },
-      el('span', { class: 'pin-bar-label' }, t('chat.pinned_one')),
-      el('span', { class: 'pin-text' }, previewOf(pins[0])),
-    ),
-  );
-  if(pins.length > 1){
-    // Sayğac paneli açır (bütün sabitlənmişlərin siyahısı oradadır).
-    bar.append(el('button', {
-      type: 'button', class: 'pin-bar-count',
-      'aria-label': t('chat.pinned_count').replace('{n}', String(pins.length)),
-      onclick: e => { e.stopPropagation(); setDetailsOpen(document.getElementById('chatWrap'), true); },
-    }, String(pins.length)));
-  }
-  strip.append(bar);
-  paintIcons(strip);
+  strip.append(pinBanner({
+    pins,
+    index: pinIndex,
+    onJump: (cur) => {
+      chatCtx().onJump?.(cur.id);
+      // Növbətiyə keç — banner artıq SONRAKI sabitlənmişi göstərir.
+      pinIndex += 1;
+      paintPinStrip();
+    },
+    onShowAll: () => setDetailsOpen(document.getElementById('chatWrap'), true),
+  }));
 }
 
 function paintDetails(){
@@ -546,6 +532,7 @@ function selectRoom(roomId, openDetail = false){
   paintRoomHead(roomId);
   // Otaq dəyişdi → əvvəlki otağın sabitlənmişləri və xülasəsi qalmamalıdır.
   pins = [];
+  pinIndex = 0;
   aiSummary = null;
   loadPins(roomId);
   if(openDetail) document.querySelector('#page-chat .chat-wrap')?.classList.add('detail-open');
