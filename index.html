@@ -190,6 +190,28 @@
 </head>
 <body>
 
+<!-- ══ BREND NİŞANI ÜÇÜN PAYLAŞILAN QRADİYENT ══
+     Loqo dörd yerdə görünür (publik başlıq, tətbiq başlığı, auth ekranı,
+     footer). Qradiyent HƏR nişanda təkrar elan olunsaydı, eyni `<defs>` dörd
+     dəfə sənədə düşərdi və `id` toqquşardı. Ona görə bir dəfə burada elan
+     olunur, nişanlar `url(#cbxGrad)` ilə istinad edir.
+
+     ⚠ `stop-color` CSS dəyişəni işlədir — inline SVG sənədin kaskadını
+       miras aldığı üçün loqo DÖRD TEMANIN hamısında avtomatik uyğunlaşır.
+       Sabit hex yazsaydıq, matrix/cyberpunk temalarında brend rəngi
+       ətrafdan qopardı.
+     ⚠ `width/height: 0` + `position: absolute` — bu blok yalnız tərifdir,
+       yer tutmamalıdır. `display: none` İŞLƏMİR: gizlədilmiş `<defs>`-ə
+       istinad bəzi brauzerlərdə itir. -->
+<svg class="cbx-defs" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="cbxGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="var(--coral)"/>
+      <stop offset="100%" stop-color="var(--teal)"/>
+    </linearGradient>
+  </defs>
+</svg>
+
 <!-- Accessibility: Skip to Content -->
 <a href="#publicMain" class="skip-to-content" id="skipLink" data-i18n="a11y.skipToContent">Məzmuna keç</a>
 
@@ -271,7 +293,7 @@
 <div id="publicLayer" class="hidden" role="region" aria-label="Public content">
   <header class="pub-header" id="pubHeader">
     <div class="ph-inner">
-      <a class="brand ph-logo" id="pubLogo"><span class="dot"></span>Collabix</a>
+      <a class="brand ph-logo" id="pubLogo"><svg class="brand-mark" viewBox="0 0 28 28" aria-hidden="true" focusable="false"><path d="M19.9 6.9a9.2 9.2 0 1 0 0 14.2" fill="none" stroke="url(#cbxGrad)" stroke-width="3.4" stroke-linecap="round"/><circle cx="20.4" cy="14" r="3.5" fill="url(#cbxGrad)"/></svg>Collabix</a>
       <nav class="ph-nav" id="pubNav">
         <a href="/" data-pub="welcome" data-i18n="nav.home"></a>
         <a href="/about" data-pub="about" data-i18n="nav.about"></a>
@@ -466,7 +488,7 @@
   <footer class="pub-footer">
     <div class="pf-inner">
       <div class="pf-col pf-brand">
-        <div class="brand"><span class="dot"></span>Collabix</div>
+        <div class="brand"><svg class="brand-mark" viewBox="0 0 28 28" aria-hidden="true" focusable="false"><path d="M19.9 6.9a9.2 9.2 0 1 0 0 14.2" fill="none" stroke="url(#cbxGrad)" stroke-width="3.4" stroke-linecap="round"/><circle cx="20.4" cy="14" r="3.5" fill="url(#cbxGrad)"/></svg>Collabix</div>
         <p data-i18n="hero.tagline"></p>
         <div class="pf-social" id="pfSocial"></div>
       </div>
@@ -511,7 +533,7 @@
   <div class="auth-wrap">
     <div class="auth-hero">
       <div>
-        <div class="brand"><span class="dot"></span>Collabix</div>
+        <div class="brand"><svg class="brand-mark" viewBox="0 0 28 28" aria-hidden="true" focusable="false"><path d="M19.9 6.9a9.2 9.2 0 1 0 0 14.2" fill="none" stroke="url(#cbxGrad)" stroke-width="3.4" stroke-linecap="round"/><circle cx="20.4" cy="14" r="3.5" fill="url(#cbxGrad)"/></svg>Collabix</div>
         <h1 data-i18n-html="auth.landing_h1"></h1>
         <p data-i18n="auth.landing_sub"></p>
         <div class="lang-orbit">
@@ -573,7 +595,7 @@
 
 <div id="app">
   <header class="app-topbar">
-    <a class="brand at-logo" id="appLogo"><span class="dot"></span>Collabix</a>
+    <a class="brand at-logo" id="appLogo"><svg class="brand-mark" viewBox="0 0 28 28" aria-hidden="true" focusable="false"><path d="M19.9 6.9a9.2 9.2 0 1 0 0 14.2" fill="none" stroke="url(#cbxGrad)" stroke-width="3.4" stroke-linecap="round"/><circle cx="20.4" cy="14" r="3.5" fill="url(#cbxGrad)"/></svg>Collabix</a>
     <span id="activeProjectDisplay" class="u-font-size-12px u-background-primary u-color-white u-padding-2px-6px u-border-radius-4px u-margin-left-10px hidden"></span>
     <span class="c-search c-search--topbar"><span class="ic" data-icon="search" data-icon-size="15"></span><input class="app-search" id="appSearch" data-i18n-ph="app.searchPh"></span>
     <div class="at-actions">

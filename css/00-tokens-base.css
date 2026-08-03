@@ -327,23 +327,53 @@ button {
   animation: cardPop .4s ease both;
 }
 
-/* Nöqtənin özü sabitdir; nəbz ayrıca qatda döyünür (bax: `dotPulse` şərhi). */
-.brand .dot {
-  position: relative;
+/* ══════════════ BREND NİŞANI (vektor loqo) ══════════════
+ *
+ * Əvvəl brend sadəcə 9px-lik mavi dairə (`<span class="dot">`) idi — sahibin
+ * sözü ilə "loqo yoxdur, sadəcə mavi bir nöqtə var". İndi `index.html`-də
+ * inline SVG monoqramdır: "C" qövsü + qovşaq nöqtəsi.
+ *
+ * ⚠ NİYƏ INLINE SVG, `<img>` DEYİL:
+ *   • `url(#cbxGrad)` qradiyenti yalnız eyni sənəddə işləyir;
+ *   • qradiyent `var(--coral)`/`var(--teal)` oxuyur, yəni loqo DÖRD TEMADA
+ *     avtomatik uyğunlaşır — xarici fayl bunu edə bilməzdi;
+ *   • əlavə şəbəkə sorğusu yoxdur (CSP `img-src` onsuz da `'self'`-dir).
+ *
+ * ⚠ Repodakı `favicon.svg` QƏSDƏN işlədilmir: o, vektor deyil — içinə
+ *   basdırılmış 64px rastrdır və başlıqda böyüdüləndə yumşalırdı. Favicon
+ *   kimi qalır (16-32px-də fərq görünmür). */
+.cbx-defs {
+  /* Yalnız tərif saxlayır, yer tutmamalıdır.
+     ⚠ `display: none` İŞLƏMİR — gizlədilmiş `<defs>`-ə istinad bəzi
+     brauzerlərdə itir və qradiyent qara çıxır. */
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
 }
 
-.brand .dot::after {
-  content: '';
-  position: absolute;
-  inset: -4px;
-  border-radius: 50%;
-  box-shadow: 0 0 14px 3px var(--coral);
-  animation: dotPulse 2.2s ease-in-out infinite;
-  pointer-events: none;
+.brand-mark {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  overflow: visible;   /* parıltı çərçivədən kəsilməsin */
+}
+
+/* Nişanın ətrafındakı yumşaq nəbz.
+   ⚠ `filter`/`box-shadow` DEYİL, `transform`+`opacity` — bax `dotPulse`
+   şərhi: `infinite` animasiya kompozit qatdan çıxsa səhifə açıq qaldıqca
+   əsas ipdə davamlı boyama olur. */
+.brand-mark path,
+.brand-mark circle {
+  transform-origin: 50% 50%;
+}
+
+.brand-mark circle {
+  animation: dotPulse 2.6s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .brand .dot::after { animation: none; }
+  .brand-mark circle { animation: none; }
 }
 
 .btn-primary,

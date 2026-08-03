@@ -168,13 +168,9 @@
   padding: 0 6px;
 }
 
-.brand .dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--coral);
-  box-shadow: 0 0 12px var(--coral);
-}
+/* ⚠ `.brand .dot` SİLİNDİ — o element artıq yoxdur. Brend nişanı indi inline
+   SVG monoqramdır (`.brand-mark`, bax `00-tokens-base.css`). Qayda qalsaydı
+   heç nəyi hədəfləməyən ölü kod olardı. */
 
 .nav-item {
   display: flex;
