@@ -2,7 +2,7 @@
 import {
   state, watchRooms, watchRoomMessages, sendRoomMessage, editRoomMessage, deleteRoomMessage, deleteRoom,
   fetchOlderRoomMessages, fetchRoomPins, setRoomPin,
-  setMessageReaction, setMessageBookmark, forwardMessage,
+  setMessageReaction, setMessageBookmark, forwardMessage, convPrefs, setConvPref,
 } from './store.js';
 import { createHistory, historyBar, loadOlder } from './history.js';
 import { el, clear, emit, isOnline } from './util.js';
@@ -16,7 +16,7 @@ import { iconTrash } from './icons.js';
 import { paintIcons } from './icons.js';
 import {
   conversationRow, buildChatHead, detailsToggleButton, setDetailsOpen,
-  enhanceComposer, renderDetailsPanel, previewOf, askAI,
+  enhanceComposer, renderDetailsPanel, previewOf, askAI, headerActions, bindListKeyboardNav,
 } from './chat-ui.js';
 
 let rooms = [];
@@ -185,8 +185,15 @@ function renderRoomList(){
   });
   list.append(el('div', { class: 'cl-head' }, search));
 
+  bindListKeyboardNav(list);
+  const prefs = convPrefs();
   const q = roomFilter.trim().toLowerCase();
-  const shown = rooms.filter(r => !q || (r.name || '').toLowerCase().includes(q));
+  const shown = rooms
+    .filter(r => !q || (r.name || '').toLowerCase().includes(q))
+    // Sabitlənmiş söhbətlər HƏMİŞƏ yuxarıda — göstərici tək başına kifayət
+    // etmir, istifadəçi onları siyahının başında gözləyir.
+    .slice()
+    .sort((a, b) => (prefs.pinned.includes(b.id) ? 1 : 0) - (prefs.pinned.includes(a.id) ? 1 : 0));
   if(!shown.length){ list.append(el('div', { class: 'cd-empty' }, t('cd.no_hits'))); return; }
 
   shown.forEach(r => {
@@ -198,8 +205,11 @@ function renderRoomList(){
     row.append(conversationRow({
       avatar: el('span', { class: 'avatar' }, '#'),
       name: r.name,
+      username: r.id,                    // otaqda "username" rolunu slug oynayır
       preview: r.id === 'general' ? t('chat.room_sub') : '',
       time: '',
+      pinned: prefs.pinned.includes(r.id),
+      muted: prefs.muted.includes(r.id),
       active: r.id === currentRoomId,
       onSelect: () => selectRoom(r.id, true),
     }));
@@ -426,11 +436,37 @@ function selectRoom(roomId, openDetail = false){
   const wrap = document.getElementById('chatWrap');
   // TASK-8 mobil master-detail: geri düyməsi siyahıya qaytarır (yalnız mobildə
   // görünür, CSS idarə edir). Otaq seçiləndə mesaj sahəsi tam en sürüşür.
+  const prefs = convPrefs();
+  const isPinned = prefs.pinned.includes(roomId);
+  const isMuted = prefs.muted.includes(roomId);
   buildChatHead(document.getElementById('chatHead'), {
     title: '# ' + (room ? room.name : roomId),
     sub: t('chat.room_sub'),
     onBack: closeRoomDetail,
-    detailsBtn: detailsToggleButton(wrap, 'chatDetails'),
+    actions: headerActions({
+      // Axtarış detallar panelindəki sahəni açır — ikinci axtarış qutusu
+      // qurmaq eyni funksiyanı ikiləşdirərdi.
+      onSearch: () => {
+        setDetailsOpen(wrap, true);
+        setTimeout(() => document.querySelector('#chatDetails .cd-search')?.focus(), 60);
+      },
+      onPin: async () => {
+        try{ await setConvPref('pinned', roomId, !isPinned); renderRoomList(); selectRoom(roomId); }
+        catch(e){ toast(e?.message || t('dyn.fail'), 'err'); }
+      },
+      pinned: isPinned,
+      detailsBtn: detailsToggleButton(wrap, 'chatDetails'),
+      menuItems: [
+        {
+          icon: isMuted ? 'bell' : 'bell-off',
+          label: isMuted ? t('conv.unmute') : t('conv.mute'),
+          onClick: async () => {
+            try{ await setConvPref('muted', roomId, !isMuted); renderRoomList(); selectRoom(roomId); }
+            catch(e){ toast(e?.message || t('dyn.fail'), 'err'); }
+          },
+        },
+      ],
+    }),
   });
   // Otaq dəyişdi → əvvəlki otağın sabitlənmişləri və xülasəsi qalmamalıdır.
   pins = [];

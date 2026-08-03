@@ -921,6 +921,17 @@ const D = {
   'chat.pin_fail':   { az: 'Sabitlənmədi', en: 'Could not pin', ru: 'Не удалось закрепить' },
   'chat.search_conv': { az: 'Söhbətlərdə axtar', en: 'Search conversations', ru: 'Поиск по чатам' },
   'chat.you':        { az: 'sən: ', en: 'you: ', ru: 'вы: ' },
+  'chat.no_messages_yet': { az: 'Hələ mesaj yoxdur', en: 'No messages yet', ru: 'Сообщений пока нет' },
+
+  /* Başlıq + söhbət tərcihləri (pin/mute) */
+  'hdr.level':   { az: 'Səviyyə {n}', en: 'Level {n}', ru: 'Уровень {n}' },
+  'hdr.search':  { az: 'Söhbətdə axtar', en: 'Search conversation', ru: 'Поиск в чате' },
+  'conv.pin':    { az: 'Söhbəti sabitlə', en: 'Pin conversation', ru: 'Закрепить чат' },
+  'conv.unpin':  { az: 'Sabitləməni ləğv et', en: 'Unpin conversation', ru: 'Открепить чат' },
+  'conv.pinned': { az: 'Sabitlənmiş söhbət', en: 'Pinned conversation', ru: 'Закреплённый чат' },
+  'conv.mute':   { az: 'Bildirişləri sustur', en: 'Mute notifications', ru: 'Отключить уведомления' },
+  'conv.unmute': { az: 'Bildirişləri aç', en: 'Unmute notifications', ru: 'Включить уведомления' },
+  'conv.muted':  { az: 'Susdurulmuş söhbət', en: 'Muted conversation', ru: 'Чат без уведомлений' },
 
   'cd.title':      { az: 'Söhbət detalları', en: 'Conversation details', ru: 'Детали чата' },
   'cd.toggle':     { az: 'Söhbət detallarını aç/bağla', en: 'Toggle conversation details', ru: 'Показать/скрыть детали' },

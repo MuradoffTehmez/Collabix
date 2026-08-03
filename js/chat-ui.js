@@ -10,7 +10,7 @@
  *   davranışı callback kimi ötürür (`opts`). Əks istiqamətli import dövr
  *   yaradardı (`icon-set.js`-in ayrılma səbəbi ilə eyni).
  */
-import { el, clear, avatarNode, isOnline, lastSeenText } from './util.js';
+import { el, clear, avatarNode, isOnline, lastSeenText, nameWithBadge, levelFromXP } from './util.js';
 import { t } from './i18n.js';
 import { toast } from './ui.js';
 import { api } from './api.js';
@@ -46,6 +46,8 @@ export function conversationRow({
   // `number | boolean`: rəqəm = say, `true` = rəqəmsiz nöqtə (aşağıdakı izaha bax).
   badge = /** @type {number|boolean} */ (0),
   active = false, unread = false, typing = false, onSelect, ariaLabel = '',
+  // Zənginləşdirmə: username sətri, status, sabitlənmiş/susdurulmuş göstəriciləri.
+  username = '', status = '', online = false, pinned = false, muted = false,
 }){
   const row = el('button', {
     type: 'button',
@@ -55,10 +57,35 @@ export function conversationRow({
     'aria-label': ariaLabel || name,
     onclick: onSelect,
   });
+
+  /* Ad sətri: ad + (sabitlənmiş/susdurulmuş ikonları).
+   * ⚠ İkonlar ADIN YANINDADIR, ayrı sütunda yox: dar siyahıda ayrı sütun
+   *   adı sıxıb kəsərdi, ikonlar isə yalnız bəzən mövcuddur. */
+  const nameLine = el('span', { class: 'ci-name' }, el('span', { class: 'ci-nm' }, name));
+  if(pinned){
+    nameLine.append(el('span', {
+      class: 'ci-flag', 'data-icon': 'pin', 'data-icon-size': '12',
+      // Ekran oxuyucusu üçün ad — ikon tək başına məlumat daşımamalıdır.
+      role: 'img', 'aria-label': t('conv.pinned'),
+    }));
+  }
+  if(muted){
+    nameLine.append(el('span', {
+      class: 'ci-flag muted', 'data-icon': 'bell-off', 'data-icon-size': '12',
+      role: 'img', 'aria-label': t('conv.muted'),
+    }));
+  }
+
   row.append(
     avatar,
-    el('span', { class: 'ci-name' }, name),
+    nameLine,
     el('span', { class: 'ci-time' }, time || ''),
+    // İkinci sətir: @username · status. Status RƏNGDƏN BAŞQA mətnlə də verilir.
+    el('span', { class: 'ci-sub' },
+      username ? el('span', { class: 'ci-user' }, '@' + username) : null,
+      status ? el('span', { class: 'ci-status' + (online ? ' online' : '') },
+        el('span', { class: 'ci-dot' + (online ? ' on' : '') }), status) : null,
+    ),
     el('span', { class: 'ci-preview' + (typing ? ' typing' : '') }, typing ? t('chat.typing') : (preview || '')),
   );
   /* Nişan YALNIZ oxunmamış varsa — sıfır nişan səs-küydür.
@@ -70,22 +97,140 @@ export function conversationRow({
   }else if(typeof badge === 'number' && badge > 0){
     row.append(el('span', { class: 'ci-badge', 'aria-label': t('chat.unread_n').replace('{n}', String(badge)) }, String(badge)));
   }
+  // Sətir dinamik qurulur → statik boot-dakı `paintIcons()` ona çatmır.
+  paintIcons(row);
   return row;
 }
 
+/**
+ * Söhbət siyahısında ox düymələri ilə naviqasiya.
+ *
+ * ⚠ `roving tabindex` İŞLƏDİLMİR: sətirlər `<button>`-dur və hər render-də
+ *   yenidən qurulur, ona görə tabindex-i sinxron saxlamaq əlavə vəziyyət
+ *   tələb edərdi. Bunun əvəzinə konteyner səviyyəsində `keydown` tutulur —
+ *   sətirlər normal Tab sırasında qalır, ↑/↓ isə sürətli keçid verir.
+ * ⚠ Bir dəfə bağlanır (`dataset.navBound`): siyahı hər yeniləmədə yenidən
+ *   qurulur, dinləyici isə KONTEYNERDƏDİR və təkrar bağlanmamalıdır.
+ */
+export function bindListKeyboardNav(list){
+  if(!list || list.dataset.navBound === '1') return;
+  list.dataset.navBound = '1';
+  list.addEventListener('keydown', e => {
+    if(e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Home' && e.key !== 'End') return;
+    const rows = [...list.querySelectorAll('.ch-item')];
+    if(!rows.length) return;
+    const cur = rows.indexOf(document.activeElement.closest('.ch-item'));
+    e.preventDefault();
+    let next;
+    if(e.key === 'Home') next = 0;
+    else if(e.key === 'End') next = rows.length - 1;
+    else if(cur < 0) next = 0;
+    // Dövrə vurur: son sətirdən ↓ ilk sətrə qayıdır (siyahı qısadır).
+    else next = (cur + (e.key === 'ArrowDown' ? 1 : -1) + rows.length) % rows.length;
+    rows[next].focus();
+  });
+}
+
 /* ══ 3. BAŞLIQ ═══════════════════════════════════════════════════════════ */
-export function buildChatHead(host, { title, sub = '', subOnline = false, onBack, detailsBtn = null }){
+/**
+ * Söhbət başlığı.
+ *
+ * `user` verilibsə ZƏNGİN variant qurulur: avatar, ad + təsdiq nişanı,
+ * XP səviyyəsi, rol nişanı, @username və status. Otaq üçün `user` yoxdur —
+ * o halda sadə variant (başlıq + alt sətir) qalır.
+ */
+export function buildChatHead(host, {
+  title, sub = '', subOnline = false, onBack, detailsBtn = null,
+  user = null, actions = null,
+}){
   clear(host);
+
+  const main = el('div', { class: 'ch-head-main' });
+  if(user){
+    const nameLine = el('span', { class: 'ch-head-title' }, nameWithBadge(user));
+    const lvl = levelFromXP(user.xp);
+    // Səviyyə nişanı — rəqəm MƏTNDƏDİR, yalnız rəngdən asılı deyil.
+    nameLine.append(el('span', {
+      class: 'ch-lvl', 'aria-label': t('hdr.level').replace('{n}', String(lvl)),
+    }, 'Lv ' + lvl));
+    /* Rol nişanı yalnız ADİ istifadəçidən FƏRQLİDİRSƏ göstərilir:
+     * hər sətirdə "USER" yazmaq məlumat daşımır, yalnız səs-küydür.
+     * ⚠ `users.role` sütununun default-u kiçik hərflə `'user'`-dir (bax
+     *   `users-role-default-trap`), ona görə müqayisə hərf həssaslığı
+     *   OLMADAN aparılır. */
+    const role = String(user.role || '').toUpperCase();
+    if(role && role !== 'USER'){
+      nameLine.append(el('span', { class: 'ch-role' }, role));
+    }
+    main.append(nameLine);
+    main.append(el('span', { class: 'ch-head-sub' + (subOnline ? ' online' : '') },
+      user.username ? el('span', {}, '@' + user.username) : null,
+      user.username && sub ? el('span', { class: 'ch-sep' }, '·') : null,
+      sub ? el('span', {}, sub) : null,
+    ));
+  }else{
+    main.append(el('span', { class: 'ch-head-title' }, title));
+    if(sub) main.append(el('span', { class: 'ch-head-sub' + (subOnline ? ' online' : '') }, sub));
+  }
+
   host.append(
     // Mobil master-detail geri düyməsi (CSS yalnız mobildə göstərir).
     el('button', { class: 'chat-back', type: 'button', 'aria-label': t('chat.back'), onclick: onBack }, '‹'),
-    el('div', { class: 'ch-head-main' },
-      el('span', { class: 'ch-head-title' }, title),
-      sub ? el('span', { class: 'ch-head-sub' + (subOnline ? ' online' : '') }, sub) : null,
-    ),
-    el('div', { class: 'ch-head-actions' }, detailsBtn || null),
+    user ? avatarNode(user, 'avatar ch-head-av', subOnline) : null,
+    main,
+    el('div', { class: 'ch-head-actions' }, actions || detailsBtn || null),
   );
   paintIcons(host);
+}
+
+/**
+ * Başlığın sağ tərəfi: axtarış · sabitlə · info · daha çox.
+ * ⚠ Hamısı ikon düyməsidir, ona görə HƏR BİRİNİN `aria-label`-ı var —
+ *   əks halda ekran oxuyucusu dörd adsız düymə oxuyardı.
+ */
+export function headerActions({ onSearch, onPin, pinned = false, detailsBtn, menuItems = [] }){
+  const wrap = el('div', { class: 'ch-head-actions' });
+
+  if(onSearch) wrap.append(el('button', {
+    type: 'button', class: 'ch-icon-btn',
+    'aria-label': t('hdr.search'), title: t('hdr.search'), onclick: onSearch,
+  }, el('span', { class: 'ic', 'data-icon': 'search', 'data-icon-size': '17' })));
+
+  if(onPin) wrap.append(el('button', {
+    type: 'button', class: 'ch-icon-btn' + (pinned ? ' on' : ''),
+    'aria-pressed': String(pinned),
+    'aria-label': pinned ? t('conv.unpin') : t('conv.pin'),
+    title: pinned ? t('conv.unpin') : t('conv.pin'),
+    onclick: onPin,
+  }, el('span', { class: 'ic', 'data-icon': 'pin', 'data-icon-size': '17' })));
+
+  if(detailsBtn) wrap.append(detailsBtn);
+
+  if(menuItems.length){
+    const mwrap = el('div', { class: 'mx-pop-wrap' });
+    const menu = el('div', { class: 'mx-menu', role: 'menu', hidden: true });
+    const btn = el('button', {
+      type: 'button', class: 'ch-icon-btn', 'aria-haspopup': 'true', 'aria-expanded': 'false',
+      'aria-label': t('a11y.more'), title: t('a11y.more'),
+      onclick: e => {
+        e.stopPropagation();
+        menu.hidden = !menu.hidden;
+        btn.setAttribute('aria-expanded', String(!menu.hidden));
+      },
+    }, el('span', { class: 'ic', 'data-icon': 'more', 'data-icon-size': '17' }));
+    menuItems.forEach(it => menu.append(el('button', {
+      type: 'button', role: 'menuitem', class: 'mx-menu-item' + (it.danger ? ' danger' : ''),
+      onclick: () => { menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); it.onClick(); },
+    }, el('span', { class: 'ic', 'data-icon': it.icon, 'data-icon-size': '14' }), el('span', {}, it.label))));
+    // Bayıra klik menyunu bağlayır (mesaj pop-ları ilə eyni model).
+    document.addEventListener('click', () => {
+      if(!menu.hidden){ menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); }
+    });
+    mwrap.append(btn, menu);
+    wrap.append(mwrap);
+  }
+  paintIcons(wrap);
+  return wrap;
 }
 
 /** Detallar panelini açan/bağlayan düymə — `aria-expanded` CSS-i də idarə edir. */

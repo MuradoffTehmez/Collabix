@@ -2,7 +2,7 @@
 import {
   state, watchThreads, watchDMMessages, sendDM, editDM, deleteDM,
   markThreadRead, pairIdFor, fetchOlderDMMessages, fetchDMPins, setDMPin,
-  setMessageReaction, setMessageBookmark, forwardMessage,
+  setMessageReaction, setMessageBookmark, forwardMessage, convPrefs, setConvPref,
 } from './store.js';
 import { createHistory, historyBar, loadOlder } from './history.js';
 import { el, clear, avatarNode, tsToMillis, isOnline, lastSeenText, bus, emit } from './util.js';
@@ -15,7 +15,7 @@ import { t } from './i18n.js';
 import { paintIcons } from './icons.js';
 import {
   conversationRow, buildChatHead, detailsToggleButton, setDetailsOpen,
-  enhanceComposer, renderDetailsPanel, previewOf, shortTime, askAI,
+  enhanceComposer, renderDetailsPanel, previewOf, shortTime, askAI, headerActions, bindListKeyboardNav,
 } from './chat-ui.js';
 
 let threads = [];
@@ -70,14 +70,29 @@ function renderThreadList(){
    *   yuxarısında `t` TƏRCÜMƏ funksiyasıdır və köhnə kodda `({ u, t })`
    *   destrukturu onu bu blok daxilində KÖLGƏLƏYİRDİ — ona görə burada
    *   tərcümə çağırmaq mümkün deyildi və "sən: " sabit azərbaycanca qalmışdı. */
+  bindListKeyboardNav(list);
+  const prefs = convPrefs();
+  // Sabitlənmişlər yuxarıda (otaq siyahısı ilə eyni qayda).
+  items.sort((a, b) => {
+    const pa = prefs.pinned.includes(pairIdFor(state.authUser.uid, a.u.uid)) ? 1 : 0;
+    const pb = prefs.pinned.includes(pairIdFor(state.authUser.uid, b.u.uid)) ? 1 : 0;
+    return pb - pa;
+  });
   items.forEach(({ u, t: th }) => {
     const unread = th && isUnread(th);
+    const pairId = pairIdFor(state.authUser.uid, u.uid);
     const preview = th
       ? (th.lastFrom === state.authUser.uid ? t('chat.you') : '') + (th.lastMsg || '')
-      : '@' + u.username;
+      : t('chat.no_messages_yet');
+    const on = isOnline(u);
     list.append(conversationRow({
-      avatar: avatarNode(u, 'avatar', isOnline(u)),
+      avatar: avatarNode(u, 'avatar', on),
       name: u.name,
+      username: u.username,
+      status: on ? t('cd.online') : (lastSeenText(u) || ''),
+      online: on,
+      pinned: prefs.pinned.includes(pairId),
+      muted: prefs.muted.includes(pairId),
       preview,
       time: th ? shortTime(tsToMillis(th.lastAt)) : '',
       // Server oxunmamış SAYINI vermir (yalnız `readAt` damğası) — ona görə
@@ -306,20 +321,40 @@ function selectPeer(uid, openDetail = false){  // openDetail: yalnız klikdən (
   // TASK-8 mobil master-detail (chat.js ilə eyni məntiq) — indi ortaq
   // `buildChatHead` ilə: başlıq quruluşu iki ekranda fərqlənməsin.
   const on = u ? isOnline(u) : false;
-  const actions = el('span', { class: 'ch-head-actions' });
-  if(u){
-    actions.append(el('button', {
-      type: 'button', class: 'ch-icon-btn', 'aria-label': t('usr.view'), title: t('usr.view'),
-      onclick: () => openProfileModal(uid),
-    }, el('span', { class: 'ic', 'data-icon': 'profile', 'data-icon-size': '18' })));
-  }
-  actions.append(detailsToggleButton(wrap, 'dmDetails'));
+  const prefs = convPrefs();
+  const isPinned = prefs.pinned.includes(pairId);
+  const isMuted = prefs.muted.includes(pairId);
   buildChatHead(document.getElementById('dmHead'), {
+    user: u,                              // zəngin variant: avatar+təsdiq+səviyyə+rol
     title: u ? (u.name || u.username) : '',
-    sub: u ? (on ? t('cd.online') : (lastSeenText(u) || '@' + u.username)) : '',
+    sub: u ? (on ? t('cd.online') : (lastSeenText(u) || '')) : '',
     subOnline: on,
     onBack: closeDmDetail,
-    detailsBtn: actions,
+    actions: headerActions({
+      // Axtarış detallar panelini açıb axtarış sahəsinə fokuslanır —
+      // ayrıca axtarış qutusu qurmaq eyni funksiyanı ikiləşdirərdi.
+      onSearch: () => {
+        setDetailsOpen(wrap, true);
+        setTimeout(() => document.querySelector('#dmDetails .cd-search')?.focus(), 60);
+      },
+      onPin: async () => {
+        try{ await setConvPref('pinned', pairId, !isPinned); renderThreadList(); selectPeer(uid); }
+        catch(e){ toast(e?.message || t('dyn.fail'), 'err'); }
+      },
+      pinned: isPinned,
+      detailsBtn: detailsToggleButton(wrap, 'dmDetails'),
+      menuItems: [
+        { icon: 'profile', label: t('usr.view'), onClick: () => openProfileModal(uid) },
+        {
+          icon: isMuted ? 'bell' : 'bell-off',
+          label: isMuted ? t('conv.unmute') : t('conv.mute'),
+          onClick: async () => {
+            try{ await setConvPref('muted', pairId, !isMuted); renderThreadList(); selectPeer(uid); }
+            catch(e){ toast(e?.message || t('dyn.fail'), 'err'); }
+          },
+        },
+      ],
+    }),
   });
   // Söhbət dəyişdi → əvvəlkinin sabitlənmişləri/xülasəsi qalmamalıdır.
   pins = [];
