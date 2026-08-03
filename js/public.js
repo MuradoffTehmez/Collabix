@@ -167,7 +167,12 @@ function renderWelcome(){
   const steps = document.getElementById('howSteps');
   clear(steps);
   [['how.1t', 'how.1d'], ['how.2t', 'how.2d'], ['how.3t', 'how.3d'], ['how.4t', 'how.4d']].forEach(([tt, dd], i) => {
-    steps.append(el('div', { class: 'how-step' + (i % 2 ? ' rev' : '') },
+    // ⚠ Növbələşən `rev` sinfi SİLİNDİ: hər ikinci addım `row-reverse` +
+    //   `text-align: right` olurdu, yəni ikon gah solda, gah sağda dururdu və
+    //   mətnin başlanğıc oxu sətirdən-sətrə tullanırdı. Nəticə qəsdən dizayn
+    //   kimi yox, "sürüşmüş" kimi oxunurdu. Ardıcıl sol hizalanma göz üçün
+    //   tək şaquli oxu saxlayır — addım siyahısı məhz belə skan olunur.
+    steps.append(el('div', { class: 'how-step' },
       el('div', { class: 'hs-num' }, el('span', { class: 'hs-ic' }, STEP_ICONS[i]()), el('b', {}, i + 1)),
       el('div', { class: 'hs-body' }, el('h3', {}, t(tt)), el('p', {}, t(dd))),
     ));
@@ -402,8 +407,14 @@ function renderFaqList(){
     //   `.faq-a-in` isə `overflow: hidden` daşıyıcısıdır. Tək qatda `<p>`-nin
     //   `padding-bottom`-u yığılmış halda da yer tuturdu — ölçüldü: hündürlük
     //   0 yox, 15px idi, yəni bağlı akkordeonlar arasında izahsız boşluq.
+    // 🔴 `markdownNode()`, xam mətn DEYİL: FAQ cavabları markdown ilə yazılıb
+    //   (`js/legal.js`-də 121 ədəd `**qalın**` işarəsi var). Əvvəl mətn
+    //   `el('p', {}, tf(f.a))` ilə DÜZ MƏTN kimi qoyulurdu, ona görə
+    //   istifadəçi ekranda hərfi olaraq `**Collabix**` ulduzlarını görürdü.
+    //   `markdownNode` DOMPurify-dan keçir (bax `js/markdown.js`).
     const answer = el('div', { class: 'faq-a', id: aId },
-      el('div', { class: 'faq-a-in' }, el('p', {}, tf(f.a))));
+      el('div', { class: 'faq-a-in' },
+        el('div', { class: 'faq-a-md' }, markdownNode(tf(f.a)))));
     // ⚠ `inert` — CSS `visibility` OYUNU DEYİL. Əvvəlcə `visibility: hidden`
     //   sınandı, lakin kaskadda gözlənilməz davrandı (ölçüldü: `.open`
     //   qaydası uyğun gəlsə də hesablanan dəyər `hidden` qalırdı). `inert`
