@@ -370,11 +370,23 @@
       </div>
     </section>
 
-    <!-- About -->
+    <!-- About
+         ⚠ `pub-narrow` QƏSDƏN YOXDUR: modul kartları şəbəkəsi geniş sahə
+           tələb edir. Uzun mətnin sətir uzunluğu CSS-də `.about-lead` /
+           `.about-sub` üzərindən məhdudlaşdırılır (oxunaqlılıq üçün 65-75
+           simvol), yəni konteyner deyil, MƏTN dar saxlanılır.
+         ⚠ CTA düyməsi STATİKDİR: `ph-guest` sinfini `setPublicAuthState()`
+           yalnız mövcud DOM-a tətbiq edir. JS-də sonradan yaradılsaydı, giriş
+           etmiş istifadəçiyə də "Qeydiyyatdan keç" görünərdi. -->
     <section class="pub-page" id="pub-about">
-      <div class="pub-section pub-narrow">
+      <div class="pub-section">
         <h1 class="pub-h1" data-i18n="pg.about"></h1>
-        <div class="md-body" id="aboutBody"></div>
+        <div id="aboutBody"></div>
+        <div class="about-cta">
+          <h2 data-i18n="about.ctaTitle"></h2>
+          <p data-i18n="about.ctaText"></p>
+          <button class="btn-primary ph-guest" type="button" id="aboutRegBtn" data-i18n="cta.register"></button>
+        </div>
       </div>
     </section>
 

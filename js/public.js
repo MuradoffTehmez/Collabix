@@ -9,6 +9,7 @@ import { toast, toggleTheme } from './ui.js';
 import { t, tf, setLang, getLang, applyI18n, initI18n } from './i18n.js';
 import { markdownNode } from './markdown.js';
 import { LEGAL, SITE, DEFAULT_FAQS, DEFAULT_TESTIMONIALS, EEAT_CONTENT } from './legal.js';
+import { ABOUT } from './about-content.js';
 import { DEFAULT_PROG, DEFAULT_SPOKEN } from './taxonomy.js';
 import { STEP_ICONS, paintIcons } from './icons.js';
 import { codeBlockNode } from './code-block.js';
@@ -64,7 +65,7 @@ export function setPublicAuthState(isAuthed){
 /* ================= səhifə renderləri ================= */
 function renderPage(page){
   if(page === 'welcome') renderWelcome();
-  else if(page === 'about') renderMd('aboutBody', LEGAL.about);
+  else if(page === 'about') renderAbout();
   else if(page === 'privacy') renderMd('privacyBody', LEGAL.privacy);
   else if(page === 'terms') renderMd('termsBody', LEGAL.terms);
   else if(page === 'faq') renderFaqPage();
@@ -78,6 +79,67 @@ function renderMd(elId, contentObj){
   const box = document.getElementById(elId);
   clear(box);
   box.append(markdownNode(tf(contentObj)));
+}
+
+/* ---------- Haqqımızda ---------- */
+// ⚠ Əvvəl bu səhifə də `renderMd('aboutBody', LEGAL.about)` idi — yəni tək
+//   markdown bloku. Nəticədə başlıq+abzas divarı alınırdı: vizual iyerarxiya
+//   yox, ikon kimi emoji (🔥) var, platformanın nə olduğu isə üç bənd ilə
+//   keçilirdi. İndi məzmun `js/about-content.js`-də STRUKTUR datadır və
+//   burada modul kartlarına, texnologiya siyahısına və dəyər kartlarına
+//   render olunur. `LEGAL.about` artıq işlədilmir (hüquqi mətnlər qalır).
+function renderAbout(){
+  const box = document.getElementById('aboutBody');
+  if(!box) return;
+  clear(box);
+
+  box.append(el('p', { class: 'about-lead' }, tf(ABOUT.lead)));
+
+  /* Modullar — "sistem nədən ibarətdir" sualının əsl cavabı. */
+  box.append(
+    el('h2', { class: 'about-h2' }, tf(ABOUT.modulesTitle)),
+    el('p', { class: 'about-sub' }, tf(ABOUT.modulesLead)),
+  );
+  const grid = el('div', { class: 'about-grid' });
+  ABOUT.modules.forEach(m => grid.append(
+    el('article', { class: 'about-card' },
+      el('div', { class: 'ab-ic', 'data-icon': m.icon, 'data-icon-size': '22' }),
+      el('h3', {}, tf(m.t)),
+      el('p', {}, tf(m.d)),
+    ),
+  ));
+  box.append(grid);
+
+  /* Texnologiya — `<dl>` semantik olaraq düzgündür: ad → izah cütləri. */
+  box.append(
+    el('h2', { class: 'about-h2' }, tf(ABOUT.techTitle)),
+    el('p', { class: 'about-sub' }, tf(ABOUT.techLead)),
+  );
+  const tech = el('dl', { class: 'about-tech' });
+  ABOUT.tech.forEach(r => tech.append(
+    el('dt', {}, r.k),
+    el('dd', {}, tf(r.v)),
+  ));
+  box.append(tech);
+
+  /* Dəyərlər */
+  box.append(el('h2', { class: 'about-h2' }, tf(ABOUT.valuesTitle)));
+  const vals = el('div', { class: 'about-values' });
+  ABOUT.values.forEach(v => vals.append(
+    el('article', { class: 'about-value' },
+      el('div', { class: 'ab-ic', 'data-icon': v.icon, 'data-icon-size': '20' }),
+      el('div', { class: 'av-body' }, el('h3', {}, tf(v.t)), el('p', {}, tf(v.d))),
+    ),
+  ));
+  box.append(vals);
+
+  /* Komanda */
+  box.append(
+    el('h2', { class: 'about-h2' }, tf(ABOUT.teamTitle)),
+    el('p', { class: 'about-team' }, tf(ABOUT.team)),
+  );
+
+  paintIcons(box);
 }
 
 /* ---------- homepage ---------- */

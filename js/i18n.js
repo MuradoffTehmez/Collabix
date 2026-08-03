@@ -185,6 +185,15 @@ const D = {
 
   /* ---------- page titles ---------- */
   'pg.about':      { az: 'Haqqımızda', en: 'About Us', ru: 'О нас' },
+  // "Haqqımızda" səhifəsinin CTA-sı. Qalan struktur məzmun
+  // `js/about-content.js`-dədir; burada YALNIZ `data-i18n` ilə statik
+  // işarələnmiş sətirlər saxlanılır (bax həmin faylın sonundakı şərh).
+  'about.ctaTitle': { az: 'Qoşulmaq pulsuzdur', en: 'Joining is free', ru: 'Присоединиться бесплатно' },
+  'about.ctaText': {
+    az: 'Hesab açmaq bir neçə saniyə çəkir. İlk otağa girin, özünüzü təqdim edin — qalanı icma ilə gəlir.',
+    en: 'Creating an account takes a few seconds. Join your first room, introduce yourself — the rest comes with the community.',
+    ru: 'Регистрация занимает несколько секунд. Зайдите в первую комнату, представьтесь — остальное придёт вместе с сообществом.',
+  },
   'pg.privacy':    { az: 'Məxfilik siyasəti', en: 'Privacy Policy', ru: 'Политика конфиденциальности' },
   'pg.terms':      { az: 'İstifadə şərtləri', en: 'Terms & Conditions', ru: 'Условия использования' },
   'pg.security':   { az: 'Təhlükəsizlik siyasəti', en: 'Security Policy', ru: 'Политика безопасности' },

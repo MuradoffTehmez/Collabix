@@ -1035,3 +1035,202 @@
     transform: scale(1) translateY(0);
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   HAQQIMIZDA — struktur səhifə
+
+   ⚠ Əvvəl bu səhifə `.md-body` markdown çıxışı idi: başlıq+abzas divarı,
+     vizual iyerarxiya yox. İndi modul kartları, texnologiya siyahısı və
+     dəyər kartlarından ibarətdir.
+
+   ⚠ SƏTİR UZUNLUĞU konteynerlə deyil, MƏTNLƏ məhdudlaşdırılır (`max-width`
+     birbaşa abzasda). Səbəb: kart şəbəkəsi geniş sahə istəyir, uzun mətn isə
+     65–75 simvoldan sonra oxunmaz olur — ikisini eyni konteynerə sığdırmaq
+     mümkün deyil. */
+
+.about-lead {
+  max-width: 68ch;
+  font-size: 1.06rem;
+  line-height: 1.7;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.about-h2 {
+  font-family: var(--display);
+  font-size: 1.32rem;
+  font-weight: 700;
+  letter-spacing: -.01em;
+  margin: 44px 0 6px;
+}
+
+.about-sub {
+  max-width: 68ch;
+  color: var(--muted);
+  line-height: 1.65;
+  margin-bottom: 20px;
+}
+
+/* ---------- modul kartları ---------- */
+.about-grid {
+  display: grid;
+  /* `auto-fit` + `minmax` → sütun sayı ekrana görə özü seçilir; ayrıca
+     breakpoint yazmağa ehtiyac qalmır və 375px-də tək sütuna düşür. */
+  grid-template-columns: repeat(auto-fit, minmax(256px, 1fr));
+  gap: 14px;
+}
+
+.about-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 18px;
+  /* ⚠ Yalnız `transform`+`border-color` keçidi — `box-shadow`/`height`
+     animasiyası kompozit qatdan çıxır və siyahıda kəkələmə yaradır. */
+  transition: transform .18s ease, border-color .18s ease;
+}
+
+@media (hover: hover) {
+  .about-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--coral);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .about-card { transition: none; }
+  .about-card:hover { transform: none; }
+}
+
+.about-card h3 {
+  font-family: var(--display);
+  font-size: .98rem;
+  font-weight: 700;
+  margin: 12px 0 6px;
+}
+
+.about-card p {
+  color: var(--muted);
+  font-size: .87rem;
+  line-height: 1.6;
+}
+
+/* İkon çipi — emoji YOX, `data-icon` ilə SVG (bax `js/about-content.js`). */
+.ab-ic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--coral-dim);
+  color: var(--coral);
+  flex: 0 0 auto;
+}
+
+/* ---------- texnologiya ---------- */
+/* `<dl>` semantik seçimdir: ad → izah. Grid ilə iki sütuna düzülür, dar
+   ekranda isə tək sütuna düşür ki, ad və izah üst-üstə oxunsun. */
+.about-tech {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 10px 20px;
+  align-items: baseline;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  background: var(--surface);
+}
+
+.about-tech dt {
+  font-family: var(--mono);
+  font-size: .82rem;
+  font-weight: 600;
+  color: var(--teal);
+  white-space: nowrap;
+}
+
+.about-tech dd {
+  color: var(--muted);
+  font-size: .88rem;
+  line-height: 1.55;
+}
+
+@media (max-width: 560px) {
+  .about-tech {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  .about-tech dd { margin-bottom: 12px; }
+  .about-tech dd:last-child { margin-bottom: 0; }
+}
+
+/* ---------- dəyərlər ---------- */
+.about-values {
+  display: grid;
+  gap: 12px;
+}
+
+.about-value {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.about-value h3 {
+  font-family: var(--display);
+  font-size: .95rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.about-value p {
+  color: var(--muted);
+  font-size: .87rem;
+  line-height: 1.6;
+  max-width: 68ch;
+}
+
+.about-team {
+  max-width: 68ch;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+/* ---------- CTA ---------- */
+.about-cta {
+  margin-top: 48px;
+  padding: 32px 26px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: linear-gradient(135deg, var(--coral-dim), var(--surface) 70%);
+  text-align: center;
+}
+
+.about-cta h2 {
+  font-family: var(--display);
+  font-size: 1.28rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.about-cta p {
+  color: var(--muted);
+  line-height: 1.65;
+  max-width: 52ch;
+  margin: 0 auto 18px;
+}
+
+/* ⚠ `.btn-primary` qlobal olaraq blok səviyyəlidir (formalarda tam en tutur).
+   Burada mərkəzləşdirilmiş CTA-dır, ona görə enini məzmuna görə daraldırıq —
+   əks halda düymə 1200px uzanır və "düymə" kimi oxunmur. `.hero-btn` eyni
+   səbəbdən eyni yanaşmadadır. */
+.about-cta .btn-primary {
+  width: auto;
+  padding: 13px 34px;
+  font-size: .95rem;
+}
