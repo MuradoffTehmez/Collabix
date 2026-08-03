@@ -603,6 +603,63 @@
 
 .chat-messages .msg .msg-body > * + * { margin-top: 6px; }
 
+/* ── Uzun mesaj: "daha çox oxu" ───────────────────────────────────────────
+ * ⚠ `max-height` `em` ilədir, `px` ilə YOX: istifadəçi şrift ölçüsünü
+ *   böyüdəndə (Dynamic Type / brauzer zoom) kəsmə həddi də böyüyür, yəni
+ *   həmişə TƏXMİNƏN eyni sayda sətir görünür. */
+.msg-body.clampable {
+  position: relative;
+  max-height: 12em;
+  overflow: hidden;
+}
+
+.msg-body.clampable.open {
+  max-height: none;
+  overflow: visible;
+}
+
+/* Kəsilmə kənarında solğunlaşma — mətnin davam etdiyi görünsün.
+   `open` halda gizlənir. */
+.msg-body.clampable:not(.open)::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 3em;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, var(--surface));
+}
+
+/* Öz mesajımda fon aksentdir → solğunlaşma da ona uyğun olmalıdır. */
+.msg.out .msg-body.clampable:not(.open)::after {
+  background: linear-gradient(to bottom, transparent, var(--coral));
+}
+
+.msg-more {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 4px;
+  padding: 3px 9px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: .72rem;
+  font-weight: 600;
+  cursor: pointer;
+  opacity: .85;
+  transition: opacity .15s ease, background-color .15s ease;
+}
+
+.msg-more:hover {
+  opacity: 1;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .msg-more { transition: none; }
+}
+
 .msg-time {
   float: right;
   margin: 2px 0 0 10px;

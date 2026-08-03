@@ -883,6 +883,8 @@ const D = {
 
   /* ── Çat redizaynı: siyahı, detallar paneli, emoji, AI ─────────────────── */
   /* ── Mesaj əməliyyatları · reaksiyalar · thread (0047) ─────────────────── */
+  'msg.show_more':   { az: 'Daha çox oxu', en: 'Read more', ru: 'Читать далее' },
+  'msg.show_less':   { az: 'Yığ', en: 'Show less', ru: 'Свернуть' },
   'msg.actions':     { az: 'Mesaj əməliyyatları', en: 'Message actions', ru: 'Действия с сообщением' },
   'msg.react':       { az: 'Reaksiya ver', en: 'React', ru: 'Реакция' },
   'msg.reply':       { az: 'Cavabla', en: 'Reply', ru: 'Ответить' },

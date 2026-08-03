@@ -10,7 +10,7 @@
  *   `ctx` obyekti ilə callback kimi ötürülür.
  */
 import { el, clear, avatarNode, nameWithBadge, fmtTime } from './util.js';
-import { t, fmtRelTime } from './i18n.js';
+import { t, fmtRelTime, getLang } from './i18n.js';
 import { richContent } from './richmsg.js';
 import { paintIcons } from './icons.js';
 import { state } from './store.js';
@@ -37,7 +37,13 @@ const REACTION_CH = Object.fromEntries(REACTIONS.map(r => [r.type, r.ch]));
  *   müqayisəsi işləməz — dəyər əsaslı sətir imzası lazımdır. */
 function signature(m){
   const rx = (m.reactions || []).map(r => `${r.type}:${r.count}:${r.mine ? 1 : 0}`).join(',');
-  return [m.id, m.text || '', m.editedAt || '', m.pinnedAt || '', m.bookmarked ? 1 : 0,
+  /* ⚠ DİL DƏ İMZADADIR. Mesaj node-unun içində TƏRCÜMƏ OLUNMUŞ mətnlər var
+   * ("Daha çox oxu", alət panelinin `aria-label`-ları, "Sabitləyib: …").
+   * Dil dəyişəndə məzmun eyni qaldığı üçün imza dəyişmirdi və keşlənmiş
+   * node-lar KÖHNƏ DİLDƏ qalırdı — interfeys ingiliscə, düymələr rusca
+   * görünürdü (ekranda müşahidə edildi). Dili imzaya qatmaq bütün mesajları
+   * bir dəfə yenidən qurur və problem öz-özünə həll olunur. */
+  return [getLang(), m.id, m.text || '', m.editedAt || '', m.pinnedAt || '', m.bookmarked ? 1 : 0,
     m.fileUrl || '', m.replyTo || '', rx].join('|');
 }
 
@@ -286,7 +292,41 @@ export function messageNode(m, ctx){
   const q = replyQuote(m, ctx);
   if(q) node.append(q);
 
-  node.append(el('div', { class: 'msg-body' }, richContent(m)));
+  /* ══ UZUN MESAJ — "daha çox oxu" ═══════════════════════════════════════
+   * Uzun mətn bütün söhbəti aşağı itələyir və qonşu mesajlar görünməz olur.
+   *
+   * ⚠ QƏRAR ÖLÇMƏ İLƏ VERİLİR, simvol sayına görə YOX: eyni 500 simvol dar
+   *   balonda 14 sətir, geniş ekranda 5 sətir tutur — sabit hədd birində
+   *   lazımsız düymə çıxarar, digərində kəsməyi qaçırardı.
+   * ⚠ Ucuz ilkin süzgəc (`CLAMP_MIN_CHARS`) qəsdən var: HƏR mesajı ölçmək
+   *   yüzlərlə `scrollHeight` oxusu deməkdir və render-i ləngidərdi
+   *   (layout thrashing). Qısa mesajlar ölçülmür.
+   * ⚠ Kod və şəkil mesajları KƏSİLMİR: kod blokunun öz yığma düyməsi var,
+   *   şəkil isə onsuz da sabit hündürlükdədir. */
+  const body = el('div', { class: 'msg-body' }, richContent(m));
+  node.append(body);
+
+  const CLAMP_MIN_CHARS = 320;
+  const clampable = (!m.type || m.type === 'text') && (m.text || '').length > CLAMP_MIN_CHARS;
+  if(clampable){
+    body.classList.add('clampable');
+    requestAnimationFrame(() => {
+      // Yalnız HƏQİQƏTƏN kəsilibsə düymə əlavə olunur.
+      if(body.scrollHeight - body.clientHeight < 8){
+        body.classList.remove('clampable');
+        return;
+      }
+      const more = el('button', {
+        type: 'button', class: 'msg-more', 'aria-expanded': 'false',
+        onclick: () => {
+          const open = body.classList.toggle('open');
+          more.setAttribute('aria-expanded', String(open));
+          more.textContent = open ? t('msg.show_less') : t('msg.show_more');
+        },
+      }, t('msg.show_more'));
+      body.after(more);
+    });
+  }
 
   if(m.editedAt) node.append(el('span', { class: 'edited-mark' }, t('feed.edited')));
 

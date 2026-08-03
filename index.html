@@ -724,7 +724,11 @@
                  mesaj (markdown, kod) tələb olunur. `rows="1"` başlanğıc
                  hündürlüyüdür, qalanını `autoGrow` idarə edir.
                  Enter = göndər, Shift+Enter = yeni sətir (çat konvensiyası). -->
-            <textarea id="chatInput" rows="1" data-i18n-ph="chat.ph" data-i18n-aria="chat.ph" maxlength="2000"></textarea>
+            <!-- ⚠ 5000 — server həddi (`msg.ts` → `clamp(text, 8000)`) DAHA
+                 BÖYÜKDÜR və qəsdən elə qalır: client limiti istifadəçi
+                 təcrübəsi üçündür, server limiti isə müdafiə qatıdır və ondan
+                 aşağı olmamalıdır. -->
+            <textarea id="chatInput" rows="1" data-i18n-ph="chat.ph" data-i18n-aria="chat.ph" maxlength="5000"></textarea>
             <!-- ⚠ `data-i18n` QƏSDƏN YOXDUR: `applyI18n` onu `textContent` kimi
                  tətbiq edir və `enhanceComposer`-in qoyduğu SVG ikonu silərdi
                  (dil dəyişəndə düymə yenidən "Göndər" mətninə çevrilirdi).
@@ -750,7 +754,8 @@
           <div class="chat-input" id="dmComposer">
             <!-- AUDIT-UI: `#chatInput` ilə eyni — placeholder etiket deyil. -->
             <!-- `#chatInput` ilə eyni səbəb — bax oradakı şərh. -->
-            <textarea id="dmInput" rows="1" data-i18n-ph="chat.ph" data-i18n-aria="chat.ph" maxlength="2000"></textarea>
+            <!-- `#chatInput` ilə eyni hədd — bax oradakı şərh. -->
+            <textarea id="dmInput" rows="1" data-i18n-ph="chat.ph" data-i18n-aria="chat.ph" maxlength="5000"></textarea>
             <!-- `#chatSendBtn` ilə eyni səbəb — bax oradakı şərh. -->
             <button id="dmSendBtn"></button>
           </div>
