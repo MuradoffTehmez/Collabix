@@ -275,6 +275,17 @@ const D = {
   'auth.btn_show_pass': { az: 'Şifrəni göstər', en: 'Show password', ru: 'Показать пароль' },
   'auth.lbl_remember': { az: 'Məni xatırla', en: 'Remember me', ru: 'Запомнить меня' },
   'auth.btn_forgot': { az: 'Parolu unutmusan?', en: 'Forgot password?', ru: 'Забыли пароль?' },
+  /* Parol bərpasının SON EHTİYAT variantı — yalnız avtomatik sıfırlama və
+     magic link mümkün olmayanda göstərilir.
+     ⚠ Mətn əvvəl SABİT AZƏRBAYCANCA idi (EN/RU istifadəçi də onu görürdü)
+       və mövcud OLMAYAN Instagram səhifəsinə yönləndirirdi (`SITE.social`
+       qəsdən boşdur). İndi tərcümə olunur və real e-poçt kanalını göstərir. */
+  'auth.forgot_t': { az: 'Parolu unutmusan?', en: 'Forgot your password?', ru: 'Забыли пароль?' },
+  'auth.forgot_d': {
+    az: 'Hesab e-poçtun qeydiyyatda göstərilməyibsə, avtomatik sıfırlama mümkün deyil. Bu halda bizə yaz — kimliyin təsdiqləndikdən sonra müvəqqəti parol təyin olunacaq, sonra onu Parametrlər bölməsindən dəyişərsən.',
+    en: 'If no e-mail address was provided at sign-up, automatic reset is not possible. Write to us instead — once your identity is confirmed, a temporary password will be issued, which you then change in Settings.',
+    ru: 'Если при регистрации не был указан e-mail, автоматический сброс невозможен. Напишите нам — после подтверждения личности будет выдан временный пароль, который вы смените в «Настройках».',
+  },
   'auth.login_note': { az: 'Hesabınız yoxdursa, əvvəlcə <b>Qeydiyyat</b> bölməsindən profil yaradın.', en: 'If you do not have an account, create one in the <b>Register</b> section.', ru: 'Если у вас нет аккаунта, сначала создайте его в разделе <b>Регистрация</b>.' },
 
   /* ---------- App General & Sidebar ---------- */
@@ -723,6 +734,9 @@ const D = {
   'wiz.ph_pass2': { az: 'Şifrəni təkrar yaz', en: 'Repeat password', ru: 'Повторите пароль' },
   'wiz.lbl_email': { az: 'Email (könüllü — yalnız əlaqə üçün)', en: 'Email (optional — contact only)', ru: 'Email (необязательно — только для связи)' },
   'wiz.pass_show': { az: 'Şifrəni göstər', en: 'Show password', ru: 'Показать пароль' },
+  // ⚠ Göz düyməsinin `aria-label`-ı vəziyyətlə dəyişir — ekran oxuyucusu
+  //   düymənin indi NƏ edəcəyini bilməlidir, nə etdiyini yox.
+  'wiz.pass_hide': { az: 'Şifrəni gizlət', en: 'Hide password', ru: 'Скрыть пароль' },
   'wiz.pass_str': { az: 'Güc: ', en: 'Strength: ', ru: 'Сложность: ' },
   'wiz.err_name': { az: 'Ad boş ola bilməz.', en: 'Name cannot be empty.', ru: 'Имя не может быть пустым.' },
   'wiz.err_bd': { az: 'Doğum tarixini seç.', en: 'Select birth date.', ru: 'Выберите дату рождения.' },

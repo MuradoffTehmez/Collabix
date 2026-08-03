@@ -360,3 +360,60 @@
   flex: 1;
   min-height: 0;
 }
+
+/* ══════ Turnstile yuvası ══════
+   ⚠ Yeri dəyişdirildi (bax `index.html`): əvvəl qeydiyyatda göndər
+     düyməsindən SONRA gəlirdi. İndi hər iki formada ardıcıllıq eynidir:
+     sahələr → təsdiq → göndər. */
+/* ⚠ `:not(:empty)` KİFAYƏT ETMİR: Turnstile açar qurulmayanda (və ya domen
+   uyğun gəlmədikdə) yuvaya BOŞ bir `<div>` qoyur — ölçüldü: uşaq elementi
+   var, hündürlük 0. Yəni yuva "dolu" sayılır və görünməyən widget üçün boş
+   yerə 18px boşluq yaranırdı. `:has(iframe)` yalnız widget HƏQİQƏTƏN
+   çəkiləndə uyğun gəlir. */
+.turnstile-slot:has(iframe) {
+  display: flex;
+  justify-content: center;
+  margin: 4px 0 14px;
+}
+
+/* Göz düyməsi — məzmunu emoji deyil, SVG (bax `js/app.js`-dəki izah).
+   ⚠ Burada `color` TƏKRAR VERİLMİR: yuxarıdakı `.eye-btn` qaydası onsuz da
+     `color: var(--muted)` təyin edir və `currentColor` SVG-yə düzgün keçir.
+     Yalnız qlif qalığını gizlətmək və ikonu mərkəzləmək lazımdır. */
+.eye-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color .16s ease;
+}
+
+.eye-btn .ic {
+  display: inline-flex;
+  font-size: 0;
+}
+
+/* Parol bərpasının ehtiyat modalı */
+.fp-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.fp-head .ic {
+  display: inline-flex;
+  font-size: 0;
+  color: var(--coral);
+}
+
+.fp-body {
+  color: var(--muted);
+  font-size: .86rem;
+  line-height: 1.6;
+  margin-bottom: 14px;
+}
+
+.fp-mail {
+  display: inline-flex;
+  font-family: var(--mono);
+  font-size: .82rem;
+}

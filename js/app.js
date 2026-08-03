@@ -20,6 +20,8 @@ import { initErrorBoundary } from './error-boundary.js';
 import { paintIcons } from './icons.js';
 import { startPresence, stopPresence } from './presence.js';
 import { t, setLang, getLang, applyI18n } from './i18n.js';
+// Parol bərpasının son ehtiyat variantı real əlaqə kanalını göstərir.
+import { SITE } from './legal.js';
 import { attachParticles } from './particles.js';
 import { initCyberpunkFX } from './cyberpunk_fx.js';
 import { mountHome, mountSaved, mountPost, subscribeFeed, setFeedTab } from './feed.js';
@@ -66,8 +68,21 @@ function initAuthUI(){
   // Login cilalanması: göz ikonası, spinner, remember me, parol reset məlumatı.
   $('loginEyeBtn').addEventListener('click', () => {
     const p = $('loginPass');
-    p.type = p.type === 'password' ? 'text' : 'password';
+    const shown = p.type === 'password';   // klikdən SONRAKI vəziyyət
+    p.type = shown ? 'text' : 'password';
+    // ⚠ Düymə əvvəl `👁` EMOJİSİ idi — platformadan asılı çəkilirdi,
+    //   `currentColor`-a tabe deyildi və vəziyyət dəyişəndə eyni qalırdı
+    //   (yəni parol açıqdırmı, bağlıdırmı — bilinmirdi). İndi reyestrdəki
+    //   SVG-dir və vəziyyətə görə `eye` ↔ `eyeOff` arasında keçir.
+    const slot = $('loginEyeBtn').querySelector('.ic');
+    if(slot){
+      slot.dataset.icon = shown ? 'eyeOff' : 'eye';
+      slot.querySelector('svg')?.remove();
+      paintIcons($('loginEyeBtn'));
+    }
   });
+  // İlkin SVG-ni yerləşdir (markup-da yalnız `data-icon` yuvası var).
+  paintIcons($('loginEyeBtn'));
   $('forgotBtn').addEventListener('click', async () => {
     // AUDIT-TASK-10 / Faza 5/#5 — ƏSL parol bərpası.
     //
@@ -77,13 +92,20 @@ function initAuthUI(){
     //   ikinci variant olaraq qalır.
     if(await openPasswordResetModal()) return;
     if(await openMagicLinkModal()) return;
+    /* SON EHTİYAT — yuxarıdakı iki avtomatik yol mümkün olmayanda.
+     * ⚠ Əvvəl bu blok SABİT AZƏRBAYCANCA mətn idi (EN/RU istifadəçi də onu
+     *   görürdü), başlıqda `🔑` emojisi vardı və mövcud OLMAYAN Instagram
+     *   səhifəsinə yönləndirirdi — `SITE.social` qəsdən boşdur (bax
+     *   `js/legal.js`). İndi tərcümə olunur, ikon reyestrdəndir və göstərilən
+     *   kanal REALDIR: `SITE.email`. */
+    const icon = el('span', { class: 'ic', 'data-icon': 'lock', 'data-icon-size': '18' });
+    const head = el('div', { class: 'section-title fp-head' }, icon, el('span', {}, t('auth.forgot_t')));
     showModal([
-      el('div', { class: 'section-title' }, '🔑 Parolu unutmusan?'),
-      el('p', { style: 'color:var(--muted); font-size:.86rem; line-height:1.6;' },
-        'Hesablar istifadəçi adı ilə qurulduğu üçün parol bərpası admin vasitəsilə edilir: ',
-        el('b', {}, 'admin ilə əlaqə saxla'),
-        ' (ümumi otaqda və ya Instagram səhifəmizdən yaz) — admin sənə müvəqqəti parol təyin edəcək, sonra Parametrlər bölməsindən dəyişərsən.'),
+      head,
+      el('p', { class: 'fp-body' }, t('auth.forgot_d')),
+      el('a', { class: 'btn-mini fp-mail', href: 'mailto:' + SITE.email }, SITE.email),
     ]);
+    paintIcons(head);
   });
   $('loginBtn').addEventListener('click', doLogin);
   $('loginPass').addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });

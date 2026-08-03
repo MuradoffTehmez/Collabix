@@ -5,6 +5,8 @@ import { register } from './auth.js';
 import { el, clear, normalizeUsername, validUsername, resizeImage, authErrMessage, debounce } from './util.js';
 import { toast } from './ui.js';
 import { tax, SKILL_LEVELS } from './taxonomy.js';
+// Parol göstər/gizlət düyməsinin SVG ikonu üçün (emoji əvəzinə).
+import { paintIcons } from './icons.js';
 import { t } from './i18n.js';
 
 const LOOKING_FOR = ['Study partner', 'Mentor', 'Layihə komandası'];
@@ -86,6 +88,38 @@ const textInput = (key, ph, max = 60, type = 'text') => {
   return i;
 };
 
+/**
+ * Parol "göstər / gizlət" düyməsi.
+ *
+ * 🔴 İKİ QÜSUR DÜZƏLDİLİR:
+ *   1. Düymənin məzmunu `'👁'` EMOJİSİ idi — platformadan asılı çəkilirdi,
+ *      `currentColor`-a tabe deyildi (dörd temaya uyğunlaşmırdı) və vəziyyət
+ *      dəyişəndə eyni qalırdı, yəni parolun açıq/gizli olduğu bilinmirdi.
+ *   2. Düymə YALNIZ birinci parol sahəsində vardı; "parol təkrarı"nda heç
+ *      yox idi — istifadəçi yazdığını yoxlaya bilmirdi, halbuki səhv yazmaq
+ *      məhz təkrar sahəsində daha çox olur.
+ *
+ * ⚠ `aria-label` vəziyyətlə birlikdə dəyişir: ekran oxuyucusu düymənin indi
+ *   NƏ edəcəyini bilməlidir ("göstər" ↔ "gizlət").
+ */
+function eyeToggle(input){
+  const slot = el('span', { class: 'ic', 'data-icon': 'eye', 'data-icon-size': '16' });
+  const btn = el('button', {
+    type: 'button', class: 'eye-btn',
+    'aria-label': t('wiz.pass_show'),
+    onclick: () => {
+      const show = input.type === 'password';   // klikdən SONRAKI vəziyyət
+      input.type = show ? 'text' : 'password';
+      slot.dataset.icon = show ? 'eyeOff' : 'eye';
+      slot.querySelector('svg')?.remove();
+      btn.setAttribute('aria-label', t(show ? 'wiz.pass_hide' : 'wiz.pass_show'));
+      paintIcons(btn);
+    },
+  }, slot);
+  paintIcons(btn);   // ilkin SVG (element hələ DOM-a qoşulmayıb — problem deyil)
+  return btn;
+}
+
 let unameStatusEl, checkUnameLive;
 
 function step1(){
@@ -105,9 +139,7 @@ function step1(){
   unameIn.addEventListener('input', () => { data.username = unameIn.value; checkUnameLive(); });
 
   const passIn = el('input', { type: 'password', placeholder: '••••••••', value: data.pass, autocomplete: 'new-password' });
-  const eye = el('button', { type: 'button', class: 'eye-btn', 'aria-label': t('wiz.pass_show'), onclick: () => {
-    passIn.type = passIn.type === 'password' ? 'text' : 'password';
-  } }, '👁');
+  const eye = eyeToggle(passIn);
   const smFill = el('div', { class: 'sm-fill' });
   const smLbl = el('div', { class: 'strength-lbl' });
   passIn.addEventListener('input', () => {
@@ -131,7 +163,10 @@ function step1(){
     viaOAuth ? null : field(t('wiz.lbl_pass'), el('div', {},
       el('div', { class: 'pass-wrap' }, passIn, eye),
       el('div', { class: 'strength-meter' }, smFill), smLbl)),
-    viaOAuth ? null : field(t('wiz.lbl_pass2'), pass2In),
+    // ⚠ Təkrar sahəsi də `pass-wrap` içindədir və öz göz düyməsini daşıyır —
+    //   əvvəl yalnız birinci sahədə vardı.
+    viaOAuth ? null : field(t('wiz.lbl_pass2'),
+      el('div', { class: 'pass-wrap' }, pass2In, eyeToggle(pass2In))),
     field(t('wiz.lbl_email'), textInput('contactEmail', 'sen@example.com', 80, 'email')),
   );
   return { node, validate: async () => {

@@ -607,12 +607,17 @@
         <ol class="wizard-steps" id="wizSteps"></ol>
         <div class="wizard-step-lbl" id="wizStepLbl" data-i18n="auth.step_lbl"></div>
         <div id="wizBody"></div>
+        <!-- Turnstile (TASK-8/Bənd 7): açar qurulmayıbsa boş qalır, yer tutmur.
+             ⚠ YERİ DƏYİŞDİRİLDİ — əvvəl `wizard-nav`-dan SONRA idi, yəni
+               "robot deyiləm" yoxlaması "Hesab yarat" düyməsindən AŞAĞIDA
+               görünürdü. Oxunuş sırası pozulurdu: istifadəçi göndər düyməsini
+               görüb basır, təsdiq isə altda qalırdı. İndi forma → təsdiq →
+               göndər ardıcıllığındadır (giriş formasında onsuz da belədir). -->
+        <div class="turnstile-slot" id="regTurnstile"></div>
         <div class="wizard-nav">
           <button type="button" class="btn-mini" id="wizBackBtn" data-i18n="auth.btn_back"></button>
           <button type="button" class="btn-primary wizard-next" id="wizNextBtn" data-i18n="auth.btn_next"></button>
         </div>
-        <!-- Turnstile (TASK-8/Bənd 7): açar qurulmayıbsa boş qalır, yer tutmur. -->
-        <div class="turnstile-slot" id="regTurnstile"></div>
         <div class="form-err" id="regErr"></div>
         <!-- OAuth (TASK-8/Bənd 5): yalnız qurulmuş provayderlər render olunur. -->
         <div id="regOAuth"></div>
@@ -624,7 +629,7 @@
         <div class="field"><label data-i18n="auth.lbl_pass"></label>
           <div class="pass-wrap">
             <input id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password">
-            <button type="button" class="eye-btn" id="loginEyeBtn" data-i18n-aria="auth.btn_show_pass">👁</button>
+            <button type="button" class="eye-btn" id="loginEyeBtn" data-i18n-aria="auth.btn_show_pass"><span class="ic" data-icon="eye" data-icon-size="16"></span></button>
           </div>
         </div>
         <label class="remember-row"><input type="checkbox" id="rememberMe" checked> <span data-i18n="auth.lbl_remember"></span></label>
