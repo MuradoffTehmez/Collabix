@@ -437,6 +437,10 @@ export async function deleteAccount(c: Ctx) {
     D(c).prepare('DELETE FROM likes WHERE user_id = ?').bind(u.id),
     D(c).prepare('DELETE FROM bookmarks WHERE user_id = ?').bind(u.id),
     D(c).prepare('DELETE FROM notifications WHERE user_id = ?').bind(u.id),
+    // Susdurma siyahısı (miqrasiya 0049) — `notifications` ilə EYNİ sinif:
+    // FK yoxdur, ona görə əl ilə silinməsə sətirlər yetim qalır və hesab
+    // silindikdən sonra GDPR "unudulmaq hüququ" yarımçıq icra olunardı.
+    D(c).prepare('DELETE FROM notification_mutes WHERE user_id = ?').bind(u.id),
     D(c).prepare('DELETE FROM presence WHERE user_id = ?').bind(u.id),
     D(c).prepare('DELETE FROM progress WHERE user_id = ?').bind(u.id),
     D(c).prepare('DELETE FROM admins WHERE user_id = ?').bind(u.id),

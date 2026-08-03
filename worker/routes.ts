@@ -11,52 +11,20 @@
 // işlədir, ona görə barrel sayəsində o, BİR SƏTİR belə dəyişmədi
 // (sənədin tələb etdiyi naxış — §3.1/4).
 //
-// ⚠ NİYƏ BİLDİRİŞLƏR HƏLƏ BURADADIR: cəmi üç kiçik endpoint və onlar heç bir
-//   domen köməkçisi tələb etmir. Ayrıca modul fayl sayını artırardı, oxunuşu
-//   yaxşılaşdırmazdı.
-import { Ctx, json } from './util';
-import { D } from './routes/shared';
-
+// ⚠ BİLDİRİŞLƏR ARTIQ BURADA DEYİL — `routes/notification.ts`-ə köçürüldü.
+//   Əvvəlki şərh "cəmi üç kiçik endpoint" deyirdi və bu, o vaxt doğru idi.
+//   Bildiriş mərkəzi (miqrasiya 0049) arxiv, sabitləmə, prioritet,
+//   qruplaşdırma və susdurma gətirdi — səbəb qüvvədən düşdü.
 export type { LogLevel } from './admin-log';
 
-/**
- * Bildiriş siyahısı — keyset paginasiya. AUDIT-TASK-10 / Faza 5/#2.
- *
- * ƏVVƏL: `LIMIT 60` və cursor yox → 60-dan köhnə bildiriş əlçatmaz idi.
- * Köhnə sətirlər isə HEÇ VAXT SİLİNMİRDİ (prune cron yox) — cədvəl sonsuz
- * böyüyürdü. Təmizlik `archive.ts` gecə cron-una əlavə edildi.
- */
-export async function listNotifs(c: Ctx) {
-  const limit = Math.min(Math.max(parseInt(c.url.searchParams.get('limit') || '60', 10) || 60, 5), 100);
-  const cursor = c.url.searchParams.get('cursor');
-  const before = cursor && Number.isFinite(Number(cursor)) ? Number(cursor) : null;
-  const rows = await D(c).prepare(
-    before
-      ? 'SELECT * FROM notifications WHERE user_id = ?1 AND created_at < ?2 ORDER BY created_at DESC LIMIT ?3'
-      // ⚠ Yer tutucu NÖMRƏLƏRİ hər budaqda AYRIDIR: kursorsuz sorğuda cəmi iki
-      // parametr bağlanır, ona görə limit `?2`-dir. `?3` yazsaydıq D1
-      // "bağlanmamış parametr" xətası verərdi.
-      : 'SELECT * FROM notifications WHERE user_id = ?1 ORDER BY created_at DESC LIMIT ?2',
-  ).bind(...(before ? [c.user!.id, before, limit + 1] : [c.user!.id, limit + 1])).all<any>();
-  const hasMore = rows.results.length > limit;
-  const page = rows.results.slice(0, limit);
-  return json({
-    hasMore,
-    nextCursor: hasMore && page.length ? String(page[page.length - 1].created_at) : null,
-    notifications: page.map(r => ({
-      id: r.id, type: r.type, fromUid: r.from_id, fromName: r.from_name,
-      postId: r.post_id, text: r.text, read: !!r.read, createdAt: r.created_at,
-    })),
-  });
-}
-export async function readNotif(c: Ctx, id: string) {
-  await D(c).prepare('UPDATE notifications SET read = 1 WHERE id = ? AND user_id = ?').bind(id, c.user!.id).run();
-  return json({ ok: true });
-}
-export async function readAllNotifs(c: Ctx) {
-  await D(c).prepare('UPDATE notifications SET read = 1 WHERE user_id = ?').bind(c.user!.id).run();
-  return json({ ok: true });
-}
+/* ================= BİLDİRİŞLƏR — `routes/notification.ts`-ə köçürüldü ================= */
+// `index.ts` marşrut cədvəli `R.listNotifs` / `R.readNotif` / `R.readAllNotifs`
+// adlarını işlədir, ona görə burada RE-EXPORT saxlanılır — bölünmə mövcud
+// marşrutlara TOXUNMUR (upload/auth ilə eyni barrel naxışı).
+export {
+  listNotifs, readNotif, readAllNotifs,
+  notifStats, notifPreviews, deleteNotif, bulkNotifs, listMutes, toggleMute,
+} from './routes/notification';
 
 /* ================= UPLOAD — `routes/upload.ts`-ə köçürüldü ================= */
 // AUDIT-TASK-10 / Faza 3.1. `index.ts` marşrut cədvəli `R.upload` /

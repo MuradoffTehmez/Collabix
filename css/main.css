@@ -65,5 +65,11 @@
      açıq şəkildə bərpa edir. */
 @import './87-chat-modern.css';
 
+/* Bildiriş mərkəzi.
+   ⚠ `75-touch.css`-dən SONRADIR (87 ilə eyni səbəb): kart sıxlığı qlobal
+     toxunuş qaydalarının üstündə qurulur və modul öz media query-sində
+     44px hədəflərini açıq şəkildə bərpa edir. */
+@import './88-notifications.css';
+
 /* 🔴 HƏMİŞƏ SONUNCU */
 @import './90-utilities.css';

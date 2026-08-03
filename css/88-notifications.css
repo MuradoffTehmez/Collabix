@@ -1,0 +1,979 @@
+/* 88-notifications.css — Bildiriş mərkəzi.
+ *
+ * ⚠ QƏSDƏN `87-chat-modern.css`-DƏN SONRA, `90-utilities.css`-DƏN ƏVVƏL:
+ *   `75-touch.css` toxunuş hədəflərini qlobal təyin edir və bu modul öz
+ *   sıxlığını (kompakt kart) onun üstündə qurmalıdır; utility qatı isə həmişə
+ *   sonuncu qalır (bax `main.css` başlıq şərhi).
+ *
+ * 🔴 SABİT HEX FON YOXDUR. Spesifikasiya "#F7F9FC fon + ağ kart" deyir — bu,
+ *    AÇIQ temada `var(--bg)` = #f2f5fc və `var(--surface)` = #ffffff ilə onsuz
+ *    da alınır. Sabit yazsaydıq dark/matrix/cyberpunk temalarında səhifə
+ *    saytın qalanından qopardı. Nişanlar dörd temanın hamısını daşıyır.
+ */
+
+/* ═══════════════════════ NİŞANLAR ═══════════════════════
+ *
+ * ⚠ TİP RƏNGLƏRİ YALNIZ İKON/NÖQTƏ/HAŞİYƏ ÜÇÜNDÜR — GÖVDƏ MƏTNİ ÜÇÜN YOX.
+ *   Səbəb ölçmədir: `#e5484d` ağ fonda 3.7:1 verir — qrafik element üçün
+ *   kifayətdir (WCAG 1.4.11 → 3:1), lakin mətn üçün yox (4.5:1). Başlıq və
+ *   izah mətni həmişə `--text` / `--muted` işlədir.
+ *
+ * ⚠ RƏNG TƏK GÖSTƏRİCİ DEYİL (`color-not-only`): hər tipin özünəməxsus
+ *   Lucide ikonu var, ona görə rəngi ayırd edə bilməyən istifadəçi də tipi
+ *   tanıyır.
+ */
+#page-notifs {
+  --nc-like: #e5484d;
+  --nc-comment: #3b82f6;
+  --nc-message: #22c55e;
+  --nc-mention: #a855f7;
+  --nc-follow: #6366f1;
+  --nc-task: #f59e0b;
+  --nc-team: #06b6d4;
+  --nc-project: #14b8a6;
+  --nc-system: var(--muted);
+  --nc-accent: var(--coral);
+
+  /* Kart ölçüləri — bir yerdə ki, sıxlıq bütün breakpoint-lərdə eyni ritmi saxlasın. */
+  --nc-avatar: 44px;
+  --nc-card-pad: var(--sp-3);
+  --nc-gap: var(--sp-3);
+
+  /* ── Yapışqan qat ofsetləri ───────────────────────────────────────────────
+   * 🔴 DƏYƏRLƏRİ `js/notify.js` ÖLÇÜB YAZIR (`syncStickyOffsets`). Buradakılar
+   *    yalnız JS işə düşənə qədərki ehtiyat dəyərlərdir.
+   *
+   * ⚠ NİYƏ SABİT YAZILMIR: `.app-topbar` hündürlüyü şrift ölçüsündən və
+   *   temadan asılıdır, `.nc-controls` isə mobil sarmada iki sətrə çıxır.
+   *   Sabit `top: 92px` yazsaydıq həmin hallarda ya boşluq qalar, ya da
+   *   axtarış sahəsi topbar-ın ALTINDA gizlənərdi (ölçüldü: 480px-də 52px
+   *   fərq). Ofset ölçülür — təxmin edilmir. */
+  --nc-topbar: 57px;
+  --nc-controls-h: 106px;
+  --nc-bulk-h: 56px;
+}
+
+/* Açıq temada tonlar bir pillə tündləşir: ağ səthdə eyni dəyərlər solğun
+   görünür və 3:1 həddinə yaxınlaşır. */
+:root[data-theme="light"] #page-notifs {
+  --nc-like: #d32f2f;
+  --nc-comment: #1d63d1;
+  --nc-message: #15803d;
+  --nc-mention: #7e22ce;
+  --nc-follow: #4338ca;
+  --nc-task: #b45309;
+  --nc-team: #0e7490;
+  --nc-project: #0f766e;
+}
+
+.nc-t--like { color: var(--nc-like); }
+.nc-t--comment { color: var(--nc-comment); }
+.nc-t--message { color: var(--nc-message); }
+.nc-t--mention { color: var(--nc-mention); }
+.nc-t--follow { color: var(--nc-follow); }
+.nc-t--task { color: var(--nc-task); }
+.nc-t--team { color: var(--nc-team); }
+.nc-t--project { color: var(--nc-project); }
+.nc-t--system { color: var(--nc-system); }
+.nc-t--accent { color: var(--nc-accent); }
+
+/* ⚠ `<button>` daxilindəki SVG öz `color`-unu VALİDEYNDƏN alır və düymənin
+   default rəngi tünddür — açıq temada işlədiyi üçün qüsur gizli qalırdı.
+   Ton sinfi birbaşa ikonun üstündədir, ona görə `currentColor` düzgün işləyir. */
+#page-notifs .ic svg { color: inherit; }
+
+/* ═══════════════════════ BAŞLIQ ═══════════════════════ */
+
+.nc-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-5);
+}
+
+.nc-title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: var(--fs-2xl);
+  font-weight: 700;
+  line-height: var(--lh-tight);
+  letter-spacing: -.02em;
+}
+
+.nc-sub {
+  margin: var(--sp-1) 0 0;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
+  /* Uzun alt-başlıq geniş ekranda bir sətirdə uzanıb oxunuşu pozmasın. */
+  max-width: 64ch;
+}
+
+.nc-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: var(--sp-2) 0 0;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+
+.nc-meta__count {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  color: var(--coral);
+  font-weight: 600;
+}
+
+/* Oxunmamış sıfırdırsa aksent rəngi yanıltıcı olardı — "diqqət" siqnalı
+   yalnız həqiqətən diqqət lazım olanda verilir. */
+.nc-meta__count.is-zero { color: var(--muted); font-weight: 500; }
+
+.nc-meta__count::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.nc-meta__sep { opacity: .5; }
+
+.nc-head__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.nc-iconbtn.is-spinning svg { animation: nc-spin .6s var(--mo-ease); }
+
+@keyframes nc-spin { to { transform: rotate(360deg); } }
+
+/* ═══════════════════════ STATİSTİKA KARTLARI ═══════════════════════ */
+
+.nc-stats {
+  display: grid;
+  /* `auto-fit` + `minmax`: 9 kart geniş ekranda bir sıra, dar ekranda özü
+     sarılır — media query ilə sütun sayını əl ilə saymağa ehtiyac qalmır. */
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-4);
+}
+
+.nc-stat {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 62px;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--sh-1);
+  color: var(--text);
+  font-family: var(--body);
+  text-align: left;
+  cursor: pointer;
+  transition: transform var(--mo-fast) var(--mo-ease),
+              box-shadow var(--mo-fast) var(--mo-ease),
+              border-color var(--mo-fast) var(--mo-ease);
+}
+
+.nc-stat:hover { transform: translateY(-2px); box-shadow: var(--sh-2); }
+.nc-stat:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+.nc-stat.is-active { border-color: var(--coral); box-shadow: 0 0 0 1px var(--coral) inset; }
+
+.nc-stat__ic {
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-sm);
+  /* Fon tondan törəyir — hər tip üçün ayrıca sabit yazmağa ehtiyac yoxdur. */
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.nc-stat__body { display: flex; flex-direction: column; min-width: 0; }
+
+.nc-stat__num {
+  font-family: var(--display);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  line-height: 1.1;
+  /* Sayğac animasiya edərkən rəqəm eni dəyişib sətri sıçratmasın. */
+  font-variant-numeric: tabular-nums;
+}
+
+.nc-stat__lbl {
+  font-size: var(--fs-xs);
+  color: var(--text);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nc-stat__trend {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.nc-stat--accent .nc-stat__num { color: var(--coral); }
+
+/* ═══════════════════════ İDARƏETMƏ ZOLAĞI ═══════════════════════ */
+
+.nc-controls {
+  position: sticky;
+  /* Topbar hündürlüyü qədər aşağıda dayanır ki, altına girməsin. */
+  top: var(--nc-topbar);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-2) 0;
+  margin-bottom: var(--sp-3);
+  background: var(--bg);
+}
+
+.nc-searchrow { display: flex; gap: var(--sp-2); align-items: center; }
+
+.nc-search { flex: 1 1 auto; min-width: 0; }
+
+/* ⚠ `15-components.css`-dəki `.c-search > input` qaydası ÜÇ konkret seçiciyə
+   bağlıdır (`.app-search`, `.search-bar > input`, `#userSearch`) — həmin faylın
+   spesifiklik şərhinə bax. Yeni sahə onların heç birinə uymur, ona görə sol
+   doldurma tətbiq olunmurdu və AXTARIŞ İKONU MƏTNİN ÜSTÜNƏ DÜŞÜRDÜ.
+   Bu modul sonra yükləndiyi üçün sadə seçici kifayətdir. */
+.nc-search > input {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--tap);
+  padding: 0 var(--sp-3) 0 34px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--body);
+  font-size: var(--fs-sm);
+}
+.nc-search > input::placeholder { color: var(--muted); }
+.nc-search > input:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+
+/* `type="search"` Safari-də daxili təmizləmə düyməsi çıxarır və o, bizim
+   fon rəngimizlə uyğunlaşmır. */
+.nc-search input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+
+.nc-selectbtn { flex: 0 0 auto; }
+
+.nc-filters {
+  display: flex;
+  gap: var(--sp-2);
+  /* Sarma YOX, sürüşmə: 12 pill sarılanda başlıq zolağı üç sətrə çıxıb
+     siyahını aşağı itələyirdi. Sürüşmə sıxlığı qoruyur (AUDIT-9 overflow). */
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+  /* Sağ kənarda solma — sürüşəcək məzmun olduğunu bildirən YEGANƏ işarədir
+     (sürüşmə çubuğu gizlidir). Onsuz kəsilmiş pill "sınıq layout" kimi oxunur.
+     `mask` sürüşmə sonuna çatanda da qalır, amma vizual zərəri yoxdur. */
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+}
+.nc-filters::-webkit-scrollbar { display: none; }
+
+.nc-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex: 0 0 auto;
+  min-height: 38px;
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--muted);
+  font-family: var(--body);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--mo-fast) var(--mo-ease),
+              color var(--mo-fast) var(--mo-ease),
+              border-color var(--mo-fast) var(--mo-ease);
+}
+
+.nc-pill:hover { color: var(--text); border-color: var(--coral2); }
+.nc-pill:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+
+.nc-pill.is-active {
+  background: var(--coral-dim);
+  border-color: var(--coral);
+  color: var(--text);
+}
+
+.nc-pill__ic { display: inline-flex; }
+
+.nc-pill__count {
+  min-width: 20px;
+  padding: 0 5px;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.nc-pill.is-active .nc-pill__count { background: var(--coral); color: var(--on-accent); }
+
+/* ═══════════════════════ TOPLU ƏMƏLİYYAT ZOLAĞI ═══════════════════════ */
+
+/* 🔴 `[hidden]` ÜSTÜNLÜYÜ: UA tablosundakı `[hidden]{display:none}` (0,1,0)
+   `.nc-bulkbar{display:flex}` (0,1,0) ilə EYNİ çəkidədir və müəllif tablosu
+   qalib gəlir — nəticədə `bar.hidden = true` HEÇ NƏ ETMİRDİ və seçim rejimi
+   söndürülü ikən BOŞ MAVİ ZOLAQ görünürdü. Atribut seçicisi çəkini artırır. */
+.nc-bulkbar[hidden] { display: none; }
+
+.nc-bulkbar {
+  position: sticky;
+  top: calc(var(--nc-topbar) + var(--nc-controls-h));
+  z-index: 19;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  padding: var(--sp-2) var(--sp-3);
+  margin-bottom: var(--sp-3);
+  border: 1px solid var(--coral);
+  border-radius: var(--r-md);
+  background: var(--coral-dim);
+  box-shadow: var(--sh-2);
+  animation: nc-slide-down var(--mo-base) var(--mo-ease);
+}
+
+.nc-bulk__count { font-size: var(--fs-sm); font-weight: 700; }
+.nc-bulk__spacer { flex: 1 1 auto; }
+
+.nc-bulk__link {
+  border: none;
+  background: none;
+  color: var(--coral);
+  font-family: var(--body);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+  /* Toxunuş hədəfi: vizual olaraq link kimidir, amma sahəsi 44px qalır. */
+  min-height: var(--tap);
+  padding: 0 var(--sp-1);
+}
+.nc-bulk__link:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+
+/* ═══════════════════════ TARİX BÖLMƏLƏRİ ═══════════════════════ */
+
+.nc-group-lbl {
+  position: sticky;
+  /* İdarəetmə zolağının altında dayanır — ikisi üst-üstə düşməməlidir. */
+  top: calc(var(--nc-topbar) + var(--nc-controls-h));
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) 0;
+  margin: var(--sp-4) 0 var(--sp-2);
+  background: var(--bg);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.nc-group-lbl::after {
+  content: '';
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--border);
+}
+
+/* Seçim rejimində toplu zolaq da yapışqandır və tarix başlığı ilə EYNİ
+   ofsetdədir — biri digərinin üstünə düşməsin deyə başlıq aşağı sürüşür. */
+#page-notifs.is-selecting .nc-group-lbl {
+  top: calc(var(--nc-topbar) + var(--nc-controls-h) + var(--nc-bulk-h));
+}
+
+/* Say nişanı ayırıcı xəttdən SONRA gəlsin deyə sıra dəyişdirilir. */
+.nc-group-lbl__n { order: 3; opacity: .7; font-variant-numeric: tabular-nums; }
+.nc-group-lbl__ic { color: var(--coral); }
+.nc-group-lbl--ghost::after { display: none; }
+
+/* ═══════════════════════ KART ═══════════════════════ */
+
+.nc-card {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--nc-gap);
+  padding: var(--nc-card-pad);
+  margin-bottom: var(--sp-2);
+  border: 1px solid var(--border);
+  /* Sol zolaq oxunmamış vəziyyət üçün ehtiyatda saxlanılır: oxunmuş kartda
+     ŞƏFFAFDIR. Onsuz oxunmamışa keçid 3px yer əlavə edib sətri sıçradardı. */
+  border-left: 3px solid transparent;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  cursor: pointer;
+  /* ⚠ VİRTUALLAŞDIRMA: brauzer ekrandan kənar kartın layout/paint işini
+     atlayır. Klassik JS virtualizasiyası yapışqan tarix başlıqları və dəyişkən
+     hündürlüklü qruplarla uyuşmurdu; bu isə eyni qazancı sıfır JS ilə verir.
+     `contain-intrinsic-size` yer tutur ki, sürüşmə çubuğu titrəməsin. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 76px;
+  transition: background var(--mo-fast) var(--mo-ease),
+              border-color var(--mo-fast) var(--mo-ease),
+              box-shadow var(--mo-fast) var(--mo-ease),
+              transform var(--mo-fast) var(--mo-ease);
+  animation: nc-fade-in var(--mo-base) var(--mo-ease);
+}
+
+.nc-card:hover { box-shadow: var(--sh-2); transform: translateY(-1px); }
+.nc-card:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+
+/* Oxunmamış: yumşaq mavi fon + mavi sol haşiyə + qalın başlıq. */
+.nc-card.is-unread {
+  background: var(--coral-dim);
+  border-left-color: var(--coral);
+}
+.nc-card.is-unread .nc-card__title { font-weight: 600; color: var(--text); }
+
+.nc-card.is-selected {
+  border-color: var(--coral);
+  box-shadow: 0 0 0 1px var(--coral) inset;
+}
+
+.nc-card.is-pinned { border-color: color-mix(in srgb, var(--coral) 45%, var(--border)); }
+.nc-card.is-priority { border-left-color: var(--nc-task); }
+
+.nc-card--child {
+  margin-left: var(--sp-6);
+  background: transparent;
+  border-style: dashed;
+}
+
+/* ── Seçim qutusu ── */
+.nc-card__pick {
+  display: none;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  align-self: center;
+  color: var(--muted);
+  cursor: pointer;
+}
+.nc-card__pick:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; border-radius: var(--r-sm); }
+
+.is-selecting .nc-card__pick { display: inline-flex; }
+.is-selecting .nc-card.is-selected .nc-card__pick { color: var(--coral); }
+
+/* ── Avatar + tip nişanı ── */
+.nc-card__avatar { position: relative; flex: 0 0 auto; }
+
+.nc-card__avatar .avatar {
+  width: var(--nc-avatar);
+  height: var(--nc-avatar);
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: var(--fs-sm);
+}
+.nc-card__avatar .avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+/* Yığılmış avatarlar — çox nəfərli qrup. */
+.nc-avstack { display: flex; }
+.nc-avstack .avatar { border: 2px solid var(--surface); }
+.nc-avstack .avatar + .avatar { margin-left: -14px; }
+
+.nc-card__type {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  /* Haşiyə kart fonundadır — nişan avatarın üstündən "kəsilmiş" görünsün. */
+  border: 2px solid var(--surface);
+  background: color-mix(in srgb, currentColor 22%, var(--surface));
+}
+.nc-card.is-unread .nc-card__type,
+.nc-card.is-unread .nc-avstack .avatar { border-color: var(--coral-dim); }
+
+/* ── Gövdə ── */
+.nc-card__body { flex: 1 1 auto; min-width: 0; }
+
+.nc-card__title {
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
+  color: var(--text-sec);
+  /* Uzun mətn üç sətirdən sonra kəsilir — kart hündürlüyü sabit qalsın.
+     ⚠ Tam mətn `aria-label`-dədir, yəni ekran oxuyucusu üçün itmir. */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.nc-card__title b { color: var(--text); font-weight: 700; }
+
+.nc-card__repeat,
+.nc-card__more-actors {
+  color: var(--coral);
+  font-weight: 600;
+}
+
+.nc-card__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  margin-top: var(--sp-1);
+}
+
+.nc-card__time {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.nc-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--nc-task) 14%, transparent);
+  color: var(--nc-task);
+  font-size: 11px;
+  font-weight: 700;
+}
+.nc-flag--pin { background: color-mix(in srgb, var(--coral) 14%, transparent); color: var(--coral); }
+
+.nc-card__toggle {
+  border: none;
+  background: none;
+  color: var(--coral);
+  font-family: var(--body);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 0;
+  text-decoration: underline;
+}
+.nc-card__toggle:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+
+/* ── Önizləmə ── */
+.nc-preview {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+  padding: var(--sp-2);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--coral2);
+  border-radius: var(--r-sm);
+  background: var(--bg);
+  max-width: 520px;
+}
+
+.nc-preview__img {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-sm);
+  object-fit: cover;
+}
+
+.nc-preview__ic { flex: 0 0 auto; color: var(--muted); }
+
+.nc-preview__txt {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.nc-preview--ghost { border-left-color: var(--border); }
+.nc-preview--ghost .c-skeleton { width: 60%; margin: 0; }
+
+/* ── Sağ tərəf: nöqtə + əməliyyatlar ── */
+.nc-card__side {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  flex: 0 0 auto;
+  align-self: stretch;
+}
+
+.nc-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--coral);
+  flex: 0 0 auto;
+  animation: nc-pulse 2.4s var(--mo-ease) infinite;
+}
+
+/* ⚠ AXINDAN ÇIXARILIB (absolute): sıraya girsəydi dörd düymə (4×32 + aralıq
+   ≈ 140px) HƏMİŞƏ yer tutardı — `opacity:0` olsa belə. Nəticədə mətn sütunu
+   daralır və oxunmamış nöqtəsi kartın ortasına doğru sürüşürdü. İndi qat kimi
+   ÜSTDƏN açılır: sıxlıq itmir, layout sıçraması da yoxdur. */
+.nc-actions {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  box-shadow: var(--sh-2);
+  /* Masaüstündə hover ilə açılır; toxunuş cihazında HƏMİŞƏ görünür
+     (`hover-vs-tap`: yalnız hover-a bağlı əməliyyat toxunuşda əlçatmazdır). */
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%) translateX(6px);
+  transition: opacity var(--mo-fast) var(--mo-ease), transform var(--mo-fast) var(--mo-ease);
+}
+
+.nc-card:hover .nc-actions,
+.nc-card:focus-within .nc-actions {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(-50%);
+}
+
+/* Qat kartın fonunu örtməlidir, yoxsa altdakı mətn düymələrin arasından görünür. */
+.nc-card.is-unread .nc-actions { background: var(--coral-dim); }
+
+.nc-act {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background var(--mo-fast) var(--mo-ease), color var(--mo-fast) var(--mo-ease);
+}
+.nc-act:hover { background: var(--surface-2); color: var(--text); }
+.nc-act:focus-visible { outline: 2px solid var(--coral); outline-offset: 1px; }
+
+/* ── "Daha çox" menyusu ── */
+.nc-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 40;
+  min-width: 208px;
+  padding: var(--sp-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--sh-3);
+  animation: nc-slide-down var(--mo-fast) var(--mo-ease);
+}
+
+.nc-menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  min-height: 38px;
+  padding: 0 var(--sp-2);
+  border: none;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--text);
+  font-family: var(--body);
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.nc-menu__item:hover { background: var(--surface-2); }
+.nc-menu__item:focus-visible { outline: 2px solid var(--coral); outline-offset: -2px; }
+.nc-menu__item .ic { color: var(--muted); }
+
+/* ═══════════════════════ QRUP ═══════════════════════ */
+
+.nc-group__rest { animation: nc-slide-down var(--mo-base) var(--mo-ease); }
+
+/* ═══════════════════════ SÜRÜŞDÜRMƏ (MOBİL) ═══════════════════════ */
+
+.nc-card.is-swiping {
+  transition: none;
+  user-select: none;
+  /* Şaquli sürüşmə brauzerə qalır; yalnız yan hərəkəti biz idarə edirik. */
+  touch-action: pan-y;
+}
+
+/* Astanadan keçəndə niyyət RƏNGLƏ elan olunur — istifadəçi barmağını
+   qaldırmadan nə olacağını görür (`swipe-clarity`). */
+.nc-card.sw-del { background: color-mix(in srgb, var(--danger) 16%, var(--surface)); }
+.nc-card.sw-arch { background: color-mix(in srgb, var(--ok) 16%, var(--surface)); }
+
+/* ═══════════════════════ SKELETON / BOŞ / DAHA ÇOX ═══════════════════════ */
+
+.nc-card--skeleton { cursor: default; pointer-events: none; animation: none; }
+.nc-sk-avatar { width: var(--nc-avatar); height: var(--nc-avatar); border-radius: 50%; flex: 0 0 auto; }
+.nc-sk-body { flex: 1 1 auto; }
+.nc-sk-line1 { width: 68%; }
+.nc-sk-line2 { width: 34%; margin-bottom: 0; }
+
+.nc-empty { padding: var(--sp-7) var(--sp-4); }
+
+.nc-empty__art {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 76px;
+  height: 76px;
+  margin-bottom: var(--sp-2);
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--coral);
+}
+
+.nc-more { display: flex; justify-content: center; padding: var(--sp-4) 0; }
+
+.nc-sentinel { height: 1px; }
+
+/* ═══════════════════════ PARAMETRLƏR PANELİ ═══════════════════════ */
+
+.nc-set__h {
+  margin: var(--sp-5) 0 var(--sp-1);
+  font-family: var(--display);
+  font-size: var(--fs-md);
+  font-weight: 700;
+}
+.nc-set__h:first-child { margin-top: 0; }
+
+.nc-set__hint {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  line-height: var(--lh-normal);
+}
+
+.nc-set__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--sp-1) var(--sp-4);
+}
+
+.nc-set__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  min-height: var(--tap);
+  cursor: pointer;
+}
+.nc-set__row.is-locked { cursor: default; opacity: .62; }
+.nc-set__lbl { font-size: var(--fs-sm); font-weight: 500; }
+
+/* Açar (switch) — `<input type=checkbox>` üstündə qurulur ki, klaviatura və
+   ekran oxuyucusu semantikası ANADANGƏLMƏ olsun (özəl `div` deyil). */
+.nc-switch { position: relative; flex: 0 0 auto; width: 40px; height: 24px; }
+
+.nc-switch input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.nc-switch__track {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  pointer-events: none;
+  transition: background var(--mo-fast) var(--mo-ease), border-color var(--mo-fast) var(--mo-ease);
+}
+
+.nc-switch__track::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: transform var(--mo-fast) var(--mo-ease), background var(--mo-fast) var(--mo-ease);
+}
+
+.nc-switch input:checked + .nc-switch__track { background: var(--coral); border-color: var(--coral); }
+.nc-switch input:checked + .nc-switch__track::after { transform: translateX(16px); background: var(--on-accent); }
+.nc-switch input:focus-visible + .nc-switch__track { outline: 2px solid var(--coral); outline-offset: 2px; }
+.nc-switch input:disabled { cursor: not-allowed; }
+
+.nc-set__mutes { display: flex; flex-direction: column; gap: var(--sp-2); }
+
+.nc-set__mute {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+}
+
+.nc-set__mute-lbl {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--fs-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nc-set__foot { display: flex; justify-content: flex-end; margin-top: var(--sp-5); }
+
+/* ═══════════════════════ ANİMASİYALAR ═══════════════════════ */
+
+@keyframes nc-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes nc-slide-down {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes nc-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--coral) 55%, transparent); }
+  55% { box-shadow: 0 0 0 5px transparent; }
+}
+
+/* ⚠ `prefers-reduced-motion` bütün dekorativ hərəkəti söndürür. Nişanlar
+   (`--mo-fast/base`) onsuz da 0ms olur, lakin `animation` ayrıca susdurulmalıdır. */
+@media (prefers-reduced-motion: reduce) {
+  .nc-card,
+  .nc-menu,
+  .nc-bulkbar,
+  .nc-group__rest,
+  .nc-iconbtn.is-spinning svg { animation: none; }
+  .nc-dot { animation: none; }
+  .nc-card:hover,
+  .nc-stat:hover { transform: none; }
+}
+
+/* ═══════════════════════ UYĞUNLAŞAN GÖRÜNÜŞ ═══════════════════════
+ * Breakpoint konvensiyası (RESPONSIVE.md): 360 / 480 / 768 / 1024 / 1280. */
+
+/* Planşet — kartlar dar, əməliyyatlar daimi görünür (hover etibarsızdır). */
+@media (max-width: 1024px) {
+  .nc-stats { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+  .nc-preview { max-width: none; }
+}
+
+@media (max-width: 768px) {
+  #page-notifs { --nc-avatar: 40px; --nc-card-pad: var(--sp-2); --nc-gap: var(--sp-2); }
+
+  .nc-head { flex-direction: column; gap: var(--sp-3); }
+  .nc-head__actions { width: 100%; }
+  /* "Hamısını oxunmuş et" əsas əməliyyatdır — mobil ekranda qalan yeri tutur. */
+  .nc-head__actions .c-btn--primary { flex: 1 1 auto; }
+
+  .nc-title { font-size: var(--fs-xl); }
+
+  .nc-stats {
+    /* Sarma əvəzinə yan sürüşmə: 9 kart üç sıra tutub siyahını ekrandan
+       qovurdu. Sürüşmə ilə hamısı bir sətirdə qalır. */
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    margin-inline: calc(var(--sp-4) * -1);
+    padding-inline: var(--sp-4);
+  }
+  .nc-stats::-webkit-scrollbar { display: none; }
+  .nc-stat { flex: 0 0 132px; scroll-snap-align: start; }
+
+  /* ⚠ Ofsetlər BURADA TƏKRAR TƏYİN EDİLMİR — `syncStickyOffsets()` onları
+     hər breakpoint-də ölçüb yenidən yazır. Əvvəl burada sabit `104px`/`62px`
+     var idi və mobil sarma zamanı axtarış sahəsi topbar-ın altında qalırdı. */
+
+  /* Toxunuşda hover yoxdur → sürətli əməliyyatlar həmişə görünür və qat
+     olmaqdan çıxıb sıraya qayıdır (üzən qat barmaq altında mətni örtərdi). */
+  .nc-actions {
+    position: static;
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+    background: transparent;
+    box-shadow: none;
+    padding: 0;
+  }
+  .nc-card.is-unread .nc-actions { background: transparent; }
+  .nc-act { width: var(--tap); height: var(--tap); }
+
+  .nc-card__side { align-items: flex-start; }
+  .nc-card--child { margin-left: var(--sp-4); }
+}
+
+@media (max-width: 480px) {
+  /* Kartın sağ sütunu artıq yer tapmır: yalnız nöqtə + "daha çox" qalır,
+     qalan əməliyyatlar sürüşdürmə jesti ilə əlçatandır (hər ikisi mövcuddur —
+     `gesture-alternative` qaydası jest-only həllə icazə vermir). */
+  .nc-actions .nc-act:not(:last-child) { display: none; }
+  .nc-menu { right: auto; left: 0; min-width: 180px; }
+
+  .nc-searchrow { flex-wrap: wrap; }
+  .nc-selectbtn { width: 100%; }
+
+  .nc-head__actions { display: grid; grid-template-columns: auto 1fr 1fr; gap: var(--sp-2); }
+  .nc-headbtn { width: 100%; }
+
+  .nc-preview__img { width: 32px; height: 32px; }
+}
+
+@media (max-width: 360px) {
+  .nc-headbtn span:not(.ic) { display: none; }
+  .nc-headbtn { padding: 0 var(--sp-2); }
+  .nc-pill__lbl { display: none; }
+  .nc-pill { padding: 0 var(--sp-2); }
+}

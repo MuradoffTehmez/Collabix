@@ -142,11 +142,19 @@ export class CollabixWorkflow extends WorkflowEntrypoint<Env, WorkflowParams> {
    */
   private async notifyUser(uid: string, type: string, text: string, fromName = 'Collabix') {
     const { NotificationService } = await import('../services/notification');
+    // ⚠ Taksonomiya BURADA DA tətbiq olunur (miqrasiya 0049). Bu yol servisin
+    //   `notify()`-ını atlayır, ona görə `group_key`/`priority` sütunlarını
+    //   özü doldurmalıdır — əks halda sistem bildirişləri qruplaşdırma və
+    //   prioritet filtrindən KƏNARDA qalardı (NULL açar heç bir qrupa düşmür).
+    const { groupKeyFor, priorityOf } = await import('../services/notification/taxonomy');
     const notif = new NotificationService(this.env);
     await this.env.DB.prepare(
-      'INSERT INTO notifications (id, user_id, type, from_id, from_name, post_id, text, read, created_at) VALUES (?,?,?,?,?,?,?,0,?)',
+      `INSERT INTO notifications
+         (id, user_id, type, from_id, from_name, post_id, text, read, created_at, archived, priority, group_key)
+       VALUES (?,?,?,?,?,?,?,0,?,0,?,?)`,
     ).bind(
       crypto.randomUUID().replace(/-/g, ''), uid, type, '', fromName, null, text, Date.now(),
+      priorityOf(type), groupKeyFor(type, '', null),
     ).run();
     await notif.pushSignal(uid, { t: 'notif' });
   }

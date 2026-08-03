@@ -228,8 +228,21 @@ const ROUTES: Route[] = [
   { method: 'POST', pattern: /^\/api\/presence$/, handler: R.heartbeat, auth: true, rl: 'presence' },
   { method: 'GET', pattern: /^\/api\/presence$/, handler: R.presenceMap, auth: true, rl: 'presence' },
   { method: 'GET', pattern: /^\/api\/notifications$/, handler: R.listNotifs, auth: true, rl: 'read' },
+  /* Bildiriş mərkəzi (miqrasiya 0049).
+     🔴 SIRA BAĞLAYICIDIR: SABİT seqmentli naxışlar parametrli olanlardan
+        ƏVVƏLDİR. `DELETE /api/notifications/([\w-]+)` naxışı `…/mutes`-a da
+        uyğun gəlir — cədvəl ilk uyğunluğu seçdiyi üçün sabitləri qabağa
+        qoymaq yeganə qorumadır. */
+  { method: 'GET', pattern: /^\/api\/notifications\/stats$/, handler: R.notifStats, auth: true, rl: 'read' },
+  { method: 'GET', pattern: /^\/api\/notifications\/previews$/, handler: R.notifPreviews, auth: true, rl: 'read' },
+  { method: 'GET', pattern: /^\/api\/notifications\/mutes$/, handler: R.listMutes, auth: true, rl: 'read' },
+  { method: 'POST', pattern: /^\/api\/notifications\/mutes$/, handler: R.toggleMute, auth: true, rl: 'write' },
   { method: 'POST', pattern: /^\/api\/notifications\/read-all$/, handler: R.readAllNotifs, auth: true, rl: 'write' },
+  /* Toplu əməliyyat — ən çox 200 sətir (bax `BULK_MAX`). `write` səbəti
+     kifayətdir: seçim rejimi bir düymə basımına BİR sorğu göndərir. */
+  { method: 'POST', pattern: /^\/api\/notifications\/bulk$/, handler: R.bulkNotifs, auth: true, rl: 'write' },
   { method: 'POST', pattern: /^\/api\/notifications\/([\w-]+)\/read$/, handler: R.readNotif, auth: true, rl: 'write' },
+  { method: 'DELETE', pattern: /^\/api\/notifications\/([\w-]+)$/, handler: R.deleteNotif, auth: true, rl: 'write' },
 
   // tasks + submissions
   { method: 'GET', pattern: /^\/api\/tasks$/, handler: R.listTasks, auth: true, rl: 'read' },

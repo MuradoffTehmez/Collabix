@@ -252,12 +252,20 @@ export async function runArchiveJob(env: Env): Promise<Record<string, unknown>> 
  * ⚠ İKİ QAYDA: OXUNMUŞ bildiriş 30 gündən, OXUNMAMIŞ isə 180 gündən sonra
  *   silinir. Oxunmamışı erkən silmək istifadəçinin GÖRMƏDİYİ məlumatı yox
  *   etmək olardı; oxunmuşu uzun saxlamaq isə heç bir dəyər vermir.
+ *
+ * 🔴 SABİTLƏNMİŞ və ARXİVLƏNMİŞ sətirlər İSTİSNADIR (miqrasiya 0049).
+ *    Hər ikisi istifadəçinin AÇIQ "bunu saxla" qərarıdır: sabitlədiyi bildiriş
+ *    30 gün sonra səssizcə yox olsaydı, arxiv isə "sildim" deyil "kənara
+ *    qoydum" mənasını daşıdığı halda təmizlənsəydi, funksiya istifadəçinin
+ *    gözlədiyinin ƏKSİNİ edərdi. İstisna olmadan bu, heç bir xəta vermədən
+ *    yalnız aylar sonra görünən data itkisi olardı.
  */
 async function pruneNotifications(env: Env): Promise<number> {
   try {
     const res = await env.DB.prepare(
       `DELETE FROM notifications
-        WHERE (read = 1 AND created_at < ?1) OR (read = 0 AND created_at < ?2)`,
+        WHERE pinned_at IS NULL AND archived = 0
+          AND ((read = 1 AND created_at < ?1) OR (read = 0 AND created_at < ?2))`,
     ).bind(now() - 30 * 86400000, now() - 180 * 86400000).run();
     return res.meta?.changes ?? 0;
   } catch (e: any) {

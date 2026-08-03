@@ -758,20 +758,84 @@ export async function adminTempPassword(uid, password){
 }
 
 /* ================= notifications ================= */
+
+/**
+ * QLOBAL abunə — nişan sayğacı və canlı toast üçün. Login boyu işləyir.
+ *
+ * ⚠ `limit=20`: bu dövrə SƏHİFƏ üçün deyil, yalnız "yeni nə var?" sualı
+ *   üçündür. Əvvəl serverin 60-lıq default-u çəkilirdi — 8 saniyədə bir 60
+ *   sətir, yəni bildiriş səhifəsi AÇIQ OLMASA BELƏ. Sayğac üçün 20 kifayətdir;
+ *   səhifənin öz siyahısı ayrıca `fetchNotifs()` ilə gəlir.
+ */
 export function watchNotifs(cb){
   return startPoll({
-    fetcher: () => api('/notifications'),
+    fetcher: () => api('/notifications?limit=20'),
     interval: 8000,
     events: ['refresh-notifs'],
-    onData: d => cb(d.notifications),
+    // 🔴 `pinned` DƏ ƏLAVƏ OLUNUR. Server sabitlənmiş sətirləri əsas axından
+    //    ÇIXARIR (bax `listNotifs` şərhi) — yalnız `notifications` oxunsaydı
+    //    sabitlənmiş oxunmamış bildiriş nişan sayğacına DÜŞMƏZDİ və rəqəm
+    //    səhifədəki saydan az görünərdi (ölçüldü: nişan 11, səhifə 12).
+    onData: d => cb((d.notifications || []).concat(d.pinned || [])),
   });
 }
+
+/**
+ * Səhifə siyahısı — filtr, axtarış və kursor səhifələmə.
+ * @param {{state?:string, bucket?:string, unread?:boolean, q?:string, cursor?:string|null, limit?:number}} o
+ */
+export async function fetchNotifs(o = {}){
+  const p = new URLSearchParams();
+  if(o.state) p.set('state', o.state);
+  if(o.bucket && o.bucket !== 'all') p.set('bucket', o.bucket);
+  if(o.unread) p.set('unread', '1');
+  if(o.q) p.set('q', o.q);
+  if(o.cursor) p.set('cursor', o.cursor);
+  p.set('limit', String(o.limit || 40));
+  return api('/notifications?' + p.toString());
+}
+
+/** Kart sayğacları — BÜTÜN bildirişlər üzrə, yüklənmiş səhifə üzrə YOX. */
+export async function fetchNotifStats(){ return api('/notifications/stats'); }
+
+/**
+ * Paylaşım önizləmələri — `{ [postId]: { excerpt, image } }`.
+ * ⚠ TOPLU çağırışdır: sətir-sətir çağırsaq bir ekran 40 sorğu edərdi (N+1).
+ */
+export async function fetchNotifPreviews(ids){
+  if(!ids || !ids.length) return {};
+  return (await api('/notifications/previews?ids=' + encodeURIComponent(ids.join(',')))).previews;
+}
+
 export async function markNotifRead(id){
   await api(`/notifications/${id}/read`, { method: 'POST' });
   emit('refresh-notifs');
 }
 export async function markAllNotifsRead(){
   await api('/notifications/read-all', { method: 'POST' });
+  emit('refresh-notifs');
+}
+export async function deleteNotif(id){
+  await api(`/notifications/${id}`, { method: 'DELETE' });
+  emit('refresh-notifs');
+}
+
+/**
+ * Toplu əməliyyat: `ids` (seçim rejimi) və ya `groupKey` (bütöv mövzu).
+ * @param {string} action read|unread|delete|archive|unarchive|pin|unpin
+ */
+export async function bulkNotifs(action, { ids = null, groupKey = null } = {}){
+  const body = { action };
+  if(groupKey) body.groupKey = groupKey;
+  else body.ids = ids || [];
+  const r = await api('/notifications/bulk', { method: 'POST', body });
+  emit('refresh-notifs');
+  return r;
+}
+
+export async function fetchNotifMutes(){ return (await api('/notifications/mutes')).mutes; }
+export async function toggleNotifMute(scope, target, muted){
+  await api('/notifications/mutes', { method: 'POST', body: { scope, target, muted } });
   emit('refresh-notifs');
 }
 

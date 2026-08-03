@@ -868,12 +868,65 @@
       </div>
     </div>
 
+    <!-- ══ BİLDİRİŞ MƏRKƏZİ ══════════════════════════════════════════════
+         Statik qabıq burada, dinamik hissələr `js/notify.js`-dədir.
+         ⚠ Başlıq/alt-başlıq MARKUP-DADIR (JS-də yaradılmır): onlar səhifənin
+           ən böyük mətn bloku (LCP namizədi) və `data-i18n` hədəfidir —
+           JS-ə köçsəydi dil dəyişimi `applyI18n()` ilə deyil, yalnız yenidən
+           mount ilə işləyərdi. -->
     <div class="page" id="page-notifs">
-      <h1 class="page-title" data-i18n="nav.notifs"></h1>
-      <p class="page-sub" data-i18n="notifs.sub"></p>
-      <button class="btn-mini dismiss u-margin-bottom-14px" id="markAllReadBtn" data-i18n="notifs.mark_all"></button>
-      <div class="task-cat-tabs notif-filters" id="notifFilters"></div>
-      <div id="notifList"></div>
+      <header class="nc-head">
+        <div class="nc-head__text">
+          <h1 class="nc-title" data-i18n="nav.notifs"></h1>
+          <p class="nc-sub" data-i18n="notifs.sub"></p>
+          <p class="nc-meta">
+            <span class="nc-meta__count" id="notifUnreadLine"></span>
+            <span class="nc-meta__sep" aria-hidden="true">·</span>
+            <span class="nc-meta__sync" id="notifSyncLine"></span>
+          </p>
+        </div>
+        <div class="nc-head__actions">
+          <button class="c-icon-btn nc-iconbtn" id="notifRefreshBtn" data-i18n-aria="notifs.refresh">
+            <span class="ic" data-icon="refresh"></span>
+          </button>
+          <button class="c-btn c-btn--ghost c-btn--sm nc-headbtn" id="notifSettingsBtn">
+            <span class="ic" data-icon="settings" data-icon-size="16"></span>
+            <span data-i18n="notifs.settings"></span>
+          </button>
+          <button class="c-btn c-btn--primary c-btn--sm nc-headbtn" id="markAllReadBtn">
+            <span class="ic" data-icon="checkAll" data-icon-size="16"></span>
+            <span data-i18n="notifs.mark_all"></span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Xülasə kartları — `renderStats()` doldurur. -->
+      <div class="nc-stats" id="notifStats"></div>
+
+      <!-- Axtarış + pill filtrlər. `position: sticky` — uzun siyahıda filtrlər
+           həmişə əlçatan qalsın (mobil davranışı CSS-dədir). -->
+      <div class="nc-controls" id="notifControls">
+        <div class="nc-searchrow">
+          <span class="c-search nc-search">
+            <span class="ic" data-icon="search" data-icon-size="15"></span>
+            <input id="notifSearch" type="search" autocomplete="off"
+                   data-i18n-ph="notifs.search_ph" data-i18n-aria="notifs.search_ph">
+          </span>
+          <button class="c-btn c-btn--ghost c-btn--sm nc-selectbtn" id="notifSelectBtn">
+            <span class="ic" data-icon="squareCheck" data-icon-size="16"></span>
+            <span data-i18n="notifs.select"></span>
+          </button>
+        </div>
+        <div class="nc-filters" id="notifFilters" role="tablist" data-i18n-aria="notifs.filters_label"></div>
+      </div>
+
+      <!-- Toplu əməliyyat zolağı — seçim rejimində görünür. -->
+      <div class="nc-bulkbar" id="notifBulkBar" role="toolbar" hidden></div>
+
+      <div id="notifList" aria-live="polite" aria-busy="false"></div>
+
+      <!-- Sonsuz sürüşmə tetikleyicisi — IntersectionObserver bunu izləyir. -->
+      <div class="nc-sentinel" id="notifSentinel" aria-hidden="true"></div>
     </div>
 
     <div class="page" id="page-users">

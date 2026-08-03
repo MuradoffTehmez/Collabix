@@ -314,8 +314,117 @@ const D = {
   'dm.empty': { az: 'Soldan bir istifadəçi seçib yazışmaya başla', en: 'Select a user from the left to start chatting', ru: 'Выберите пользователя слева для начала общения' },
 
   /* ---------- Page: Notifs ---------- */
-  'notifs.sub': { az: 'Like, şərh, mesaj və tapşırıq yoxlanışları', en: 'Likes, comments, messages, and task reviews', ru: 'Лайки, комментарии, сообщения и проверки заданий' },
+  'notifs.sub': { az: 'Bəyənmə, şərh, izləmə, mesaj, qeyd, tapşırıq və sistem yenilikləri', en: 'Likes, comments, follows, messages, mentions, tasks and system updates', ru: 'Лайки, комментарии, подписки, сообщения, упоминания, задачи и системные обновления' },
   'notifs.mark_all': { az: 'Hamısını oxunmuş et', en: 'Mark all as read', ru: 'Отметить всё как прочитанное' },
+  'notifs.refresh': { az: 'Yenilə', en: 'Refresh', ru: 'Обновить' },
+  'notifs.settings': { az: 'Parametrlər', en: 'Settings', ru: 'Настройки' },
+  'notifs.search_ph': { az: 'Bildirişlərdə axtar...', en: 'Search notifications...', ru: 'Поиск по уведомлениям...' },
+  'notifs.filters_label': { az: 'Bildiriş filtrləri', en: 'Notification filters', ru: 'Фильтры уведомлений' },
+  'notifs.select': { az: 'Seç', en: 'Select', ru: 'Выбрать' },
+  'notifs.select_done': { az: 'Bitir', en: 'Done', ru: 'Готово' },
+  'notifs.select_all': { az: 'Hamısını seç', en: 'Select all', ru: 'Выбрать все' },
+  'notifs.select_none': { az: 'Seçimi ləğv et', en: 'Clear selection', ru: 'Снять выделение' },
+
+  /* Sayğac sətri — `{n}` əvəzlənir (bax `tn()`). */
+  'notifs.unread_n': { az: '{n} oxunmamış bildiriş', en: '{n} unread notifications', ru: '{n} непрочитанных уведомлений' },
+  'notifs.unread_0': { az: 'Oxunmamış bildiriş yoxdur', en: 'No unread notifications', ru: 'Нет непрочитанных уведомлений' },
+  'notifs.synced': { az: 'Son sinxron: {t}', en: 'Last synced: {t}', ru: 'Синхронизировано: {t}' },
+  'notifs.selected_n': { az: '{n} seçildi', en: '{n} selected', ru: 'Выбрано: {n}' },
+
+  /* Filtr pilləri / statistika kartları — açarlar `TYPE_BUCKETS` ilə eynidir. */
+  'notifs.b.all': { az: 'Hamısı', en: 'All', ru: 'Все' },
+  'notifs.b.unread': { az: 'Oxunmamış', en: 'Unread', ru: 'Непрочитанные' },
+  'notifs.b.messages': { az: 'Mesajlar', en: 'Messages', ru: 'Сообщения' },
+  'notifs.b.likes': { az: 'Bəyənmələr', en: 'Likes', ru: 'Лайки' },
+  'notifs.b.comments': { az: 'Şərhlər', en: 'Comments', ru: 'Комментарии' },
+  'notifs.b.mentions': { az: 'Qeydlər', en: 'Mentions', ru: 'Упоминания' },
+  'notifs.b.follows': { az: 'İzləyicilər', en: 'Followers', ru: 'Подписчики' },
+  'notifs.b.tasks': { az: 'Tapşırıqlar', en: 'Tasks', ru: 'Задачи' },
+  'notifs.b.teams': { az: 'Komandalar', en: 'Teams', ru: 'Команды' },
+  'notifs.b.projects': { az: 'Layihələr', en: 'Projects', ru: 'Проекты' },
+  'notifs.b.system': { az: 'Sistem', en: 'System', ru: 'Система' },
+  'notifs.b.archived': { az: 'Arxiv', en: 'Archive', ru: 'Архив' },
+
+  /* Tarix bölmələri */
+  'notifs.g.pinned': { az: 'Sabitlənmiş', en: 'Pinned', ru: 'Закреплённые' },
+  'notifs.g.today': { az: 'Bu gün', en: 'Today', ru: 'Сегодня' },
+  'notifs.g.yesterday': { az: 'Dünən', en: 'Yesterday', ru: 'Вчера' },
+  'notifs.g.week': { az: 'Bu həftə', en: 'This week', ru: 'На этой неделе' },
+  'notifs.g.lastweek': { az: 'Keçən həftə', en: 'Last week', ru: 'На прошлой неделе' },
+  'notifs.g.earlier': { az: 'Daha əvvəl', en: 'Earlier', ru: 'Ранее' },
+
+  /* Nisbi vaxt.
+     ⚠ Yalnız "dünən" burada: qalan pillələri (`indicə`, `5 dəqiqə əvvəl`,
+       `2 saat əvvəl`) `fmtRelTime()` artıq hər üç dildə düzgün verir. Bütün
+       nərdivanı təkrar yazsaydıq iki nisbi-vaxt sistemi olardı və onlar
+       vaxtla ayrılardı. AZ budağı `numeric:'auto'` işlətmədiyi üçün "1 gün
+       əvvəl" deyir — bu tək hal əl ilə örtülür. */
+  'notifs.t.yesterday': { az: 'Dünən', en: 'Yesterday', ru: 'Вчера' },
+
+  /* Qruplaşdırma mətnləri */
+  'notifs.grp.repeat': { az: '{n} dəfə', en: '{n} times', ru: '{n} раз(а)' },
+  'notifs.grp.others': { az: '{name} və daha {n} nəfər', en: '{name} and {n} others', ru: '{name} и ещё {n}' },
+  'notifs.grp.expand': { az: 'Hamısını göstər', en: 'Show all', ru: 'Показать все' },
+  'notifs.grp.collapse': { az: 'Yığ', en: 'Collapse', ru: 'Свернуть' },
+
+  /* Sürətli əməliyyatlar */
+  'notifs.a.read': { az: 'Oxunmuş et', en: 'Mark as read', ru: 'Отметить прочитанным' },
+  'notifs.a.unread': { az: 'Oxunmamış et', en: 'Mark as unread', ru: 'Отметить непрочитанным' },
+  'notifs.a.delete': { az: 'Sil', en: 'Delete', ru: 'Удалить' },
+  'notifs.a.archive': { az: 'Arxivə at', en: 'Archive', ru: 'В архив' },
+  'notifs.a.unarchive': { az: 'Arxivdən çıxar', en: 'Unarchive', ru: 'Из архива' },
+  'notifs.a.pin': { az: 'Sabitlə', en: 'Pin', ru: 'Закрепить' },
+  'notifs.a.unpin': { az: 'Sabitləməni ləğv et', en: 'Unpin', ru: 'Открепить' },
+  'notifs.a.mute_type': { az: 'Bu tipi sussuz et', en: 'Mute this type', ru: 'Отключить этот тип' },
+  'notifs.a.mute_user': { az: 'Bu istifadəçini sussuz et', en: 'Mute this user', ru: 'Отключить пользователя' },
+  'notifs.a.mute_thread': { az: 'Bu mövzunu sussuz et', en: 'Mute this thread', ru: 'Отключить эту тему' },
+  'notifs.a.open': { az: 'Aç', en: 'Open', ru: 'Открыть' },
+  'notifs.a.copy': { az: 'Linki kopyala', en: 'Copy link', ru: 'Скопировать ссылку' },
+  'notifs.a.more': { az: 'Digər əməliyyatlar', en: 'More actions', ru: 'Другие действия' },
+  'notifs.a.priority': { az: 'Yüksək prioritet', en: 'High priority', ru: 'Высокий приоритет' },
+
+  /* Nəticə mesajları */
+  'notifs.ok.read': { az: 'Oxunmuş edildi', en: 'Marked as read', ru: 'Отмечено прочитанным' },
+  'notifs.ok.deleted': { az: 'Bildiriş silindi', en: 'Notification deleted', ru: 'Уведомление удалено' },
+  'notifs.ok.deleted_n': { az: '{n} bildiriş silindi', en: '{n} notifications deleted', ru: 'Удалено уведомлений: {n}' },
+  'notifs.ok.archived': { az: 'Arxivə atıldı', en: 'Archived', ru: 'Перемещено в архив' },
+  'notifs.ok.unarchived': { az: 'Arxivdən çıxarıldı', en: 'Removed from archive', ru: 'Возвращено из архива' },
+  'notifs.ok.pinned': { az: 'Sabitləndi', en: 'Pinned', ru: 'Закреплено' },
+  'notifs.ok.unpinned': { az: 'Sabitləmə ləğv edildi', en: 'Unpinned', ru: 'Откреплено' },
+  'notifs.ok.muted': { az: 'Sussuz edildi', en: 'Muted', ru: 'Отключено' },
+  'notifs.ok.unmuted': { az: 'Səs açıldı', en: 'Unmuted', ru: 'Включено' },
+  'notifs.ok.copied': { az: 'Link kopyalandı', en: 'Link copied', ru: 'Ссылка скопирована' },
+  'notifs.err': { az: 'Alınmadı', en: 'Failed', ru: 'Не удалось' },
+
+  /* Boş vəziyyətlər */
+  'notifs.empty.title': { az: 'Hələ bildiriş yoxdur', en: 'No notifications yet', ru: 'Уведомлений пока нет' },
+  'notifs.empty.text': { az: 'Kimsə paylaşımını bəyənəndə, şərh yazanda və ya səni qeyd edəndə burada görünəcək.', en: 'When someone likes your post, comments, or mentions you, it will show up here.', ru: 'Когда кто-то оценит ваш пост, оставит комментарий или упомянет вас — это появится здесь.' },
+  'notifs.empty.cta': { az: 'Paylaşımlara bax', en: 'Explore posts', ru: 'Смотреть посты' },
+  'notifs.empty.filtered_title': { az: 'Bu filtrdə nəticə yoxdur', en: 'Nothing matches this filter', ru: 'По этому фильтру ничего нет' },
+  'notifs.empty.filtered_text': { az: 'Axtarışı dəyiş və ya filtri sıfırla.', en: 'Try a different search or reset the filter.', ru: 'Измените запрос или сбросьте фильтр.' },
+  'notifs.empty.reset': { az: 'Filtri sıfırla', en: 'Reset filter', ru: 'Сбросить фильтр' },
+  'notifs.empty.archive_title': { az: 'Arxiv boşdur', en: 'Archive is empty', ru: 'Архив пуст' },
+  'notifs.empty.archive_text': { az: 'Arxivə atdığın bildirişlər burada saxlanılır.', en: 'Notifications you archive are kept here.', ru: 'Здесь хранятся архивированные уведомления.' },
+
+  /* Parametrlər modalı */
+  'notifs.set.title': { az: 'Bildiriş parametrləri', en: 'Notification settings', ru: 'Настройки уведомлений' },
+  'notifs.set.types': { az: 'Bildiriş tipləri', en: 'Notification types', ru: 'Типы уведомлений' },
+  'notifs.set.types_hint': { az: 'Söndürülmüş tip üzrə yeni bildiriş yazılmır — köhnələr siyahıda qalır.', en: 'Disabled types stop new notifications; existing ones stay in the list.', ru: 'Отключённые типы больше не создаются; прежние остаются в списке.' },
+  'notifs.set.channels': { az: 'Çatdırılma kanalları', en: 'Delivery channels', ru: 'Каналы доставки' },
+  'notifs.set.ch_inapp': { az: 'Tətbiqdaxili', en: 'In-app', ru: 'В приложении' },
+  'notifs.set.ch_inapp_hint': { az: 'Həmişə aktivdir — bildiriş mərkəzinin özüdür.', en: 'Always on — this is the notification center itself.', ru: 'Всегда включено — это сам центр уведомлений.' },
+  'notifs.set.ch_desktop': { az: 'Masaüstü bildirişləri', en: 'Desktop notifications', ru: 'Уведомления на рабочем столе' },
+  'notifs.set.ch_desktop_hint': { az: 'Brauzer icazəsi tələb olunur. Yalnız bu cihazda saxlanılır.', en: 'Requires browser permission. Stored on this device only.', ru: 'Требуется разрешение браузера. Хранится только на этом устройстве.' },
+  'notifs.set.ch_desktop_denied': { az: 'Brauzer icazə vermədi — sayt parametrlərindən aç.', en: 'Browser denied permission — enable it in site settings.', ru: 'Браузер отклонил разрешение — включите в настройках сайта.' },
+  'notifs.set.ch_email': { az: 'E-poçt bildirişləri', en: 'Email notifications', ru: 'Уведомления по эл. почте' },
+  'notifs.set.ch_email_hint': { az: 'Hazırlanır — yalnız təhlükəsizlik e-poçtları göndərilir.', en: 'Coming soon — only security emails are sent today.', ru: 'В разработке — сейчас отправляются только письма безопасности.' },
+  'notifs.set.mutes': { az: 'Sussuz edilənlər', en: 'Muted', ru: 'Отключённые' },
+  'notifs.set.mutes_empty': { az: 'Sussuz edilmiş heç nə yoxdur.', en: 'Nothing is muted.', ru: 'Ничего не отключено.' },
+  'notifs.set.unmute': { az: 'Aç', en: 'Unmute', ru: 'Включить' },
+  'notifs.set.scope_type': { az: 'Tip', en: 'Type', ru: 'Тип' },
+  'notifs.set.scope_user': { az: 'İstifadəçi', en: 'User', ru: 'Пользователь' },
+  'notifs.set.scope_thread': { az: 'Mövzu', en: 'Thread', ru: 'Тема' },
+  'notifs.set.close': { az: 'Bağla', en: 'Close', ru: 'Закрыть' },
 
   /* ---------- Page: Users ---------- */
   'users.sub': { az: 'Platformadakı bütün üzvlər — profilə bax, birbaşa mesaj yaz', en: 'All platform members — view profiles, send direct messages', ru: 'Все участники платформы — смотрите профили, отправляйте ЛС' },
