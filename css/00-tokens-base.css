@@ -35,7 +35,33 @@
   --card-hover-glow: rgba(74, 143, 255, .08);
   --card-radius: 20px;
   --code-radius: 16px;
-  --code-bg: rgba(11, 16, 32, .65);
+
+  /* ── KOD SƏTHİ — BÜTÜN TEMALARDA EYNİ VƏ QARA ────────────────────────────
+   * 🔴 Bu nişanlar QƏSDƏN tema ilə DƏYİŞMİR.
+   *
+   * Səbəb: `js/app.js` `highlight.js/styles/atom-one-dark.css` temasını
+   * QLOBAL yükləyir və o tema QARA fon üçün nəzərdə tutulmuş AÇIQ mətn
+   * rəngləri verir. Light temada isə `--code-bg` açıq idi
+   * (`rgba(232,237,249,.7)`) — nəticədə açıq fonda açıq mətn çıxırdı və kod
+   * praktiki olaraq oxunmurdu (istifadəçi bildirdi).
+   *
+   * İki yol var idi: (a) hər tema üçün ayrı hljs teması yükləmək, (b) kod
+   * səthini sabit saxlamaq. (b) seçildi: kod bloku onsuz da "terminal"
+   * metaforasıdır və IDE-lərdə də sənəd temasından asılı olmayaraq tünd
+   * qalır; (a) isə tema keçidində ayrıca CSS yükləmə məntiqi tələb edərdi.
+   *
+   * ⚠ ŞƏFFAFLIQ YOXDUR: əvvəlki dəyərlər `rgba(…, .65)` idi və açıq kart
+   *   fonunun üstündə solğunlaşırdı. İndi tam qapaq rəngdir.
+   * `#282c34` — atom-one-dark temasının öz kanonik fonu. */
+  --code-bg: #282c34;
+  --code-fg: #abb2bf;
+  /* Sətir nömrələri — gutter fonunda (`#000 18%` qarışığı) ÖLÇÜLƏRƏK seçilib.
+     Nömrələr `aria-hidden` (dekorativ) olsa da istifadəçi onları GÖZLƏ
+     oxuyur, ona görə AA həddi (4.5:1) hədəflənib:
+       #6b7385 → 4.25 ✗   #7e8698 → 4.32 ✗   #888fa1 → 4.88 ✓ */
+  --code-gutter-fg: #888fa1;
+  --code-border: rgba(255, 255, 255, .09);
+
   --primary: #4a8fff;
   --accent: #5eeaea;
 
@@ -99,7 +125,8 @@
   --card-hover-glow: rgba(0, 230, 118, .08);
   --card-radius: 20px;
   --code-radius: 16px;
-  --code-bg: rgba(2, 10, 4, .7);
+  /* ⚠ `--code-bg` QƏSDƏN override EDİLMİR — kod səthi bütün temalarda eynidir
+     (bax `:root`-dakı izah). Əvvəlki `rgba(2,10,4,.7)` silindi. */
   --primary: #00e676;
   --accent: #00e5ff;
 }
@@ -130,7 +157,9 @@
   --card-hover-glow: rgba(47, 111, 224, .06);
   --card-radius: 20px;
   --code-radius: 16px;
-  --code-bg: rgba(232, 237, 249, .7);
+  /* 🔴 BURADA AÇIQ FON VAR İDİ (`rgba(232,237,249,.7)`) — məhz bu, light
+     temada kodu oxunmaz edirdi: hljs `atom-one-dark` AÇIQ mətn rəngləri
+     verir. Override silindi, kod səthi qara qalır. */
   --primary: #2f6fe0;
   --accent: #0d9d9d;
 }

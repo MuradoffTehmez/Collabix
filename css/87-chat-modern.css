@@ -930,6 +930,122 @@
 
 .fwd-item:hover { border-color: var(--coral); background: var(--coral-dim); }
 
+/* ══ 5c. KOD BLOKU — sətir nömrəsi sütunu ══════════════════════════════════
+ * ⚠ Nömrələr `<pre>`-nin İÇİNDƏ deyil, yanındakı ayrıca sütundadır: hljs
+ *   `innerHTML`-i əvəz etdiyi üçün kodun içinə qoyulan hər şey silinir
+ *   (bax `code-block.js`-dəki izah). */
+.code-body {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* 🔴 KOD BLOKUNUN DAXİLİ RƏNGLƏRİ TEMA NİŞANLARINDAN ASILI DEYİL.
+ * Səth bütün temalarda qaradır (`--code-bg`), ona görə `--border`/`--muted`
+ * kimi tema nişanları burada işləmir: light temada onlar açıqdır və qara
+ * fonda kontrast 3:1-in altına düşür. Kod-xüsusi nişanlar işlədilir. */
+.feed-code {
+  background: var(--code-bg);
+  color: var(--code-fg);
+  border: 1px solid var(--code-border);
+}
+
+.feed-code .code-head {
+  background: color-mix(in srgb, #fff 4%, var(--code-bg));
+  border-bottom: 1px solid var(--code-border);
+  color: var(--code-gutter-fg);
+}
+
+.feed-code .code-lang-badge {
+  background: color-mix(in srgb, #fff 10%, transparent);
+  color: var(--code-fg);
+}
+
+.feed-code .code-head-actions button {
+  color: var(--code-gutter-fg);
+}
+
+.feed-code .code-head-actions button:hover {
+  background: color-mix(in srgb, #fff 10%, transparent);
+  color: var(--code-fg);
+}
+
+.code-gutter {
+  flex-shrink: 0;
+  padding: 12px 10px 12px 12px;
+  border-right: 1px solid var(--code-border);
+  background: color-mix(in srgb, #000 18%, var(--code-bg));
+  color: var(--code-gutter-fg);
+  font-family: var(--mono);
+  /* 🔴 Şrift ölçüsü və sətir hündürlüyü `<pre>` ilə EYNİ olmalıdır — əks
+     halda nömrələr kod sətirləri ilə tədricən sürüşür. */
+  font-size: .78rem;
+  line-height: 1.55;
+  text-align: right;
+  white-space: pre;
+  user-select: none;              /* kopyalayanda nömrələr düşməsin */
+  -webkit-user-select: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.code-body > pre {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 12px 14px;
+  overflow-x: auto;
+  font-size: .78rem;
+  line-height: 1.55;
+}
+
+/* 🔴 KODUN ÖZ PADDING-İ SIFIRLANIR — nömrələr sətirlərlə üst-üstə düşsün.
+ *
+ * İki mənbə kodun içinə boşluq qoyur:
+ *   `20-feed.css` → `.feed-code code { padding: 16px 18px !important }`
+ *   highlight.js teması → `pre code.hljs { padding: 1em }`
+ * Ölçüldü: kod gutter-dən 12px aşağı sürüşürdü.
+ *
+ * ⚠ `!important` MƏCBURDUR: rəqib qayda da `!important`-dir, ona görə
+ *   spesifiklik tək başına kifayət etmir (mənim seçicim onsuz da daha
+ *   spesifikdir — important-lar arasında o qalib gəlir).
+ * Boşluq və fon artıq `<pre>` / `.feed-code` səviyyəsindədir. */
+.code-body > pre > code,
+.code-body > pre > code.hljs {
+  display: block;
+  padding: 0 !important;
+  background: none;
+  font: inherit;
+}
+
+/* Yığılmış vəziyyət — yalnız ilk sətirlər görünür. */
+.feed-code.collapsed .code-body {
+  max-height: 92px;
+  position: relative;
+}
+
+.feed-code.collapsed .code-body::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 44px;
+  background: linear-gradient(to bottom, transparent, var(--code-bg, var(--surface)));
+  pointer-events: none;
+}
+
+.feed-code .code-collapse-btn .ic,
+.feed-code .code-collapse-btn svg { transition: transform .18s ease; }
+.feed-code.collapsed .code-collapse-btn svg { transform: rotate(-90deg); }
+
+/* Çat balonunda kod bloku daha dardır. */
+.feed-code.compact { max-width: 100%; }
+.feed-code.compact .code-body > pre { font-size: .74rem; }
+.feed-code.compact .code-gutter { font-size: .74rem; padding-left: 8px; padding-right: 7px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .feed-code .code-collapse-btn svg { transition: none; }
+}
+
 /* ══ 6. KOMPOZİTOR ═════════════════════════════════════════════════════════ */
 .chat-input {
   padding: 12px 16px 14px;

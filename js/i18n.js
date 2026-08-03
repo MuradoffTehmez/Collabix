@@ -957,6 +957,10 @@ const D = {
   'cd.summarize':  { az: 'Söhbəti xülasə et', en: 'Summarize conversation', ru: 'Сделать сводку' },
 
   /* Kompozitor */
+  /* Kod bloku */
+  'code.plain':  { az: 'kod', en: 'code', ru: 'код' },
+  'code.toggle': { az: 'Kodu yığ / aç', en: 'Collapse / expand code', ru: 'Свернуть / развернуть код' },
+
   'cmp.bold':        { az: 'Qalın (Ctrl+B)', en: 'Bold (Ctrl+B)', ru: 'Жирный (Ctrl+B)' },
   'cmp.inline_code': { az: 'Kod (Ctrl+E)', en: 'Code (Ctrl+E)', ru: 'Код (Ctrl+E)' },
   'cmp.link':        { az: 'Link əlavə et', en: 'Insert link', ru: 'Вставить ссылку' },

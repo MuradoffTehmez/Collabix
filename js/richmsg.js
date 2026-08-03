@@ -1,12 +1,13 @@
 // Zəngin mesajlar (otaq + DM üçün ortaq): şəkil / fayl / kod göndərmə və render.
 import { uploadMessageFile, MSG_FILE_MAX } from './store.js';
-import { el, isSafeFileURL, highlightEl, avatarNode, nameWithBadge, fmtTime } from './util.js';
+import { el, isSafeFileURL, avatarNode, nameWithBadge, fmtTime } from './util.js';
 import { toast, showModal, closeModal } from './ui.js';
 import { t, fmtRelTime } from './i18n.js';
 import { highlightOptions } from './taxonomy.js';
 import { mentionify } from './mention.js';
 import { openImageModal } from './feed.js';
 import { paintIcons } from './icons.js';
+import { codeBlockNode } from './code-block.js';
 
 const fmtSize = b => b > 1024 * 1024 ? (b / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB';
 
@@ -40,12 +41,12 @@ export function richContent(m){
     paintIcons(link);
     frag.append(link);
   } else if(m.type === 'code' && m.text){
-    const code = document.createElement('code');
-    code.textContent = m.text;
-    if(m.language) code.className = 'language-' + m.language;
-    const pre = el('pre', {}, code);
-    frag.append(el('div', { class: 'feed-code' }, pre));
-    highlightEl(code);
+    /* AUDIT/REDİZAYN: burada sadə `<pre><code>` çəkilirdi — nə sətir nömrəsi,
+     * nə dil nişanı, nə kopyala düyməsi, nə də yığma var idi. Post axını isə
+     * onsuz da tam komponent işlədirdi. Kod paylaşımı platformanın əsas
+     * ssenarisi olduğu üçün ikisi eyniləşdirildi (`code-block.js`).
+     * `compact` — çat balonu post kartından dardır. */
+    frag.append(codeBlockNode(m.text, m.language, { compact: true }));
   } else {
     frag.append(mentionify(m.text));
   }

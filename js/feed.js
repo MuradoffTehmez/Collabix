@@ -9,19 +9,20 @@ import {
   toggleRepost, deriveMyReposts
 } from './store.js';
 import {
-  el, clear, avatarNode, nameWithBadge, fmtTime, isSafeImageURL, isSafeFileURL, highlightEl,
+  el, clear, avatarNode, nameWithBadge, fmtTime, isSafeImageURL, isSafeFileURL,
   debounce, bus, emit, updateDynamicSEO, levelFromXP
 } from './util.js';
 import { toast, confirmDialog, showModal, closeModal, skeletons, emptyState } from './ui.js';
 import { api } from './api.js';
 import { openProfileModal, setFeedCache } from './users.js';
 import { markdownNode } from './markdown.js';
-import { highlightOptions } from './taxonomy.js';
+// `highlightOptions` artıq `code-block.js`-dədir (dil nişanı orada qurulur).
 import { mentionify, attachMentionAutocomplete } from './mention.js';
 import { t, fmtRelTime } from './i18n.js';
 import { attachQuotedPost } from './composer.js';
 // Ortaq ikon fabriki + kopyala komponenti (public qat da eynisini işlədir).
-import { SVG, iconCopy, iconCheck, iconSend, iconX, copyButton, paintIcons } from './icons.js';
+import { SVG, iconCheck, iconSend, iconX, iconChevron, paintIcons } from './icons.js';
+import { codeBlockNode as sharedCodeBlock } from './code-block.js';
 
 // Heart (like)
 const iconHeart = (filled) => SVG(
@@ -52,11 +53,7 @@ const iconMore = () => SVG(
   '<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>'
 );
 
-// ChevronDown (collapse)
-const iconChevron = () => SVG(
-  '<path d="m6 9 6 6 6-6"/>',
-  { w: '14', h: '14' }
-);
+// `iconChevron` artıq `icons.js`-dən gəlir (kod bloku ortaq modula çıxarıldı).
 
 // Pencil (edit)
 const iconEdit = () => SVG(
@@ -240,55 +237,14 @@ document.addEventListener('click', e => {
 }, { passive: true });
 
 /* ---------- blok render ---------- */
-function codeBlockNode(content, language){
-  const code = document.createElement('code');
-  if(language) code.className = 'language-' + language;
-
-  // Wrap each line in a span for CSS counter-based line numbers
-  const lines = content.split('\n');
-  lines.forEach(line => {
-    const span = document.createElement('span');
-    span.className = 'code-line';
-    span.textContent = line;
-    code.append(span);
-    code.append(document.createTextNode('\n'));
-  });
-
-  const pre = el('pre', {}, code);
-  const langLbl = (highlightOptions().find(o => o.highlightId === language) || {}).label || language || 'kod';
-
-  // Copy button with animated state (ortaq komponent — icons.js)
-  const copyBtn = copyButton(content);
-
-  // Collapse button
-  const collapseBtn = el('button', {
-    class: 'code-collapse-btn',
-    'aria-label': 'Collapse code',
-    onclick: () => {
-      wrap.classList.toggle('collapsed');
-    }
-  }, iconChevron());
-
-  const wrap = el('div', { class: 'feed-code show-lines' },
-    el('div', { class: 'code-head' },
-      el('span', { class: 'code-lang-badge' }, langLbl),
-      el('div', { class: 'code-head-actions' }, collapseBtn, copyBtn)),
-    pre);
-
-  // Detect horizontal scroll for fade indicator
-  requestAnimationFrame(() => {
-    if(pre.scrollWidth > pre.clientWidth) {
-      wrap.classList.add('has-scroll');
-    }
-    pre.addEventListener('scroll', () => {
-      const atEnd = pre.scrollLeft + pre.clientWidth >= pre.scrollWidth - 4;
-      wrap.classList.toggle('has-scroll', !atEnd && pre.scrollWidth > pre.clientWidth);
-    }, { passive: true });
-  });
-
-  highlightEl(code);
-  return wrap;
-}
+/* REDİZAYN: bu funksiyanın gövdəsi `js/code-block.js`-ə köçürüldü.
+ * Səbəb: çat mesajları (`richmsg.js`) öz sadə `<pre><code>` variantını
+ * çəkirdi — yəni eyni platformada kod İKİ FƏRQLİ görünüşdə idi. İndi hər
+ * iki yol eyni komponenti işlədir; burada yalnız yenidən ixrac qalır ki,
+ * `feed.js`-in daxili çağırışları dəyişməsin.
+ * ⚠ Dil nişanının "kod" fallback-i də ARTIQ TƏRCÜMƏ OLUNUR (`code.plain`) —
+ *   əvvəl sabit azərbaycanca idi. */
+const codeBlockNode = (content, language) => sharedCodeBlock(content, language);
 
 function imageGalleryNode(urls, caption){
   const safe = (urls || []).filter(isSafeImageURL);

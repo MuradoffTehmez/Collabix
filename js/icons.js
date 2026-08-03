@@ -49,6 +49,10 @@ export const iconLock = () => SVG(
   { w: '14', h: '14' },
 );
 
+/* Kod blokunun "yığ" düyməsi. `feed.js`-də LOKAL təyin olunmuşdu; kod bloku
+ * ortaq `code-block.js` modulunda birləşdiriləndə buraya çıxarıldı. */
+export const iconChevron = () => SVG('<path d="m6 9 6 6 6-6"/>', { w: '14', h: '14' });
+
 /* AUDIT-UI: komanda sahibliyinin köçürülməsi düyməsi '👑' emojisi idi. */
 export const iconAward = () => SVG(
   '<path d="m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526"/><circle cx="12" cy="8" r="6"/>',
