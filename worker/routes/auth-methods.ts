@@ -510,8 +510,17 @@ export async function passwordResetRequest(c: Ctx) {
     JSON.stringify({ uid: row.id, email }),
     { expirationTtl: RESET_TTL },
   );
-  // Kod cəhdlərinin sayğacı sıfırlanır (yeni kod = yeni 5 cəhd).
-  await c.env.SESSIONS.delete(`pwtry:${await sha256Hex(email)}`);
+  /* ⚠ CƏHD SAYĞACI BURADA SIFIRLANMIR (əvvəl `delete` çağırılırdı).
+   *
+   *   Səbəb ölçülüb: KV-nin günlük YAZMA kvotası bu layihədə real hədddir
+   *   (istehsalda "KV put() limit exceeded for the day" alındı — sessiyalar
+   *   da eyni namespace-dədir). Hər bərpa sorğusunda əlavə silmə əməliyyatı
+   *   həmin büdcədən yeyirdi.
+   *
+   *   Nəticə: 5 səhv cəhddən sonra YENİ kod istəmək kilidi açmır — sayğac
+   *   öz TTL-i ilə (15 dəq) sönür. Bu, brute-force qarşısında daha sərt,
+   *   istifadəçi üçün isə bir qədər əlverişsizdir; mübadilə qəsdlidir və
+   *   429 mesajında gözləmə tələb olunduğu deyilir. */
 
   const lang = mailLang(fromJSON<any>(row.settings, {})?.lang);
   const url = `${c.url.origin}/?reset=${token}`;
@@ -562,7 +571,9 @@ export async function passwordResetConfirm(c: Ctx) {
         type: 'login_failed', severity: 'warning',
         meta: { flow: 'password_reset', reason: 'code_attempts_exceeded' },
       });
-      return err('Çox sayda səhv cəhd. Yeni kod istəyin.', 429, 'reset_locked');
+      // ⚠ "Yeni kod istəyin" DEYİLMİR: yeni kod sayğacı sıfırlamır (bax
+      //   `passwordResetRequest`-dəki KV kvota şərhi) — mesaj gözləməyi deyir.
+      return err('Çox sayda səhv cəhd. 15 dəqiqə sonra yenidən cəhd edin.', 429, 'reset_locked');
     }
   }
 
