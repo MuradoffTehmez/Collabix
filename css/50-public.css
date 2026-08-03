@@ -242,6 +242,11 @@
   font-weight: 800;
   line-height: 1.12;
   letter-spacing: -.02em;
+  /* ⚠ Sətirləri bərabərləşdirir. Onsuz başlıq "…İnkişaf / et." kimi qırılırdı
+     və son sətirdə tək söz ("dul sətir") qalırdı — premium başlıqda ən çox
+     gözə dəyən tipoqrafik qüsur budur. Dəstəklənməyən brauzerdə sadəcə
+     nəzərə alınmır, yəni təhlükəsiz təkmilləşdirmədir. */
+  text-wrap: balance;
   background: linear-gradient(100deg, var(--text), var(--coral2));
   -webkit-background-clip: text;
   background-clip: text;
@@ -1314,4 +1319,220 @@
   font-size: 0;          /* qlif qalığını gizlədir */
   color: currentColor;   /* emoji ilə mümkün olmayan şey */
   flex: 0 0 auto;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   HERO — "canlı və effektli" redizayn (2026-08-03)
+
+   ⚠ BÜTÜN ANİMASİYALAR `transform` + `opacity` ÜZƏRİNDƏDİR.
+     Səbəb layihədə artıq bir dəfə ödənilib: `box-shadow`/`filter` animasiyası
+     kompozit qatdan çıxır və hər kadrda yenidən boyama tələb edir. Burada
+     hərəkət çoxdur, ona görə bu qayda daha da kritikdir — əks halda zəif
+     telefonda hero sürüşməni kəkələdərdi.
+   ⚠ `filter: blur()` parıltılarda SABİTDİR (animasiya olunmur) — yalnız
+     `transform` sürüşür. Blur-un özünü animasiya etmək tam səhifə repaint
+     deməkdir. */
+
+/* ---------- fon şəbəkəsi ---------- */
+/* Dərinlik üçün incə xətt şəbəkəsi. `background-image` sabitdir; hərəkət
+   yalnız `transform`-dadır, yəni GPU-da. Maska kənarlarda əridir ki, şəbəkə
+   kəsilmiş kimi görünməsin. */
+.hero-grid {
+  position: absolute;
+  inset: -10%;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--text) 7%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--text) 7%, transparent) 1px, transparent 1px);
+  background-size: 54px 54px;
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 30%, transparent 75%);
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 30%, transparent 75%);
+  animation: heroGridDrift 22s linear infinite;
+}
+
+@keyframes heroGridDrift {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(54px, 54px, 0); }
+}
+
+/* ---------- üst nişan ---------- */
+.hero-badge {
+  display: inline-block;
+  margin-bottom: 18px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--coral) 40%, var(--border));
+  background: color-mix(in srgb, var(--coral) 12%, transparent);
+  color: var(--coral);
+  font-family: var(--mono);
+  font-size: .72rem;
+  letter-spacing: .02em;
+}
+
+/* ---------- sosial sübut ---------- */
+.hero-proof {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px 34px;
+  list-style: none;
+  margin: 30px 0 4px;
+  padding: 0;
+}
+
+.hero-proof li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.hero-proof b {
+  font-family: var(--display);
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -.02em;
+  /* Rəqəm qradiyenti — brendlə eyni dil. */
+  background: linear-gradient(100deg, var(--coral), var(--teal));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.hero-proof span {
+  color: var(--muted);
+  font-size: .74rem;
+}
+
+/* ---------- üzən məhsul kartları ---------- */
+.hero-floats {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;   /* heroya klik maneə olmasın */
+  z-index: 1;
+}
+
+.hero-float {
+  position: absolute;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .28);
+  padding: 11px 13px;
+  font-size: .76rem;
+  /* Giriş + üzmə ardıcıl işləyir: əvvəl yerinə oturur, sonra yavaş süzülür. */
+  animation: heroFloatIn .7s cubic-bezier(.22, .61, .36, 1) both,
+             heroFloatDrift 7s ease-in-out infinite;
+}
+
+/* Hər kartın öz mövqeyi, gecikməsi və sürüşmə fazası — eyni anda hərəkət
+   etsələr "banner" kimi görünərdilər. */
+.hf-1 { top: 16%;  left: 4%;  width: 218px; animation-delay: 420ms, 900ms; }
+.hf-2 { bottom: 20%; right: 3%; width: 250px; animation-delay: 560ms, 1500ms; }
+.hf-3 { bottom: 12%; left: 8%; width: 190px; animation-delay: 700ms, 2100ms;
+        display: flex; align-items: center; gap: 10px; }
+
+@keyframes heroFloatIn {
+  from { opacity: 0; transform: translateY(18px) scale(.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes heroFloatDrift {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-11px); }
+}
+
+.hf-msg {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+}
+
+.hf-msg > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.hf-msg b {
+  font-size: .72rem;
+  color: var(--coral);
+}
+
+.hf-msg span {
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.hf-av {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--coral), var(--coral2));
+  color: var(--on-accent);
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: .72rem;
+}
+
+.hf-av2 { background: linear-gradient(135deg, var(--teal), var(--violet)); }
+
+/* Mini kod sətri — məhsulun kod təcrübəsinə işarə. Tam kod bloku DEYİL:
+   burada `codeBlockNode()` işlətmək dekorativ elementə lazımsız ağırlıq
+   gətirərdi (hljs + kopyala düyməsi + gutter). */
+.hf-code {
+  margin: 9px 0 0;
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: #282c34;         /* kod səthi bütün temalarda eynidir */
+  color: #abb2bf;
+  font-family: var(--mono);
+  font-size: .68rem;
+  line-height: 1.5;
+  overflow: hidden;
+}
+
+.hf-k { color: #c678dd; }
+.hf-f { color: #61afef; }
+.hf-n { color: #d19a66; }
+
+.hf-ic {
+  display: inline-flex;
+  font-size: 0;
+  color: var(--coral);
+  flex: 0 0 auto;
+}
+
+.hf-3 > div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.hf-3 b {
+  font-size: .74rem;
+  color: var(--text);
+}
+
+.hf-3 span {
+  font-size: .7rem;
+  color: var(--muted);
+}
+
+/* ⚠ Dar ekranda üzən kartlar GİZLƏNİR: hero mətnini sıxışdırır və toxunma
+   sahələrinin üstünə düşürlər. Məlumat itmir — eyni məzmun aşağıdakı
+   bölmələrdə mətnlə var. */
+@media (max-width: 1100px) {
+  .hero-floats { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-grid { animation: none; }
+  .hero-float { animation: heroFloatIn .01s both; }
 }

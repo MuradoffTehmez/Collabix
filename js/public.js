@@ -151,7 +151,72 @@ const FEATURES = [
   ['flame', 'feat.4t', 'feat.4d'], ['message', 'feat.5t', 'feat.5d'], ['globe', 'feat.6t', 'feat.6d'],
 ];
 
+/* ---------- hero: üzən "məhsul anı" kartları ---------- */
+/*
+ * 🔵 GENİŞLƏNMƏ NÖQTƏSİ — real istifadəçi məzmunu buradan gələcək.
+ *
+ *   Aşağıdakı `HERO_MOMENTS` NÜMUNƏ məzmundur: platformada baş verən tipik
+ *   anı göstərir (sual → cavab → XP). Rəqəm və ad UYDURULMUŞ REYTİNQ DEYİL,
+ *   sadəcə illüstrasiyadır.
+ *
+ *   Real rəylər/anlar hazır olanda YALNIZ bu funksiyanın DATA MƏNBƏYİ
+ *   dəyişməlidir — məsələn `fetchPublicTestimonials()` (artıq mövcuddur,
+ *   `store.js`) və ya yeni "son anlar" endpoint-i. Kartların markup-ı, CSS-i
+ *   və animasiyası olduğu kimi qalır.
+ *
+ *   ⚠ Data gələndə nəzərə al:
+ *     • `type` sahəsi kartın formasını seçir ('msg' | 'code' | 'stat');
+ *     • mətn uzunluğu MƏHDUD olmalıdır (kart eni 190–250px) — server
+ *       tərəfdən kəs, CSS ellipsi ilə gizlətmə;
+ *     • boş massiv gəlsə blok TAMAMİLƏ gizlənməlidir (aşağıda edilir),
+ *       yarımçıq kart göstərməkdənsə heç nə göstərmək yaxşıdır.
+ */
+const HERO_MOMENTS = [
+  { cls: 'hf-1', type: 'msg',  av: 'A', who: 'hero.f1_who', text: 'hero.f1_msg' },
+  { cls: 'hf-2', type: 'code', av: 'R', who: 'hero.f2_who', text: 'hero.f2_msg',
+    // Sintaksis parçaları: [sinif, mətn]. `codeBlockNode()` QƏSDƏN işlədilmir —
+    // dekorativ elementə hljs + kopyala + gutter ağırlığı gətirməyin mənası yoxdur.
+    code: [['hf-k', 'for'], ['', ' i '], ['hf-k', 'in'], ['', ' '], ['hf-f', 'range'],
+           ['', '('], ['hf-n', '1'], ['', ', n):']] },
+  { cls: 'hf-3', type: 'stat', icon: 'flame', who: 'hero.f3_title', text: 'hero.f3_sub' },
+];
+
+function renderHeroFloats(moments = HERO_MOMENTS){
+  const box = document.getElementById('heroFloats');
+  if(!box) return;
+  clear(box);
+  // Məzmun yoxdursa blok tamamilə gizlənir — yarımçıq kart göstərmirik.
+  box.hidden = !moments.length;
+  if(!moments.length) return;
+
+  moments.forEach(m => {
+    const card = el('div', { class: 'hero-float ' + m.cls });
+
+    if(m.type === 'stat'){
+      card.append(
+        el('span', { class: 'hf-ic', 'data-icon': m.icon, 'data-icon-size': '18' }),
+        el('div', {}, el('b', {}, t(m.who)), el('span', {}, t(m.text))),
+      );
+    }else{
+      card.append(el('div', { class: 'hf-msg' },
+        el('span', { class: 'hf-av' + (m.cls === 'hf-2' ? ' hf-av2' : '') }, m.av),
+        el('div', {}, el('b', {}, t(m.who)), el('span', {}, t(m.text))),
+      ));
+      if(m.code){
+        const pre = el('pre', { class: 'hf-code' });
+        m.code.forEach(([c, txt]) => pre.append(c ? el('span', { class: c }, txt)
+                                                 : document.createTextNode(txt)));
+        card.append(pre);
+      }
+    }
+    box.append(card);
+  });
+  paintIcons(box);
+}
+
 function renderWelcome(){
+  renderHeroFloats();
+
   const grid = document.getElementById('featGrid');
   clear(grid);
   FEATURES.forEach(([ic, tt, dd], i) => {

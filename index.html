@@ -341,9 +341,31 @@
   <main id="publicMain">
     <!-- Homepage / vitrin -->
     <section class="pub-page" id="pub-welcome">
+      <!-- ══ HERO (2026-08-03 redizayn) ══
+           Əvvəl bu bölmə mərkəzləşdirilmiş mətn + iki düymədən ibarət idi və
+           sahibin sözü ilə "çox primitiv görünüşə malikdir". İndi üç qat var:
+             1) fon — parıltılar + incə şəbəkə (dərinlik hissi),
+             2) məzmun — nişan, başlıq, CTA, sosial sübut,
+             3) üzən məhsul kartları — "nə aldığını" birbaşa göstərir.
+
+           ⚠ Üzən kartlar `aria-hidden`: onlar dekorativ TƏKRARDIR (eyni
+             məlumat aşağıdakı bölmələrdə mətnlə var), ekran oxuyucusunu
+             saxta söhbətlə yükləmək lazım deyil.
+           ⚠ Kartlar yalnız geniş ekranda görünür — dar ekranda məzmunu
+             sıxışdırardılar (CSS-dəki media blokuna bax). -->
       <div class="hero">
         <div class="bg-glow g1"></div><div class="bg-glow g2"></div><div class="bg-glow g3"></div>
+        <div class="hero-grid" aria-hidden="true"></div>
+
+        <!-- ⚠ BOŞ QALIR — məzmun `renderHeroFloats()` tərəfindən qurulur.
+             Səbəb: bu kartlara GƏLƏCƏKDƏ real istifadəçi anları/rəyləri
+             düşəcək. Statik HTML olsaydı, o keçid bütün markup-ı yenidən
+             yazmaq demək olardı; data ilə idarə olunanda yalnız MƏNBƏ
+             dəyişir, dizayn toxunulmaz qalır. -->
+        <div class="hero-floats" id="heroFloats" aria-hidden="true"></div>
+
         <div class="hero-inner">
+          <span class="hero-badge" data-i18n="hero.badge"></span>
           <h1 data-i18n="hero.h1"></h1>
           <p class="hero-tagline" data-i18n="hero.tagline"></p>
           <p class="hero-sub" data-i18n="hero.sub"></p>
@@ -351,6 +373,14 @@
             <button class="btn-primary hero-btn" id="heroRegBtn" data-i18n="hero.cta1"></button>
             <button class="btn-mini hero-btn2" id="heroHowBtn" data-i18n="hero.cta2"></button>
           </div>
+          <!-- ⚠ Rəqəmlər STATİKDİR və qəsdən mühafizəkardır: taksonomiyadakı
+               real sahə/otaq sayına söykənir. Saxta "10 000 istifadəçi" tipli
+               rəqəm yazmaq etibarı sındırır. -->
+          <ul class="hero-proof">
+            <li><b>18+</b><span data-i18n="hero.p_rooms"></span></li>
+            <li><b>20+</b><span data-i18n="hero.p_langs"></span></li>
+            <li><b>0 ₼</b><span data-i18n="hero.p_free"></span></li>
+          </ul>
           <div class="term-line">collabix.qoşul() <span class="blink"></span></div>
         </div>
       </div>

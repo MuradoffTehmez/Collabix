@@ -40,6 +40,19 @@ const D = {
   'hero.sub':      { az: 'Study-partner tap, kod paylaş, tapşırıqları həll et, XP qazan və seriya saxla — hamısı bir yerdə.', en: 'Find study partners, share code, solve tasks, earn XP and keep your streak — all in one place.', ru: 'Находи партнёров, делись кодом, решай задачи, зарабатывай XP и держи серию — всё в одном месте.' },
   'hero.cta1':     { az: 'Pulsuz qoşul', en: 'Join for free', ru: 'Присоединиться' },
   'hero.cta2':     { az: 'Necə işləyir?', en: 'How it works', ru: 'Как это работает' },
+  /* Hero "premium" blokunun mətnləri (2026-08-03 redizayn).
+     ⚠ Üzən kartlar MƏHSULU göstərir — uydurma rəy və ya saxta rəqəm deyil:
+       real bir söhbət anı, real kod bloku və real XP hadisəsi. */
+  'hero.badge':    { az: '18+ icma · AZ / EN / RU', en: '18+ community · AZ / EN / RU', ru: 'Сообщество 18+ · AZ / EN / RU' },
+  'hero.f1_who':   { az: 'Aysel', en: 'Aysel', ru: 'Айсель' },
+  'hero.f1_msg':   { az: 'Bu döngü niyə işləmir?', en: 'Why is this loop not working?', ru: 'Почему этот цикл не работает?' },
+  'hero.f2_who':   { az: 'Rəşad', en: 'Rashad', ru: 'Рашад' },
+  'hero.f2_msg':   { az: 'Diapazon 1-dən başlayır — bax:', en: 'Range starts at 1 — look:', ru: 'range начинается с 1 — смотри:' },
+  'hero.f3_title': { az: 'Gündəlik seriya', en: 'Daily streak', ru: 'Ежедневная серия' },
+  'hero.f3_sub':   { az: '+50 XP qazandın', en: 'You earned +50 XP', ru: 'Вы получили +50 XP' },
+  'hero.p_rooms':  { az: 'mövzu otağı', en: 'topic rooms', ru: 'тематических комнат' },
+  'hero.p_langs':  { az: 'dil və texnologiya', en: 'languages & tech', ru: 'языков и технологий' },
+  'hero.p_free':   { az: 'tam pulsuz', en: 'fully free', ru: 'полностью бесплатно' },
 
   /* ---------- features ---------- */
   'feat.title':    { az: 'Platformada nə var?', en: 'What’s inside?', ru: 'Что внутри?' },
