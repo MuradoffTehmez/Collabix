@@ -14,6 +14,7 @@ import { t, fmtRelTime, getLang } from './i18n.js';
 import { richContent } from './richmsg.js';
 import { paintIcons } from './icons.js';
 import { state } from './store.js';
+import { attachLinkPreview, firstUrl } from './link-preview.js';
 
 /* ══ 1. REAKSİYALAR ═══════════════════════════════════════════════════════
  * Tiplər SERVERDƏKİ `CHECK` siyahısı ilə eyni olmalıdır (miqrasiya 0047).
@@ -305,6 +306,15 @@ export function messageNode(m, ctx){
    *   şəkil isə onsuz da sabit hündürlükdədir. */
   const body = el('div', { class: 'msg-body' }, richContent(m));
   node.append(body);
+
+  /* ── Link önizləməsi ─────────────────────────────────────────────────
+   * ⚠ YALNIZ BİRİNCİ link üçün: bir mesajda 5 link olsa 5 kart mesajı
+   *   boğardı. Qalanları mətndə klikləniən qalır.
+   * ⚠ Sorğu TƏNBƏLDİR (`IntersectionObserver`): ekrana çıxmayan mesajlar
+   *   üçün xarici sayta sorğu atmaq həm yavaş, həm nəzakətsizdir.
+   * ⚠ Uğursuzluq SƏSSİZDİR: önizləmə əlavə bəzəkdir, mesajın özü onsuz da
+   *   görünür — xəta göstərmək səs-küy olardı. */
+  if(!m.type || m.type === 'text') attachLinkPreview(node, body, firstUrl(m.text));
 
   const CLAMP_MIN_CHARS = 320;
   const clampable = (!m.type || m.type === 'text') && (m.text || '').length > CLAMP_MIN_CHARS;

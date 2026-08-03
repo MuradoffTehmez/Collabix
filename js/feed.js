@@ -23,6 +23,7 @@ import { attachQuotedPost } from './composer.js';
 // Ortaq ikon fabriki + kopyala komponenti (public qat da eynisini işlədir).
 import { SVG, iconCheck, iconSend, iconX, iconChevron, paintIcons } from './icons.js';
 import { codeBlockNode as sharedCodeBlock } from './code-block.js';
+import { attachLinkPreview, firstUrl } from './link-preview.js';
 
 // Heart (like)
 const iconHeart = (filled) => SVG(
@@ -390,7 +391,12 @@ export function postBodyNode(p){
       }
     });
   } else {
-    if(p.text) body.append(el('div', { class: 'feed-body' }, p.text));
+    if(p.text){
+      const tb = el('div', { class: 'feed-body' }, p.text);
+      body.append(tb);
+      // Link önizləməsi — çat ilə ORTAQ modul (`link-preview.js`).
+      attachLinkPreview(body, tb, firstUrl(p.text));
+    }
     if(p.code) body.append(codeBlockNode(p.code, p.codeLang));
     if(isSafeImageURL(p.imageURL)){
       const img = document.createElement('img');
@@ -1412,6 +1418,8 @@ function mountComments(box, p){
     // Markdown: şərhlər də kod bloku/qalın/link yaza bilir (post kimi).
     // `mentionify` @adları kliklənən edir və markdown-dan SONRA tətbiq olunur.
     const textEl = el('div', { class: 'cm-text' }, mentionify(c.text));
+    // Şərhdə də link önizləməsi (post və çat ilə eyni komponent).
+    attachLinkPreview(textEl, textEl, firstUrl(c.text));
 
     const badges = el('span', { class: 'c-badges' });
     if(isPostAuthor) badges.append(el('span', { class: 'c-badge author' }, t('cm.author')));

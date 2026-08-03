@@ -125,6 +125,7 @@ export {
   roomBookmarkPut, roomBookmarkDelete, dmBookmarkPut, dmBookmarkDelete,
   forwardMessage,
 } from './routes/room';
+export { linkPreview, linkImage } from './link-preview';
 export {
   listTasks, createTask, reviewTask, deleteTask, submitSolution,
   listSubmissions, reviewSubmission, createReport, listReports, resolveReport,

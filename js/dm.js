@@ -19,7 +19,7 @@ import {
   // ⚠ `previewText` BURADAN alınmır — o, `chat-message.js`-dədir (yuxarıda
   //   idxal olunub). Buradakı analoq `previewOf`-dur; ikisini qarışdırmaq
   //   təkrar bəyan xətası verirdi.
-  pinBanner, matchesFilter,
+  pinBanner, matchesFilter, collectShared,
 } from './chat-ui.js';
 
 let threads = [];
@@ -290,6 +290,7 @@ function paintDetails(){
     people,
     pins,
     summary: aiSummary,
+    shared: collectShared(lastMsgs),
     // Bax `chat.js`-dəki eyni şərh: həm mətn, həm tip üzrə süzülür.
     onSearch: (q, filter) => lastMsgs
       .filter(m => matchesFilter(m, filter))
@@ -357,7 +358,7 @@ function selectPeer(uid, openDetail = false){  // openDetail: yalnız klikdən (
         catch(e){ toast(e?.message || t('dyn.fail'), 'err'); }
       },
       pinned: isPinned,
-      detailsBtn: detailsToggleButton(wrap, 'dmDetails'),
+      detailsBtn: detailsToggleButton(wrap, 'dmDetails', () => paintDetails()),
       menuItems: [
         { icon: 'profile', label: t('usr.view'), onClick: () => openProfileModal(uid) },
         {
@@ -391,6 +392,8 @@ function selectPeer(uid, openDetail = false){  // openDetail: yalnız klikdən (
     box.append(historyBar(hist, doLoad));
     const all = [...hist.older, ...liveMsgs];
     lastMsgs = all;                       // paneldəki lokal axtarış üçün
+    // Bax `chat.js`-dəki eyni şərh: açıq panel yeni mesajla yenilənməlidir.
+    if(document.getElementById('dmWrap')?.dataset.details === 'open') paintDetails();
     if(!all.length){ box.append(emptyState('mail', t('chat.empty_dm_msgs'))); return; }
     // ⚠ `historyBar` yuxarıda əlavə olunub, `renderMessageList` isə `clear(box)`
     //   edir — zolaq render-DƏN SONRA yenidən başa qoyulur.

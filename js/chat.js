@@ -19,7 +19,7 @@ import {
   conversationRow, buildChatHead, detailsToggleButton, setDetailsOpen,
   enhanceComposer, renderDetailsPanel, askAI, headerActions, bindListKeyboardNav,
   // `previewText` `chat-message.js`-dədir (bax dm.js-dəki eyni qeyd).
-  pinBanner, matchesFilter,
+  pinBanner, matchesFilter, collectShared,
 } from './chat-ui.js';
 
 let rooms = [];
@@ -435,6 +435,7 @@ function paintDetails(){
     people,
     pins,
     summary: aiSummary,
+    shared: collectShared(lastMsgs),
     /* Axtarış LOKAL-dır (yüklənmiş mesajlar üzərində) və həm mətnə, həm
      * TİPƏ görə süzür. Şəkil/fayl mesajlarında `text` boş olur, ona görə
      * onlar üçün önbaxış mətni `previewText` ilə qurulur — əks halda
@@ -513,7 +514,7 @@ function paintRoomHead(roomId){
         catch(e){ toast(e?.message || t('dyn.fail'), 'err'); }
       },
       pinned: isPinned,
-      detailsBtn: detailsToggleButton(wrap, 'chatDetails'),
+      detailsBtn: detailsToggleButton(wrap, 'chatDetails', () => paintDetails()),
       menuItems: [
         {
           icon: isMuted ? 'bell' : 'bell-off',
@@ -567,6 +568,12 @@ function selectRoom(roomId, openDetail = false){
     const all = [...hist.older, ...liveMsgs];
     // Panelin lokal axtarışı yüklənmiş mesajlar üzərində işləyir.
     lastMsgs = all;
+    /* ⚠ Detallar paneli `lastMsgs`-dən qidalanır (media/fayl/link/axtarış).
+     * Yeni mesaj gələndə panel köhnə məlumatla qalırdı — link göndərildikdən
+     * sonra "Linklər · 0" görünürdü.
+     * ⚠ Yalnız panel AÇIQ olanda yenilənir: bağlı panel üçün hər mesajda
+     *   siyahıları yenidən qurmaq boş işdir. */
+    if(document.getElementById('chatWrap')?.dataset.details === 'open') paintDetails();
     if(!all.length){ box.append(emptyState('hash', t('chat.empty_chat'))); return; }
     /* ⚠ `historyBar` yuxarıda `box`-a əlavə olunub, `renderMessageList` isə
      *   `clear(box)` edir — ona görə zolaq render-DƏN SONRA yenidən qoyulur. */

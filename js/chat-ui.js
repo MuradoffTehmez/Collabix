@@ -246,7 +246,14 @@ export function headerActions({ onSearch, onPin, pinned = false, detailsBtn, men
 }
 
 /** Detallar panelini açan/bağlayan düymə — `aria-expanded` CSS-i də idarə edir. */
-export function detailsToggleButton(wrap, panelId){
+/**
+ * @param {Element} wrap
+ * @param {string} panelId
+ * @param {(open:boolean)=>void} [onToggle] açılanda məzmunu təzələmək üçün —
+ *   panel `lastMsgs`-dən qidalanır və açılış anında ən son vəziyyəti
+ *   göstərməlidir (əks halda köhnə media/link sayları görünür).
+ */
+export function detailsToggleButton(wrap, panelId, onToggle){
   const btn = el('button', {
     type: 'button', class: 'ch-icon-btn', id: panelId + 'Toggle',
     'aria-expanded': String(wrap.dataset.details === 'open'),
@@ -256,7 +263,11 @@ export function detailsToggleButton(wrap, panelId){
     /* ⚠ İkon `more` DEYİL, `info`-dur: `headerActions`-dakı "daha çox"
      *   menyusu da `more` işlədir və başlıqda iki eyni `⋯` görünürdü. */
   }, el('span', { class: 'ic', 'data-icon': 'info', 'data-icon-size': '18' }));
-  btn.addEventListener('click', () => setDetailsOpen(wrap, wrap.dataset.details !== 'open'));
+  btn.addEventListener('click', () => {
+    const open = wrap.dataset.details !== 'open';
+    if(open) onToggle?.(true);       // məzmun açılmadan ƏVVƏL təzələnir
+    setDetailsOpen(wrap, open);
+  });
   return btn;
 }
 
@@ -699,8 +710,34 @@ export function pinBanner({ pins, index, onJump, onShowAll }){
  * Paneli qurur. Bölmələr `opts`-dan gəlir ki, otaq və DM fərqli məzmun
  * versin, amma quruluş və əlçatanlıq davranışı ORTAQ qalsın.
  */
+/**
+ * Söhbətdəki media/fayl/linkləri yüklənmiş mesajlardan çıxarır.
+ *
+ * ⚠ LOKAL-dır (server sorğusu yox): panelin məqsədi "bu söhbətdə gördüyüm
+ *   faylı tap"-dır. Tam arxiv üçün ayrıca endpoint + indeks lazımdır.
+ * ⚠ Ən yenidən köhnəyə — istifadəçi son paylaşılanı axtarır.
+ */
+export function collectShared(msgs){
+  const images = [], files = [], links = [];
+  for(let i = msgs.length - 1; i >= 0; i--){
+    const m = msgs[i];
+    if(m.type === 'image' && m.fileUrl) images.push(m);
+    else if(m.type === 'file' && m.fileUrl) files.push(m);
+    if(m.text){
+      const found = m.text.match(/https?:\/\/\S+/gi);
+      if(found) found.forEach(u => links.push({ url: u, m }));
+    }
+  }
+  return { images, files, links };
+}
+
+/** Bayt → oxunaqlı ölçü. */
+const fmtBytes = b => !b ? ''
+  : b > 1048576 ? (b / 1048576).toFixed(1) + ' MB'
+  : Math.max(1, Math.round(b / 1024)) + ' KB';
+
 export function renderDetailsPanel(panel, wrap, {
-  titleId, people = [], pins = [], summary = null,
+  titleId, people = [], pins = [], summary = null, shared = null,
   onSearch = null, onUnpin = null, onJump = null, onSummarize = null,
 }){
   clear(panel);
@@ -810,6 +847,84 @@ export function renderDetailsPanel(panel, wrap, {
       t('cd.people') + ' · ' + people.length),
     peopleBox,
   ));
+
+  /* ── Paylaşılan media · fayllar · linklər ────────────────────────────── */
+  if(shared){
+    // Şəkillər — kvadrat şəbəkə, klik mesaja tullandırır.
+    const mediaBox = el('div');
+    if(!shared.images.length){
+      mediaBox.append(el('div', { class: 'cd-empty' }, t('cd.no_media')));
+    }else{
+      const grid = el('div', { class: 'cd-media' });
+      shared.images.slice(0, 12).forEach(m => {
+        const img = document.createElement('img');
+        img.src = m.fileUrl;
+        img.loading = 'lazy';            // panel açılmadan yüklənməsin
+        img.decoding = 'async';
+        img.alt = m.fileName || t('chat.prev_image');
+        grid.append(el('button', {
+          type: 'button', class: 'cd-media-item',
+          'aria-label': t('cd.jump_to_media'),
+          onclick: () => onJump?.({ id: m.id }),
+        }, img));
+      });
+      mediaBox.append(grid);
+    }
+    body.append(el('div', { class: 'cd-section' },
+      el('div', { class: 'cd-section-title' },
+        el('span', { class: 'ic', 'data-icon': 'image', 'data-icon-size': '13' }),
+        t('cd.media') + ' · ' + shared.images.length),
+      mediaBox,
+    ));
+
+    // Fayllar — ad + ölçü, klik mesaja tullandırır.
+    const fileBox = el('div');
+    if(!shared.files.length){
+      fileBox.append(el('div', { class: 'cd-empty' }, t('cd.no_files')));
+    }else{
+      shared.files.slice(0, 20).forEach(m => fileBox.append(el('button', {
+        type: 'button', class: 'cd-row', onclick: () => onJump?.({ id: m.id }),
+      },
+        el('span', { class: 'ic', 'data-icon': 'paperclip', 'data-icon-size': '14' }),
+        el('span', { class: 'cd-row-body' },
+          el('span', { class: 'cd-row-nm' }, m.fileName || t('chat.prev_file')),
+          el('span', { class: 'cd-row-sub' }, fmtBytes(m.fileSize)),
+        ),
+      )));
+    }
+    body.append(el('div', { class: 'cd-section' },
+      el('div', { class: 'cd-section-title' },
+        el('span', { class: 'ic', 'data-icon': 'paperclip', 'data-icon-size': '13' }),
+        t('cd.files') + ' · ' + shared.files.length),
+      fileBox,
+    ));
+
+    // Linklər — xarici keçid, ona görə `<a>` (yeni tab + `noopener`).
+    const linkBox = el('div');
+    if(!shared.links.length){
+      linkBox.append(el('div', { class: 'cd-empty' }, t('cd.no_links')));
+    }else{
+      shared.links.slice(0, 20).forEach(({ url }) => {
+        let host = url;
+        try{ host = new URL(url).hostname; }catch(e){ /* natamam URL — xam mətn qalır */ }
+        linkBox.append(el('a', {
+          class: 'cd-row', href: url, target: '_blank', rel: 'noopener noreferrer',
+        },
+          el('span', { class: 'ic', 'data-icon': 'link', 'data-icon-size': '14' }),
+          el('span', { class: 'cd-row-body' },
+            el('span', { class: 'cd-row-nm' }, host),
+            el('span', { class: 'cd-row-sub' }, url),
+          ),
+        ));
+      });
+    }
+    body.append(el('div', { class: 'cd-section' },
+      el('div', { class: 'cd-section-title' },
+        el('span', { class: 'ic', 'data-icon': 'link', 'data-icon-size': '13' }),
+        t('cd.links') + ' · ' + shared.links.length),
+      linkBox,
+    ));
+  }
 
   /* ── Sabitlənmiş mesajlar ── */
   const pinBox = el('div');

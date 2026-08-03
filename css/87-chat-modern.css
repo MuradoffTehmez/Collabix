@@ -763,6 +763,88 @@
   white-space: nowrap;
 }
 
+/* ── Link önizləmə kartı ─────────────────────────────────────────────────
+ * ⚠ Şəkil üçün `aspect-ratio` ilə yer TUTULUR: yüklənəndə aşağıdakı məzmun
+ *   sıçramasın (CLS). */
+/* ⚠ ÜFÜQİ LAYOUT: şəkil SOLDA, mətn sağda (istifadəçi istəyi).
+ * Şaquli variant (şəkil yuxarıda, tam en) kartı hündür edir və uzun
+ * söhbətdə/feed-də mesajları ekrandan itələyirdi. Kompakt sətir həm çatda,
+ * həm postda eyni yaxşı oturur. */
+.msg-link-card {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  margin-top: 8px;
+  border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+  border-radius: 12px;
+  overflow: hidden;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  color: inherit;
+  text-decoration: none;
+  max-width: 420px;
+  transition: background-color .15s ease;
+}
+
+.msg-link-card:hover { background: color-mix(in srgb, currentColor 14%, transparent); }
+
+/* Sabit kvadrat eskiz — yüklənənə qədər yer TUTULUR (CLS sıfır), şəkil
+   gəlmirsə (`error` ilə silinir) kart mətnlə normal qalır. */
+.msg-link-card img {
+  width: 88px;
+  flex-shrink: 0;
+  align-self: stretch;
+  object-fit: cover;
+  display: block;
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
+
+.lc-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 9px 11px;
+  min-width: 0;                /* uzun başlıq `ellipsis` ala bilsin */
+}
+
+/* Dar ekranda eskiz daha kiçik — mətnə yer qalsın. */
+@media (max-width: 480px) {
+  .msg-link-card img { width: 68px; }
+}
+
+.lc-site {
+  font-size: .64rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  opacity: .7;
+}
+
+.lc-title {
+  font-size: .8rem;
+  font-weight: 600;
+  line-height: 1.35;
+  /* Ən çox 2 sətir — kart mesajı boğmasın. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.lc-desc {
+  font-size: .72rem;
+  line-height: 1.4;
+  opacity: .8;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .msg-link-card { transition: none; }
+}
+
 /* ── Reaksiya sətri ── */
 .msg-reacts {
   display: flex;
@@ -1505,6 +1587,100 @@
 .cd-hit .who { display: block; font-size: .68rem; color: var(--muted); margin-bottom: 2px; }
 .cd-hit .txt { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cd-hit mark { background: var(--coral-dim); color: var(--coral); border-radius: 3px; }
+
+/* Axtarış filtri çipləri */
+.cd-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.cd-chip {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font: inherit;
+  font-size: .7rem;
+  cursor: pointer;
+  transition: background-color .15s ease, color .15s ease, border-color .15s ease;
+}
+
+.cd-chip:hover { color: var(--text); }
+
+/* Seçili çip — RƏNG TƏK SİQNAL DEYİL: sərhəd və çəki də dəyişir. */
+.cd-chip.on {
+  border-color: var(--coral);
+  background: var(--coral-dim);
+  color: var(--coral);
+  font-weight: 700;
+}
+
+.cd-hit-kind { color: var(--muted); margin-right: 5px; display: inline-flex; vertical-align: -1px; }
+
+/* Paylaşılan media şəbəkəsi */
+.cd-media {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+.cd-media-item {
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface-2);
+  cursor: pointer;
+  /* Kvadrat nisbət — şəkil yüklənənə qədər yer TUTULUR (CLS sıfır). */
+  aspect-ratio: 1;
+}
+
+.cd-media-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform .15s ease;
+}
+
+.cd-media-item:hover img { transform: scale(1.06); }
+
+/* Fayl / link sətri */
+.cd-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 7px 8px;
+  margin-top: 3px;
+  border: none;
+  border-radius: 9px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.cd-row:hover { background: var(--bg-hover); }
+.cd-row .ic { color: var(--muted); flex-shrink: 0; }
+.cd-row-body { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.cd-row-nm { font-size: .78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cd-row-sub {
+  font-size: .66rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cd-media-item img, .cd-chip { transition: none; }
+}
 
 /* İştirakçılar */
 .cd-person {

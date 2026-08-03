@@ -215,6 +215,14 @@ const ROUTES: Route[] = [
      Mənbə və hədəf gövdədədir, çünki marşrut naxışı iki fərqli scope-u
      eyni anda ifadə edə bilmir. */
   { method: 'POST', pattern: /^\/api\/messages\/forward$/, handler: R.forwardMessage, auth: true, rl: 'write' },
+  /* Link önizləməsi (OG unfurl).
+     ⚠ `rl: 'heavy'` — endpoint XARİCİ sayta sorğu göndərir; adi `read`
+       səbətində olsaydı bir istifadəçi serveri yad saytlara sorğu maşınına
+       çevirə bilərdi. Nəticə həm də KV-də 24 saat keşlənir. */
+  { method: 'GET', pattern: /^\/api\/link-preview$/, handler: R.linkPreview, auth: true, rl: 'heavy' },
+  /* Önizləmə şəklinin proxy-si — CSP `img-src 'self'` olduğu üçün MƏCBURDUR,
+     həm də istifadəçinin IP-sini yad sayta sızmağa qoymur. */
+  { method: 'GET', pattern: /^\/api\/link-image$/, handler: R.linkImage, auth: true, rl: 'read' },
 
   // presence + notifications
   { method: 'POST', pattern: /^\/api\/presence$/, handler: R.heartbeat, auth: true, rl: 'presence' },
