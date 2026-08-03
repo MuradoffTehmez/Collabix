@@ -522,7 +522,29 @@ export type RlMechanism = 'do' | 'kv';
  */
 function mechanismFor(env: Env, cfg: RateBucketCfg): RlMechanism {
   if ((env.RL_MECHANISM || '').toLowerCase() === 'kv') return 'kv';
-  if (!cfg.critical) return 'kv';
+  /* 🔴 `if (!cfg.critical) return 'kv'` SİLİNDİ — KV GÜNLÜK KVOTANI YEYİRDİ.
+   *
+   *   Ölçmə (2026-08-03, istehsal): parol bərpası 500 verdi, jurnalda
+   *   "KV put() limit exceeded for the day".
+   *
+   *   Hesab: `kvHit()` icazə verilən HƏR sorğuda bir `put` edir. Limit
+   *   opt-out modelindədir (`rl` göstərilməyibsə `read`), yəni praktiki
+   *   olaraq hər API sorğusu = 1 KV yazısı. Üstəlik `presence` səbəti
+   *   heartbeat ilə hər 30 saniyədə işə düşür → saatda 120 yazı.
+   *   Tək bir açıq tab 8 saatda ~960 yazı edir; pulsuz plandakı 1000/gün
+   *   həddini BİR istifadəçi tək başına tükədir.
+   *
+   *   🔴 NİYƏ SESSİYALARI DA VURUR: sayğaclar sessiyalarla EYNİ `SESSIONS`
+   *      namespace-indədir. Kvota bitəndə uğurlu giriş də sessiya yaza
+   *      bilmir — amma UĞURSUZ giriş 401 qaytarmağa davam edir, ona görə
+   *      qüsur monitorinqdə "normal 401 fonu" kimi gizlənir.
+   *
+   *   İndi binding varsa BÜTÜN səbətlər DO-ya gedir: DO storage KV kvotasına
+   *   aid deyil və sayğac atomikdir (kvHit-in oxu→yaz yarışı da aradan qalxır).
+   * ⚠ Qiyməti: hər səbət üçün DO instansı — yəni PoP başına kiçik gecikmə və
+   *   DO əməliyyat xərci. Mübadilə qəsdlidir: işləməyən limitdənsə bir qədər
+   *   bahalı, amma DÜZGÜN işləyən limit yaxşıdır.
+   * ⚠ `RL_MECHANISM=kv` var-ı geri qayıtmaq üçün hələ də işləyir. */
   // Binding ÜMUMİYYƏTLƏ yoxdursa (konfiq hələ tətbiq olunmayıb) KV-yə düşürük.
   // Bu, `catch` blokundakı FAIL-CLOSED qaydasından FƏRQLİDİR və qəsdəndir:
   // runtime nasazlığı ilə konfiq çatışmazlığı eyni şey deyil — sonuncuda
