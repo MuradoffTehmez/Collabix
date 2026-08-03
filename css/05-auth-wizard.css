@@ -417,3 +417,120 @@
   font-family: var(--mono);
   font-size: .82rem;
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   AUTH — VİZUAL VƏ HƏRƏKƏT QATI (2026-08-03)
+
+   ⚠ Bütün hərəkət `transform`/`opacity` üzərindədir. Auth ekranı istifadəçinin
+     saytda gördüyü İLK interaktiv səthdir — burada kəkələmə birbaşa "ucuz
+     məhsul" təəssüratı yaradır. */
+
+/* ---------- kartın girişi ---------- */
+/* Kart aşağıdan qalxır, sol panel və form isə mərhələ ilə görünür.
+   Yalnız BİR dəfə, yüklənmədə — hər tab keçidində təkrarlanmır. */
+.auth-wrap {
+  animation: authCardIn .55s cubic-bezier(.22, .61, .36, 1) both;
+}
+
+@keyframes authCardIn {
+  from { opacity: 0; transform: translateY(22px) scale(.985); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.auth-hero > *,
+.auth-form > * {
+  animation: authItemIn .5s cubic-bezier(.22, .61, .36, 1) both;
+}
+
+.auth-hero > *:nth-child(1) { animation-delay: 120ms; }
+.auth-hero > *:nth-child(2) { animation-delay: 190ms; }
+.auth-form > *:nth-child(1) { animation-delay: 160ms; }
+.auth-form > *:nth-child(2) { animation-delay: 230ms; }
+
+@keyframes authItemIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- tab keçidi: sürüşən göstərici ---------- */
+/* ⚠ Aktiv fon əvvəl düymənin ÖZ `background`-ı idi, yəni keçid ani tullanırdı.
+   İndi konteynerdə tək bir "həb" var və `transform` ilə sürüşür — istifadəçi
+   hansı istiqamətə keçdiyini görür. */
+.tabs-switch {
+  position: relative;
+  isolation: isolate;   /* həb düymələrin altında qalsın */
+}
+
+.tabs-switch::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--coral), var(--coral2));
+  transition: transform .3s cubic-bezier(.4, 0, .2, 1);
+  z-index: -1;
+}
+
+.tabs-switch.t-login::before {
+  transform: translateX(100%);
+}
+
+/* Düymənin öz fonu ARTIQ LAZIM DEYİL — həb onu əvəz edir. */
+.tabs-switch button.active {
+  background: none;
+  color: var(--on-accent);
+}
+
+.tabs-switch button {
+  position: relative;
+  transition: color .2s ease;
+}
+
+/* ---------- sahə fokusu ---------- */
+/* Fokus halqası `box-shadow` ilə deyil, `outline` ilə verilir: `box-shadow`
+   keçidi kompozit qatdan çıxır və hər sahəyə toxunanda repaint yaradır. */
+.auth-form input:focus-visible,
+.auth-form select:focus-visible,
+.auth-form textarea:focus-visible {
+  outline: 2px solid var(--coral);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+
+/* ---------- düymə basılma geribildirimi ---------- */
+/* 150-300ms aralığından qısa, çünki bu, ani təsdiq hissidir, keçid deyil. */
+.auth-form .btn-primary,
+.auth-form .btn-mini,
+.tabs-switch button {
+  transition: transform .12s ease, color .2s ease, filter .15s ease;
+}
+
+.auth-form .btn-primary:active,
+.auth-form .btn-mini:active,
+.tabs-switch button:active {
+  transform: scale(.975);
+}
+
+/* ---------- addım keçidinin sürəti ---------- */
+/* Mövcud `wizIn`/`wizInBack` saxlanılır (istiqamət məlumatı daşıyır), yalnız
+   yumşaldılır — 0.3s xətti hiss olunurdu. */
+.wiz-step {
+  animation-duration: .34s;
+  animation-timing-function: cubic-bezier(.22, .61, .36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-wrap,
+  .auth-hero > *,
+  .auth-form > *,
+  .wiz-step { animation: none; }
+
+  .tabs-switch::before { transition: none; }
+
+  .auth-form .btn-primary:active,
+  .auth-form .btn-mini:active,
+  .tabs-switch button:active { transform: none; }
+}

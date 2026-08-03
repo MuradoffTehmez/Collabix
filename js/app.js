@@ -50,6 +50,10 @@ const $ = id => document.getElementById(id);
 function switchAuthTab(t){
   $('tabRegBtn').classList.toggle('active', t === 'reg');
   $('tabLoginBtn').classList.toggle('active', t === 'login');
+  // ⚠ Konteynerə sinif: sürüşən göstərici (`.tabs-switch::before`) mövqeyini
+  //   buradan alır. Əvvəl aktiv fon birbaşa düymənin üzərində idi və keçid
+  //   ANİ tullanırdı — hansı tabdan hansına keçildiyi hiss olunmurdu.
+  document.querySelector('.tabs-switch')?.classList.toggle('t-login', t === 'login');
   $('regForm').classList.toggle('hidden', t !== 'reg');
   $('loginForm').classList.toggle('hidden', t !== 'login');
   const lines = { reg: 'yeni_profil.yarat()', login: 'istifadeci.giris()' };
