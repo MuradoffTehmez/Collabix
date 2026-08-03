@@ -13,6 +13,7 @@ import { el, clear, avatarNode, nameWithBadge, fmtTime } from './util.js';
 import { t, fmtRelTime } from './i18n.js';
 import { richContent } from './richmsg.js';
 import { paintIcons } from './icons.js';
+import { state } from './store.js';
 
 /* ══ 1. REAKSİYALAR ═══════════════════════════════════════════════════════
  * Tiplər SERVERDƏKİ `CHECK` siyahısı ilə eyni olmalıdır (miqrasiya 0047).
@@ -212,7 +213,33 @@ function reactionRow(m, ctx){
   return row;
 }
 
-/* ══ 5. CAVAB SİTATI ══════════════════════════════════════════════════════ */
+/* ══ 5. SABİTLƏNMİŞ GÖSTƏRİCİSİ ═══════════════════════════════════════════
+ *
+ * Əvvəl sabitlənmiş mesaj YALNIZ balonun sol kənarındakı 3px zolaqla
+ * bildirilirdi: nə nişan, nə kim/nə vaxt məlumatı, nə də ekran oxuyucusu üçün
+ * ad var idi — istifadəçi zolağın nə demək olduğunu bilmirdi.
+ *
+ * İndi kompakt "pill" nişanıdır: normal halda yalnız ikon, hover/fokusda isə
+ * genişlənib "Sabitlənib · {kim}" mətnini açır.
+ * ⚠ GENİŞLƏNMƏ `max-width` ilədir, `display` ilə YOX: `display` dəyişikliyi
+ *   animasiya olunmur və nişan sıçrayışla peyda olardı.
+ * ⚠ `tabindex="0"` — məlumat yalnız siçanla əlçatan olmamalıdır; klaviatura
+ *   ilə fokuslananda da eyni mətn açılır (`:focus-visible`).
+ */
+function pinBadge(m){
+  const who = state.users.get(m.pinnedBy)?.name || '';
+  const label = who
+    ? t('chat.pinned_by').replace('{who}', who)
+    : t('chat.pinned_one');
+  return el('span', {
+    class: 'msg-pin', tabIndex: 0, role: 'note', 'aria-label': label, title: label,
+  },
+    el('span', { class: 'ic', 'data-icon': 'pin', 'data-icon-size': '11' }),
+    el('span', { class: 'msg-pin-txt' }, label),
+  );
+}
+
+/* ══ 6. CAVAB SİTATI ══════════════════════════════════════════════════════ */
 function replyQuote(m, ctx){
   if(!m.replyTo) return null;
   const src = ctx.byId?.get(m.replyTo);
@@ -253,6 +280,8 @@ export function messageNode(m, ctx){
       + (m.bookmarked ? ' bookmarked' : ''),
     dataset: { mid: m.id, sig: signature(m) },
   });
+
+  if(m.pinnedAt) node.append(pinBadge(m));
 
   const q = replyQuote(m, ctx);
   if(q) node.append(q);

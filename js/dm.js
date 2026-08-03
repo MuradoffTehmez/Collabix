@@ -258,14 +258,30 @@ function paintPinStrip(){
   clear(strip);
   if(!pins.length){ strip.hidden = true; return; }
   strip.hidden = false;
-  strip.append(
-    el('span', { class: 'ic', 'data-icon': 'pin', 'data-icon-size': '14' }),
-    el('span', { class: 'pin-text' }, previewOf(pins[0])),
-    el('button', {
-      type: 'button', class: 'cmp-btn',
-      onclick: () => setDetailsOpen(document.getElementById('dmWrap'), true),
-    }, pins.length > 1 ? `+${pins.length - 1}` : t('cd.pins')),
+  // Bax `chat.js`-dəki eyni şərh: bütöv zolaq kliklənir və mesaja tullandırır.
+  const pairId = pairIdFor(state.authUser.uid, currentPeerUid);
+  const jump = () => dmCtx(pairId).onJump?.(pins[0].id);
+  const bar = el('div', {
+    class: 'pin-bar', role: 'button', tabIndex: 0,
+    'aria-label': t('chat.jump_pinned'),
+    onclick: jump,
+    onkeydown: e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); jump(); } },
+  },
+    el('span', { class: 'pin-bar-accent' }),
+    el('span', { class: 'ic pin-bar-ic', 'data-icon': 'pin', 'data-icon-size': '15' }),
+    el('span', { class: 'pin-bar-body' },
+      el('span', { class: 'pin-bar-label' }, t('chat.pinned_one')),
+      el('span', { class: 'pin-text' }, previewOf(pins[0])),
+    ),
   );
+  if(pins.length > 1){
+    bar.append(el('button', {
+      type: 'button', class: 'pin-bar-count',
+      'aria-label': t('chat.pinned_count').replace('{n}', String(pins.length)),
+      onclick: e => { e.stopPropagation(); setDetailsOpen(document.getElementById('dmWrap'), true); },
+    }, String(pins.length)));
+  }
+  strip.append(bar);
   paintIcons(strip);
 }
 

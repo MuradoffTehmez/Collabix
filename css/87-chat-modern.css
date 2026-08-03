@@ -426,25 +426,81 @@
 
 /* ══ 4. SABİTLƏNMİŞ ZOLAQ (başlığın altında) ═══════════════════════════════ */
 .chat-pinstrip {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: color-mix(in srgb, var(--coral) 7%, var(--surface));
+  padding: 8px 12px;
+  background: var(--surface);
   border-bottom: 1px solid var(--border);
-  font-size: .76rem;
-  color: var(--muted);
 }
 
 .chat-pinstrip[hidden] { display: none; }
 
-.chat-pinstrip .pin-text {
+/* Sabitlənmiş banner — bütöv sahə kliklənir və mesaja tullandırır. */
+.pin-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px 7px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--coral) 8%, var(--surface));
+  cursor: pointer;
+  transition: background-color .15s ease;
+}
+
+.pin-bar:hover { background: color-mix(in srgb, var(--coral) 14%, var(--surface)); }
+
+/* Sol aksent zolağı — banner "sitat" kimi oxunur. */
+.pin-bar-accent {
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--coral);
+}
+
+.pin-bar-ic { color: var(--coral); flex-shrink: 0; display: inline-flex; }
+
+.pin-bar-body {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.pin-bar-label {
+  font-size: .66rem;
+  font-weight: 700;
+  color: var(--coral);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.chat-pinstrip .pin-text {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: .8rem;
   color: var(--text);
+}
+
+/* Sayğac — birdən çox sabitlənmiş varsa paneli açır. */
+.pin-bar-count {
+  flex-shrink: 0;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border: none;
+  border-radius: 999px;
+  background: var(--coral);
+  color: var(--on-accent);
+  font: inherit;
+  font-size: .68rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
 }
 
 /* ══ 5. MESAJ SAHƏSİ ═══════════════════════════════════════════════════════ */
@@ -541,6 +597,55 @@
 /* Sabitlənmiş / əlfəcinli — rəng TƏK siqnal deyil, kənar zolağı da var. */
 .chat-messages .msg.pinned { box-shadow: inset 3px 0 0 var(--teal), 0 1px 2px rgba(0,0,0,.06); }
 .chat-messages .msg.bookmarked { box-shadow: inset 3px 0 0 var(--violet), 0 1px 2px rgba(0,0,0,.06); }
+
+/* ── Sabitlənmiş nişanı (balonun üstündə) ─────────────────────────────────
+ * Normal halda YALNIZ ikon; hover/fokusda genişlənib mətni açır.
+ * ⚠ `max-width` animasiya olunur, `display` YOX: `display` keçidi animasiya
+ *   olunmur və nişan sıçrayışla peyda olardı.
+ * ⚠ `white-space: nowrap` + `overflow: hidden` — mətn açılana qədər
+ *   sətirlərə bölünüb hündürlüyü dəyişməsin (layout sıçrayışı olmasın). */
+.msg-pin {
+  position: absolute;
+  top: -9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 22px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--teal);
+  color: var(--teal-dim);
+  font-size: .64rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  cursor: default;
+  z-index: 4;
+  transition: max-width .18s ease;
+}
+
+/* Nişan mesajın "gələn/gedən" istiqamətinə görə yerləşir. */
+.msg.in .msg-pin { left: 10px; }
+.msg.out .msg-pin { right: 10px; }
+
+.msg-pin .ic { flex-shrink: 0; }
+.msg-pin-txt { padding-right: 2px; }
+
+/* Açılma: mesajın üzərinə gələndə VƏ ya nişan fokuslananda.
+   Nişanın özünə hover etmək də kifayətdir (klaviatura üçün `:focus-visible`). */
+.msg:hover .msg-pin,
+.msg-pin:hover,
+.msg-pin:focus-visible { max-width: 260px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .msg-pin { transition: none; }
+}
+
+/* Toxunuş cihazında hover yoxdur → nişan həmişə açıq (`hover-vs-tap`). */
+@media (hover: none) {
+  .msg-pin { max-width: 260px; }
+}
 
 /* ── Cavab sitatı ── */
 .msg-reply {
