@@ -25,6 +25,9 @@ export async function listTaxonomies(c: Ctx) {
     (out[r.type] = out[r.type] || []).push({
       id: r.id, label: r.label, color: r.color, icon: r.icon, flag: r.flag,
       highlightId: r.highlight_id, order: r.sort_order, active: !!r.active,
+      // Miqrasiya 0050 — kataloqda skill nişanının rəng qrupu.
+      // ⚠ `?? ''` : miqrasiyadan əvvəlki keşlənmiş cavablarda sütun yoxdur.
+      category: r.category ?? '',
     });
   });
   return json({ taxonomies: out });

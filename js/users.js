@@ -1,94 +1,159 @@
-// User directory (filtered search), follow, profile modal,
-// public profile page (#u/{username}) and report form.
+// İstifadəçi kataloqu — kəşf, süzgəc, üç görünüş rejimi, tövsiyə raili;
+// izləmə, profil modalı, public profil səhifəsi (#u/{username}) və şikayət.
+//
+// ⚠ İKİ AYRI DATA YOLU VAR:
+//   • `state.users` — QLOBAL identifikasiya keşi (post müəllifi, DM, mention).
+//     `listUsers()`-dan gəlir və tam profil sətrini daşıyır.
+//   • `dir.items`   — YALNIZ bu səhifənin sorğusu. Serverdə süzülür, sıralanır
+//     və sosial kontekstlə zənginləşir (`teamsCount`, `mutualTeams`, `iFollow`).
+//   İkisini qarışdırmaq olmaz: kataloq nüsxəsində `settings` yoxdur.
 import { api } from './api.js';
 import {
   state, createReport, toggleFollow, isMutual,
   fetchFollowingOf, fetchFollowersOf, canMessage, fetchUserDirectory,
+  fetchDirectoryStats, fetchSuggestedUsers, directoryExportUrl,
 } from './store.js';
-import { el, clear, avatarNode, nameWithBadge, isOnline, lastSeenText, fmtTime, debounce, bus, emit, updateDynamicSEO, hashParams } from './util.js';
+import {
+  el, clear, avatarNode, nameWithBadge, isOnline, lastSeenText, debounce,
+  bus, emit, updateDynamicSEO, hashParams, levelFromXP, LEVEL_THRESHOLDS,
+  prefersReducedMotion, countUp,
+} from './util.js';
 import { showModal, closeModal, toast, emptyState, skeletons } from './ui.js';
-import { t } from './i18n.js';
+import { paintIcons } from './icon-set.js';
+import { t, fmtDate } from './i18n.js';
 import { tax } from './taxonomy.js';
 import { renderHeatmapInto } from './heatmap.js';
 
 let feedCache = []; // Filled by feed.js
 export function setFeedCache(posts){ feedCache = posts; }
 
-function followBtn(u, cls = 'btn-mini'){
-  const following = state.myFollowing.has(u.uid);
-  return el('button', {
-    class: cls + (following ? ' dismiss' : ''),
+/* ═══════════════════════ RANK VƏ XP ═══════════════════════
+ *
+ * ⚠ RANK YENİ MƏLUMAT DEYİL — mövcud səviyyədən (`levelFromXP`) törəyir.
+ *   Ayrıca sütun əlavə etsəydik iki həqiqət mənbəyi olardı və XP dəyişəndə
+ *   onlar ayrıla bilərdi. Astanalar `util.js`-dədir (orada üç nüsxə xəbərdarlığı).
+ */
+const RANKS = [
+  { max: 2,  key: 'bronze',  tone: 'bronze' },
+  { max: 4,  key: 'silver',  tone: 'silver' },
+  { max: 6,  key: 'gold',    tone: 'gold' },
+  { max: 8,  key: 'diamond', tone: 'diamond' },
+  { max: 9,  key: 'master',  tone: 'master' },
+  { max: 99, key: 'legend',  tone: 'legend' },
+];
+
+function rankOf(xp){
+  const lvl = levelFromXP(xp);
+  const r = RANKS.find(x => lvl <= x.max) || RANKS[RANKS.length - 1];
+  return { lvl, key: r.key, tone: r.tone, label: t('users.rk_' + r.key) };
+}
+
+/** Cari səviyyə daxilində irəliləyiş — {pct, remaining, isMax}. */
+function xpProgress(xp){
+  const x = Math.max(0, xp || 0);
+  const lvl = levelFromXP(x);
+  const base = LEVEL_THRESHOLDS[lvl - 1] ?? 0;
+  const next = LEVEL_THRESHOLDS[lvl];
+  if(next === undefined) return { pct: 100, remaining: 0, isMax: true };
+  const span = next - base;
+  return {
+    // `span` sıfır ola bilməz (astanalar artandır), amma müdafiə ucuzdur.
+    pct: span > 0 ? Math.min(100, Math.round(((x - base) / span) * 100)) : 100,
+    remaining: Math.max(0, next - x),
+    isMax: false,
+  };
+}
+
+/* ═══════════════════════ STATUS ═══════════════════════
+ *
+ * 🔴 İKİ MƏNBƏ BİRLƏŞİR:
+ *    • presence (`isOnline`) — ölçülür, "bağlıdırmı"
+ *    • `u.status`            — istifadəçi özü qoyur, "nə demək istəyir"
+ *    Oflayn istifadəçinin `busy` statusu GÖSTƏRİLMİR: əl ilə qoyulmuş etiket
+ *    bağlantı faktını əvəz etmir və "Məşğul" yazısı onlayn olduğu təəssüratı
+ *    yaradardı. YEGANƏ istisna `hiring`-dir — o, bağlantıdan asılı olmayan
+ *    uzunmüddətli niyyətdir (LinkedIn "Open to work" ilə eyni məntiq).
+ */
+const STATUS_META = {
+  online:  { tone: 'online',  key: 'users.st_online' },
+  offline: { tone: 'offline', key: 'users.st_offline' },
+  away:    { tone: 'away',    key: 'users.st_away' },
+  busy:    { tone: 'busy',    key: 'users.st_busy' },
+  dnd:     { tone: 'dnd',     key: 'users.st_dnd' },
+  hiring:  { tone: 'hiring',  key: 'users.st_hiring' },
+};
+
+function statusOf(u){
+  const online = isOnline(u);
+  const manual = u.status || '';
+  if(manual === 'hiring') return { ...STATUS_META.hiring, online };
+  if(online && manual && STATUS_META[manual]) return { ...STATUS_META[manual], online };
+  return { ...(online ? STATUS_META.online : STATUS_META.offline), online };
+}
+
+/* ═══════════════════════ BACARIQ KATEQORİYALARI ═══════════════════════
+ *
+ * ⚠ KATEQORİYA SERVERDƏN GƏLİR (`taxonomies.category`, miqrasiya 0050).
+ *   Client-də sabit cədvəl yazsaydıq admin yeni skill əlavə edən kimi o,
+ *   kateqoriyasız qalardı — məlumat bir yerdə, görünüş başqa yerdə idarə
+ *   olunardı. Burada YALNIZ kateqoriya → rəng tonu uyğunluğu var.
+ */
+const SKILL_CATS = {
+  lang:     'cat-lang',
+  web:      'cat-web',
+  db:       'cat-db',
+  devops:   'cat-devops',
+  cloud:    'cat-cloud',
+  design:   'cat-design',
+  security: 'cat-security',
+  embedded: 'cat-embedded',
+  spoken:   'cat-spoken',
+};
+
+/** label → kateqoriya sinfi. Taksonomiya bir dəfə indekslənir. */
+let catIndex = null;
+function rebuildCatIndex(){
+  catIndex = new Map();
+  for(const item of [...tax.prog, ...tax.spoken]){
+    catIndex.set(item.label, SKILL_CATS[item.category] || 'cat-other');
+  }
+}
+function skillCatClass(label){
+  if(!catIndex) rebuildCatIndex();
+  return catIndex.get(label) || 'cat-other';
+}
+
+/* ═══════════════════════ İZLƏMƏ DÜYMƏSİ ═══════════════════════ */
+
+function followBtn(u, cls = 'c-btn c-btn--ghost c-btn--sm'){
+  // ⚠ Mənbə İKİDİR: kataloq cavabındakı `iFollow` (server, dəqiq) və
+  //   `state.myFollowing` (client keşi, ani). Optimistik yeniləmə üçün
+  //   ikincisi lazımdır, ilk render üçün isə birincisi daha etibarlıdır.
+  const following = u.iFollow !== undefined ? u.iFollow : state.myFollowing.has(u.uid);
+  const btn = el('button', {
+    class: cls + (following ? ' is-following' : ''),
+    'aria-pressed': String(following),
     onclick: async e => {
       e.stopPropagation();
-      const btn = e.currentTarget;
-      btn.disabled = true;
+      const b = e.currentTarget;
+      b.disabled = true;
       try{
-        const now = await toggleFollow(u.uid);
-        toast(now ? '@' + u.username + ' izlənilir' : 'İzləmə dayandırıldı');
+        const nowFollowing = await toggleFollow(u.uid);
+        u.iFollow = nowFollowing;
+        b.classList.toggle('is-following', nowFollowing);
+        b.setAttribute('aria-pressed', String(nowFollowing));
+        const lbl = b.querySelector('.fb-label');
+        if(lbl) lbl.textContent = t(nowFollowing ? 'users.a_unfollow' : 'users.a_follow');
+        toast(nowFollowing ? '@' + u.username + ' izlənilir' : 'İzləmə dayandırıldı');
       }catch(err){ toast(t('dyn.err_generic'), 'err'); }
-      btn.disabled = false;
+      b.disabled = false;
     },
-  }, following ? '✓ İzlənilir' : '+ İzlə');
-}
-
-/* ---------- İstifadəçilər#2: "+N" bacarıq nişanı ---------- */
-// Ən vacib 2-3 bacarıq göstərilir, qalanı "+N" nişanında toplanır.
-// Klik/hover → popover ilə tam siyahı. Klaviatura ilə də açılır (button + Esc).
-const VISIBLE_SKILLS = 3;
-
-function skillTag(label, level){
-  return el('span', { class: 'tag teal' }, label + (level ? ' · ' + level.slice(0, 1) : ''));
-}
-
-function skillRow(u){
-  const levels = { ...(u.progLevels || {}), ...(u.langLevels || {}) };
-  const all = [...(u.prog || []), ...(u.langs || [])];
-  if(!all.length) return null;
-
-  const row = el('div', { class: 'user-card-tags' },
-    all.slice(0, VISIBLE_SKILLS).map(lbl => skillTag(lbl, levels[lbl])));
-
-  const rest = all.slice(VISIBLE_SKILLS);
-  if(!rest.length) return row;
-
-  const pop = el('div', { class: 'skill-pop', role: 'tooltip' },
-    el('div', { class: 'sp-title' }, t('users.all_skills')),
-    el('div', { class: 'sp-tags' }, all.map(lbl => skillTag(lbl, levels[lbl]))));
-
-  const more = el('button', {
-    class: 'tag more-tag',
-    type: 'button',
-    'aria-label': t('users.more_skills').replace('{0}', rest.length),
-    'aria-expanded': 'false',
-    onclick: e => {
-      e.stopPropagation();
-      const open = wrap.classList.toggle('open');
-      more.setAttribute('aria-expanded', String(open));
-    },
-  }, '+' + rest.length);
-
-  const wrap = el('span', { class: 'more-wrap' }, more, pop);
-  row.append(wrap);
-  return row;
-}
-
-function userCard(u){
-  return el('div', { class: 'user-card' },
-    el('div', { class: 'user-card-head' },
-      avatarNode(u, 'avatar', isOnline(u)),
-      el('div', { class: 'uc-id' },
-        el('b', {}, nameWithBadge(u)),
-        el('span', {}, '@' + u.username + ' · 🔥' + (u.streak || 0) + ' · ' + (u.xp || 0) + ' XP'),
-        isMutual(u.uid) ? el('span', { class: 'mutual-tag' }, '⇄ ' + t('soc.mutual')) : null,
-      ),
-      followBtn(u),
-    ),
-    skillRow(u),
-    el('div', { class: 'user-card-actions' },
-      el('button', { onclick: () => emit('nav', { page: 'u/' + u.username }) }, t('usr.view')),
-      el('button', { class: 'primary', onclick: () => tryOpenDM(u) }, t('usr.msg')),
-    ),
+  },
+    el('span', { class: 'ic', 'data-icon': following ? 'check' : 'userPlus', 'data-icon-size': '14' }),
+    el('span', { class: 'fb-label' }, t(following ? 'users.a_unfollow' : 'users.a_follow')),
   );
+  paintIcons(btn);
+  return btn;
 }
 
 // Mesaj icazəsi: qəbul edənin whoCanMessage siyasətinə hörmət (client tərəf; rules da qoruyur).
@@ -97,7 +162,8 @@ function tryOpenDM(u){
   emit('open-dm', { uid: u.uid });
 }
 
-/* ---------- izləyən/izlədiklər siyahısı modalı ---------- */
+/* ═══════════════════════ İZLƏYƏN/İZLƏDİKLƏRİ MODALI ═══════════════════════ */
+
 export async function openFollowList(uid, kind){
   const isSelf = uid === state.authUser.uid;
   const owner = state.users.get(uid);
@@ -119,7 +185,7 @@ export async function openFollowList(uid, kind){
     users.forEach(u => {
       listBox.append(el('div', { class: 'admin-user-row' },
         avatarNode(u, 'avatar', isOnline(u)),
-        el('div', { class: 'name', style: 'cursor:pointer;', onclick: () => { closeModal(); emit('nav', { page: 'u/' + u.username }); } },
+        el('div', { class: 'name u-cursor-pointer', onclick: () => { closeModal(); emit('nav', { page: 'u/' + u.username }); } },
           nameWithBadge(u), ' ', el('span', { class: 'sub' }, '@' + u.username)),
         isMutual(u.uid) ? el('span', { class: 'mutual-tag' }, '⇄') : null,
         u.uid !== state.authUser.uid ? followBtn(u) : null,
@@ -131,21 +197,10 @@ export async function openFollowList(uid, kind){
   }
 }
 
-function rebuildSkillFilter(){
-  const sel = document.getElementById('userSkillFilter');
-  const cur = sel.value;
-  clear(sel);
-  sel.append(el('option', { value: '' }, 'Bütün skill-lər'));
-  [...tax.prog, ...tax.spoken].forEach(i => sel.append(el('option', { value: i.label }, i.label)));
-  sel.value = cur;
-}
+/* ═══════════════════════ KATALOQ VƏZİYYƏTİ ═══════════════════════ */
 
-/* ================= kataloq: server-side sıralama + səhifələmə =================
-   Əvvəllər bütün siyahı `state.users`-dən client-də süzülüb sıralanırdı.
-   İndi sorğu D1-ə gedir (ORDER BY + index, 0006) və nəticə hissə-hissə gəlir.
-   `state.users` qlobal keş kimi qalır — feed/DM/mention ondan asılıdır.       */
-
-const VIEW_KEY = 'collabix_users_view';   // İstifadəçilər#3 — grid|list yadda qalır
+const VIEW_KEY = 'collabix_users_view';    // grid | list | compact — yadda qalır
+const VISIBLE_SKILLS = 4;                  // qalanı "+N" nişanında
 
 const dir = {
   cursor: null,
@@ -156,39 +211,504 @@ const dir = {
   emptyStreak: 0,  // ardıcıl boş səhifə sayı (client süzgəcindən sonra)
 };
 
+let view = 'grid';
+let stats = null;
+let suggest = null;
+let openMenu = null;
+let hoverCard = null;
+let hoverTimer = 0;
+
+/** Sürətli pill → server/client filtr dəyərləri. */
+const QUICK = [
+  { key: 'all',      icon: 'users' },
+  { key: 'online',   icon: 'zap',    extra: 'online' },
+  { key: 'hiring',   icon: 'briefcase', status: 'hiring' },
+  { key: 'mentor',   icon: 'award',  looking: 'Mentor' },
+  { key: 'verified', icon: 'check',  extra: 'verified' },
+  { key: 'mutual',   icon: 'userPlus', extra: 'mutual' },
+];
+let quickKey = 'all';
+
+const $ = id => document.getElementById(id);
+
 function currentQuery(){
-  return {
-    q: (document.getElementById('userSearch').value || '').trim(),
-    skill: document.getElementById('userSkillFilter').value,
-    level: document.getElementById('userLevelFilter').value,
-    looking: document.getElementById('userLookingFilter').value,
-    extra: document.getElementById('userExtraFilter').value,
-    sort: document.getElementById('userSortSelect').value,
+  const q = {
+    q: ($('userSearch').value || '').trim(),
+    skill: $('userSkillFilter').value,
+    level: $('userLevelFilter').value,
+    looking: $('userLookingFilter').value,
+    extra: $('userExtraFilter').value,
+    company: ($('userCompanyFilter').value || '').trim(),
+    loc: ($('userLocFilter').value || '').trim(),
+    status: $('userStatusFilter').value,
+    sort: $('userSortSelect').value,
   };
+  // Sürətli pill panel filtrlərini ƏZİR (istifadəçi son toxunduğu idarəetmə
+  // qalib gəlməlidir). `all` heç nə əlavə etmir.
+  const qk = QUICK.find(x => x.key === quickKey);
+  if(qk){
+    if(qk.extra) q.extra = qk.extra;
+    if(qk.status) q.status = qk.status;
+    if(qk.looking) q.looking = qk.looking;
+  }
+  return q;
 }
 
-// `extra` filtrlərindən yalnız `verified` serverdədir; `online` presence
-// xəritəsindən, `mutual` isə izləmə dəstlərindən — hər ikisi yalnız client-də
-// mövcuddur, ona görə gələn səhifə üzərində süzülür.
+/** Neçə filtr aktivdir — düymə nişanı üçün. */
+function activeFilterCount(){
+  const q = currentQuery();
+  return ['skill', 'level', 'looking', 'extra', 'company', 'loc', 'status']
+    .filter(k => !!q[k]).length;
+}
+
+// `extra` filtrlərindən `verified`, `following`, `followers`, `mutual` ARTIQ
+// serverdədir (miqrasiya 0051 + `directory.ts`). `online` isə presence
+// sistemindən gəlir və yalnız client-də mövcuddur.
 function clientSideExtra(users, extra){
   if(extra === 'online') return users.filter(u => isOnline(u));
-  if(extra === 'mutual') return users.filter(u => isMutual(u.uid));
   return users;
 }
 
-function setStatus(text){
-  document.getElementById('userDirStatus').textContent = text || '';
+function setStatus(text){ $('userDirStatus').textContent = text || ''; }
+
+/* ═══════════════════════ STATİSTİKA KARTLARI ═══════════════════════ */
+
+const STAT_CARDS = [
+  { key: 'total',    icon: 'users',      tone: 'accent' },
+  { key: 'online',   icon: 'zap',        tone: 'online',  field: 'activeDay' },
+  { key: 'following', icon: 'userPlus',  tone: 'follow' },
+  { key: 'teams',    icon: 'users',      tone: 'team' },
+  { key: 'projects', icon: 'folder',     tone: 'project' },
+  { key: 'verified', icon: 'check',      tone: 'verified' },
+  { key: 'mentors',  icon: 'award',      tone: 'mentor' },
+  { key: 'hiring',   icon: 'briefcase',  tone: 'hiring' },
+];
+
+function renderStats(){
+  const box = $('userStats');
+  if(!box || !stats) return;
+  clear(box);
+  for(const c of STAT_CARDS){
+    const value = stats[c.field || c.key] || 0;
+    const num = el('span', { class: 'ud-stat__num' }, '0');
+    box.append(el('div', { class: 'ud-stat ud-t--' + c.tone },
+      el('span', { class: 'ud-stat__ic ic', 'data-icon': c.icon, 'data-icon-size': '16' }),
+      el('span', { class: 'ud-stat__body' },
+        num,
+        el('span', { class: 'ud-stat__lbl' }, t('users.s_' + c.key)),
+        // Trend yalnız "üzvlər" kartındadır — qalanları üçün həftəlik artım
+        // ölçülmür və uydurma rəqəm göstərmək yanlış olardı.
+        c.key === 'total' && stats.newWeek
+          ? el('span', { class: 'ud-stat__trend' }, t('users.s_new_week').replace('{n}', String(stats.newWeek)))
+          : null,
+      ),
+    ));
+    countUp(num, value, { duration: 420 });
+  }
+  paintIcons(box);
+}
+
+/* ═══════════════════════ SÜRƏTLİ PİLLƏR ═══════════════════════ */
+
+function renderQuick(){
+  const box = $('userQuick');
+  if(!box) return;
+  clear(box);
+  for(const q of QUICK){
+    const active = quickKey === q.key;
+    box.append(el('button', {
+      class: 'ud-pill' + (active ? ' is-active' : ''),
+      type: 'button', role: 'tab', 'aria-selected': String(active),
+      onclick: () => {
+        quickKey = quickKey === q.key ? 'all' : q.key;
+        renderQuick();
+        reloadDirectory();
+      },
+    },
+      el('span', { class: 'ud-pill__ic ic', 'data-icon': q.icon, 'data-icon-size': '15' }),
+      el('span', {}, t('users.q_' + q.key)),
+    ));
+  }
+  paintIcons(box);
+}
+
+/* ═══════════════════════ KART ═══════════════════════ */
+
+function skillChips(u, max){
+  const levels = { ...(u.progLevels || {}), ...(u.langLevels || {}) };
+  const all = [...(u.prog || []), ...(u.langs || [])];
+  if(!all.length) return null;
+
+  // ⚠ Səviyyə TƏK HƏRFLƏ göstərilir (B/O/Q) — nişan dar olmalıdır, tam söz
+  //   ("Qabaqcıl") kartı sındırırdı. Hərf təkbaşına şifrəlidir, ona görə tam
+  //   dəyər `title`-dədir: siçanla üstünə gələn və ekran oxuyucusu onu alır.
+  const chip = lbl => el('span', {
+    class: 'ud-skill ' + skillCatClass(lbl),
+    title: levels[lbl] ? lbl + ' · ' + levels[lbl] : lbl,
+  }, lbl, levels[lbl] ? el('i', {}, levels[lbl].slice(0, 1)) : null);
+
+  const row = el('div', { class: 'ud-skills' });
+  all.slice(0, max).forEach(lbl => row.append(chip(lbl)));
+
+  const rest = all.slice(max);
+  if(!rest.length) return row;
+
+  const pop = el('div', { class: 'ud-skillpop', role: 'tooltip' },
+    el('div', { class: 'ud-skillpop__t' }, t('users.all_skills')),
+    el('div', { class: 'ud-skillpop__b' }, all.map(chip)));
+
+  const more = el('button', {
+    class: 'ud-skill ud-skill--more', type: 'button',
+    'aria-label': t('users.more_skills').replace('{0}', String(rest.length)),
+    'aria-expanded': 'false',
+    onclick: e => {
+      e.stopPropagation();
+      const open = wrap.classList.toggle('open');
+      more.setAttribute('aria-expanded', String(open));
+    },
+  }, '+' + rest.length);
+
+  const wrap = el('span', { class: 'ud-morewrap' }, more, pop);
+  row.append(wrap);
+  return row;
+}
+
+function statusDot(u){
+  const s = statusOf(u);
+  return el('span', {
+    class: 'ud-status ud-s--' + s.tone,
+    title: t(s.key), 'aria-label': t(s.key),
+  });
+}
+
+function xpBlock(u){
+  const r = rankOf(u.xp);
+  const p = xpProgress(u.xp);
+  const fill = el('span', { class: 'ud-xp__fill ud-r--' + r.tone });
+  // ⚠ CSSOM ilə yazılır, HTML `style="…"` atributu ilə YOX: CSP `style-src`
+  //   atribut formasını bloklayır və zolaq prod-da SƏSSİZCƏ sıfır enində
+  //   qalardı (layihə qeydi: `csp-blocks-inline-style-attributes`).
+  fill.style.setProperty('--ud-xp-pct', p.pct + '%');
+  return el('div', { class: 'ud-xp' },
+    el('div', { class: 'ud-xp__top' },
+      el('span', { class: 'ud-rank ud-r--' + r.tone },
+        el('span', { class: 'ic', 'data-icon': 'crown', 'data-icon-size': '11' }),
+        r.label, el('i', {}, 'Lv' + r.lvl)),
+      el('span', { class: 'ud-xp__num' }, (u.xp || 0).toLocaleString(), ' XP'),
+    ),
+    el('div', {
+      class: 'ud-xp__bar', role: 'progressbar',
+      'aria-valuenow': String(p.pct), 'aria-valuemin': '0', 'aria-valuemax': '100',
+      'aria-label': p.isMax ? t('users.rk_max') : t('users.rk_next').replace('{n}', String(p.remaining)),
+      title: p.isMax ? t('users.rk_max') : t('users.rk_next').replace('{n}', String(p.remaining)),
+    }, fill),
+  );
+}
+
+/** Meta sətri — şirkət · yer · qoşulma. Boş sahələr TAMAM buraxılır. */
+function metaRow(u){
+  const bits = [];
+  if(u.company) bits.push(['building', u.company]);
+  const loc = [u.city, u.country].filter(Boolean).join(', ');
+  if(loc) bits.push(['mapPin', loc]);
+  // ⚠ `month: 'short'` İŞLƏDİLMİR: `az-AZ` ICU məlumatında qısa ay adı
+  //   "M07" formasındadır və kartda "Qoşulub 2026 M07" kimi oxunmaz çıxırdı.
+  //   `long` hər üç dildə düzgün ay adı verir.
+  if(!bits.length && u.joinedAt) bits.push(['calendar', t('users.c_joined').replace('{d}', fmtDate(u.joinedAt, { month: 'long', year: 'numeric' }))]);
+  if(!bits.length) return null;
+  return el('div', { class: 'ud-meta' }, bits.map(([ic, txt]) =>
+    el('span', { class: 'ud-meta__i' },
+      el('span', { class: 'ic', 'data-icon': ic, 'data-icon-size': '13' }), txt)));
+}
+
+/** Sosial sətir — izləyici / komanda / layihə + ortaqlıqlar. */
+function socialRow(u){
+  const row = el('div', { class: 'ud-social' });
+  const n = (v, key) => el('span', { class: 'ud-social__i' },
+    el('b', {}, String(v || 0)), ' ' + t(key));
+  row.append(n(u.followersCount, 'users.c_followers'));
+  if(u.teamsCount) row.append(n(u.teamsCount, 'users.c_teams'));
+  if(u.projectsCount) row.append(n(u.projectsCount, 'users.c_projects'));
+
+  if(u.mutualTeams) row.append(el('span', { class: 'ud-mutual' },
+    el('span', { class: 'ic', 'data-icon': 'users', 'data-icon-size': '11' }),
+    t('users.c_mutual_t').replace('{n}', String(u.mutualTeams))));
+  if(u.mutualProjects) row.append(el('span', { class: 'ud-mutual' },
+    el('span', { class: 'ic', 'data-icon': 'folder', 'data-icon-size': '11' }),
+    t('users.c_mutual_p').replace('{n}', String(u.mutualProjects))));
+  if(u.followsMe) row.append(el('span', { class: 'ud-mutual ud-mutual--f' }, t('users.c_follows_you')));
+  return row;
+}
+
+function actionRow(u, compact){
+  const box = el('div', { class: 'ud-actions' });
+  box.append(el('button', {
+    class: 'c-btn c-btn--primary c-btn--sm ud-actions__msg',
+    onclick: e => { e.stopPropagation(); tryOpenDM(u); },
+  },
+    el('span', { class: 'ic', 'data-icon': 'send', 'data-icon-size': '14' }),
+    compact ? null : el('span', {}, t('users.a_msg'))));
+  box.append(followBtn(u));
+  if(!compact) box.append(el('button', {
+    class: 'c-btn c-btn--ghost c-btn--sm',
+    onclick: e => { e.stopPropagation(); emit('nav', { page: 'u/' + u.username }); },
+  }, t('users.a_profile')));
+  box.append(el('button', {
+    class: 'c-icon-btn ud-more', type: 'button',
+    'aria-label': t('users.a_more'),
+    onclick: function(e){ e.stopPropagation(); openUserMenu(this, u); },
+  }, el('span', { class: 'ic', 'data-icon': 'more', 'data-icon-size': '16' })));
+  paintIcons(box);
+  return box;
+}
+
+function userCard(u){
+  const compact = view === 'compact';
+  const maxSkills = compact ? 2 : VISIBLE_SKILLS;
+  const s = statusOf(u);
+
+  const card = el('article', {
+    class: 'ud-card' + (u.verified ? ' is-verified' : ''),
+    dataset: { uid: u.uid },
+    tabindex: '0',
+    'aria-label': u.name + ' @' + u.username,
+    onclick: e => {
+      if(e.target.closest('.ud-actions, .ud-morewrap, .ud-menu')) return;
+      emit('nav', { page: 'u/' + u.username });
+    },
+    onkeydown: e => {
+      if(e.key === 'Enter'){ e.preventDefault(); emit('nav', { page: 'u/' + u.username }); }
+    },
+  });
+
+  // ── Avatar sütunu
+  const avWrap = el('div', { class: 'ud-card__av' },
+    avatarNode(u, 'avatar'),
+    statusDot(u),
+  );
+  // Hover mini-profil YALNIZ avatarda açılır (spesifikasiya) — bütün kartda
+  // açılsaydı siyahını sürüşdürərkən dayanmadan görünərdi.
+  avWrap.addEventListener('mouseenter', () => scheduleHover(avWrap, u));
+  avWrap.addEventListener('mouseleave', cancelHover);
+  card.append(avWrap);
+
+  // ── Əsas sütun
+  const body = el('div', { class: 'ud-card__body' });
+  body.append(el('div', { class: 'ud-id' },
+    el('span', { class: 'ud-name' }, nameWithBadge(u)),
+    el('span', { class: 'ud-handle' }, '@' + u.username),
+    s.tone === 'hiring' ? el('span', { class: 'ud-badge ud-s--hiring' }, t('users.st_hiring')) : null,
+  ));
+
+  const meta = metaRow(u);
+  if(meta) body.append(meta);
+
+  if(!compact){
+    body.append(el('p', { class: 'ud-bio' }, u.bio || t('users.c_no_bio')));
+  }
+  body.append(xpBlock(u));
+  const chips = skillChips(u, maxSkills);
+  if(chips) body.append(chips);
+  if(!compact) body.append(socialRow(u));
+  card.append(body);
+
+  // ── Əməliyyat sütunu
+  card.append(el('div', { class: 'ud-card__side' },
+    el('span', { class: 'ud-seen' }, lastSeenText(u) || ''),
+    actionRow(u, compact),
+  ));
+
+  paintIcons(card);
+  return card;
+}
+
+/* ═══════════════════════ HOVER MİNİ-PROFİL ═══════════════════════ */
+
+function scheduleHover(anchor, u){
+  // ⚠ 380 ms GECİKMƏ: onsuz siyahı boyu siçan hərəkəti onlarla panel açırdı
+  //   (`hover-vs-tap` qaydası — hover təsadüfi ola bilər). Toxunuş
+  //   cihazlarında `mouseenter` ümumiyyətlə atılır.
+  if(window.matchMedia('(pointer: coarse)').matches) return;
+  cancelHover();
+  hoverTimer = window.setTimeout(() => showHover(anchor, u), 380);
+}
+
+function cancelHover(){
+  clearTimeout(hoverTimer);
+  if(hoverCard){ hoverCard.remove(); hoverCard = null; }
+}
+
+function showHover(anchor, u){
+  const r = rankOf(u.xp);
+  const loc = [u.city, u.country].filter(Boolean).join(', ');
+  hoverCard = el('div', { class: 'ud-hover', role: 'tooltip' },
+    el('div', { class: 'ud-hover__head' },
+      avatarNode(u, 'avatar'),
+      el('div', {},
+        el('b', {}, nameWithBadge(u)),
+        el('span', { class: 'ud-handle' }, '@' + u.username),
+      ),
+    ),
+    u.company || loc ? el('div', { class: 'ud-hover__meta' },
+      [u.company, loc].filter(Boolean).join(' · ')) : null,
+    el('p', { class: 'ud-hover__bio' }, u.bio || t('users.c_no_bio')),
+    el('div', { class: 'ud-hover__row' },
+      el('span', { class: 'ud-rank ud-r--' + r.tone }, r.label, el('i', {}, 'Lv' + r.lvl)),
+      el('span', { class: 'ud-hover__xp' }, (u.xp || 0).toLocaleString() + ' XP'),
+    ),
+    skillChips(u, 5),
+    el('div', { class: 'ud-hover__act' },
+      el('button', { class: 'c-btn c-btn--primary c-btn--sm', onclick: () => tryOpenDM(u) }, t('users.a_msg')),
+      followBtn(u),
+    ),
+  );
+  // Kartın içinə yerləşir — sürüşmə zamanı onunla birlikdə hərəkət edir.
+  anchor.append(hoverCard);
+  paintIcons(hoverCard);
+}
+
+/* ═══════════════════════ "DAHA ÇOX" MENYUSU ═══════════════════════ */
+
+function closeMenu(){ if(openMenu){ openMenu.remove(); openMenu = null; } }
+
+function openUserMenu(anchor, u){
+  closeMenu();
+  /** @type {Array<{key: string, icon: string, run: () => void}>} */
+  const items = [
+    { key: 'users.a_profile', icon: 'profile', run: () => emit('nav', { page: 'u/' + u.username }) },
+    { key: 'users.a_copy', icon: 'copy', run: () => copyProfileLink(u) },
+    { key: 'users.a_share', icon: 'share', run: () => shareProfile(u) },
+    { key: 'users.a_report', icon: 'flag', run: () => openReportForm(u) },
+  ];
+  const menu = el('div', { class: 'ud-menu', role: 'menu' },
+    items.map(it => el('button', {
+      class: 'ud-menu__item', role: 'menuitem', type: 'button',
+      onclick: e => { e.stopPropagation(); closeMenu(); it.run(); },
+    },
+      el('span', { class: 'ic', 'data-icon': it.icon, 'data-icon-size': '15' }),
+      el('span', {}, t(it.key)),
+    )),
+  );
+  anchor.parentElement.append(menu);
+  paintIcons(menu);
+  openMenu = menu;
+  const first = menu.querySelector('button');
+  if(first) first.focus();
+  setTimeout(() => document.addEventListener('click', closeMenu, { once: true }), 0);
+}
+
+const profileUrl = u => location.origin + '/#u/' + u.username;
+
+async function copyProfileLink(u){
+  try{ await navigator.clipboard.writeText(profileUrl(u)); toast(t('users.a_copied')); }
+  catch(e){ toast(t('dyn.err_generic'), 'err'); }
+}
+
+async function shareProfile(u){
+  // `navigator.share` yalnız HTTPS + istifadəçi jesti ilə işləyir və
+  // masaüstü brauzerlərin çoxunda yoxdur — kopyalamaya geri düşür.
+  if(navigator.share){
+    try{ await navigator.share({ title: u.name, url: profileUrl(u) }); return; }
+    catch(e){ /* istifadəçi ləğv etdi — səssiz */ }
+  }
+  copyProfileLink(u);
+}
+
+/* ═══════════════════════ TÖVSİYƏ RAİLİ ═══════════════════════ */
+
+const RAIL_GROUPS = [
+  { key: 'known',  field: 'known' },
+  { key: 'topxp',  field: 'topXp' },
+  { key: 'fresh',  field: 'fresh' },
+  { key: 'active', field: 'active' },
+];
+
+function renderRail(){
+  const box = $('userRail');
+  if(!box) return;
+  clear(box);
+  if(!suggest){
+    box.append(el('div', { class: 'ud-rail__box' },
+      el('span', { class: 'c-skeleton c-skeleton--title' }),
+      el('span', { class: 'c-skeleton c-skeleton--line' }),
+      el('span', { class: 'c-skeleton c-skeleton--line' })));
+    return;
+  }
+
+  const groups = RAIL_GROUPS.filter(g => (suggest[g.field] || []).length);
+  if(!groups.length){
+    box.append(el('div', { class: 'ud-rail__box' },
+      el('p', { class: 'ud-rail__empty' }, t('users.r_empty'))));
+    return;
+  }
+
+  box.append(el('h2', { class: 'ud-rail__title' }, t('users.r_title')));
+  for(const g of groups){
+    const list = el('div', { class: 'ud-rail__list' });
+    for(const u of suggest[g.field]){
+      list.append(el('div', { class: 'ud-mini' },
+        el('button', {
+          class: 'ud-mini__id', type: 'button',
+          onclick: () => emit('nav', { page: 'u/' + u.username }),
+        },
+          avatarNode(u, 'avatar'),
+          el('span', { class: 'ud-mini__txt' },
+            el('b', {}, u.name),
+            el('span', {}, u.company || ('@' + u.username)),
+          ),
+        ),
+        followBtn(u, 'c-btn c-btn--ghost c-btn--sm ud-mini__f'),
+      ));
+    }
+    box.append(el('section', { class: 'ud-rail__box' },
+      el('h3', { class: 'ud-rail__h' }, t('users.r_' + g.key)), list));
+  }
+  paintIcons(box);
+}
+
+/* ═══════════════════════ SİYAHI ═══════════════════════ */
+
+function renderEmpty(grid){
+  grid.append(el('div', { class: 'c-empty ud-empty' },
+    el('div', { class: 'ud-empty__art' },
+      el('span', { class: 'ic', 'data-icon': 'userSearch', 'data-icon-size': '32' })),
+    el('div', { class: 'c-empty__title' }, t('users.none_title')),
+    el('div', { class: 'c-empty__text' }, t('users.none_text')),
+    el('div', { class: 'ud-empty__act' },
+      el('button', { class: 'c-btn c-btn--ghost c-btn--sm', onclick: resetFilters }, t('users.flt_reset')),
+      el('button', { class: 'c-btn c-btn--primary c-btn--sm', onclick: openInvite }, t('users.invite')),
+    ),
+  ));
+  paintIcons(grid);
+}
+
+/**
+ * Skeleton — spinner YOX.
+ * ⚠ Ölçü real karta yaxındır: uzaq olsa skeleton sıçrayışı gizlədib sonra
+ *   geri qaytarar (CLS). Rejim dəyişəndə skeleton da dəyişir.
+ */
+function renderSkeletons(grid, n = 6){
+  clear(grid);
+  for(let i = 0; i < n; i++){
+    grid.append(el('div', { class: 'ud-card ud-card--sk' },
+      el('div', { class: 'c-skeleton ud-sk-av' }),
+      el('div', { class: 'ud-card__body' },
+        el('div', { class: 'c-skeleton c-skeleton--line ud-sk-1' }),
+        el('div', { class: 'c-skeleton c-skeleton--line ud-sk-2' }),
+        el('div', { class: 'c-skeleton c-skeleton--line ud-sk-3' }),
+      ),
+    ));
+  }
 }
 
 async function loadDirectory({ reset = false } = {}){
   if(!state.authUser) return;            // logout keçidində gec gələn event-lər
   if(dir.loading || (dir.done && !reset)) return;
 
-  const grid = document.getElementById('userGrid');
+  const grid = $('userGrid');
   if(reset){
     dir.cursor = null; dir.done = false; dir.count = 0; dir.emptyStreak = 0;
-    clear(grid);
-    skeletons(grid, 6);
+    renderSkeletons(grid, view === 'compact' ? 10 : 6);
   }
 
   dir.loading = true;
@@ -208,21 +728,24 @@ async function loadDirectory({ reset = false } = {}){
     dir.done = !d.nextCursor;
 
     if(dir.done){
-      setStatus(dir.count ? t('users.end') : '');
-      if(!dir.count){ clear(grid); grid.append(emptyState('userSearch', t('users.none'))); }
+      setStatus(dir.count ? t('users.count_n').replace('{n}', String(dir.count)) : '');
+      if(!dir.count){ clear(grid); renderEmpty(grid); }
     } else {
       setStatus('');
-      // Server səhifəsi client süzgəcindən (online/mutual) sonra tam boşala
-      // bilər — belə halda sentinel görünmür və scroll dayanır, ona görə
-      // növbəti səhifəni özümüz çəkirik.
+      // Server səhifəsi client süzgəcindən (`online`) sonra tam boşala bilər —
+      // belə halda sentinel görünmür və scroll dayanır, ona görə növbəti
+      // səhifəni özümüz çəkirik.
       // ⚠ Zəncir məhdudlaşdırılıb: "onlayn" filtri ilə heç kim uyğun gəlmirsə
       // bu, bütün bazanı ard-arda sorğulaya bilərdi. 5 boş səhifədən sonra
       // dayanır və istifadəçi scroll edərək davam edə bilər.
+      // ⚠ ZƏNCİR ARTIQ QISADIR: `mutual`/`following`/`verified` serverə
+      //   köçürüldüyü üçün yalnız `online` bu yola düşür.
       if(!rows.length){
         dir.emptyStreak = (dir.emptyStreak || 0) + 1;
         dir.loading = false;
         if(dir.emptyStreak < 5) return loadDirectory();
         setStatus(dir.count ? '' : t('users.none'));
+        if(!dir.count){ clear(grid); renderEmpty(grid); }
         return;
       }
       dir.emptyStreak = 0;
@@ -237,16 +760,231 @@ async function loadDirectory({ reset = false } = {}){
   }
 }
 
-const reloadDirectory = () => loadDirectory({ reset: true });
+const reloadDirectory = () => { updateFilterBadge(); loadDirectory({ reset: true }); };
 
-/* ---------- İstifadəçilər#3: grid ⇄ list ---------- */
-function applyView(view){
-  const grid = document.getElementById('userGrid');
-  grid.classList.toggle('list-view', view === 'list');
+/* ═══════════════════════ GÖRÜNÜŞ REJİMİ ═══════════════════════ */
+
+function applyView(v){
+  view = ['grid', 'list', 'compact'].includes(v) ? v : 'grid';
+  const grid = $('userGrid');
+  grid.classList.remove('view-grid', 'view-list', 'view-compact');
+  grid.classList.add('view-' + view);
   document.querySelectorAll('#userViewToggle button').forEach(b =>
     b.classList.toggle('active', b.dataset.view === view));
   try{ localStorage.setItem(VIEW_KEY, view); }catch(e){}
 }
+
+/* ═══════════════════════ FİLTR PANELİ ═══════════════════════ */
+
+function updateFilterBadge(){
+  const n = activeFilterCount();
+  const badge = $('userFilterCount');
+  if(!badge) return;
+  badge.textContent = String(n);
+  badge.hidden = n === 0;
+  const btn = $('userFilterBtn');
+  if(btn) btn.setAttribute('aria-label', t('users.flt_n').replace('{n}', String(n)));
+}
+
+function toggleFilters(force){
+  const panel = $('userFilters');
+  const btn = $('userFilterBtn');
+  const open = force !== undefined ? force : panel.hidden;
+  panel.hidden = !open;
+  btn.setAttribute('aria-expanded', String(open));
+}
+
+function resetFilters(){
+  ['userSkillFilter', 'userLevelFilter', 'userLookingFilter', 'userExtraFilter', 'userStatusFilter']
+    .forEach(id => { const s = $(id); if(s) s.value = ''; });
+  ['userCompanyFilter', 'userLocFilter', 'userSearch'].forEach(id => { const i = $(id); if(i) i.value = ''; });
+  $('userSortSelect').value = 'recent';
+  quickKey = 'all';
+  renderQuick();
+  reloadDirectory();
+}
+
+function rebuildSkillFilter(){
+  const sel = $('userSkillFilter');
+  if(!sel) return;
+  const cur = sel.value;
+  clear(sel);
+  sel.append(el('option', { value: '' }, t('users.flt_skill')));
+  [...tax.prog, ...tax.spoken].forEach(i => sel.append(el('option', { value: i.label }, i.label)));
+  sel.value = cur;
+  rebuildCatIndex();
+}
+
+/* ═══════════════════════ AXTARIŞ + AVTOTAMAMLAMA ═══════════════════════ */
+
+let suggestIdx = -1;
+
+function closeSuggest(){
+  const box = $('userSuggest');
+  if(!box) return;
+  box.hidden = true;
+  clear(box);
+  suggestIdx = -1;
+  $('userSearch').setAttribute('aria-expanded', 'false');
+}
+
+/**
+ * Avtotamamlama — YÜKLƏNMİŞ nəticələrdən + taksonomiyadan.
+ *
+ * ⚠ AYRICA SORĞU GÖNDƏRMİR: hər hərfdə ikinci endpoint çağırmaq limit
+ *   səbətini iki dəfə sürətlə yeyərdi. Siyahı onsuz da 250 ms debounce ilə
+ *   serverdən yenilənir; təklif isə həmin nəticələrin üzərində qurulur.
+ */
+function renderSuggest(term){
+  const box = $('userSuggest');
+  const input = $('userSearch');
+  if(!box) return;
+  const q = term.toLowerCase();
+  if(q.length < 2){ closeSuggest(); return; }
+
+  const people = [...state.users.values()]
+    .filter(u => u.uid !== state.authUser.uid
+      && ((u.name || '').toLowerCase().includes(q) || (u.username || '').toLowerCase().includes(q)))
+    .slice(0, 5);
+  const skills = [...tax.prog, ...tax.spoken]
+    .filter(i => i.label.toLowerCase().includes(q)).slice(0, 3);
+
+  if(!people.length && !skills.length){ closeSuggest(); return; }
+
+  clear(box);
+  suggestIdx = -1;
+  people.forEach(u => box.append(el('button', {
+    class: 'ud-suggest__i', type: 'button', role: 'option', 'aria-selected': 'false',
+    onclick: () => { closeSuggest(); emit('nav', { page: 'u/' + u.username }); },
+  },
+    avatarNode(u, 'avatar'),
+    el('span', {}, el('b', {}, u.name), ' ', el('i', {}, '@' + u.username)),
+  )));
+  skills.forEach(s => box.append(el('button', {
+    class: 'ud-suggest__i ud-suggest__i--skill', type: 'button', role: 'option', 'aria-selected': 'false',
+    onclick: () => {
+      closeSuggest();
+      input.value = '';
+      $('userSkillFilter').value = s.label;
+      reloadDirectory();
+    },
+  },
+    el('span', { class: 'ic', 'data-icon': 'code', 'data-icon-size': '15' }),
+    el('span', {}, s.label),
+  )));
+  box.hidden = false;
+  input.setAttribute('aria-expanded', 'true');
+  paintIcons(box);
+}
+
+function moveSuggest(delta){
+  const box = $('userSuggest');
+  if(!box || box.hidden) return;
+  const items = [...box.querySelectorAll('.ud-suggest__i')];
+  if(!items.length) return;
+  suggestIdx = (suggestIdx + delta + items.length) % items.length;
+  items.forEach((n, i) => {
+    n.classList.toggle('is-active', i === suggestIdx);
+    n.setAttribute('aria-selected', String(i === suggestIdx));
+  });
+  items[suggestIdx].scrollIntoView({ block: 'nearest' });
+}
+
+/* ═══════════════════════ DƏVƏT ═══════════════════════ */
+
+/**
+ * Dəvət modalı — mövcud `/api/me/invites` axını (miqrasiya 0037).
+ *
+ * ⚠ YENİ ENDPOINT YARADILMADI: dəvət kodu sistemi artıq var idi, sadəcə
+ *   İstifadəçilər səhifəsindən əlçatan deyildi.
+ */
+async function openInvite(){
+  const box = el('div', {}, el('span', { class: 'c-skeleton c-skeleton--line' }));
+  showModal([el('div', { class: 'section-title' }, t('users.invite')), box]);
+  try{
+    const d = await api('/me/invites');
+    const list = (d.invites || []).filter(x => x.active);
+    clear(box);
+    const show = code => {
+      const url = location.origin + '/?invite=' + code;
+      box.append(el('div', { class: 'ud-invite' },
+        el('code', {}, url),
+        el('button', {
+          class: 'c-btn c-btn--ghost c-btn--sm',
+          onclick: async () => {
+            try{ await navigator.clipboard.writeText(url); toast(t('users.a_copied')); }
+            catch(e){ toast(t('dyn.err_generic'), 'err'); }
+          },
+        }, t('users.a_copy'))));
+    };
+    if(list.length) list.slice(0, 3).forEach(x => show(x.code));
+    else box.append(el('button', {
+      class: 'c-btn c-btn--primary c-btn--sm',
+      onclick: async e => {
+        e.currentTarget.disabled = true;
+        try{
+          const r = await api('/me/invites', { method: 'POST', body: {} });
+          clear(box); show(r.invite.code);
+        }catch(err){ toast(t('dyn.err_generic'), 'err'); }
+      },
+    }, t('users.invite')));
+  }catch(e){
+    clear(box);
+    box.append(el('p', { class: 'ud-rail__empty' }, t('dyn.err_generic')));
+  }
+}
+
+/* ═══════════════════════ İXRAC ═══════════════════════ */
+
+function exportCsv(){
+  // ⚠ `<a download>` işlədilir, `fetch` YOX: fayl Worker-dən stream gəlir və
+  //   brauzer endirməni özü aparır (admin CSV ixracı ilə eyni naxış). `fetch`
+  //   ilə bütün faylı yaddaşa yığmaq lazım gələrdi.
+  const a = el('a', { href: directoryExportUrl(currentQuery()), download: '' });
+  document.body.append(a);
+  a.click();
+  a.remove();
+  toast(t('users.export_ok'));
+}
+
+/* ═══════════════════════ YAPIŞQAN QAT OFSETLƏRİ ═══════════════════════ */
+
+let stickyRO = null;
+
+/**
+ * İki yapışqan qat üst-üstə düzülür: topbar → idarəetmə zolağı; tövsiyə raili
+ * də topbar-ın altında dayanır.
+ *
+ * 🔴 DƏYƏRLƏR ÖLÇÜLÜR, CSS-də SABİT YAZILMIR. `.app-topbar` hündürlüyü şrift
+ *    ölçüsündən asılıdır, `.ud-controls` isə 480px-dən dar ekranda sarılıb
+ *    hündürləşir. Sabit `top: 108px` yazılanda axtarış sahəsi topbar-ın
+ *    ALTINDA gizlənirdi (bildiriş mərkəzində ölçülmüş eyni qüsur).
+ *
+ * ⚠ `style.setProperty` CSSOM yoluyladır — CSP atribut formasını bloklayır.
+ */
+function syncUsersSticky(){
+  const root = document.getElementById('page-users');
+  const controls = $('userControls');
+  if(!root || !controls) return;
+  const topbar = document.querySelector('.app-topbar');
+  const h = node => (node ? Math.round(node.getBoundingClientRect().height) : 0);
+  root.style.setProperty('--ud-topbar', h(topbar) + 'px');
+  root.style.setProperty('--ud-controls-h', h(controls) + 'px');
+}
+
+function initStickyWatcher(){
+  const controls = $('userControls');
+  if(!controls || stickyRO) return;
+  syncUsersSticky();
+  // Filtr paneli açılıb-bağlandıqda, dil dəyişəndə və şrift yüklənəndə
+  // hündürlük dəyişir — `resize` hadisəsi bunların HEÇ BİRİNİ tutmur.
+  stickyRO = new ResizeObserver(syncUsersSticky);
+  stickyRO.observe(controls);
+  const topbar = document.querySelector('.app-topbar');
+  if(topbar) stickyRO.observe(topbar);
+}
+
+/* ═══════════════════════ MOUNT ═══════════════════════ */
 
 // Ana#10 — homepage-dən gələn öncədən-seçilmiş skill.
 // İki mənbə: URL param (#users?skill=Python, paylaşıla bilən) və sessionStorage
@@ -261,7 +999,7 @@ function applyPendingSkill(){
     }catch(e){}
   }
   if(!skill) return;
-  const sel = document.getElementById('userSkillFilter');
+  const sel = $('userSkillFilter');
   // Yalnız taksonomiyada həqiqətən mövcud olan dəyəri tətbiq et
   // (uydurma param filtri "heç nə tapılmadı" vəziyyətinə salmasın).
   if([...sel.options].some(o => o.value === skill)) sel.value = skill;
@@ -270,63 +1008,147 @@ function applyPendingSkill(){
 export function mountUsers(){
   rebuildSkillFilter();
   applyPendingSkill();
+  renderQuick();
+  updateFilterBadge();
 
-  let view = 'grid';
-  try{ view = localStorage.getItem(VIEW_KEY) === 'list' ? 'list' : 'grid'; }catch(e){}
-  applyView(view);
+  let saved = 'grid';
+  try{ saved = localStorage.getItem(VIEW_KEY) || 'grid'; }catch(e){}
+  applyView(saved);
 
   reloadDirectory();
 
-  // Sıra/filtr dəyişəndə sorğu yenidən qurulur (serverə gedir).
-  const input = document.getElementById('userSearch');
-  const onSearch = debounce(reloadDirectory, 250);
-  input.addEventListener('input', onSearch);
+  // Xülasə və tövsiyələr — siyahıdan ASILI DEYİL, ona görə paralel çəkilir
+  // və uğursuzluğu siyahını bloklamır.
+  fetchDirectoryStats().then(d => { stats = d; renderStats(); }).catch(() => {});
+  renderRail();
+  fetchSuggestedUsers().then(d => { suggest = d; renderRail(); }).catch(() => { suggest = {}; renderRail(); });
 
-  const selIds = ['userSkillFilter', 'userLevelFilter', 'userLookingFilter', 'userExtraFilter', 'userSortSelect'];
-  const sels = selIds.map(id => document.getElementById(id));
+  /* ---- axtarış ---- */
+  const input = $('userSearch');
+  const onSearch = debounce(reloadDirectory, 250);
+  const onInput = e => { onSearch(); renderSuggest(e.target.value.trim()); };
+  input.addEventListener('input', onInput);
+  const onSearchKey = e => {
+    if(e.key === 'ArrowDown'){ e.preventDefault(); moveSuggest(1); }
+    else if(e.key === 'ArrowUp'){ e.preventDefault(); moveSuggest(-1); }
+    else if(e.key === 'Enter' && suggestIdx >= 0){
+      e.preventDefault();
+      $('userSuggest').querySelectorAll('.ud-suggest__i')[suggestIdx]?.click();
+    }
+    else if(e.key === 'Escape'){ closeSuggest(); input.value = ''; reloadDirectory(); }
+  };
+  input.addEventListener('keydown', onSearchKey);
+  input.addEventListener('blur', () => setTimeout(closeSuggest, 150));
+
+  // Ctrl/Cmd + K — axtarışa fokus.
+  // ⚠ `preventDefault` MƏCBURİDİR: Firefox-da Ctrl+K brauzerin öz axtarış
+  //   sətrini açır və hadisə bizə çatsa da səhifə fokusu itirirdi.
+  const onHotkey = e => {
+    if((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')){
+      if(!document.getElementById('page-users').classList.contains('active')) return;
+      e.preventDefault();
+      input.focus();
+      input.select();
+    }
+  };
+  document.addEventListener('keydown', onHotkey);
+
+  /* ---- filtrlər ---- */
+  const selIds = ['userSkillFilter', 'userLevelFilter', 'userLookingFilter',
+    'userExtraFilter', 'userStatusFilter', 'userSortSelect'];
+  const sels = selIds.map(id => $(id));
   sels.forEach(s => s.addEventListener('change', reloadDirectory));
 
-  const toggle = document.getElementById('userViewToggle');
+  const textIds = ['userCompanyFilter', 'userLocFilter'];
+  const texts = textIds.map(id => $(id));
+  const onTextFilter = debounce(reloadDirectory, 300);
+  texts.forEach(i => i.addEventListener('input', onTextFilter));
+
+  const filterBtn = $('userFilterBtn');
+  const onFilterBtn = () => toggleFilters();
+  filterBtn.addEventListener('click', onFilterBtn);
+  const resetBtn = $('userFilterReset');
+  resetBtn.addEventListener('click', resetFilters);
+  const applyBtn = $('userFilterApply');
+  const onApply = () => { toggleFilters(false); reloadDirectory(); };
+  applyBtn.addEventListener('click', onApply);
+
+  /* ---- görünüş ---- */
+  const toggle = $('userViewToggle');
   const onToggle = e => {
     const b = e.target.closest('button[data-view]');
-    if(b) applyView(b.dataset.view);
+    if(!b) return;
+    applyView(b.dataset.view);
+    // Rejim dəyişəndə kartların strukturu dəyişir → yenidən çəkilir.
+    loadDirectory({ reset: true });
   };
   toggle.addEventListener('click', onToggle);
 
+  /* ---- başlıq əməliyyatları ---- */
+  const inviteBtn = $('userInviteBtn');
+  inviteBtn.addEventListener('click', openInvite);
+  const exportBtn = $('userExportBtn');
+  exportBtn.addEventListener('click', exportCsv);
+
+  /* ---- yuxarı qayıt ---- */
+  const toTop = $('userToTop');
+  const onScroll = () => {
+    toTop.hidden = window.scrollY < 600;
+  };
+  window.addEventListener('scroll', onScroll, { passive: true });
+  const onToTop = () => window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+  toTop.addEventListener('click', onToTop);
+
+  /* ---- canlı yeniləmələr ---- */
   // Follow/presence dəyişiklikləri bütün siyahını yenidən çəkməməlidir —
   // yalnız client-side süzgəc aktivdirsə nəticə dəyişə bilər.
   const onSoft = () => {
-    const extra = document.getElementById('userExtraFilter').value;
-    if(extra === 'online' || extra === 'mutual') reloadDirectory();
+    if(currentQuery().extra === 'online') reloadDirectory();
   };
   bus.addEventListener('follows-updated', onSoft);
   bus.addEventListener('presence-updated', onSoft);
   bus.addEventListener('taxonomy-updated', rebuildSkillFilter);
 
-  // İnfinite scroll: sentinel görünəndə növbəti səhifə.
-  const sentinel = document.getElementById('userSentinel');
+  /* ---- sonsuz sürüşmə ---- */
+  const sentinel = $('userSentinel');
   const io = new IntersectionObserver(entries => {
     if(entries.some(e => e.isIntersecting)) loadDirectory();
   }, { rootMargin: '300px' });
   io.observe(sentinel);
 
-  // "+N" popover-ini kənara klikləyəndə bağla.
+  initStickyWatcher();
+
+  // "+N" popover-ini və menyunu kənara klikləyəndə bağla.
   const onDocClick = e => {
-    document.querySelectorAll('#userGrid .more-wrap.open').forEach(w => {
+    document.querySelectorAll('#userGrid .ud-morewrap.open').forEach(w => {
       if(w.contains(e.target)) return;
       w.classList.remove('open');
-      w.querySelector('.more-tag')?.setAttribute('aria-expanded', 'false');
+      w.querySelector('.ud-skill--more')?.setAttribute('aria-expanded', 'false');
     });
   };
   document.addEventListener('click', onDocClick);
 
   return () => {
     io.disconnect();
+    if(stickyRO){ stickyRO.disconnect(); stickyRO = null; }
     dir.reqId++;                 // uçuşdakı cavablar DOM-a toxunmasın
     dir.loading = false;
-    input.removeEventListener('input', onSearch);
+    cancelHover();
+    closeMenu();
+    closeSuggest();
+    input.removeEventListener('input', onInput);
+    input.removeEventListener('keydown', onSearchKey);
+    document.removeEventListener('keydown', onHotkey);
     sels.forEach(s => s.removeEventListener('change', reloadDirectory));
+    texts.forEach(i => i.removeEventListener('input', onTextFilter));
+    filterBtn.removeEventListener('click', onFilterBtn);
+    resetBtn.removeEventListener('click', resetFilters);
+    applyBtn.removeEventListener('click', onApply);
     toggle.removeEventListener('click', onToggle);
+    inviteBtn.removeEventListener('click', openInvite);
+    exportBtn.removeEventListener('click', exportCsv);
+    window.removeEventListener('scroll', onScroll);
+    toTop.removeEventListener('click', onToTop);
     document.removeEventListener('click', onDocClick);
     bus.removeEventListener('follows-updated', onSoft);
     bus.removeEventListener('presence-updated', onSoft);

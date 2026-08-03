@@ -929,44 +929,135 @@
       <div class="nc-sentinel" id="notifSentinel" aria-hidden="true"></div>
     </div>
 
+    <!-- ══ İSTİFADƏÇİ KATALOQU ═══════════════════════════════════════════
+         Statik qabıq burada, dinamik hissələr `js/users.js`-dədir.
+         ⚠ Başlıq/alt-başlıq və filtr etiketləri MARKUP-DADIR: onlar
+           `data-i18n` hədəfidir və `applyI18n()` ilə dil dəyişimində
+           yenilənir. JS-də yaradılsaydılar yalnız yenidən mount ilə
+           dəyişərdilər (bildiriş mərkəzi ilə eyni qərar). -->
     <div class="page" id="page-users">
-      <h1 class="page-title" data-i18n="nav.users"></h1>
-      <p class="page-sub" data-i18n="users.sub"></p>
-      <div class="search-bar users-searchbar">
-        <span class="c-search"><span class="ic" data-icon="search" data-icon-size="15"></span><input id="userSearch" data-i18n-ph="users.search"></span>
-        <!-- İstifadəçilər#5: sıralama · #3: grid/list keçidi -->
-        <select id="userSortSelect" class="user-sort" data-i18n-aria="users.sort">
-          <option value="recent" data-i18n="users.sort_recent"></option>
-          <option value="xp" data-i18n="users.sort_xp"></option>
-          <option value="active" data-i18n="users.sort_active"></option>
-          <option value="alpha" data-i18n="users.sort_alpha"></option>
-        </select>
-        <div class="view-toggle" id="userViewToggle" role="group" data-i18n-aria="users.view">
-          <button type="button" data-view="grid" class="active" data-i18n-aria="users.view_grid" data-i18n-title="users.view_grid">▦</button>
-          <button type="button" data-view="list" data-i18n-aria="users.view_list" data-i18n-title="users.view_list">☰</button>
+      <header class="ud-head">
+        <div class="ud-head__text">
+          <h1 class="ud-title" data-i18n="nav.users"></h1>
+          <p class="ud-sub" data-i18n="users.sub"></p>
+        </div>
+        <div class="ud-head__actions">
+          <button class="c-btn c-btn--ghost c-btn--sm ud-headbtn" id="userExportBtn">
+            <span class="ic" data-icon="download" data-icon-size="16"></span>
+            <span data-i18n="users.export"></span>
+          </button>
+          <button class="c-btn c-btn--primary c-btn--sm ud-headbtn" id="userInviteBtn">
+            <span class="ic" data-icon="userPlus" data-icon-size="16"></span>
+            <span data-i18n="users.invite"></span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Xülasə kartları — `renderStats()` doldurur. -->
+      <div class="ud-stats" id="userStats"></div>
+
+      <!-- İki sütun: kataloq + tövsiyə raili (≥1280px). -->
+      <div class="ud-layout">
+        <div class="ud-main">
+          <!-- Axtarış + filtr + sıralama + görünüş. `position: sticky`. -->
+          <div class="ud-controls" id="userControls">
+            <div class="ud-searchrow">
+              <span class="c-search ud-search">
+                <span class="ic" data-icon="search" data-icon-size="15"></span>
+                <input id="userSearch" type="search" autocomplete="off" role="combobox"
+                       aria-autocomplete="list" aria-expanded="false" aria-controls="userSuggest"
+                       data-i18n-ph="users.search" data-i18n-aria="users.search">
+                <kbd class="ud-kbd" aria-hidden="true">Ctrl K</kbd>
+                <!-- Avtomatik tamamlama siyahısı -->
+                <div class="ud-suggest" id="userSuggest" role="listbox" hidden></div>
+              </span>
+              <button class="c-btn c-btn--ghost c-btn--sm ud-filterbtn" id="userFilterBtn"
+                      aria-expanded="false" aria-controls="userFilters">
+                <span class="ic" data-icon="filter" data-icon-size="15"></span>
+                <span data-i18n="users.filters"></span>
+                <span class="ud-filterbtn__n" id="userFilterCount" hidden>0</span>
+              </button>
+              <div class="ud-viewtoggle" id="userViewToggle" role="group" data-i18n-aria="users.view">
+                <button type="button" data-view="grid" class="active" data-i18n-aria="users.view_grid" data-i18n-title="users.view_grid"><span class="ic" data-icon="grid" data-icon-size="16"></span></button>
+                <button type="button" data-view="list" data-i18n-aria="users.view_list" data-i18n-title="users.view_list"><span class="ic" data-icon="rows" data-icon-size="16"></span></button>
+                <button type="button" data-view="compact" data-i18n-aria="users.view_compact" data-i18n-title="users.view_compact"><span class="ic" data-icon="menu" data-icon-size="16"></span></button>
+              </div>
+            </div>
+
+            <!-- Sürətli filtr pilləri (həmişə görünür) -->
+            <div class="ud-quick" id="userQuick" role="tablist" data-i18n-aria="users.filters"></div>
+
+            <!-- Geniş filtr paneli — düymə ilə açılır, mobil-də alt vərəq. -->
+            <div class="ud-filters" id="userFilters" hidden>
+              <label class="ud-field"><span data-i18n="users.flt_skill_l"></span>
+                <select id="userSkillFilter"><option value="" data-i18n="users.flt_skill"></option></select>
+              </label>
+              <label class="ud-field"><span data-i18n="users.flt_level_l"></span>
+                <select id="userLevelFilter">
+                  <option value="" data-i18n="users.flt_level"></option>
+                  <option data-i18n="users.flt_beg"></option><option data-i18n="users.flt_mid"></option><option data-i18n="users.flt_adv"></option>
+                </select>
+              </label>
+              <label class="ud-field"><span data-i18n="users.flt_look_l"></span>
+                <select id="userLookingFilter">
+                  <option value="" data-i18n="users.flt_look"></option>
+                  <option data-i18n="users.flt_sp"></option><option data-i18n="users.flt_mentor"></option><option data-i18n="users.flt_team"></option>
+                </select>
+              </label>
+              <label class="ud-field"><span data-i18n="users.flt_status_l"></span>
+                <select id="userStatusFilter">
+                  <option value="" data-i18n="users.flt_status"></option>
+                  <option value="hiring" data-i18n="users.st_hiring"></option>
+                  <option value="away" data-i18n="users.st_away"></option>
+                  <option value="busy" data-i18n="users.st_busy"></option>
+                  <option value="dnd" data-i18n="users.st_dnd"></option>
+                </select>
+              </label>
+              <label class="ud-field"><span data-i18n="users.flt_company_l"></span>
+                <input id="userCompanyFilter" type="text" autocomplete="off" data-i18n-ph="users.flt_company">
+              </label>
+              <label class="ud-field"><span data-i18n="users.flt_loc_l"></span>
+                <input id="userLocFilter" type="text" autocomplete="off" data-i18n-ph="users.flt_loc">
+              </label>
+              <label class="ud-field"><span data-i18n="users.flt_rel_l"></span>
+                <select id="userExtraFilter">
+                  <option value="" data-i18n="users.flt_ext_all"></option>
+                  <option value="verified" data-i18n="users.flt_ver"></option>
+                  <option value="online" data-i18n="users.flt_on"></option>
+                  <option value="mutual" data-i18n="users.flt_mut"></option>
+                  <option value="following" data-i18n="users.flt_following"></option>
+                  <option value="followers" data-i18n="users.flt_followers"></option>
+                </select>
+              </label>
+              <label class="ud-field"><span data-i18n="users.sort"></span>
+                <select id="userSortSelect" data-i18n-aria="users.sort">
+                  <option value="recent" data-i18n="users.sort_recent"></option>
+                  <option value="xp" data-i18n="users.sort_xp"></option>
+                  <option value="active" data-i18n="users.sort_active"></option>
+                  <option value="followers" data-i18n="users.sort_followers"></option>
+                  <option value="alpha" data-i18n="users.sort_alpha"></option>
+                </select>
+              </label>
+              <div class="ud-filters__foot">
+                <button class="c-btn c-btn--quiet c-btn--sm" id="userFilterReset" data-i18n="users.flt_reset"></button>
+                <button class="c-btn c-btn--primary c-btn--sm" id="userFilterApply" data-i18n="users.flt_apply"></button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mobil/planşetdə tövsiyə zolağı buraya düşür (CSS köçürür). -->
+          <div class="ud-rail" id="userRail"></div>
+
+          <div class="user-grid" id="userGrid"></div>
+          <!-- infinite scroll sentineli (İntersectionObserver) -->
+          <div class="dir-sentinel" id="userSentinel" aria-hidden="true"></div>
+          <div class="dir-status" id="userDirStatus" role="status" aria-live="polite"></div>
         </div>
       </div>
-      <div class="user-filters">
-        <select id="userSkillFilter"><option value="" data-i18n="users.flt_skill"></option></select>
-        <select id="userLevelFilter">
-          <option value="" data-i18n="users.flt_level"></option>
-          <option data-i18n="users.flt_beg"></option><option data-i18n="users.flt_mid"></option><option data-i18n="users.flt_adv"></option>
-        </select>
-        <select id="userLookingFilter">
-          <option value="" data-i18n="users.flt_look"></option>
-          <option data-i18n="users.flt_sp"></option><option data-i18n="users.flt_mentor"></option><option data-i18n="users.flt_team"></option>
-        </select>
-        <select id="userExtraFilter">
-          <option value="" data-i18n="users.flt_ext_all"></option>
-          <option value="verified" data-i18n="users.flt_ver"></option>
-          <option value="online" data-i18n="users.flt_on"></option>
-          <option value="mutual" data-i18n="users.flt_mut"></option>
-        </select>
-      </div>
-      <div class="user-grid" id="userGrid"></div>
-      <!-- infinite scroll sentineli (İntersectionObserver) -->
-      <div class="dir-sentinel" id="userSentinel" aria-hidden="true"></div>
-      <div class="dir-status" id="userDirStatus" role="status" aria-live="polite"></div>
+
+      <button class="ud-totop" id="userToTop" hidden data-i18n-aria="users.to_top">
+        <span class="ic" data-icon="chevron" data-icon-size="18"></span>
+      </button>
     </div>
 
     <div class="page" id="page-tasks">

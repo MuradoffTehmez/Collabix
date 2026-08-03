@@ -1,0 +1,1076 @@
+/* 89-users.css — İstifadəçi kataloqu (People Directory).
+ *
+ * ⚠ `88-notifications.css`-DƏN SONRA, `90-utilities.css`-DƏN ƏVVƏL:
+ *   `35-stats-profile.css` (`.user-grid`), `52-users.css` (köhnə kart qatı) və
+ *   `60-responsive.css` bu fayldan ƏVVƏL gəlir, ona görə buradakı qaydalar
+ *   eyni spesifiklikdə qalib gəlir — köhnə `.user-card` qatını silmədən
+ *   yeni `.ud-*` qatına keçmək mümkün olur (layihənin tədrici köçürmə naxışı).
+ *
+ * 🔴 SABİT HEX FON YOXDUR. Spesifikasiya `#F7F9FC` fon + ağ kart deyir — bu,
+ *    AÇIQ temada `var(--bg)` = #f2f5fc və `var(--surface)` = #ffffff ilə onsuz
+ *    da alınır. Sabit yazsaydıq dark/matrix/cyberpunk temalarında səhifə
+ *    saytın qalanından qopardı.
+ */
+
+/* ═══════════════════════ NİŞANLAR ═══════════════════════
+ *
+ * ⚠ TON RƏNGLƏRİ YALNIZ İKON / NÖQTƏ / HAŞİYƏ ÜÇÜNDÜR — GÖVDƏ MƏTNİ ÜÇÜN YOX.
+ *   Ad, bio və meta həmişə `--text` / `--muted` işlədir (WCAG 4.5:1); ton
+ *   rəngləri qrafik elementdir və 3:1 həddinə tabedir.
+ *
+ * ⚠ RƏNG TƏK GÖSTƏRİCİ DEYİL: hər statusun forması/etiketi, hər rankın adı,
+ *   hər bacarıq kateqoriyasının mətni var (`color-not-only`).
+ */
+#page-users {
+  /* Status */
+  --ud-online: #22c55e;
+  --ud-away: #f59e0b;
+  --ud-busy: #ef4444;
+  --ud-dnd: #dc2626;
+  --ud-hiring: #0ea5e9;
+  --ud-offline: var(--muted);
+
+  /* Rank — metal metaforası; `--ud-legend` qəsdən aksentdir. */
+  --ud-bronze: #b45309;
+  --ud-silver: #94a3b8;
+  --ud-gold: #eab308;
+  --ud-diamond: #22d3ee;
+  --ud-master: #a855f7;
+  --ud-legend: var(--coral);
+
+  /* Bacarıq kateqoriyaları (miqrasiya 0050 `taxonomies.category`) */
+  --ud-cat-lang: #3b82f6;
+  --ud-cat-web: #f97316;
+  --ud-cat-db: #8b5cf6;
+  --ud-cat-devops: #14b8a6;
+  --ud-cat-cloud: #0ea5e9;
+  --ud-cat-design: #ec4899;
+  --ud-cat-security: #ef4444;
+  --ud-cat-embedded: #84cc16;
+  --ud-cat-spoken: #06b6d4;
+  --ud-cat-other: var(--muted);
+
+  /* Statistika kartı tonları */
+  --ud-accent: var(--coral);
+  --ud-follow: #6366f1;
+  --ud-team: #06b6d4;
+  --ud-project: #14b8a6;
+  --ud-verified: #22c55e;
+  --ud-mentor: #a855f7;
+
+  /* Ölçülər — sıxlıq bütün breakpoint-lərdə eyni ritmi saxlasın. */
+  --ud-avatar: 56px;
+  --ud-card-pad: var(--sp-4);
+  --ud-rail-w: 300px;
+
+  /* Yapışqan ofsetlər — `js/users.js` `syncUsersSticky()` ölçüb yazır. */
+  --ud-topbar: 57px;
+  --ud-controls-h: 108px;
+}
+
+/* Açıq temada tonlar bir pillə tündləşir: ağ səthdə eyni dəyərlər 3:1
+   həddinə yaxınlaşır (bildiriş mərkəzi ilə eyni ölçmə). */
+:root[data-theme="light"] #page-users {
+  --ud-online: #15803d;
+  --ud-away: #b45309;
+  --ud-busy: #dc2626;
+  --ud-hiring: #0369a1;
+  --ud-silver: #64748b;
+  --ud-gold: #a16207;
+  --ud-diamond: #0e7490;
+  --ud-master: #7e22ce;
+  --ud-cat-lang: #1d63d1;
+  --ud-cat-web: #c2410c;
+  --ud-cat-db: #6d28d9;
+  --ud-cat-devops: #0f766e;
+  --ud-cat-cloud: #0369a1;
+  --ud-cat-design: #be185d;
+  --ud-cat-security: #b91c1c;
+  --ud-cat-embedded: #4d7c0f;
+  --ud-cat-spoken: #0e7490;
+  --ud-follow: #4338ca;
+  --ud-team: #0e7490;
+  --ud-project: #0f766e;
+  --ud-verified: #15803d;
+  --ud-mentor: #7e22ce;
+}
+
+.ud-t--accent { color: var(--ud-accent); }
+.ud-t--online { color: var(--ud-online); }
+.ud-t--follow { color: var(--ud-follow); }
+.ud-t--team { color: var(--ud-team); }
+.ud-t--project { color: var(--ud-project); }
+.ud-t--verified { color: var(--ud-verified); }
+.ud-t--mentor { color: var(--ud-mentor); }
+.ud-t--hiring { color: var(--ud-hiring); }
+
+/* ⚠ `<button>` daxilindəki SVG `color`-u valideyndən alır və düymənin
+   default rəngi tünddür — açıq temada işlədiyi üçün qüsur gizli qalırdı. */
+#page-users .ic svg { color: inherit; }
+
+/* ═══════════════════════ BAŞLIQ ═══════════════════════ */
+
+.ud-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-5);
+}
+
+.ud-title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: var(--fs-2xl);
+  font-weight: 700;
+  line-height: var(--lh-tight);
+  letter-spacing: -.02em;
+}
+
+.ud-sub {
+  margin: var(--sp-1) 0 0;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
+  max-width: 64ch;
+}
+
+.ud-head__actions { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+
+/* ═══════════════════════ STATİSTİKA KARTLARI ═══════════════════════ */
+
+.ud-stats {
+  display: grid;
+  /* `auto-fit` + `minmax`: 8 kart geniş ekranda bir sıra, dar ekranda özü
+     sarılır — sütun sayını media query ilə əl ilə saymağa ehtiyac qalmır. */
+  grid-template-columns: repeat(auto-fit, minmax(136px, 1fr));
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-4);
+}
+
+.ud-stat {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 62px;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--sh-1);
+}
+
+.ud-stat__ic {
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-sm);
+  /* Fon tondan törəyir — hər kart üçün ayrıca sabit yazmağa ehtiyac yoxdur. */
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.ud-stat__body { display: flex; flex-direction: column; min-width: 0; }
+
+.ud-stat__num {
+  font-family: var(--display);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--text);
+  /* Sayğac animasiya edərkən rəqəm eni dəyişib sətri sıçratmasın. */
+  font-variant-numeric: tabular-nums;
+}
+
+/* ⚠ `white-space: nowrap` + ellipsis DEYİL: 8 kart 136px sütunlarda oturur və
+   uzun etiket ("Komandalarım") kəsilib "Komandalar…" olurdu — yəni kartın
+   NƏYİ saydığı bilinmirdi. İki sətrə sarma kəsilmədən oxunur; kart
+   hündürlüyü `min-height` ilə onsuz da sabitdir. */
+.ud-stat__lbl {
+  font-size: var(--fs-xs);
+  color: var(--text);
+  font-weight: 600;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.ud-stat__trend { font-size: 11px; color: var(--muted); white-space: nowrap; }
+
+/* ═══════════════════════ LAYOUT: KATALOQ + RAİL ═══════════════════════ */
+
+.ud-layout { display: block; }
+.ud-main { min-width: 0; }
+
+/* Tövsiyə raili DEFAULT olaraq axındadır (mobil/planşet); ≥1280px-də sağ
+   sütuna keçir. Mobil-first: dar ekranda əlavə qayda lazım deyil. */
+.ud-rail { margin-bottom: var(--sp-4); }
+
+@media (min-width: 1280px) {
+  .ud-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--ud-rail-w);
+    gap: var(--sp-5);
+    align-items: start;
+  }
+  /* ⚠ Rail `.ud-main`-in İÇİNDƏDİR (markup), ona görə grid sütununa
+     `order`/`grid-column` ilə çıxarıla bilməz. `position: sticky` + mənfi
+     kənar əvəzinə DOM sırası saxlanılır və rail ikinci sütuna KÖÇÜRÜLÜR. */
+  .ud-main { display: contents; }
+  .ud-controls, .user-grid, .dir-sentinel, .dir-status { grid-column: 1; }
+  .ud-rail {
+    grid-column: 2;
+    grid-row: 1 / span 4;
+    position: sticky;
+    top: calc(var(--ud-topbar) + var(--sp-3));
+    margin-bottom: 0;
+    max-height: calc(100vh - var(--ud-topbar) - var(--sp-5));
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+}
+
+/* ═══════════════════════ İDARƏETMƏ ZOLAĞI ═══════════════════════ */
+
+.ud-controls {
+  position: sticky;
+  top: var(--ud-topbar);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-2) 0;
+  margin-bottom: var(--sp-3);
+  background: var(--bg);
+}
+
+.ud-searchrow { display: flex; gap: var(--sp-2); align-items: center; }
+
+.ud-search { flex: 1 1 auto; min-width: 0; position: relative; }
+
+/* ⚠ `15-components.css`-dəki `.c-search > input` qaydası ÜÇ konkret seçiciyə
+   bağlıdır (`.app-search`, `.search-bar > input`, `#userSearch`). Üçüncüsü
+   məhz bu sahədir, lakin orada `padding-left` var, qalan görünüş yoxdur —
+   ona görə tam stil burada verilir. */
+.ud-search > input {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--tap);
+  padding: 0 76px 0 34px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--body);
+  font-size: var(--fs-sm);
+}
+.ud-search > input::placeholder { color: var(--muted); }
+.ud-search > input:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+.ud-search > input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+
+.ud-kbd {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 10px;
+  line-height: 1.4;
+  pointer-events: none;
+}
+
+/* ── Avtotamamlama ── */
+.ud-suggest {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: var(--sp-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--sh-3);
+}
+/* 🔴 `[hidden]` ÜSTÜNLÜYÜ: UA `[hidden]{display:none}` müəllif qaydası ilə
+   eyni çəkidədir və `display` təyin edən sinif onu basır. */
+.ud-suggest[hidden] { display: none; }
+
+.ud-suggest__i {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  min-height: 44px;
+  padding: 0 var(--sp-2);
+  border: none;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--text);
+  font-family: var(--body);
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.ud-suggest__i:hover,
+.ud-suggest__i.is-active { background: var(--surface-2); }
+.ud-suggest__i:focus-visible { outline: 2px solid var(--coral); outline-offset: -2px; }
+.ud-suggest__i i { color: var(--muted); font-style: normal; }
+.ud-suggest__i .avatar { width: 26px; height: 26px; border-radius: 50%; font-size: 10px; }
+.ud-suggest__i--skill .ic { color: var(--muted); }
+
+.ud-filterbtn { flex: 0 0 auto; position: relative; }
+.ud-filterbtn__n {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: var(--r-pill);
+  background: var(--coral);
+  color: var(--on-accent);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+}
+.ud-filterbtn__n[hidden] { display: none; }
+
+/* ── Görünüş keçidi ── */
+.ud-viewtoggle {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+.ud-viewtoggle button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: none;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background var(--mo-fast) var(--mo-ease), color var(--mo-fast) var(--mo-ease);
+}
+.ud-viewtoggle button:hover { background: var(--surface-2); color: var(--text); }
+.ud-viewtoggle button.active { background: var(--coral-dim); color: var(--coral); }
+.ud-viewtoggle button:focus-visible { outline: 2px solid var(--coral); outline-offset: 1px; }
+
+/* ── Sürətli pillər ── */
+.ud-quick {
+  display: flex;
+  gap: var(--sp-2);
+  /* Sarma YOX, sürüşmə: pillər sarılanda başlıq zolağı iki sətrə çıxıb
+     siyahını aşağı itələyirdi (AUDIT-9 overflow qaydası). */
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
+}
+.ud-quick::-webkit-scrollbar { display: none; }
+
+.ud-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--muted);
+  font-family: var(--body);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--mo-fast) var(--mo-ease),
+              color var(--mo-fast) var(--mo-ease),
+              border-color var(--mo-fast) var(--mo-ease);
+}
+.ud-pill:hover { color: var(--text); border-color: var(--coral2); }
+.ud-pill:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+.ud-pill.is-active { background: var(--coral-dim); border-color: var(--coral); color: var(--text); }
+
+/* ── Geniş filtr paneli ── */
+.ud-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--sh-1);
+  animation: ud-slide-down var(--mo-base) var(--mo-ease);
+}
+.ud-filters[hidden] { display: none; }
+
+.ud-field { display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; }
+.ud-field > span { font-size: var(--fs-xs); font-weight: 600; color: var(--muted); }
+.ud-field select,
+.ud-field input {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--tap);
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--body);
+  font-size: var(--fs-sm);
+}
+.ud-field select:focus-visible,
+.ud-field input:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+
+.ud-filters__foot {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+}
+
+/* ═══════════════════════ QRİD ═══════════════════════ */
+
+/* ⚠ `35-stats-profile.css`-dəki `.user-grid` (220px minmax) BURADA ƏVƏZLƏNİR:
+   yeni kart daha zəngindir və 220px-də mətn sıxılıb kəsilirdi. */
+.user-grid.view-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--sp-3);
+}
+
+.user-grid.view-list,
+.user-grid.view-compact { display: flex; flex-direction: column; gap: var(--sp-2); }
+
+/* ═══════════════════════ KART ═══════════════════════ */
+
+.ud-card {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--ud-card-pad);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--sh-1);
+  cursor: pointer;
+  /* ⚠ VİRTUALLAŞDIRMA: brauzer ekrandan kənar kartın layout/paint işini
+     atlayır. Klassik JS virtualizasiyası üç fərqli rejimin (grid/list/compact)
+     dəyişkən hündürlükləri ilə uyuşmurdu; bu isə eyni qazancı sıfır JS ilə
+     verir. `contain-intrinsic-size` yer tutur ki, sürüşmə çubuğu titrəməsin. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 190px;
+  transition: transform var(--mo-fast) var(--mo-ease),
+              box-shadow var(--mo-fast) var(--mo-ease),
+              border-color var(--mo-fast) var(--mo-ease);
+  animation: ud-fade-in var(--mo-base) var(--mo-ease);
+}
+
+.ud-card:hover { transform: translateY(-2px); box-shadow: var(--sh-2); border-color: var(--coral2); }
+.ud-card:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+
+/* Təsdiqlənmiş hesab — incə fərq, tam rəngli haşiyə deyil
+   (`Do not make cards visually identical` tələbi, amma «rəngi həddən artıq
+   yükləmə» tələbi ilə birlikdə). */
+.ud-card.is-verified { border-color: color-mix(in srgb, var(--ud-verified) 35%, var(--border)); }
+
+/* ── Avatar sütunu ── */
+.ud-card__av { position: relative; flex: 0 0 auto; }
+
+.ud-card__av .avatar {
+  width: var(--ud-avatar);
+  height: var(--ud-avatar);
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: var(--fs-md);
+  transition: transform var(--mo-base) var(--mo-ease);
+}
+.ud-card__av .avatar img { width: 100%; height: 100%; object-fit: cover; }
+.ud-card:hover .ud-card__av .avatar { transform: scale(1.06); }
+
+.ud-status {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  /* Haşiyə kart fonundadır — nöqtə avatarın üstündən «kəsilmiş» görünsün. */
+  border: 3px solid var(--surface);
+  background: var(--ud-offline);
+}
+.ud-s--online { background: var(--ud-online); }
+.ud-s--away { background: var(--ud-away); }
+.ud-s--busy { background: var(--ud-busy); }
+.ud-s--dnd { background: var(--ud-dnd); }
+.ud-s--hiring { background: var(--ud-hiring); }
+
+/* Onlayn nöqtəsi nəbz vurur — «status animation» tələbi.
+   ⚠ YALNIZ onlayn: sabit statuslarda hərəkət diqqəti boş yerə oğurlayardı. */
+.ud-s--online { animation: ud-pulse 2.4s var(--mo-ease) infinite; }
+
+/* ── Gövdə ── */
+.ud-card__body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+
+.ud-id { display: flex; align-items: baseline; gap: var(--sp-2); flex-wrap: wrap; min-width: 0; }
+
+.ud-name {
+  font-size: var(--fs-md);
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.25;
+  /* Uzun ad kartı sındırmasın. */
+  overflow-wrap: anywhere;
+}
+
+.ud-handle { font-size: var(--fs-xs); color: var(--muted); }
+
+.ud-badge {
+  padding: 2px 7px;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, currentColor 14%, transparent);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+/* `.ud-s--hiring` fon rəngi qoyur — nişanda o, MƏTN rəngi olmalıdır. */
+.ud-badge.ud-s--hiring { background: color-mix(in srgb, var(--ud-hiring) 14%, transparent); color: var(--ud-hiring); }
+
+.ud-meta { display: flex; gap: var(--sp-3); flex-wrap: wrap; }
+.ud-meta__i {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  min-width: 0;
+}
+.ud-meta__i .ic { flex: 0 0 auto; }
+
+.ud-bio {
+  margin: 0;
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+  color: var(--text-sec);
+  /* İki sətir: kart hündürlüyü sabit qalsın. Tam mətn profil səhifəsindədir. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── XP + rank ── */
+.ud-xp { display: flex; flex-direction: column; gap: 4px; }
+.ud-xp__top { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
+
+.ud-rank {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, currentColor 14%, transparent);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.ud-rank i { font-style: normal; opacity: .75; font-family: var(--mono); }
+
+.ud-r--bronze { color: var(--ud-bronze); }
+.ud-r--silver { color: var(--ud-silver); }
+.ud-r--gold { color: var(--ud-gold); }
+.ud-r--diamond { color: var(--ud-diamond); }
+.ud-r--master { color: var(--ud-master); }
+.ud-r--legend { color: var(--ud-legend); }
+
+.ud-xp__num {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ud-xp__bar {
+  height: 5px;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.ud-xp__fill {
+  display: block;
+  height: 100%;
+  width: var(--ud-xp-pct, 0%);
+  border-radius: inherit;
+  background: currentColor;
+  /* Doldurma eni JS-də CSSOM ilə yazılır (CSP inline `style` atributunu
+     bloklayır — `--ud-xp-pct` nişanı həmin yolla təyin olunur). */
+  transition: width 600ms var(--mo-ease);
+}
+
+/* ── Bacarıqlar ── */
+.ud-skills { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+.ud-skill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, currentColor 10%, transparent);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.ud-skill i { font-style: normal; opacity: .7; font-family: var(--mono); }
+
+.cat-lang { color: var(--ud-cat-lang); }
+.cat-web { color: var(--ud-cat-web); }
+.cat-db { color: var(--ud-cat-db); }
+.cat-devops { color: var(--ud-cat-devops); }
+.cat-cloud { color: var(--ud-cat-cloud); }
+.cat-design { color: var(--ud-cat-design); }
+.cat-security { color: var(--ud-cat-security); }
+.cat-embedded { color: var(--ud-cat-embedded); }
+.cat-spoken { color: var(--ud-cat-spoken); }
+.cat-other { color: var(--ud-cat-other); }
+
+.ud-morewrap { position: relative; display: inline-flex; }
+
+.ud-skill--more {
+  border-style: dashed;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: var(--body);
+  min-height: 22px;
+}
+.ud-skill--more:hover { color: var(--text); }
+.ud-skill--more:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+
+.ud-skillpop {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  min-width: 220px;
+  max-width: 300px;
+  padding: var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--sh-3);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--mo-fast) var(--mo-ease);
+}
+.ud-morewrap:hover .ud-skillpop,
+.ud-morewrap.open .ud-skillpop,
+.ud-morewrap:focus-within .ud-skillpop { opacity: 1; visibility: visible; }
+
+.ud-skillpop__t { font-size: 11px; color: var(--muted); font-weight: 600; margin-bottom: var(--sp-2); }
+.ud-skillpop__b { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* ── Sosial sətir ── */
+.ud-social { display: flex; gap: var(--sp-3); flex-wrap: wrap; align-items: center; }
+.ud-social__i { font-size: var(--fs-xs); color: var(--muted); white-space: nowrap; }
+.ud-social__i b { color: var(--text); font-variant-numeric: tabular-nums; }
+
+.ud-mutual {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 7px;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--coral) 12%, transparent);
+  color: var(--coral);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.ud-mutual--f { background: color-mix(in srgb, var(--ud-follow) 12%, transparent); color: var(--ud-follow); }
+
+/* ── Sağ sütun ── */
+.ud-card__side {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--sp-2);
+  flex: 0 0 auto;
+}
+
+.ud-seen { font-size: 10px; color: var(--muted); white-space: nowrap; }
+
+.ud-actions { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; justify-content: flex-end; }
+
+/* İzlənilir vəziyyəti — «İzlə»dən vizual olaraq FƏRQLİ olmalıdır, yoxsa
+   düymənin nə etdiyi bilinmir. */
+.c-btn.is-following { background: var(--coral-dim); border-color: var(--coral); color: var(--coral); }
+
+.ud-more { width: 36px; height: 36px; }
+
+.ud-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 40;
+  min-width: 190px;
+  padding: var(--sp-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--sh-3);
+  animation: ud-slide-down var(--mo-fast) var(--mo-ease);
+}
+.ud-menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  min-height: 38px;
+  padding: 0 var(--sp-2);
+  border: none;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--text);
+  font-family: var(--body);
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.ud-menu__item:hover { background: var(--surface-2); }
+.ud-menu__item:focus-visible { outline: 2px solid var(--coral); outline-offset: -2px; }
+.ud-menu__item .ic { color: var(--muted); }
+
+/* ═══════════════════════ REJİMLƏR ═══════════════════════ */
+
+/* GRID — şaquli kart, əməliyyatlar altda tam en. */
+.view-grid .ud-card { flex-direction: column; align-items: stretch; }
+.view-grid .ud-card__av { align-self: flex-start; }
+.view-grid .ud-card__side {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding-top: var(--sp-2);
+  border-top: 1px solid var(--border);
+}
+.view-grid .ud-menu { right: 0; }
+
+/* LIST — üfüqi, enterprise sətri. */
+.view-list .ud-card { align-items: center; }
+.view-list .ud-card__side { align-items: flex-end; }
+
+/* COMPACT — yüksək sıxlıq: bio yox, iki bacarıq, ikon düymələr. */
+.view-compact .ud-card {
+  align-items: center;
+  padding: var(--sp-2) var(--sp-3);
+  contain-intrinsic-size: auto 64px;
+  border-radius: var(--r-md);
+}
+.view-compact { --ud-avatar: 38px; }
+.view-compact .ud-card__body { flex-direction: row; align-items: center; gap: var(--sp-3); flex-wrap: wrap; }
+.view-compact .ud-xp { flex: 0 0 130px; }
+.view-compact .ud-status { width: 12px; height: 12px; border-width: 2px; }
+.view-compact .ud-seen { display: none; }
+
+/* ═══════════════════════ HOVER MİNİ-PROFİL ═══════════════════════ */
+
+.ud-hover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 50;
+  width: 280px;
+  padding: var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--sh-3);
+  cursor: default;
+  animation: ud-fade-in var(--mo-fast) var(--mo-ease);
+}
+.ud-hover__head { display: flex; gap: var(--sp-2); align-items: center; margin-bottom: var(--sp-2); }
+.ud-hover__head .avatar { width: 42px; height: 42px; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+.ud-hover__head .avatar img { width: 100%; height: 100%; object-fit: cover; }
+.ud-hover__head b { display: block; font-size: var(--fs-sm); }
+.ud-hover__meta { font-size: var(--fs-xs); color: var(--muted); margin-bottom: var(--sp-2); }
+.ud-hover__bio {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+  color: var(--text-sec);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.ud-hover__row { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-2); }
+.ud-hover__xp { font-size: var(--fs-xs); color: var(--muted); font-variant-numeric: tabular-nums; }
+.ud-hover__act { display: flex; gap: var(--sp-2); margin-top: var(--sp-2); }
+
+/* ═══════════════════════ TÖVSİYƏ RAİLİ ═══════════════════════ */
+
+.ud-rail__title {
+  margin: 0 0 var(--sp-2);
+  font-family: var(--display);
+  font-size: var(--fs-md);
+  font-weight: 700;
+}
+
+.ud-rail__box {
+  padding: var(--sp-3);
+  margin-bottom: var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--sh-1);
+}
+
+.ud-rail__h {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.ud-rail__list { display: flex; flex-direction: column; gap: var(--sp-2); }
+.ud-rail__empty { margin: 0; font-size: var(--fs-xs); color: var(--muted); }
+
+.ud-mini { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; }
+
+.ud-mini__id {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text);
+  font-family: var(--body);
+  text-align: left;
+  cursor: pointer;
+}
+.ud-mini__id:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; border-radius: var(--r-sm); }
+.ud-mini__id .avatar { width: 32px; height: 32px; border-radius: 50%; flex: 0 0 auto; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
+.ud-mini__id .avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+.ud-mini__txt { display: flex; flex-direction: column; min-width: 0; }
+.ud-mini__txt b { font-size: var(--fs-xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ud-mini__txt span { font-size: 10px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ud-mini__f { flex: 0 0 auto; min-height: 32px; padding: 0 var(--sp-2); }
+.ud-mini__f .fb-label { display: none; }
+
+/* Mobil/planşetdə rail üfüqi zolağa çevrilir. */
+@media (max-width: 1279px) {
+  .ud-rail { display: flex; gap: var(--sp-3); overflow-x: auto; scrollbar-width: none; padding-bottom: var(--sp-2); }
+  .ud-rail::-webkit-scrollbar { display: none; }
+  .ud-rail__title { display: none; }
+  .ud-rail__box { flex: 0 0 260px; margin-bottom: 0; }
+}
+
+/* ═══════════════════════ BOŞ / SKELETON / ALT ═══════════════════════ */
+
+.ud-empty { padding: var(--sp-7) var(--sp-4); grid-column: 1 / -1; }
+.ud-empty__art {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 76px;
+  height: 76px;
+  margin-bottom: var(--sp-2);
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--coral);
+}
+.ud-empty__act { display: flex; gap: var(--sp-2); flex-wrap: wrap; justify-content: center; margin-top: var(--sp-2); }
+
+.ud-card--sk { cursor: default; pointer-events: none; animation: none; }
+.ud-sk-av { width: var(--ud-avatar); height: var(--ud-avatar); border-radius: 50%; flex: 0 0 auto; }
+.ud-sk-1 { width: 55%; }
+.ud-sk-2 { width: 80%; }
+.ud-sk-3 { width: 35%; margin-bottom: 0; }
+
+.ud-invite { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-2); flex-wrap: wrap; }
+.ud-invite code {
+  flex: 1 1 220px;
+  min-width: 0;
+  padding: var(--sp-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--bg);
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  overflow-wrap: anywhere;
+}
+
+.ud-totop {
+  position: fixed;
+  right: var(--sp-4);
+  bottom: var(--sp-5);
+  z-index: 60;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap);
+  height: var(--tap);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--sh-2);
+  cursor: pointer;
+  /* Yuxarı ox — ikon `chevron` aşağıya baxır, 180° çevrilir. */
+  transform: rotate(180deg);
+  animation: ud-fade-in var(--mo-base) var(--mo-ease);
+}
+.ud-totop[hidden] { display: none; }
+.ud-totop:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+
+/* ═══════════════════════ ANİMASİYALAR ═══════════════════════ */
+
+@keyframes ud-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes ud-slide-down {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes ud-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ud-online) 55%, transparent); }
+  55% { box-shadow: 0 0 0 5px transparent; }
+}
+
+/* ⚠ `prefers-reduced-motion` nişanları 0ms edir, lakin `animation` ayrıca
+   susdurulmalıdır — nişan `@keyframes`-i söndürmür. */
+@media (prefers-reduced-motion: reduce) {
+  .ud-card, .ud-menu, .ud-filters, .ud-hover, .ud-totop { animation: none; }
+  .ud-s--online { animation: none; }
+  .ud-card:hover { transform: none; }
+  .ud-card:hover .ud-card__av .avatar { transform: none; }
+  .ud-xp__fill { transition: none; }
+  .ud-totop { transform: rotate(180deg); }
+}
+
+/* ═══════════════════════ UYĞUNLAŞAN GÖRÜNÜŞ ═══════════════════════
+ * Breakpoint konvensiyası (RESPONSIVE.md): 360 / 480 / 768 / 1024 / 1280. */
+
+@media (max-width: 1024px) {
+  .user-grid.view-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  .ud-stats { grid-template-columns: repeat(auto-fit, minmax(124px, 1fr)); }
+}
+
+@media (max-width: 768px) {
+  #page-users { --ud-avatar: 48px; --ud-card-pad: var(--sp-3); }
+
+  .ud-head { flex-direction: column; gap: var(--sp-3); }
+  .ud-head__actions { width: 100%; }
+  .ud-head__actions .c-btn { flex: 1 1 auto; }
+  .ud-title { font-size: var(--fs-xl); }
+
+  .ud-stats {
+    /* Sarma əvəzinə yan sürüşmə: 8 kart üç sıra tutub siyahını ekrandan
+       qovurdu. Sürüşmə sıxlığı qoruyur. */
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    margin-inline: calc(var(--sp-4) * -1);
+    padding-inline: var(--sp-4);
+  }
+  .ud-stats::-webkit-scrollbar { display: none; }
+  .ud-stat { flex: 0 0 136px; scroll-snap-align: start; }
+
+  /* 🔴 GRID REJİMİ MOBİLDƏ TƏK SÜTUNDUR (`Cards only` tələbi) — iki sütun
+     320px minimumla onsuz da sığmır. */
+  .user-grid.view-grid { grid-template-columns: 1fr; }
+
+  /* Hover cihazda yoxdur → mini-profil heç vaxt açılmır (JS də bloklayır). */
+  .ud-hover { display: none; }
+
+  /* Toxunuş hədəfləri (75-touch.css qatının üstündə açıq bərpa). */
+  .ud-viewtoggle button { width: var(--tap); height: var(--tap); }
+  .ud-more { width: var(--tap); height: var(--tap); }
+}
+
+@media (max-width: 480px) {
+  .ud-searchrow { flex-wrap: wrap; }
+  .ud-filterbtn { flex: 1 1 auto; }
+  .ud-viewtoggle { flex: 0 0 auto; }
+  .ud-kbd { display: none; }
+  .ud-search > input { padding-right: var(--sp-3); }
+
+  /* 🔴 FİLTR PANELİ ALT VƏRƏQƏ (bottom sheet) ÇEVRİLİR — spesifikasiya tələbi.
+     Dar ekranda 8 sahəli grid səhifəni iki ekran aşağı itələyirdi. */
+  .ud-filters {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: auto;
+    z-index: 1000;
+    max-height: 82vh;
+    overflow-y: auto;
+    grid-template-columns: 1fr;
+    border-radius: 18px 18px 0 0;
+    box-shadow: var(--sh-3);
+    animation: ud-sheet-up var(--mo-base) var(--mo-ease);
+    /* Gesture bar / notch üçün təhlükəsiz sahə. */
+    padding-bottom: max(var(--sp-4), env(safe-area-inset-bottom));
+  }
+  .ud-filters__foot { position: sticky; bottom: 0; background: var(--surface); padding-top: var(--sp-2); }
+
+  .view-grid .ud-card__side { flex-wrap: wrap; }
+  .ud-actions { width: 100%; }
+  .ud-actions .c-btn { flex: 1 1 auto; }
+}
+
+@keyframes ud-sheet-up {
+  from { transform: translateY(100%); }
+  to { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ud-filters { animation: none; }
+}
+
+@media (max-width: 360px) {
+  .ud-head__actions .c-btn span:not(.ic) { display: none; }
+  .ud-pill span:not(.ic) { display: none; }
+  .ud-pill { padding: 0 var(--sp-2); }
+  .ud-social__i:nth-child(n+3) { display: none; }
+}

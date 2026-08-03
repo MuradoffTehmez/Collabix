@@ -282,6 +282,14 @@ export function mapUser(r: any, self = false): any {
     activityDays: fromJSON(r.activity_days, {}),
     joinedAt: r.joined_at, blocked: !!r.blocked, verified: !!r.verified,
     role: r.role,
+    // Miqrasiya 0050/0051 — kataloq sahələri.
+    // ⚠ `?? ''` / `?? 0` MƏCBURİDİR: miqrasiyadan ƏVVƏL yazılmış sətirlərin
+    //   keşlənmiş nüsxələri (KV, client `state.users`) bu sütunları
+    //   daşımır və `undefined` UI-da "undefined" mətni kimi görünərdi.
+    company: r.company ?? '',
+    status: r.status ?? '',
+    followersCount: r.followers_count ?? 0,
+    followingCount: r.following_count ?? 0,
     activeProjectId: r.active_project_id || null,
     showProjectOnProfile: r.show_project_on_profile !== 0,
   };

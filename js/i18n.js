@@ -459,6 +459,113 @@ const D = {
   'users.none':        { az: 'Filtrlərə uyğun istifadəçi tapılmadı', en: 'No users match these filters', ru: 'Нет пользователей по этим фильтрам' },
   'users.err':         { az: 'Siyahı yüklənə bilmədi', en: 'Could not load the list', ru: 'Не удалось загрузить список' },
 
+  /* ── Kataloq yenidən dizaynı (miqrasiya 0050/0051) ────────────────────── */
+  'users.invite':      { az: 'Dəvət et', en: 'Invite', ru: 'Пригласить' },
+  'users.export':      { az: 'İxrac', en: 'Export', ru: 'Экспорт' },
+  'users.filters':     { az: 'Filtrlər', en: 'Filters', ru: 'Фильтры' },
+  'users.view_compact': { az: 'Sıx görünüş', en: 'Compact view', ru: 'Компактный вид' },
+  'users.to_top':      { az: 'Yuxarı qayıt', en: 'Back to top', ru: 'Наверх' },
+  'users.sort_followers': { az: 'Ən çox izləyici', en: 'Most followers', ru: 'Больше подписчиков' },
+
+  /* Filtr paneli etiketləri */
+  'users.flt_skill_l':   { az: 'Bacarıq', en: 'Skill', ru: 'Навык' },
+  'users.flt_level_l':   { az: 'Səviyyə', en: 'Level', ru: 'Уровень' },
+  'users.flt_look_l':    { az: 'Nə axtarır', en: 'Looking for', ru: 'Ищет' },
+  'users.flt_status_l':  { az: 'Status', en: 'Status', ru: 'Статус' },
+  'users.flt_status':    { az: 'Bütün statuslar', en: 'Any status', ru: 'Любой статус' },
+  'users.flt_company_l': { az: 'İş yeri', en: 'Company', ru: 'Компания' },
+  'users.flt_company':   { az: 'Şirkət adı...', en: 'Company name...', ru: 'Название компании...' },
+  'users.flt_loc_l':     { az: 'Yer', en: 'Location', ru: 'Локация' },
+  'users.flt_loc':       { az: 'Ölkə və ya şəhər...', en: 'Country or city...', ru: 'Страна или город...' },
+  'users.flt_rel_l':     { az: 'Əlaqə', en: 'Relationship', ru: 'Связь' },
+  'users.flt_following': { az: 'İzlədiklərim', en: 'People I follow', ru: 'Мои подписки' },
+  'users.flt_followers': { az: 'Məni izləyənlər', en: 'My followers', ru: 'Мои подписчики' },
+  'users.flt_reset':     { az: 'Sıfırla', en: 'Reset', ru: 'Сбросить' },
+  'users.flt_apply':     { az: 'Tətbiq et', en: 'Apply', ru: 'Применить' },
+  'users.flt_n':         { az: '{n} filtr aktiv', en: '{n} filters active', ru: 'Активных фильтров: {n}' },
+
+  /* Sürətli pillər */
+  'users.q_all':      { az: 'Hamısı', en: 'Everyone', ru: 'Все' },
+  'users.q_online':   { az: 'Onlayn', en: 'Online', ru: 'Онлайн' },
+  'users.q_hiring':   { az: 'İş axtarır', en: 'Open to work', ru: 'Ищет работу' },
+  'users.q_mentor':   { az: 'Mentorlar', en: 'Mentors', ru: 'Менторы' },
+  'users.q_verified': { az: 'Təsdiqlənmiş', en: 'Verified', ru: 'Подтверждённые' },
+  'users.q_mutual':   { az: 'Qarşılıqlı', en: 'Mutual', ru: 'Взаимные' },
+  'users.q_new':      { az: 'Yeni üzvlər', en: 'New members', ru: 'Новые' },
+
+  /* Statistika kartları */
+  'users.s_total':    { az: 'Üzvlər', en: 'Members', ru: 'Участники' },
+  'users.s_online':   { az: 'Bu gün aktiv', en: 'Active today', ru: 'Активны сегодня' },
+  'users.s_following': { az: 'İzlədiklərim', en: 'Following', ru: 'Подписки' },
+  'users.s_teams':    { az: 'Komandalarım', en: 'My teams', ru: 'Мои команды' },
+  'users.s_projects': { az: 'Layihələrim', en: 'My projects', ru: 'Мои проекты' },
+  'users.s_verified': { az: 'Təsdiqlənmiş', en: 'Verified', ru: 'Подтверждённые' },
+  'users.s_mentors':  { az: 'Mentorlar', en: 'Mentors', ru: 'Менторы' },
+  'users.s_hiring':   { az: 'İşə açıq', en: 'Open to work', ru: 'Открыты к работе' },
+  'users.s_new_week': { az: 'həftədə +{n}', en: '+{n} this week', ru: '+{n} за неделю' },
+
+  /* İstifadəçi statusu */
+  'users.st_online':  { az: 'Onlayn', en: 'Online', ru: 'Онлайн' },
+  'users.st_offline': { az: 'Oflayn', en: 'Offline', ru: 'Офлайн' },
+  'users.st_away':    { az: 'Uzaqdayam', en: 'Away', ru: 'Отошёл' },
+  'users.st_busy':    { az: 'Məşğulam', en: 'Busy', ru: 'Занят' },
+  'users.st_dnd':     { az: 'Narahat etməyin', en: 'Do not disturb', ru: 'Не беспокоить' },
+  'users.st_hiring':  { az: 'İş axtarıram', en: 'Open to work', ru: 'Ищу работу' },
+
+  /* Rank adları — XP səviyyəsindən törəyir (bax `level.ts` astanaları) */
+  'users.rk_bronze':  { az: 'Bürünc', en: 'Bronze', ru: 'Бронза' },
+  'users.rk_silver':  { az: 'Gümüş', en: 'Silver', ru: 'Серебро' },
+  'users.rk_gold':    { az: 'Qızıl', en: 'Gold', ru: 'Золото' },
+  'users.rk_diamond': { az: 'Almaz', en: 'Diamond', ru: 'Алмаз' },
+  'users.rk_master':  { az: 'Usta', en: 'Master', ru: 'Мастер' },
+  'users.rk_legend':  { az: 'Əfsanə', en: 'Legend', ru: 'Легенда' },
+  'users.rk_next':    { az: 'Növbəti səviyyəyə {n} XP', en: '{n} XP to next level', ru: 'До следующего уровня {n} XP' },
+  'users.rk_max':     { az: 'Maksimum səviyyə', en: 'Max level', ru: 'Максимальный уровень' },
+
+  /* Kart məlumatları */
+  'users.c_followers':  { az: 'izləyici', en: 'followers', ru: 'подписчиков' },
+  'users.c_following':  { az: 'izlədiyi', en: 'following', ru: 'подписок' },
+  'users.c_teams':      { az: 'komanda', en: 'teams', ru: 'команд' },
+  'users.c_projects':   { az: 'layihə', en: 'projects', ru: 'проектов' },
+  'users.c_mutual_t':   { az: '{n} ortaq komanda', en: '{n} mutual team(s)', ru: 'Общих команд: {n}' },
+  'users.c_mutual_p':   { az: '{n} ortaq layihə', en: '{n} mutual project(s)', ru: 'Общих проектов: {n}' },
+  'users.c_follows_you': { az: 'Səni izləyir', en: 'Follows you', ru: 'Подписан на вас' },
+  'users.c_joined':     { az: 'Qoşulub {d}', en: 'Joined {d}', ru: 'Присоединился {d}' },
+  'users.c_no_bio':     { az: 'Bio əlavə olunmayıb', en: 'No bio yet', ru: 'Био пока нет' },
+
+  /* Sürətli əməliyyatlar */
+  'users.a_msg':      { az: 'Mesaj', en: 'Message', ru: 'Написать' },
+  'users.a_profile':  { az: 'Profil', en: 'Profile', ru: 'Профиль' },
+  'users.a_follow':   { az: 'İzlə', en: 'Follow', ru: 'Подписаться' },
+  'users.a_unfollow': { az: 'İzlənilir', en: 'Following', ru: 'Вы подписаны' },
+  'users.a_more':     { az: 'Digər əməliyyatlar', en: 'More actions', ru: 'Другие действия' },
+  'users.a_share':    { az: 'Profili paylaş', en: 'Share profile', ru: 'Поделиться профилем' },
+  'users.a_copy':     { az: 'Linki kopyala', en: 'Copy link', ru: 'Скопировать ссылку' },
+  'users.a_report':   { az: 'Şikayət et', en: 'Report', ru: 'Пожаловаться' },
+  'users.a_copied':   { az: 'Link kopyalandı', en: 'Link copied', ru: 'Ссылка скопирована' },
+
+  /* Tövsiyə raili */
+  'users.r_title':    { az: 'Kəşf et', en: 'Discover', ru: 'Найти' },
+  'users.r_known':    { az: 'Tanış ola bilərsən', en: 'People you may know', ru: 'Возможно, вы знакомы' },
+  'users.r_topxp':    { az: 'Ən yüksək XP', en: 'Top XP', ru: 'Лидеры по XP' },
+  'users.r_fresh':    { az: 'Yeni qoşulanlar', en: 'Recently joined', ru: 'Недавно присоединились' },
+  'users.r_active':   { az: 'Son aktiv olanlar', en: 'Recently active', ru: 'Недавно активные' },
+  'users.r_empty':    { az: 'Hələ tövsiyə yoxdur', en: 'No suggestions yet', ru: 'Пока нет рекомендаций' },
+
+  /* Boş vəziyyət / nəticə */
+  'users.none_title': { az: 'İstifadəçi tapılmadı', en: 'No users found', ru: 'Пользователи не найдены' },
+  'users.none_text':  { az: 'Axtarışı dəyiş, filtrləri sıfırla və ya platformaya yeni adam dəvət et.', en: 'Try a different search, reset the filters, or invite someone new.', ru: 'Измените запрос, сбросьте фильтры или пригласите кого-нибудь.' },
+  'users.count_n':    { az: '{n} nəticə', en: '{n} results', ru: 'Результатов: {n}' },
+  'users.export_ok':  { az: 'CSV endirilir', en: 'Downloading CSV', ru: 'Загрузка CSV' },
+  'users.export_empty': { az: 'İxrac ediləcək nəticə yoxdur', en: 'Nothing to export', ru: 'Нечего экспортировать' },
+
+  /* Profil parametrləri — yeni sahələr */
+  'set.company':      { az: 'İş yeri / şirkət', en: 'Company', ru: 'Компания' },
+  'set.company_ph':   { az: 'Məsələn: Collabix', en: 'e.g. Collabix', ru: 'Например: Collabix' },
+  'set.status':       { az: 'Status', en: 'Status', ru: 'Статус' },
+  'set.status_none':  { az: 'Təyin edilməyib', en: 'Not set', ru: 'Не задан' },
+  'set.status_hint':  { az: 'Status onlayn göstəricisini ƏVƏZ ETMİR — oflayn olanda göstərilmir.', en: 'Status does not replace the online indicator — it is hidden while you are offline.', ru: 'Статус не заменяет индикатор онлайна — он скрыт, пока вы офлайн.' },
+
   /* ---------- command palette (İstifadəçilər#4) ---------- */
   'pal.title':      { az: 'Sürətli axtarış', en: 'Quick search', ru: 'Быстрый поиск' },
   'pal.ph':         { az: 'İstifadəçi axtar və ya səhifəyə keç...', en: 'Search users or jump to a page...', ru: 'Найти пользователя или перейти...' },

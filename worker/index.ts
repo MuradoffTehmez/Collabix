@@ -129,6 +129,16 @@ const ROUTES: Route[] = [
   { method: 'GET', pattern: /^\/api\/users$/, handler: R.listUsers, auth: true, rl: 'read' },
   // İstifadəçilər səhifəsi üçün sıralanan/filtrlənən/səhifələnən kataloq (TASK-6).
   { method: 'GET', pattern: /^\/api\/users\/directory$/, handler: R.usersDirectory, auth: true, rl: 'read' },
+  /* Kataloq əlavələri (miqrasiya 0050/0051).
+     ⚠ Bu üçü `/api/users/([\w-]+)` kimi parametrli naxışlardan ƏVVƏL
+       gəlməlidir — sabit seqment parametrli naxışa da uyğun gəlir. */
+  { method: 'GET', pattern: /^\/api\/users\/suggested$/, handler: R.suggestedUsers, auth: true, rl: 'read' },
+  { method: 'GET', pattern: /^\/api\/users\/dir-stats$/, handler: R.directoryStats, auth: true, rl: 'read' },
+  /* CSV ixracı `heavy` səbətindədir: cari filtrlə 500 sətrə qədər YIĞIR,
+     yəni bir çağırış 9 ardıcıl D1 səhifə sorğusuna qədər çəkə bilər.
+     `read` səbətində olsaydı istifadəçi onu təkrar-təkrar çağıraraq bazanı
+     yükləyə bilərdi. */
+  { method: 'GET', pattern: /^\/api\/users\/export\.csv$/, handler: R.exportDirectory, auth: true, rl: 'heavy' },
   { method: 'PATCH', pattern: /^\/api\/me$/, handler: R.patchMe, auth: true, rl: 'write' },
   { method: 'PATCH', pattern: /^\/api\/me\/settings$/, handler: R.patchSettings, auth: true, rl: 'write' },
   { method: 'GET', pattern: /^\/api\/me\/social$/, handler: R.mySocial, auth: true, rl: 'read' },

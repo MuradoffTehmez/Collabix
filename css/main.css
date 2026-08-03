@@ -71,5 +71,11 @@
      44px hədəflərini açıq şəkildə bərpa edir. */
 @import './88-notifications.css';
 
+/* İstifadəçi kataloqu.
+   ⚠ `35-stats-profile.css` (`.user-grid`), `52-users.css` (köhnə kart qatı)
+     və `60-responsive.css` bu fayldan ƏVVƏLDİR — yeni `.ud-*` qatı eyni
+     spesifiklikdə qalib gəlsin deyə sıra belədir (tədrici köçürmə). */
+@import './89-users.css';
+
 /* 🔴 HƏMİŞƏ SONUNCU */
 @import './90-utilities.css';

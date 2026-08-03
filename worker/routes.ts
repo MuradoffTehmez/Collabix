@@ -78,9 +78,15 @@ export {
 } from './routes/post';
 
 export {
-  listUsers, usersDirectory, patchMe, patchSettings, mySocial,
+  listUsers, patchMe, patchSettings, mySocial,
   followLists, followPut, followDelete, progressOf, userStats, activityFor,
 } from './routes/user';
+/* İstifadəçi kataloqu — `routes/user.ts`-dən ayrıldı (öz filtr taksonomiyası,
+   sosial zənginləşdirməsi, tövsiyə və ixracı var). `index.ts` marşrut cədvəli
+   `R.usersDirectory` adını işlədir, ona görə RE-EXPORT saxlanılır. */
+export {
+  usersDirectory, suggestedUsers, directoryStats, exportDirectory,
+} from './routes/directory';
 export {
   listRooms, createRoom, deleteRoom, patchRoom, roomMessages, sendRoomMessage,
   editRoomMessage, deleteRoomMessage, listThreads, dmMessages, sendDM,

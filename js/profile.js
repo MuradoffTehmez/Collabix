@@ -241,6 +241,18 @@ function openEditModal(initialTab = 'general'){
   });
   const countryIn = inp(me.country, 'Azərbaycan', 40);
   const cityIn = inp(me.city, 'Bakı', 40);
+
+  // Miqrasiya 0050 — kataloqda göstərilən iş yeri və əl ilə status.
+  // ⚠ Sahə OLMADAN sütun ölü olardı: kataloq onu göstərir, amma heç kim
+  //   doldura bilməzdi. Sxem dəyişikliyi həmişə doldurma yolu ilə birlikdə
+  //   gəlməlidir.
+  const companyIn = inp(me.company, t('set.company_ph'), 60);
+  const statusIn = el('select', {},
+    el('option', { value: '' }, t('set.status_none')),
+    ...['hiring', 'away', 'busy', 'dnd'].map(v =>
+      el('option', { value: v, selected: (me.status || '') === v }, t('users.st_' + v))),
+  );
+
   const tabGeneral = el('div', {},
     el('div', { class: 'photo-pick' }, avPreview,
       el('label', {}, 'Şəkli dəyiş', fileIn),
@@ -252,6 +264,9 @@ function openEditModal(initialTab = 'general'){
     fld('Bio / Haqqımda', bioIn),
     el('div', { class: 'row2' }, fld('Doğum tarixi', bdIn), fld('Cins', genderBox)),
     el('div', { class: 'row2' }, fld('Ölkə', countryIn), fld('Şəhər', cityIn)),
+    el('div', { class: 'row2' },
+      fld(t('set.company'), companyIn),
+      fld(t('set.status'), statusIn, t('set.status_hint'))),
   );
 
   /* --- Tab: Bacarıqlar --- */
@@ -410,6 +425,8 @@ function openEditModal(initialTab = 'general'){
         name, bio: bioIn.value.trim(),
         birthDate: bdIn.value, age: bdIn.value ? ageFromBirthDate(bdIn.value) : (me.age || 18),
         gender, country: countryIn.value.trim(), city: cityIn.value.trim(),
+        // Miqrasiya 0050 — kataloq sahələri.
+        company: companyIn.value.trim(), status: statusIn.value,
         progLevels, langLevels,
         prog: Object.keys(progLevels), langs: Object.keys(langLevels),
         goals: goalsIn.value.trim(),

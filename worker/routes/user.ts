@@ -1,14 +1,16 @@
 // İstifadəçi profili domeni — AUDIT-TASK-10 / Faza 3.1.
 //
-// Profil oxu/redaktə, kataloq, sosial əlaqələr, tərəqqi, statistika və
-// fəaliyyət qrafiki. Statistika bölmələri buraya salınıb, çünki onlar
-// istifadəçi profilinin göstəricələridir və başqa domendən çağırılmır.
+// Profil oxu/redaktə, sosial əlaqələr, tərəqqi, statistika və fəaliyyət
+// qrafiki. Statistika bölmələri buraya salınıb, çünki onlar istifadəçi
+// profilinin göstəricələridir və başqa domendən çağırılmır.
+// ⚠ KATALOQ artıq burada deyil — `routes/directory.ts` (aşağıdakı şərhə bax).
 import {
   Ctx, json, err, readJson, now, clampStr, fromJSON, toJSON,
-  likePattern, searchNormalize, mapUser, normalizeUsername,
+  searchNormalize, mapUser, normalizeUsername,
 } from '../util';
 import { grantXp } from '../xp';
 import { D, badReq, notify } from './shared';
+import { USER_STATUSES } from './directory';
 
 /* ================= USERS / PROFİL ================= */
 export async function listUsers(c: Ctx) {
@@ -16,125 +18,18 @@ export async function listUsers(c: Ctx) {
   return json({ users: rows.results.map(r => mapUser(r)) });
 }
 
-/* ---------- İstifadəçi kataloqu (TASK-6 / İstifadəçilər#5) ----------
+/* ---------- İstifadəçi kataloqu — `routes/directory.ts`-ə köçürüldü ----------
    listUsers() qlobal identifikasiya keşidir (post müəllifi, DM, mention) və
-   OLDUĞU KİMİ qalır. Bu isə İstifadəçilər səhifəsinin sorğusudur: D1-də
-   sıralama + filtr + keyset pagination (0006-dakı kompozit index-lər).      */
-
-// sort açarı → [SQL sütunu, istiqamət]. Ağ siyahı: dəyər birbaşa SQL-ə düşdüyü
-// üçün istifadəçi girişi HEÇ VAXT buraya keçmir (injection qapısı bağlıdır).
-const DIR_SORTS: Record<string, [string, 'ASC' | 'DESC']> = {
-  recent: ['joined_at', 'DESC'],      // default — ən yeni qoşulanlar
-  xp: ['xp', 'DESC'],
-  active: ['last_active_at', 'DESC'],
-  alpha: ['username', 'ASC'],
-};
-const DIR_PAGE = 24;
-
-export async function usersDirectory(c: Ctx) {
-  const u = new URL(c.req.url).searchParams;
-  const sortKey = u.get('sort') || 'recent';
-  const [col, dir] = DIR_SORTS[sortKey] || DIR_SORTS.recent;
-
-  const where: string[] = ['blocked = 0', 'id != ?'];
-  const vals: unknown[] = [c.user!.id];
-
-  // Mətn axtarışı — ad / istifadəçi adı üzrə.
-  // ⚠ Hər `LIKE`-da `ESCAPE '\'` MƏCBURİDİR — dəyərlərdə `_`/`%` escape olunur,
-  // amma ESCAPE bəyan edilməsə SQLite `\_`-i "\ + istənilən simvol" sayır və
-  // `_` olan adlar (bütün `e2e_*` hesablar) tapılmır (adminUsersList-dəki eyni buq).
-  const q = (u.get('q') || '').trim().toLowerCase();
-  if (q) {
-    // D-3: `search_name` normallaşdırılmış sütundur — `Təhməz` sorğusu
-    // `Tehmez` yazılışını (və əksini) tapır. Sorğu tərəfi YAZI tərəfi ilə
-    // eyni funksiyadan keçir (`searchNormalize`), əks halda heç nə tapılmaz.
-    // ⚠ YALNIZ anonim `?` işlədilir. Nömrəli (`?1`) placeholder-lər bu sorğuda
-    // TƏHLÜKƏLİDİR: `where`/`vals` cütü dinamik yığılır və siyahının əvvəlində
-    // artıq `id != ?` parametri var — `?1` həmin istifadəçi id-sinə düşərdi,
-    // axtarış mətninə yox. (Məhz bu səhv D-3 testini sındırmışdı.)
-    where.push("(lower(name) LIKE ? ESCAPE '\\' OR lower(username) LIKE ? ESCAPE '\\'"
-      + " OR search_name LIKE ? ESCAPE '\\')");
-    const likeRaw = likePattern(q);
-    vals.push(likeRaw, likeRaw, likePattern(searchNormalize(q)));
-  }
-
-  // Skill/səviyyə/məqsəd JSON sütunlarındadır (prog_levels, lang_levels,
-  // looking_for). D1-də json_extract var, amma açar adı dinamikdir → LIKE ilə
-  // ilkin daraltma edib dəqiq yoxlamanı JS-də aparırıq (aşağıda).
-  const skill = (u.get('skill') || '').trim();
-  if (skill) {
-    where.push("(prog_levels LIKE ? ESCAPE '\\' OR lang_levels LIKE ? ESCAPE '\\')");
-    const key = '%"' + skill.replace(/[%_\\]/g, ch => '\\' + ch) + '"%';
-    vals.push(key, key);
-  }
-  const looking = (u.get('looking') || '').trim();
-  if (looking) {
-    where.push("looking_for LIKE ? ESCAPE '\\'");
-    vals.push('%"' + looking.replace(/[%_\\]/g, ch => '\\' + ch) + '"%');
-  }
-  if (u.get('extra') === 'verified') where.push('verified = 1');
-
-  // Keyset (cursor): "<sortDəyəri>|<id>". OFFSET-dən fərqli olaraq dərin
-  // səhifələrdə də sabit sürətlidir və sətir sürüşməsi baş vermir.
-  // `username` mətn, qalan sıra sütunları INTEGER-dir — cursor dəyəri URL-dən
-  // həmişə string gəldiyi üçün rəqəm sütunlarında Number-ə çevrilir, əks halda
-  // SQLite mətn müqayisəsi edərdi ("9" > "10").
-  const numericSort = col !== 'username';
-  const cursor = u.get('cursor');
-  if (cursor) {
-    const i = cursor.lastIndexOf('|');
-    if (i > 0) {
-      const rawVal = cursor.slice(0, i);
-      const cid = cursor.slice(i + 1);
-      const cv: string | number = numericSort ? Number(rawVal) : rawVal;
-      if (!(numericSort && Number.isNaN(cv as number))) {
-        const cmp = dir === 'DESC' ? '<' : '>';
-        where.push(`(${col} ${cmp} ? OR (${col} = ? AND id > ?))`);
-        vals.push(cv, cv, cid);
-      }
-    }
-  }
-
-  const limit = Math.min(Math.max(parseInt(u.get('limit') || '', 10) || DIR_PAGE, 1), 60);
-  // limit+1 çəkirik: əlavə sətir gəlirsə daha səhifə var deməkdir.
-  const sql =
-    `SELECT * FROM users WHERE ${where.join(' AND ')} ` +
-    `ORDER BY ${col} ${dir}, id ASC LIMIT ?`;
-  const rows = await D(c).prepare(sql).bind(...vals, limit + 1).all<any>();
-
-  // Cursor SQL nəticəsindən hesablanır — aşağıdakı JS süzgəcindən ƏVVƏL.
-  // Əks halda süzgəcin atdığı sətrlər növbəti səhifədə təkrar sorğulanardı.
-  const hasMore = rows.results.length > limit;
-  const pageRows = hasMore ? rows.results.slice(0, limit) : rows.results;
-  const lastRow = pageRows[pageRows.length - 1] as any;
-  const nextCursor = hasMore && lastRow ? `${lastRow[col]}|${lastRow.id}` : null;
-
-  let list = pageRows.map(r => mapUser(r));
-
-  // Dəqiq skill/səviyyə süzgəci: LIKE yalnız açarın mətndə olmasını yoxlayır
-  // (məs. "Java" sorğusu "JavaScript"-ə də uyğun gəlir), burada isə həqiqətən
-  // həmin skill-in — və istənilirsə səviyyəsinin — olması təsdiqlənir.
-  // ⚠ Nəticədə səhifə `limit`-dən az element qaytara bilər; müştəri
-  // `nextCursor` null olana qədər yükləməyə davam edir.
-  const level = (u.get('level') || '').trim();
-  if (skill || level) {
-    list = list.filter((x: any) => {
-      const all = { ...(x.progLevels || {}), ...(x.langLevels || {}) };
-      if (skill && !(skill in all)) return false;
-      if (level) {
-        if (skill) return all[skill] === level;
-        return Object.values(all).includes(level);
-      }
-      return true;
-    });
-  }
-
-  return json({ users: list, nextCursor });
-}
+   OLDUĞU KİMİ burada qalır. Kataloq isə öz filtr taksonomiyasını, sosial
+   zənginləşdirməsini, tövsiyə və ixrac endpoint-lərini daşıdığı üçün ayrıca
+   domen modulunadır (AUDIT-TASK-10 / Faza 3.1 naxışı).                      */
 
 const SELF_FIELDS: Record<string, [string, number]> = {
   name: ['name', 60], bio: ['bio', 400], birthDate: ['birth_date', 10], gender: ['gender', 10],
   country: ['country', 40], city: ['city', 40], goals: ['goals', 300],
+  // Miqrasiya 0050 — kataloqda göstərilir və LIKE ilə süzülür.
+  // `name` ilə eyni tavan (60): UI ikisini eyni sətirdə yan-yana yazır.
+  company: ['company', 60],
   instagram: ['instagram', 40], github: ['github', 40], linkedin: ['linkedin', 60],
   telegram: ['telegram', 40], website: ['website', 100], contactEmail: ['contact_email', 120],
   photoURL: ['photo_url', 300], lastActiveDay: ['last_active_day', 10],
@@ -150,6 +45,17 @@ export async function patchMe(c: Ctx) {
   if ('showProjectOnProfile' in b) {
     sets.push('show_project_on_profile = ?');
     vals.push(b.showProjectOnProfile ? 1 : 0);
+  }
+  // Əl ilə status (miqrasiya 0050) — AĞ SİYAHI ilə.
+  // ⚠ `SELF_FIELDS`-ə salına BİLMƏZDİ: oradakı sahələr sərbəst mətndir və
+  //   yalnız uzunluğa görə kəsilir. Status isə sabit çoxluqdur və naməlum
+  //   dəyər UI-da rəngsiz/etiketsiz nişan kimi görünərdi. Sxemdə `CHECK`
+  //   yoxdur (ALTER məhdudiyyəti), ona görə YEGANƏ qapı buradır.
+  if ('status' in b) {
+    const s = clampStr(b.status, 10);
+    if (!USER_STATUSES.has(s)) return badReq('Naməlum status.');
+    sets.push('status = ?');
+    vals.push(s);
   }
   for (const k of ['progLevels', 'langLevels', 'lookingFor', 'activityDays'] as const) {
     if (k in b) {
@@ -264,15 +170,40 @@ export async function followLists(c: Ctx, uid: string) {
   return json({ uids: rows.results.map(r => r.u) });
 }
 
+/**
+ * ⚠ SAYĞAC SİNXRONU (miqrasiya 0051): `users.followers_count` /
+ *   `following_count` denormallaşdırılmışdır — kataloqun "ən çox izləyici"
+ *   sıralaması indekslənmiş sütun tələb edir.
+ *
+ * 🔴 SAYĞAC `changes`-dən ASILI YAZILIR, şərtsiz DEYİL. `INSERT OR IGNORE`
+ *    təkrar izləmədə HEÇ NƏ yazmır (PRIMARY KEY var); şərtsiz `+1` etsəydik
+ *    iki dəfə "İzlə" basmaq sayğacı şişirdərdi və `follows` cədvəli ilə
+ *    HƏQİQƏT FƏRQİ yaranardı — özü də heç bir xəta vermədən.
+ */
 export async function followPut(c: Ctx, uid: string) {
   if (uid === c.user!.id) return badReq('Özünü izləyə bilməzsən.');
-  await D(c).prepare('INSERT OR IGNORE INTO follows (follower_id, target_id, created_at) VALUES (?,?,?)')
+  const res = await D(c).prepare('INSERT OR IGNORE INTO follows (follower_id, target_id, created_at) VALUES (?,?,?)')
     .bind(c.user!.id, uid, now()).run();
-  await notify(c, uid, 'follow', 'səni izləməyə başladı');
+  if ((res.meta?.changes ?? 0) > 0) {
+    await D(c).batch([
+      D(c).prepare('UPDATE users SET followers_count = followers_count + 1 WHERE id = ?').bind(uid),
+      D(c).prepare('UPDATE users SET following_count = following_count + 1 WHERE id = ?').bind(c.user!.id),
+    ]);
+    await notify(c, uid, 'follow', 'səni izləməyə başladı');
+  }
   return json({ ok: true });
 }
 export async function followDelete(c: Ctx, uid: string) {
-  await D(c).prepare('DELETE FROM follows WHERE follower_id = ? AND target_id = ?').bind(c.user!.id, uid).run();
+  const res = await D(c).prepare('DELETE FROM follows WHERE follower_id = ? AND target_id = ?')
+    .bind(c.user!.id, uid).run();
+  if ((res.meta?.changes ?? 0) > 0) {
+    // `MAX(0, …)` müdafiəsi: sayğac hər hansı səbəbdən sürüşsə belə mənfi
+    // dəyər UI-da "-1 izləyici" kimi görünməməlidir.
+    await D(c).batch([
+      D(c).prepare('UPDATE users SET followers_count = MAX(0, followers_count - 1) WHERE id = ?').bind(uid),
+      D(c).prepare('UPDATE users SET following_count = MAX(0, following_count - 1) WHERE id = ?').bind(c.user!.id),
+    ]);
+  }
   return json({ ok: true });
 }
 

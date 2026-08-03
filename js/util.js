@@ -277,7 +277,11 @@ export function countUp(node, target, { duration = 1000 } = {}){
  *   istifadəçi profilində bir səviyyə, admin panelində başqa səviyyə görər —
  *   `worker/level.ts` başlığı məhz bu tələni izah edir.
  */
-const LEVEL_THRESHOLDS = [0, 500, 1500, 3500, 7000, 12000, 18000, 26000, 36000, 50000];
+// ⚠ İXRAC OLUNUR, çünki kataloqdakı XP tərəqqi zolağı NÖVBƏTİ astananı
+//   bilməlidir. Yeni nüsxə yaratmaq QADAĞANDIR — yuxarıdakı şərhə bax:
+//   astanalar artıq üç yerdədir (miqrasiya 0034, `worker/level.ts`, bura).
+//   Dördüncü nüsxə həmin tələni bir də böyüdərdi.
+export const LEVEL_THRESHOLDS = [0, 500, 1500, 3500, 7000, 12000, 18000, 26000, 36000, 50000];
 
 export function levelFromXP(xp){
   const x = Math.max(0, xp || 0);

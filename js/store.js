@@ -59,7 +59,16 @@ export async function getUser(uid){
  * @param {{ q?: string, skill?: string, level?: string, looking?: string,
  *           extra?: string, sort?: string, cursor?: string, limit?: number }} [opts]
  */
-export async function fetchUserDirectory({ q, skill, level, looking, extra, sort, cursor, limit } = {}){
+/**
+ * Kataloq sorğu parametrləri — siyahı və CSV ixracı EYNİ funksiyadan keçir.
+ * ⚠ JSDoc tipi MƏCBURİDİR: `checkJs` boş default obyektdən (`= {}`) sahələri
+ *   çıxara bilmir və hər yeni filtr TS2339 verir.
+ * @param {{q?:string, skill?:string, level?:string, looking?:string, extra?:string,
+ *          sort?:string, company?:string, loc?:string, status?:string,
+ *          cursor?:string|null, limit?:number}} [o]
+ */
+export function directoryParams(o = {}){
+  const { q, skill, level, looking, extra, sort, company, loc, status, cursor, limit } = o;
   const p = new URLSearchParams();
   if(q) p.set('q', q);
   if(skill) p.set('skill', skill);
@@ -67,11 +76,35 @@ export async function fetchUserDirectory({ q, skill, level, looking, extra, sort
   if(looking) p.set('looking', looking);
   if(extra) p.set('extra', extra);
   if(sort) p.set('sort', sort);
+  if(company) p.set('company', company);
+  if(loc) p.set('loc', loc);
+  if(status) p.set('status', status);
   if(cursor) p.set('cursor', cursor);
   if(limit) p.set('limit', String(limit));
-  const d = await api('/users/directory?' + p.toString());
+  return p;
+}
+
+export async function fetchUserDirectory(opts = {}){
+  const d = await api('/users/directory?' + directoryParams(opts).toString());
+  // ⚠ `set` ŞƏRTSİZ DEYİL: `state.users` qlobal identifikasiya keşidir və
+  //   feed/DM/mention ondan oxuyur. Kataloq cavabı zənginləşdirilmiş
+  //   sahələr daşıyır (`teamsCount`, `iFollow` …) — köhnə sətri əvəzləmək
+  //   təhlükəsizdir, lakin `listUsers`-dan gələn tam sətri kataloq
+  //   nüsxəsi ilə ƏZMƏK olmaz, çünki orada `settings` kimi sahələr var.
+  //   Ona görə yalnız YOX olan sətirlər yazılır (mövcud davranış qorunur).
   d.users.forEach(u => { if(!state.users.has(u.uid)) state.users.set(u.uid, u); });
   return d;
+}
+
+/** Başlıq kartları — BÜTÜN baza üzrə, yüklənmiş səhifə üzrə YOX. */
+export async function fetchDirectoryStats(){ return api('/users/dir-stats'); }
+
+/** Sağ paneldəki dörd tövsiyə siyahısı. */
+export async function fetchSuggestedUsers(){ return api('/users/suggested'); }
+
+/** CSV ixracı — brauzer endirməni özü aparır (admin ixracı ilə eyni naxış). */
+export function directoryExportUrl(opts = {}){
+  return '/api/users/export.csv?' + directoryParams(opts).toString();
 }
 
 export async function updateMyProfile(fields){

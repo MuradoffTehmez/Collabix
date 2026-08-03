@@ -433,6 +433,17 @@ export async function deleteAccount(c: Ctx) {
     D(c).prepare('UPDATE posts SET original_deleted = 1 WHERE shared_post_id IN (SELECT id FROM posts WHERE author_id = ?)').bind(u.id),
     D(c).prepare('DELETE FROM post_shares WHERE user_id = ? OR post_id IN (SELECT id FROM posts WHERE author_id = ?)').bind(u.id, u.id),
     D(c).prepare('DELETE FROM posts WHERE author_id = ?').bind(u.id),
+    // 🔴 SAYĞACLAR `follows` SİLİNMƏZDƏN ƏVVƏL azaldılır (miqrasiya 0051).
+    //    Sıra bağlayıcıdır: sətirlər silindikdən sonra kimin sayğacını
+    //    azaltmaq lazım olduğunu öyrənmək mümkün olmazdı. Onsuz hesab
+    //    silindikdə QALAN istifadəçilərin izləyici sayı şişik qalırdı —
+    //    heç bir xəta vermədən, yalnız rəqəm yalan danışırdı.
+    D(c).prepare(
+      `UPDATE users SET followers_count = MAX(0, followers_count - 1)
+        WHERE id IN (SELECT target_id FROM follows WHERE follower_id = ?)`).bind(u.id),
+    D(c).prepare(
+      `UPDATE users SET following_count = MAX(0, following_count - 1)
+        WHERE id IN (SELECT follower_id FROM follows WHERE target_id = ?)`).bind(u.id),
     D(c).prepare('DELETE FROM follows WHERE follower_id = ? OR target_id = ?').bind(u.id, u.id),
     D(c).prepare('DELETE FROM likes WHERE user_id = ?').bind(u.id),
     D(c).prepare('DELETE FROM bookmarks WHERE user_id = ?').bind(u.id),
