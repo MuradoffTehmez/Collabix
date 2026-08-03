@@ -775,7 +775,10 @@
   padding-top: var(--sp-2);
   border-top: 1px solid var(--border);
 }
-.view-grid .ud-menu { right: 0; }
+/* ⚠ `.view-grid .ud-menu` qaydası SİLİNDİ: menyu artıq `body`-yə portal
+   edilir, yəni `.view-grid` nəslindən çıxır və seçici heç vaxt uyğun gəlmir.
+   Ölü qayda kimi saxlansaydı, gələcəkdə kimsə `right: 0` ilə `left`-i
+   birlikdə görüb elementi uzatmağa çalışa bilərdi. */
 
 /* LIST — üfüqi, enterprise sətri. */
 .view-list .ud-card { align-items: center; }
