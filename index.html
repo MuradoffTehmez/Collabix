@@ -409,10 +409,30 @@
         </aside>
       </div>
 
-      <!-- Ana#9: kod paylaşımı vitrini — bloklarda "Kopyala" (feed ilə eyni komponent) -->
-      <div class="pub-section">
-        <h2 class="pub-h2" data-i18n="codeshow.title"></h2>
-        <p class="pub-lead" data-i18n="codeshow.sub"></p>
+      <!-- Kod paylaşımı vitrini (2026-08-03 redizayn)
+           ⚠ Əvvəl bu bölmə başlıq + bir sətir + üst-üstə iki kod bloku idi —
+             yəni özəlliyi VƏD edirdi, amma niyə əhəmiyyətli olduğunu izah
+             etmirdi. İndi iki sütun: solda faydanın izahı, sağda məhsulun
+             öz konteksti (kod bloku feed/çat ilə EYNİ komponentdir). -->
+      <div class="pub-section codeshow">
+        <div class="cs-copy">
+          <h2 class="pub-h2" data-i18n="codeshow.title"></h2>
+          <p class="pub-lead" data-i18n="codeshow.sub"></p>
+          <ul class="cs-feats">
+            <li>
+              <span class="cs-ic" data-icon="code" data-icon-size="18"></span>
+              <div><b data-i18n="codeshow.f1t"></b><span data-i18n="codeshow.f1d"></span></div>
+            </li>
+            <li>
+              <span class="cs-ic" data-icon="copy" data-icon-size="18"></span>
+              <div><b data-i18n="codeshow.f2t"></b><span data-i18n="codeshow.f2d"></span></div>
+            </li>
+            <li>
+              <span class="cs-ic" data-icon="message" data-icon-size="18"></span>
+              <div><b data-i18n="codeshow.f3t"></b><span data-i18n="codeshow.f3d"></span></div>
+            </li>
+          </ul>
+        </div>
         <div class="code-showcase" id="codeShowcase"></div>
       </div>
 

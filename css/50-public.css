@@ -1536,3 +1536,78 @@
   .hero-grid { animation: none; }
   .hero-float { animation: heroFloatIn .01s both; }
 }
+
+/* ══════════════ KOD PAYLAŞIMI VİTRİNİ (2026-08-03 redizayn) ══════════════
+   Əvvəl: başlıq + bir sətir + üst-üstə iki kod bloku. Özəlliyi VƏD edirdi,
+   niyə əhəmiyyətli olduğunu izah etmirdi. İndi iki sütun. */
+.codeshow {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 40px;
+  align-items: center;
+}
+
+.cs-copy .pub-h2 { margin-top: 0; }
+
+.cs-copy .pub-lead {
+  max-width: 46ch;   /* oxunaqlılıq üçün sətir uzunluğu */
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.cs-feats {
+  list-style: none;
+  margin: 26px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 16px;
+}
+
+.cs-feats li {
+  display: flex;
+  gap: 13px;
+  align-items: flex-start;
+}
+
+.cs-feats b {
+  display: block;
+  font-family: var(--display);
+  font-size: .92rem;
+  margin-bottom: 3px;
+}
+
+.cs-feats span {
+  color: var(--muted);
+  font-size: .84rem;
+  line-height: 1.55;
+}
+
+.cs-ic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  border-radius: 10px;
+  background: var(--coral-dim);
+  color: var(--coral);
+  font-size: 0;
+}
+
+/* ⚠ `auto-fit` SİLİNDİ: iki sütunlu düzülüşdə kod blokları artıq dar sütuna
+   düşür, əlavə şəbəkə onları daha da daraldırdı və uzun sətirlər kəsilirdi.
+   İndi sadəcə üst-üstə yığılır. */
+.codeshow .code-showcase {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .codeshow {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+  }
+}

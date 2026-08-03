@@ -277,6 +277,11 @@ function renderCodeShowcase(){
   if(!box) return;
   clear(box);
   CODE_SAMPLES.forEach(s => box.append(codeBlockNode(s.code, s.lang)));
+
+  // ⚠ Sol sütundakı özəllik ikonları `index.html`-də statik `data-icon`-dur;
+  //   `paintIcons` çağırılmasa SVG yerləşdirilmir və boş yuva qalır.
+  const feats = document.querySelector('.cs-feats');
+  if(feats) paintIcons(feats);
 }
 
 /* ---------- Ana#2: canlı statistika (count-up, görünəndə bir dəfə) ---------- */

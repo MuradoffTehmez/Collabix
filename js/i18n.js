@@ -91,7 +91,14 @@ const D = {
 
   /* ---------- kod paylaşımı vitrini (Ana#9) ---------- */
   'codeshow.title': { az: 'Kod paylaş, cavab al', en: 'Share code, get answers', ru: 'Делись кодом, получай ответы' },
-  'codeshow.sub':  { az: 'Syntax highlighting, sətir nömrələri və bir kliklə kopyalama — postlarda və otaqlarda.', en: 'Syntax highlighting, line numbers and one-click copy — in posts and rooms.', ru: 'Подсветка синтаксиса, номера строк и копирование в один клик — в постах и комнатах.' },
+  'codeshow.sub':  { az: 'Sual verəndə kodu şəkil kimi yox, kod kimi paylaş — oxunaqlı, kopyalana bilən, redaktə oluna bilən.', en: 'When you ask a question, share code as code — readable, copyable, editable. Not as a screenshot.', ru: 'Задавая вопрос, делись кодом как кодом — читаемым, копируемым, редактируемым. Не скриншотом.' },
+  /* Kod vitrininin özəllik sətirləri (2026-08-03 redizayn). */
+  'codeshow.f1t':  { az: 'Sintaksis rəngləməsi', en: 'Syntax highlighting', ru: 'Подсветка синтаксиса' },
+  'codeshow.f1d':  { az: '20+ dil avtomatik tanınır — Python-dan SQL-ə qədər.', en: '20+ languages detected automatically — from Python to SQL.', ru: '20+ языков определяются автоматически — от Python до SQL.' },
+  'codeshow.f2t':  { az: 'Sətir nömrələri və kopyalama', en: 'Line numbers and copy', ru: 'Номера строк и копирование' },
+  'codeshow.f2d':  { az: '"3-cü sətirdə" deyə bilirsən. Kopyalayanda nömrələr düşmür.', en: 'You can say "line 3". Numbers are not copied along.', ru: 'Можно сказать «в строке 3». Номера не копируются вместе с кодом.' },
+  'codeshow.f3t':  { az: 'Hər yerdə eyni redaktor', en: 'The same editor everywhere', ru: 'Один редактор везде' },
+  'codeshow.f3d':  { az: 'Otaq, birbaşa mesaj, post və şərh — fərq yoxdur.', en: 'Rooms, direct messages, posts and comments — no difference.', ru: 'Комнаты, личные сообщения, посты и комментарии — без разницы.' },
 
   /* ---------- testimonials ---------- */
   'testi.title':   { az: 'İstifadəçilər nə deyir?', en: 'What users say', ru: 'Отзывы' },
