@@ -10,7 +10,8 @@ import { t, tf, setLang, getLang, applyI18n, initI18n } from './i18n.js';
 import { markdownNode } from './markdown.js';
 import { LEGAL, SITE, DEFAULT_FAQS, DEFAULT_TESTIMONIALS, EEAT_CONTENT } from './legal.js';
 import { DEFAULT_PROG, DEFAULT_SPOKEN } from './taxonomy.js';
-import { STEP_ICONS, copyButton, paintIcons } from './icons.js';
+import { STEP_ICONS, paintIcons } from './icons.js';
+import { codeBlockNode } from './code-block.js';
 import { initCookieBanner } from './cookies.js';
 
 // Loqo dəsti (~18 KB path datası) yalnız PUBLIC qatda lazımdır — daxil olmuş
@@ -118,28 +119,32 @@ function renderWelcome(){
 /* ---------- Ana#9: kod paylaşımı vitrini + "Kopyala" ---------- */
 // Nümunə kod blokları — homepage-də platformanın kod təcrübəsini göstərir.
 // Kopyala düyməsi feed.js-dəki EYNİ komponentdir (icons.js).
+// ⚠ `label` sahəsi SİLİNDİ: `codeBlockNode()` etiketi taksonomiyadan özü
+//   tapır (`highlightOptions()` → `label`), yəni burada saxlamaq eyni adı iki
+//   yerdə saxlamaq və onların ayrılması riski demək idi.
 const CODE_SAMPLES = [
-  { lang: 'python', label: 'Python', code: 'def fib(n):\n    a, b = 0, 1\n    for _ in range(n):\n        yield a\n        a, b = b, a + b\n\nprint(list(fib(10)))' },
-  { lang: 'javascript', label: 'JavaScript', code: 'const streak = days =>\n  days.reduce((n, d) => d.active ? n + 1 : 0, 0);\n\nconsole.log(streak(activity));' },
+  { lang: 'python', code: 'def fib(n):\n    a, b = 0, 1\n    for _ in range(n):\n        yield a\n        a, b = b, a + b\n\nprint(list(fib(10)))' },
+  { lang: 'javascript', code: 'const streak = days =>\n  days.reduce((n, d) => d.active ? n + 1 : 0, 0);\n\nconsole.log(streak(activity));' },
 ];
 
+/* 🔴 Bu vitrin `js/code-block.js`-ə KEÇİRİLDİ — əvvəl saytın YEGANƏ yeri idi
+ *   ki, hələ də köhnə `feed-code show-lines` yolundan istifadə edirdi.
+ *
+ *   İki səssiz qüsur vardı:
+ *     1. `hljs` HEÇ ÇAĞIRILMIRDI — yəni landing "Syntax highlighting" vəd
+ *        edən mətnin altında RƏNGSİZ kod göstərirdi. Vitrinin özü vədini
+ *        təkzib edirdi.
+ *     2. `show-lines` sətir nömrələrini CSS sayğacı ilə `<span class="code-line">`
+ *        üzərindən qurur; `code-block.js`-dəki şərh bunun niyə sınıq olduğunu
+ *        izah edir (hljs `innerHTML`-i əvəz edib span-ları silir).
+ *
+ *   `codeBlockNode()` eyni komponentdir: dil nişanı, ayrıca nömrə sütunu,
+ *   kopyala, yığ/aç və REAL rəngləmə — feed və çatla tam eyni təcrübə. */
 function renderCodeShowcase(){
   const box = document.getElementById('codeShowcase');
   if(!box) return;
   clear(box);
-  CODE_SAMPLES.forEach(s => {
-    const code = el('code', { class: 'language-' + s.lang });
-    s.code.split('\n').forEach(line => {
-      code.append(el('span', { class: 'code-line' }, line), document.createTextNode('\n'));
-    });
-    box.append(el('div', { class: 'feed-code show-lines' },
-      el('div', { class: 'code-head' },
-        el('span', { class: 'code-lang-badge' }, s.label),
-        el('div', { class: 'code-head-actions' }, copyButton(s.code)),
-      ),
-      el('pre', {}, code),
-    ));
-  });
+  CODE_SAMPLES.forEach(s => box.append(codeBlockNode(s.code, s.lang)));
 }
 
 /* ---------- Ana#2: canlı statistika (count-up, görünəndə bir dəfə) ---------- */

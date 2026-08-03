@@ -260,32 +260,19 @@
   display: block;
   white-space: pre;
   line-height: 1.65;
-  counter-reset: line;
 }
 
-/* Line numbers */
-.feed-code.show-lines code {
-  padding-left: 52px !important;
-}
+/* ⚠ KÖHNƏ SƏTİR-NÖMRƏSİ QATI (`.show-lines` + `.code-line` + `counter-reset`)
+   SİLİNDİ — ölü kod idi.
 
-.feed-code.show-lines code .code-line {
-  display: block;
-  position: relative;
-}
+   Üsul hər sətri `<span class="code-line">`-a büküb CSS sayğacı ilə nömrələyirdi,
+   lakin `hljs.highlightElement()` `<code>`-un `innerHTML`-ini tam əvəz etdiyi
+   üçün həmin span-lar render-dən sonra YOX OLURDU (ölçüldü: say 0). Yəni
+   nömrələr heç vaxt görünmürdü, amma `padding-left: 52px` qalıb kodu boş yerə
+   sürüşdürürdü.
 
-.feed-code.show-lines code .code-line::before {
-  counter-increment: line;
-  content: counter(line);
-  position: absolute;
-  left: -38px;
-  width: 28px;
-  text-align: right;
-  color: var(--muted);
-  opacity: .35;
-  font-size: .7rem;
-  user-select: none;
-  pointer-events: none;
-}
+   Nömrələr indi `js/code-block.js`-dəki ayrıca `.code-gutter` sütunundadır.
+   Son istifadəçi `js/public.js`-dəki landing vitrini idi; o da köçürüldü. */
 
 /* Code header */
 .code-head {
