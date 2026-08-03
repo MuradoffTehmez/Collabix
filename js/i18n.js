@@ -729,6 +729,13 @@ const D = {
   'wiz.lbl_lf': { az: 'Nə axtarıram? (könüllü)', en: 'What am I looking for? (optional)', ru: 'Что я ищу? (необязательно)' },
   'wiz.lbl_site': { az: 'Şəxsi sayt', en: 'Personal website', ru: 'Личный сайт' },
   'wiz.err_site': { az: 'Sayt ünvanı http(s):// ilə başlamalıdır.', en: 'Website must start with http(s)://.', ru: 'Адрес сайта должен начинаться с http(s)://.' },
+  // Dəvət kodu — QEYDİYYATI BLOKLAMIR (server səhv kodu səssizcə udur, bax
+  // `worker/routes/invite.ts`), ona görə mətnlər "istəyə bağlı" tonundadır.
+  'wiz.lbl_invite': { az: 'Dəvət kodu', en: 'Invite code', ru: 'Код приглашения' },
+  'wiz.invite_opt': { az: 'istəyə bağlı', en: 'optional', ru: 'необязательно' },
+  'wiz.invite_hint': { az: 'Sizi dəvət edən dostunuzun kodu. Kodsuz da qeydiyyat tamamlanır.', en: 'The code from the friend who invited you. You can sign up without one.', ru: 'Код друга, который вас пригласил. Без кода регистрация тоже возможна.' },
+  'wiz.invite_ok': { az: 'Dəvət edən', en: 'Invited by', ru: 'Пригласил' },
+  'wiz.invite_bad': { az: 'Kod tapılmadı və ya vaxtı bitib', en: 'Code not found or expired', ru: 'Код не найден или истёк' },
   'wiz.create_load': { az: 'Hesab yaradılır...', en: 'Creating account...', ru: 'Создание аккаунта...' },
 
   /* ---------- Profile & Users ---------- */

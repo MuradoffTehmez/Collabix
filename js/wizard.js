@@ -64,6 +64,9 @@ const freshData = () => ({
   name: '', gender: '', birthDate: '', country: '', city: '', bio: '', avatarBlob: null,
   progLevels: {}, langLevels: {}, goals: '', lookingFor: [],
   instagram: '', github: '', linkedin: '', telegram: '', website: '',
+  // ⚠ Burada olmalıdır ki, uğurlu qeydiyyatdan sonra `freshData()` onu da
+  //   sıfırlasın — əks halda növbəti qeydiyyat əvvəlkinin kodunu daşıyardı.
+  inviteCode: '',
   // OAuth qeydiyyatı (Bənd 5): dolu olduqda parol sahələri gizlənir və
   // qeydiyyat sorğusu bu biletlə gedir. Bilet serverdə saxlanılır — client
   // ondan email/provayder id-sini oxuya və dəyişdirə bilmir.
@@ -236,6 +239,49 @@ function step3(){
 }
 
 function step4(){
+  /* Dəvət kodu — son addımda, sosial linklərdən sonra.
+   *
+   * 🔴 BU SAHƏ ƏVVƏL ÜMUMİYYƏTLƏ YOX İDİ, halbuki backend hazır idi:
+   *   `worker/routes/auth.ts` qeydiyyatda `redeemInvite(c, b.inviteCode, id)`
+   *   çağırır və `/api/invites/:code/check` qonaq endpoint-i məhz "qeydiyyat
+   *   formunda canlı yoxlama" üçün yazılıb (bax `worker/index.ts` şərhi).
+   *   Yəni dəvət XP-si heç vaxt verilə bilmirdi — axın yarımçıq qalmışdı.
+   *
+   * ⚠ SAHƏ MƏCBURİ DEYİL və validasiyası qeydiyyatı BLOKLAMIR: server səhv
+   *   kodu qəsdən səssizcə udur (kod marketinq mexanizmidir, autentifikasiya
+   *   şərti deyil). Buradakı canlı yoxlama yalnız İSTİFADƏÇİYƏ məlumat verir. */
+  const inviteIn = el('input', {
+    type: 'text', placeholder: 'ABCD1234', maxLength: 32,
+    autocapitalize: 'characters', autocomplete: 'off', spellcheck: 'false',
+    value: data.inviteCode || '',
+  });
+  const inviteStatus = el('div', { class: 'uname-status', role: 'status', 'aria-live': 'polite' });
+  const checkInvite = debounce(async () => {
+    const code = (data.inviteCode || '').trim();
+    if(!code){ inviteStatus.textContent = ''; inviteStatus.className = 'uname-status'; return; }
+    inviteStatus.textContent = '… ' + t('dyn.checking');
+    inviteStatus.className = 'uname-status';
+    try{
+      const r = await api(`/invites/${encodeURIComponent(code)}/check`);
+      if(r.valid){
+        inviteStatus.textContent = '✓ ' + t('wiz.invite_ok') + ': ' + (r.inviterName || '—');
+        inviteStatus.className = 'uname-status ok';
+      }else{
+        inviteStatus.textContent = '✗ ' + t('wiz.invite_bad');
+        inviteStatus.className = 'uname-status bad';
+      }
+    }catch{
+      // Şəbəkə xətası qeydiyyata mane olmamalıdır — status sadəcə təmizlənir.
+      inviteStatus.textContent = '';
+      inviteStatus.className = 'uname-status';
+    }
+  }, 450);
+  inviteIn.addEventListener('input', () => {
+    // Kodlar böyük hərflə saxlanılır; istifadəçi kiçik yazsa da uyğunlaşır.
+    data.inviteCode = inviteIn.value.trim().toUpperCase();
+    checkInvite();
+  });
+
   const node = el('div', { class: 'wiz-step' + (goingBack ? ' back' : '') },
     el('div', { class: 'row2' },
       field('Instagram', textInput('instagram', '@istifadəçi', 40)),
@@ -244,6 +290,13 @@ function step4(){
       field('LinkedIn', textInput('linkedin', 'in/istifadəçi', 60)),
       field('Telegram', textInput('telegram', '@istifadəçi', 40))),
     field(t('wiz.lbl_site'), textInput('website', 'https://...', 100)),
+    el('div', { class: 'wiz-invite' },
+      field(
+        t('wiz.lbl_invite') + ' (' + t('wiz.invite_opt') + ')',
+        el('div', {}, inviteIn, inviteStatus),
+        t('wiz.invite_hint'),
+      ),
+    ),
   );
   return { node, validate: () => {
     if(data.website && !/^https?:\/\/.+\..+/.test(data.website)) return t('wiz.err_site');
@@ -346,6 +399,7 @@ export function initWizard(){
         goals: data.goals.trim(), lookingFor: data.lookingFor,
         instagram: data.instagram.trim(), github: data.github.trim(),
         linkedin: data.linkedin.trim(), telegram: data.telegram.trim(), website: data.website.trim(),
+        inviteCode: (data.inviteCode || '').trim(),
         avatarBlob: data.avatarBlob,
       });
       err.textContent = '';

@@ -61,6 +61,13 @@ export async function register(d){
         goals: d.goals, lookingFor: d.lookingFor,
         instagram: d.instagram, github: d.github, linkedin: d.linkedin,
         telegram: d.telegram, website: d.website,
+        // ⚠ Bu sətir ƏVVƏL YOX İDİ — server `b.inviteCode` gözləyirdi
+        //   (`worker/routes/auth.ts` → `redeemInvite`), amma client onu heç
+        //   vaxt göndərmirdi. Nəticədə dəvət axını və "Dost dəvəti +50" XP-si
+        //   backend-də hazır olsa da praktikada işləmirdi.
+        // ⚠ Boş sətir `undefined` olur ki, gövdədə lazımsız açar getməsin;
+        //   server onsuz da səhv/boş kodu səssizcə udur.
+        inviteCode: d.inviteCode || undefined,
       },
     });
   }catch(e){

@@ -561,7 +561,11 @@
         <div class="form-err" id="loginErr"></div>
         <div id="loginOAuth"></div>
         <button type="button" class="link-btn" id="forgotBtn" data-i18n="auth.btn_forgot"></button>
-        <p class="form-note" data-i18n="auth.login_note"></p>
+        <!-- ⚠ `data-i18n-html`, `data-i18n` DEYİL: tərcümə sətrində `<b>` var.
+             `applyI18n()` adi `data-i18n`-i `textContent` ilə yazır, ona görə
+             teqlər EKRANDA HƏRFİ görünürdü ("…əvvəlcə <b>Qeydiyyat</b>
+             bölməsindən…"). `data-i18n-html` `innerHTML` işlədir. -->
+        <p class="form-note" data-i18n-html="auth.login_note"></p>
       </div>
     </div>
   </div>

@@ -34,15 +34,26 @@
   padding: 0;
 }
 
+/* ⚠ Etiket YALNIZ cari addımda göstərilir (aşağıdakı `.wsc-lbl` qaydası).
+   Əvvəl dörd etiketin hamısı yan-yana sığmağa çalışırdı və hamısı ellipslə
+   kəsilirdi ("Sosial (hamı…", "Bacarıqlar v…") — sınıq təəssürat yaradırdı.
+   İndi keçilmiş/gələcək addımlar yalnız nöqtə kimi görünür, cari addım isə
+   tam adı ilə genişlənir: nə kəsilmə, nə məlumat itkisi. */
 .wiz-step-chip {
   display: flex;
   align-items: center;
   gap: 5px;
   min-width: 0;
-  flex: 1;
+  flex: 0 0 auto;
   color: var(--muted);
   font-size: .68rem;
   line-height: 1.2;
+  transition: flex-grow .25s ease;
+}
+
+.wiz-step-chip.cur {
+  flex: 1 1 auto;
+  color: var(--text);
 }
 
 .wsc-dot {
@@ -61,9 +72,19 @@
 }
 
 .wsc-lbl {
+  /* Yalnız cari addımda görünür — bax `.wiz-step-chip` şərhi.
+     ⚠ `display: none` istifadə olunur, `visibility` yox: gizli etiket yer
+     tutmamalıdır, əks halda çiplər yenə sıxılar. Ekran oxuyucusu üçün
+     məlumat itmir — addım nömrəsi `.wsc-dot`-dadır və cari addımın tam adı
+     `.wizard-step-lbl` sətrində onsuz da yazılır. */
+  display: none;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.wiz-step-chip.cur .wsc-lbl {
+  display: inline;
 }
 
 .wiz-step-chip.done .wsc-dot {
