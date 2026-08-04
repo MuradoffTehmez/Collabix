@@ -340,52 +340,178 @@
   line-height: 1.55;
 }
 
-/* how it works */
+/* how it works - Premium SaaS Redesign */
+.pub-subtitle {
+  color: var(--muted);
+  font-size: 1.15rem;
+  margin-bottom: 48px;
+  line-height: 1.6;
+  max-width: 600px;
+}
+
 .how-steps {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 24px;
+  padding-bottom: 40px;
 }
 
 .how-step {
   display: flex;
-  gap: 16px;
+  gap: 24px;
   align-items: flex-start;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 18px 20px;
-  animation: cardPop .45s ease both;
+  border-radius: 20px;
+  padding: 32px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  animation: cardPop 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  position: relative;
+  overflow: hidden;
 }
 
-/* ⚠ `.how-step.rev` SİLİNDİ — bax `renderWelcome()`-dakı izah. Növbələşən
-   `row-reverse` addımların hizasını pozurdu. */
+.how-step::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
 
-.hs-num {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
+.how-step:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--sh-3);
+  border-color: var(--coral);
+}
+
+.how-step:hover::before { opacity: 1; }
+
+.hs-left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.hs-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
   background: linear-gradient(135deg, var(--coral), var(--coral2));
   color: #fff;
   font-family: var(--display);
   font-weight: 800;
-  font-size: 1.15rem;
+  font-size: 1.25rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+  box-shadow: 0 4px 12px var(--coral-dim);
+  margin-bottom: 12px;
+  position: relative;
+  z-index: 2;
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
 }
 
-.hs-body h3 {
+.how-step:hover .hs-badge {
+  box-shadow: 0 8px 24px var(--coral-dim);
+  transform: scale(1.05);
+}
+
+.hs-icon-box {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: linear-gradient(145deg, var(--surface-2), var(--surface));
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.05), 0 4px 8px rgba(0, 0, 0, 0.1);
+  position: relative;
+  z-index: 2;
+}
+
+.hs-ic {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.hs-icon-box svg { width: 32px; height: 32px; }
+
+.how-step:hover .hs-ic { transform: scale(1.15) rotate(5deg); }
+
+.hs-timeline {
+  position: absolute;
+  top: 136px;
+  bottom: -56px;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  background: var(--border);
+  z-index: 1;
+  overflow: hidden;
+}
+
+.hs-timeline::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 0%;
+  background: var(--coral);
+  transition: height 0.4s ease;
+}
+
+.how-step:hover .hs-timeline::after { height: 100%; }
+
+.hs-right {
+  display: flex;
+  flex-direction: column;
+  padding-top: 4px;
+  position: relative;
+  z-index: 2;
+}
+
+.hs-right h3 {
   font-family: var(--display);
-  font-size: 1rem;
-  margin-bottom: 4px;
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text);
+  transition: color 0.3s ease;
 }
 
-.hs-body p {
+.how-step:hover .hs-right h3 { color: var(--coral); }
+
+.hs-right p {
   color: var(--muted);
-  font-size: .84rem;
-  line-height: 1.55;
+  font-size: 16px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .how-step {
+    flex-direction: column;
+    padding: 24px;
+    gap: 16px;
+  }
+  .hs-left {
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+  }
+  .hs-badge { margin-bottom: 0; width: 44px; height: 44px; font-size: 1.1rem; }
+  .hs-icon-box { width: 56px; height: 56px; }
+  .hs-icon-box svg { width: 28px; height: 28px; }
+  .hs-timeline { display: none; }
 }
 
 /* sidebar widgets */

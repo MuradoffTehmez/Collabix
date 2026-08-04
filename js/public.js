@@ -231,15 +231,15 @@ function renderWelcome(){
   // Ana#8 — hər mərhələyə vahid üslublu SVG ikon (nömrə ilə yanaşı).
   const steps = document.getElementById('howSteps');
   clear(steps);
-  [['how.1t', 'how.1d'], ['how.2t', 'how.2d'], ['how.3t', 'how.3d'], ['how.4t', 'how.4d']].forEach(([tt, dd], i) => {
-    // ⚠ Növbələşən `rev` sinfi SİLİNDİ: hər ikinci addım `row-reverse` +
-    //   `text-align: right` olurdu, yəni ikon gah solda, gah sağda dururdu və
-    //   mətnin başlanğıc oxu sətirdən-sətrə tullanırdı. Nəticə qəsdən dizayn
-    //   kimi yox, "sürüşmüş" kimi oxunurdu. Ardıcıl sol hizalanma göz üçün
-    //   tək şaquli oxu saxlayır — addım siyahısı məhz belə skan olunur.
-    steps.append(el('div', { class: 'how-step' },
-      el('div', { class: 'hs-num' }, el('span', { class: 'hs-ic' }, STEP_ICONS[i]()), el('b', {}, i + 1)),
-      el('div', { class: 'hs-body' }, el('h3', {}, t(tt)), el('p', {}, t(dd))),
+  const arr = [['how.1t', 'how.1d'], ['how.2t', 'how.2d'], ['how.3t', 'how.3d'], ['how.4t', 'how.4d']];
+  arr.forEach(([tt, dd], i) => {
+    steps.append(el('div', { class: 'how-step', style: `animation-delay: ${i * 80}ms` },
+      el('div', { class: 'hs-left' },
+        el('div', { class: 'hs-badge' }, el('span', {}, i + 1)),
+        el('div', { class: 'hs-icon-box' }, el('span', { class: 'hs-ic' }, STEP_ICONS[i]())),
+        i < arr.length - 1 ? el('div', { class: 'hs-timeline' }) : null
+      ),
+      el('div', { class: 'hs-right' }, el('h3', {}, t(tt)), el('p', {}, t(dd)))
     ));
   });
 

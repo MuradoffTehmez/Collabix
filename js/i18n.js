@@ -71,6 +71,7 @@ const D = {
 
   /* ---------- how it works ---------- */
   'how.title':     { az: 'Necə işləyir?', en: 'How it works', ru: 'Как это работает' },
+  'how.subtitle':  { az: 'Bir neçə sadə addımla icmaya qoşul və inkişaf etməyə başla.', en: 'Join the community and start growing in a few simple steps.', ru: 'Присоединяйтесь к сообществу и начните развиваться в несколько простых шагов.' },
   'how.1t':        { az: 'Qeydiyyatdan keç', en: 'Sign up', ru: 'Зарегистрируйся' },
   'how.1d':        { az: '4 addımlı sihirbazla profil yarat — skill-lərini və hədəflərini seç.', en: 'Create a profile with the 4-step wizard — pick your skills and goals.', ru: 'Создай профиль в 4 шага — выбери навыки и цели.' },
   'how.2t':        { az: 'İcmaya qoşul', en: 'Join the community', ru: 'Присоединяйся' },
