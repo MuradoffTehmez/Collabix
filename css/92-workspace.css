@@ -347,7 +347,7 @@ button.ws-card:focus-visible { outline: 2px solid var(--coral); outline-offset: 
   right: 10px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   font-family: var(--mono);
   color: var(--muted);
   border: 1px solid var(--border);
@@ -364,7 +364,7 @@ button.ws-card:focus-visible { outline: 2px solid var(--coral); outline-offset: 
   border-radius: 9px;
   background: var(--coral);
   color: #fff;
-  font-size: 10px;
+  font-size: var(--fs-xs);
   font-weight: 700;
   display: inline-flex;
   align-items: center;
@@ -644,21 +644,21 @@ button.ws-card:focus-visible { outline: 2px solid var(--coral); outline-offset: 
 .ws-selbox { width: 14px; height: 14px; cursor: pointer; flex: 0 0 auto; }
 .ws-key {
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--muted);
   background: var(--surface-2);
   border-radius: 5px;
   padding: 1px 5px;
 }
-.ws-key--lg { font-size: var(--fs-xs); padding: 3px 8px; }
-.ws-prio { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; }
+.ws-key--lg { padding: 3px 8px; }
+.ws-prio { display: inline-flex; align-items: center; gap: 3px; font-size: var(--fs-xs); font-weight: 700; }
 .ws-stat {
   display: inline-flex;
   align-items: center;
   padding: 1px 8px;
   border-radius: var(--r-pill);
   background: color-mix(in srgb, currentColor 13%, transparent);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   font-weight: 600;
 }
 .ws-card-t__h {
@@ -677,7 +677,7 @@ button.ws-card:focus-visible { outline: 2px solid var(--coral); outline-offset: 
   align-items: center;
   gap: var(--sp-2);
   flex-wrap: wrap;
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--muted);
 }
 .ws-card-t__sp { flex: 1 1 auto; }
@@ -706,7 +706,7 @@ button.ws-card:focus-visible { outline: 2px solid var(--coral); outline-offset: 
   border-radius: var(--r-pill);
   background: color-mix(in srgb, var(--lc, var(--ws-slate)) 15%, transparent);
   color: var(--lc, var(--ws-slate));
-  font-size: 10px;
+  font-size: var(--fs-xs);
   font-weight: 600;
   border: none;
   cursor: default;
@@ -721,7 +721,7 @@ button.ws-card:focus-visible { outline: 2px solid var(--coral); outline-offset: 
   padding: 2px 7px;
 }
 
-.ws-prog { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--muted); }
+.ws-prog { display: flex; align-items: center; gap: 6px; font-size: var(--fs-xs); color: var(--muted); }
 .ws-prog i {
   flex: 1 1 auto;
   height: 4px;
@@ -956,7 +956,7 @@ button.ws-card:focus-visible { outline: 2px solid var(--coral); outline-offset: 
 .ws-cm__b { flex: 1 1 auto; min-width: 0; }
 .ws-cm__h { display: flex; align-items: baseline; gap: 7px; font-size: var(--fs-xs); color: var(--muted); }
 .ws-cm__h b { color: var(--text); }
-.ws-cm__h i { font-style: normal; font-size: 10px; }
+.ws-cm__h i { font-style: normal; font-size: var(--fs-xs); }
 .ws-cm__b p { margin: 2px 0 0; font-size: var(--fs-sm); line-height: 1.5; overflow-wrap: anywhere; }
 .ws-cm__form { display: flex; gap: var(--sp-2); align-items: flex-end; margin-top: var(--sp-2); }
 .ws-cm__in { flex: 1 1 auto; font-size: var(--fs-sm); resize: vertical; }
@@ -993,7 +993,7 @@ button.ws-card:focus-visible { outline: 2px solid var(--coral); outline-offset: 
   z-index: 4;
   background: var(--surface);
   text-align: left;
-  padding: 9px var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
   font-size: var(--fs-xs);
   font-weight: 700;
   color: var(--muted);
@@ -1003,10 +1003,12 @@ button.ws-card:focus-visible { outline: 2px solid var(--coral); outline-offset: 
 .ws-tb th.is-sortable { cursor: pointer; }
 .ws-tb th.is-sortable:hover { color: var(--text); }
 .ws-tb th.is-on { color: var(--coral); }
-.ws-tb td { padding: 8px var(--sp-3); border-bottom: 1px solid var(--border); vertical-align: middle; }
+.ws-tb td { padding: var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--border); vertical-align: middle; transition: background var(--mo-fast) var(--mo-ease); }
 .ws-tb tr:last-child td { border-bottom: none; }
-.ws-tb__r { cursor: pointer; }
+.ws-tb__r { cursor: pointer; transition: transform var(--mo-fast) var(--mo-ease); }
 .ws-tb__r:hover td { background: var(--surface-2); }
+/* Hover lift added per implementation plan requirements */
+.ws-tb__r:hover { transform: translateY(-1px); }
 .ws-tb__r:focus-visible { outline: 2px solid var(--coral); outline-offset: -2px; }
 .ws-tb__t { font-weight: 600; }
 .ws-tb__u { display: inline-flex; align-items: center; gap: 6px; }
@@ -1070,7 +1072,7 @@ button.ws-card:focus-visible { outline: 2px solid var(--coral); outline-offset: 
   border: none;
   border-radius: 5px;
   background: color-mix(in srgb, currentColor 12%, transparent);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   text-align: left;
   cursor: pointer;
   overflow: hidden;
@@ -1080,7 +1082,7 @@ button.ws-card:focus-visible { outline: 2px solid var(--coral); outline-offset: 
 }
 .ws-cal__t i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex: 0 0 auto; }
 .ws-cal__t.is-done { opacity: .55; text-decoration: line-through; }
-.ws-cal__more { font-size: 10px; color: var(--muted); padding-left: 5px; }
+.ws-cal__more { font-size: var(--fs-xs); color: var(--muted); padding-left: 5px; }
 
 /* ═══════════════════════ ZAMAN XƏTTİ ═══════════════════════ */
 
@@ -1221,7 +1223,7 @@ button.ws-card:focus-visible { outline: 2px solid var(--coral); outline-offset: 
   border-radius: var(--r-pill);
   background: color-mix(in srgb, currentColor 22%, transparent);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 45%, transparent);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   font-family: var(--body);
   cursor: pointer;
   overflow: hidden;
@@ -1250,13 +1252,13 @@ button.ws-card:focus-visible { outline: 2px solid var(--coral); outline-offset: 
     font-size: var(--fs-xs);
   }
   .ws-cal__d { min-height: 76px; }
-  .ws-cal__t { font-size: 9px; }
+  .ws-cal__t { font-size: var(--fs-xs); }
   .ws-gantt { grid-template-columns: 140px repeat(var(--gc, 12), minmax(40px, 1fr)); }
   .ws-gantt::before { left: calc(140px + (var(--today, 1) - 0.5) * ((100% - 140px) / var(--gc, 12))); }
 }
 
 @media (max-width: 480px) {
-  .ws-cal__wd { font-size: 9px; padding: 5px 2px; }
+  .ws-cal__wd { font-size: var(--fs-xs); padding: 5px 2px; }
   .ws-cal__d { min-height: 62px; padding: 3px; }
   .ws-cal__nav h2 { min-width: 0; font-size: var(--fs-sm); }
 }

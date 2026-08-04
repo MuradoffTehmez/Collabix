@@ -8,8 +8,8 @@
   z-index: 85;
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 9px 18px;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-4);
   background: color-mix(in srgb, var(--surface) 88%, transparent);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
@@ -27,9 +27,9 @@
   background: var(--surface-2);
   border: 1px solid var(--border);
   color: var(--text);
-  padding: 8px 14px;
-  border-radius: 999px;
-  font-size: .82rem;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-pill);
+  font-size: var(--fs-sm);
 }
 
 .app-search:focus {
@@ -41,7 +41,7 @@
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-2);
   position: relative;
 }
 
@@ -49,10 +49,10 @@
   position: relative;
   background: none;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--r-md);
   color: var(--text);
   font-size: .95rem;
-  padding: 7px 10px;
+  padding: var(--sp-2) var(--sp-3);
   min-width: 38px;
   min-height: 38px;
 }
@@ -77,17 +77,17 @@
 .at-avatar-btn .avatar {
   width: 36px;
   height: 36px;
-  border-radius: 11px;
+  border-radius: var(--r-md);
 }
 
 .avatar-menu {
   position: absolute;
-  top: calc(100% + 8px);
+  top: calc(100% + var(--sp-2));
   right: 0;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, .4);
+  border-radius: var(--r-md);
+  box-shadow: var(--sh-3);
   display: none;
   flex-direction: column;
   min-width: 180px;
@@ -103,14 +103,14 @@
 .avatar-menu button {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-3);
   background: none;
   border: none;
   color: var(--text);
-  padding: 11px 14px;
-  font-size: .85rem;
+  padding: var(--sp-3) var(--sp-3);
+  font-size: var(--fs-sm);
   text-align: left;
-  min-height: 44px;
+  min-height: var(--tap);
 }
 
 .avatar-menu button:hover {
@@ -123,15 +123,15 @@
 }
 
 .app-footer {
-  margin-top: 36px;
-  padding: 14px 4px;
+  margin-top: var(--sp-6);
+  padding: var(--sp-3) var(--sp-1);
   border-top: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--sp-3);
   flex-wrap: wrap;
   color: var(--muted);
-  font-size: .74rem;
+  font-size: var(--fs-xs);
 }
 
 .app-footer a {
@@ -147,10 +147,10 @@
   flex-shrink: 0;
   background: var(--surface);
   border-right: 1px solid var(--border);
-  padding: 16px 14px;
+  padding: var(--sp-4);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--sp-1);
   position: sticky;
   top: 57px;
   height: calc(100vh - 57px);
@@ -163,9 +163,9 @@
   font-size: 1.15rem;
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 24px;
-  padding: 0 6px;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-5);
+  padding: 0 var(--sp-1);
 }
 
 /* ⚠ `.brand .dot` SİLİNDİ — o element artıq yoxdur. Brend nişanı indi inline
@@ -175,17 +175,19 @@
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 10px;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-3);
+  border-radius: var(--r-md);
   color: var(--muted);
-  font-size: .92rem;
+  font-size: var(--fs-sm);
   font-weight: 500;
   background: none;
   border: none;
+  /* AUDIT-UI: invisible left border — active state adds coral color. */
+  border-left: 3px solid transparent;
   text-align: left;
   width: 100%;
-  transition: .15s;
+  transition: background var(--mo-fast) var(--mo-ease), color var(--mo-fast) var(--mo-ease), border-color var(--mo-fast) var(--mo-ease);
   position: relative;
 }
 
@@ -197,6 +199,7 @@
 .nav-item.active {
   background: var(--coral-dim);
   color: var(--coral);
+  border-left-color: var(--coral);
 }
 
 .nav-item .ic {
@@ -232,8 +235,9 @@
 
 .nav-item.admin-item {
   border: 1px solid var(--coral);
+  border-left: 3px solid var(--coral);
   color: var(--coral);
-  margin-top: 6px;
+  margin-top: var(--sp-2);
 }
 
 .nav-item.admin-item:hover {
@@ -242,38 +246,38 @@
 
 .sidebar-bottom {
   margin-top: auto;
-  padding-top: 14px;
+  padding-top: var(--sp-3);
   border-top: 1px solid var(--border);
 }
 
 .user-chip {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 6px;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-1);
   cursor: pointer;
 }
 
 .user-chip .name {
-  font-size: .85rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
 }
 
 .user-chip .streak {
   font-family: var(--mono);
-  font-size: .72rem;
+  font-size: var(--fs-xs);
   color: var(--teal);
 }
 
 .logout-btn {
   width: 100%;
-  margin-top: 8px;
-  padding: 8px;
-  border-radius: 8px;
+  margin-top: var(--sp-2);
+  padding: var(--sp-2);
+  border-radius: var(--r-sm);
   border: 1px solid var(--border);
   background: none;
   color: var(--muted);
-  font-size: .76rem;
+  font-size: var(--fs-xs);
 }
 
 .logout-btn:hover {
@@ -289,7 +293,7 @@
      daşıdırdı. `min-width: 0` `.main`-a məzmundan kiçik olmağa icazə verir, beləcə
      daxili `.hm-scroll overflow-x:auto` düzgün işləyir. */
   min-width: 0;
-  padding: 28px 34px;
+  padding: var(--sp-5) var(--sp-6);
   max-width: 1140px;
   width: 100%;
 }
@@ -325,19 +329,19 @@ h1.page-title {
 
 .page-sub {
   color: var(--muted);
-  font-size: .9rem;
-  margin-bottom: 26px;
+  font-size: var(--fs-md);
+  margin-bottom: var(--sp-5);
 }
 
 .tag {
   font-family: var(--mono);
-  font-size: .72rem;
-  padding: 3px 9px;
-  border-radius: 6px;
+  font-size: var(--fs-xs);
+  padding: 3px var(--sp-2);
+  border-radius: var(--r-sm);
   border: 1px solid var(--border);
   color: var(--muted);
   display: inline-flex;
-  gap: 4px;
+  gap: var(--sp-1);
   align-items: center;
 }
 
@@ -386,22 +390,22 @@ h1.page-title {
 .stat-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
-  margin-bottom: 28px;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-5);
 }
 
 .stat-card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 18px;
-  transition: .15s;
+  padding: var(--sp-4);
+  transition: border-color var(--mo-fast) var(--mo-ease), transform var(--mo-fast) var(--mo-ease), box-shadow var(--mo-base) var(--mo-ease);
 }
 
 .stat-card:hover {
   border-color: var(--primary);
-  transform: translateY(-4px);
-  box-shadow: 0 12px 32px var(--card-hover-glow);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px var(--card-hover-glow);
 }
 
 .stat-card .num {
@@ -412,8 +416,8 @@ h1.page-title {
 
 .stat-card .lbl {
   color: var(--muted);
-  font-size: .78rem;
-  margin-top: 2px;
+  font-size: var(--fs-xs);
+  margin-top: var(--sp-1);
 }
 
 .stat-card.flame .num {
@@ -423,19 +427,19 @@ h1.page-title {
 .section-title {
   font-family: var(--display);
   font-weight: 700;
-  font-size: 1.05rem;
-  margin-bottom: 12px;
+  font-size: var(--fs-lg);
+  margin-bottom: var(--sp-3);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-2);
 }
 
 .composer {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 16px;
-  margin-bottom: 26px;
+  padding: var(--sp-4);
+  margin-bottom: var(--sp-5);
 }
 
 .composer textarea {
@@ -443,17 +447,17 @@ h1.page-title {
   background: var(--surface-2);
   border: 1px solid var(--border);
   color: var(--text);
-  border-radius: 9px;
-  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  padding: var(--sp-3);
   font-family: inherit;
-  font-size: .88rem;
+  font-size: var(--fs-sm);
   resize: vertical;
   min-height: 60px;
 }
 
 .composer textarea.code-mode {
   font-family: var(--mono);
-  font-size: .82rem;
+  font-size: var(--fs-sm);
   min-height: 120px;
 }
 
@@ -466,8 +470,8 @@ h1.page-title {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 10px;
-  gap: 10px;
+  margin-top: var(--sp-3);
+  gap: var(--sp-3);
   flex-wrap: wrap;
 }
 
@@ -538,14 +542,14 @@ h1.page-title {
 }
 
 .btn-small {
-  padding: 8px 16px;
+  padding: var(--sp-2) var(--sp-4);
   border: none;
-  border-radius: 9px;
+  border-radius: var(--r-sm);
   background: linear-gradient(100deg, var(--coral), var(--coral2));
   /* AUDIT-UI: `.btn-primary` ilə eyni kontrast qüsuru — bax 00-tokens-base.css. */
   color: var(--on-accent);
   font-weight: 700;
-  font-size: .82rem;
+  font-size: var(--fs-sm);
   flex-shrink: 0;
 }
 
@@ -557,9 +561,9 @@ select.code-lang-sel {
   background: var(--surface-2);
   border: 1px solid var(--border);
   color: var(--text);
-  padding: 7px 10px;
-  border-radius: 8px;
-  font-size: .8rem;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-sm);
   font-family: var(--mono);
   display: none;
 }

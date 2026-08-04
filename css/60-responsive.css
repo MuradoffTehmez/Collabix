@@ -31,7 +31,7 @@
 
   .app-search {
     max-width: 150px;
-    font-size: .76rem;
+    font-size: var(--fs-xs);
   }
 
   .lang-switch {
@@ -144,8 +144,8 @@
 
   /* Card responsive: tablet */
   .feed-card {
-    padding: 18px 18px;
-    border-radius: 16px;
+    padding: var(--sp-4);
+    border-radius: var(--r-lg);
   }
 
   .feed-head .avatar {
@@ -158,8 +158,8 @@
   }
 
   .act-btn {
-    padding: 8px 10px;
-    font-size: .76rem;
+    padding: var(--sp-2) var(--sp-3);
+    font-size: var(--fs-sm);
   }
 
   .btn-small,
@@ -213,23 +213,23 @@
 @media (max-width: 480px) {
   /* Card responsive: phone */
   .feed-card {
-    padding: 14px 14px;
-    border-radius: 14px;
-    margin-bottom: 12px;
+    padding: var(--sp-3);
+    border-radius: var(--r-md);
+    margin-bottom: var(--sp-3);
   }
 
   .feed-head {
-    gap: 10px;
+    gap: var(--sp-2);
   }
 
   .feed-head .avatar {
     width: 34px;
     height: 34px;
-    border-radius: 10px;
+    border-radius: var(--r-sm);
   }
 
   .feed-head .name {
-    font-size: .86rem;
+    font-size: var(--fs-sm);
   }
 
   .feed-actions {
@@ -239,21 +239,21 @@
   }
 
   .act-btn {
-    padding: 8px 8px;
-    border-radius: 8px;
+    padding: var(--sp-2);
+    border-radius: var(--r-sm);
   }
 
   .act-btn .count {
-    font-size: .72rem;
+    font-size: var(--fs-xs);
   }
 
   .feed-code code {
-    font-size: .72rem;
-    padding: 12px 14px !important;
+    font-size: var(--fs-xs);
+    padding: var(--sp-3) var(--sp-4) !important;
   }
 
   .code-head {
-    padding: 6px 10px;
+    padding: var(--sp-1) var(--sp-2);
   }
 
   .card-menu-dropdown {
@@ -262,11 +262,11 @@
 
   .stat-row {
     grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    gap: var(--sp-2);
   }
 
   .stat-card {
-    padding: 13px;
+    padding: var(--sp-3);
   }
 
   .stat-card .num {
@@ -332,7 +332,7 @@
 /* ==== Breakpoint: 360 (kiçik telefon) ==== */
 @media (max-width: 360px) {
   .bottom-nav button small {
-    font-size: .52rem;
+    font-size: var(--fs-xs);
   }
 
   h1.page-title {

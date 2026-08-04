@@ -7,7 +7,7 @@
   background: var(--surface-2);
   border-radius: 3px;
   overflow: hidden;
-  margin-bottom: 8px;
+  margin-bottom: var(--sp-2);
 }
 
 .wp-fill {
@@ -20,17 +20,17 @@
 
 .wizard-step-lbl {
   font-family: var(--mono);
-  font-size: .74rem;
+  font-size: var(--fs-xs);
   color: var(--muted);
-  margin-bottom: 16px;
+  margin-bottom: var(--sp-4);
 }
 
 /* Ana#11 — addım etiketləri (tamamlanmış / cari / gözləyən) */
 .wizard-steps {
   display: flex;
-  gap: 6px;
+  gap: var(--sp-1);
   list-style: none;
-  margin: 8px 0 10px;
+  margin: var(--sp-2) 0 var(--sp-2);
   padding: 0;
 }
 
@@ -42,13 +42,13 @@
 .wiz-step-chip {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--sp-1);
   min-width: 0;
   flex: 0 0 auto;
   color: var(--muted);
-  font-size: .68rem;
-  line-height: 1.2;
-  transition: flex-grow .25s ease;
+  font-size: var(--fs-xs);
+  line-height: var(--lh-tight);
+  transition: flex-grow var(--mo-fast) var(--mo-ease);
 }
 
 .wiz-step-chip.cur {
@@ -63,12 +63,12 @@
   width: 17px;
   height: 17px;
   flex: 0 0 auto;
-  border-radius: 50%;
+  border-radius: var(--r-pill);
   border: 1px solid var(--border);
   background: var(--surface-2);
-  font-size: .6rem;
+  font-size: var(--fs-xs);
   font-weight: 700;
-  transition: background-color .25s ease, border-color .25s ease, color .25s ease;
+  transition: background-color var(--mo-fast) var(--mo-ease), border-color var(--mo-fast) var(--mo-ease), color var(--mo-fast) var(--mo-ease);
 }
 
 .wsc-lbl {
@@ -100,7 +100,7 @@
 .wiz-step-chip.cur .wsc-dot {
   background: var(--coral);
   border-color: var(--coral);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 /* dar ekranda yalnız nömrələr — etiketlər sığmır */
@@ -122,18 +122,18 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 10px;
-  margin-top: 16px;
+  gap: var(--sp-2);
+  margin-top: var(--sp-4);
 }
 
 .wizard-next {
   width: auto !important;
-  padding: 11px 26px !important;
+  padding: var(--sp-2) var(--sp-6) !important;
   margin-top: 0 !important;
 }
 
 .wiz-step {
-  animation: wizIn .3s ease;
+  animation: wizIn var(--mo-fast) var(--mo-ease);
 }
 
 @keyframes wizIn {
@@ -205,7 +205,7 @@
 }
 
 .strength-lbl {
-  font-size: .68rem;
+  font-size: var(--fs-xs);
   color: var(--muted);
   margin-top: 3px;
   font-family: var(--mono);
@@ -213,7 +213,7 @@
 }
 
 .uname-status {
-  font-size: .72rem;
+  font-size: var(--fs-xs);
   margin-top: 4px;
   font-family: var(--mono);
   min-height: 14px;
@@ -230,10 +230,10 @@
 .remember-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: .8rem;
+  gap: var(--sp-2);
+  font-size: var(--fs-sm);
   color: var(--muted);
-  margin: 4px 0 10px;
+  margin: var(--sp-1) 0 var(--sp-2);
   cursor: pointer;
 }
 
@@ -241,8 +241,8 @@
   background: none;
   border: none;
   color: var(--teal);
-  font-size: .78rem;
-  margin-top: 10px;
+  font-size: var(--fs-sm);
+  margin-top: var(--sp-2);
   display: block;
   width: 100%;
   text-align: center;
@@ -276,29 +276,29 @@
 .skill-pick {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
+  gap: var(--sp-2);
 }
 
 .skill-chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 11px;
-  border-radius: 999px;
+  gap: var(--sp-1);
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--r-pill);
   border: 1px solid var(--border);
   background: var(--surface-2);
   color: var(--muted);
-  font-size: .78rem;
+  font-size: var(--fs-sm);
   font-family: var(--mono);
   cursor: pointer;
-  transition: .15s;
+  transition: border-color var(--mo-fast) var(--mo-ease), color var(--mo-fast) var(--mo-ease);
   user-select: none;
 }
 
 .skill-chip .lvl {
-  font-size: .62rem;
-  padding: 1px 6px;
-  border-radius: 999px;
+  font-size: var(--fs-xs);
+  padding: 1px var(--sp-1);
+  border-radius: var(--r-pill);
   background: var(--surface);
   display: none;
 }
@@ -330,18 +330,18 @@
 .skill-chip-view {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 11px;
-  border-radius: 999px;
+  gap: var(--sp-1);
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--r-pill);
   border: 1px solid var(--teal);
   color: var(--teal);
   background: var(--teal-dim);
-  font-size: .76rem;
+  font-size: var(--fs-xs);
   font-family: var(--mono);
 }
 
 .skill-chip-view .lvl {
-  font-size: .6rem;
+  font-size: var(--fs-xs);
   opacity: .85;
 }
 
@@ -396,7 +396,7 @@
 .fp-head {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: var(--sp-2);
 }
 
 .fp-head .ic {
@@ -407,15 +407,15 @@
 
 .fp-body {
   color: var(--muted);
-  font-size: .86rem;
-  line-height: 1.6;
-  margin-bottom: 14px;
+  font-size: var(--fs-sm);
+  line-height: var(--lh-relaxed);
+  margin-bottom: var(--sp-3);
 }
 
 .fp-mail {
   display: inline-flex;
   font-family: var(--mono);
-  font-size: .82rem;
+  font-size: var(--fs-sm);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════

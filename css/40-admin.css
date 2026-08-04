@@ -171,8 +171,8 @@
   padding: 11px 18px;
   border-radius: 12px;
   font-size: .85rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, .4);
-  animation: toastIn .25s ease;
+  box-shadow: var(--sh-3);
+  animation: toastIn var(--mo-base) var(--mo-ease);
   display: flex;
   gap: 8px;
   align-items: center;

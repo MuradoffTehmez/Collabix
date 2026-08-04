@@ -203,7 +203,7 @@ button {
   align-items: center;
   justify-content: center;
   position: relative;
-  transition: transform .2s ease, box-shadow .2s ease;
+  transition: transform var(--mo-base) var(--mo-ease), box-shadow var(--mo-base) var(--mo-ease);
 }
 
 .avatar:hover {
@@ -216,7 +216,7 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 30px;
+  padding: var(--sp-6);
   position: relative;
   overflow: hidden;
 }
@@ -380,7 +380,7 @@ button {
 .btn-small {
   background-size: 220% 100%;
   background-image: linear-gradient(100deg, var(--coral), var(--coral2), var(--coral));
-  transition: filter .15s, transform .15s, background-position .6s ease;
+  transition: filter var(--mo-fast) var(--mo-ease), transform var(--mo-fast) var(--mo-ease), background-position .6s ease;
 }
 
 .btn-primary:hover,
@@ -406,7 +406,7 @@ button {
 .nav-item,
 .social-chip,
 .tag {
-  transition: transform .18s ease, border-color .18s ease, background-color .18s ease;
+  transition: transform var(--mo-base) var(--mo-ease), border-color var(--mo-base) var(--mo-ease), background-color var(--mo-base) var(--mo-ease);
 }
 
 .nav-item:hover {
@@ -425,11 +425,11 @@ button {
   border: 1px solid var(--border);
   border-radius: 22px;
   overflow: hidden;
-  box-shadow: 0 30px 80px rgba(0, 0, 0, .45);
+  box-shadow: var(--sh-3);
 }
 
 .auth-hero {
-  padding: 46px 40px;
+  padding: var(--sp-7) 40px;
   display: flex;
   flex-direction: column;
   /* ⚠ `space-between` DEYİL: sağdakı form hündür olanda (qeydiyyat 4 addım)
@@ -438,7 +438,7 @@ button {
      qısadır). `center` artıq boşluğu yuxarı/aşağı bərabər paylayır, yəni
      mətn qrupu hər iki tabda bütöv qalır. */
   justify-content: center;
-  gap: 18px;
+  gap: var(--sp-4);
   border-right: 1px solid var(--border);
   position: relative;
 }
@@ -448,7 +448,7 @@ button {
   font-size: 2.3rem;
   font-weight: 800;
   line-height: 1.12;
-  margin-bottom: 14px;
+  margin-bottom: var(--sp-3);
   letter-spacing: -.02em;
 }
 
@@ -468,24 +468,24 @@ button {
 .lang-orbit {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 22px;
+  gap: var(--sp-2);
+  margin-top: var(--sp-5);
 }
 
 .lang-orbit span {
   font-family: var(--mono);
-  font-size: .72rem;
-  padding: 5px 10px;
-  border-radius: 999px;
+  font-size: var(--fs-xs);
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--r-pill);
   border: 1px solid var(--border);
   color: var(--muted);
 }
 
 .term-line {
   font-family: var(--mono);
-  font-size: .78rem;
+  font-size: var(--fs-sm);
   color: var(--teal);
-  margin-top: 26px;
+  margin-top: var(--sp-5);
 }
 
 .term-line::before {
@@ -510,39 +510,39 @@ button {
 }
 
 .storage-note {
-  font-size: .7rem;
+  font-size: var(--fs-xs);
   color: var(--muted);
-  margin-top: 18px;
-  line-height: 1.5;
+  margin-top: var(--sp-4);
+  line-height: var(--lh-normal);
   border-top: 1px solid var(--border);
-  padding-top: 14px;
+  padding-top: var(--sp-3);
 }
 
 .auth-form {
-  padding: 40px 34px;
+  padding: var(--sp-7) var(--sp-6);
   max-height: 88vh;
   overflow-y: auto;
 }
 
 .tabs-switch {
   display: flex;
-  gap: 5px;
-  margin-bottom: 22px;
+  gap: var(--sp-1);
+  margin-bottom: var(--sp-5);
   background: var(--surface-2);
-  padding: 4px;
-  border-radius: 11px;
+  padding: var(--sp-1);
+  border-radius: var(--r-md);
 }
 
 .tabs-switch button {
   flex: 1;
-  padding: 9px 4px;
+  padding: var(--sp-2) var(--sp-1);
   border: none;
   background: none;
   color: var(--muted);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   font-weight: 600;
-  font-size: .8rem;
-  transition: .15s;
+  font-size: var(--fs-sm);
+  transition: background var(--mo-fast) var(--mo-ease), color var(--mo-fast) var(--mo-ease);
 }
 
 .tabs-switch button.active {
@@ -551,14 +551,14 @@ button {
 }
 
 .field {
-  margin-bottom: 14px;
+  margin-bottom: var(--sp-3);
 }
 
 .field label {
   display: block;
-  font-size: .78rem;
+  font-size: var(--fs-sm);
   color: var(--muted);
-  margin-bottom: 6px;
+  margin-bottom: var(--sp-1);
   font-weight: 500;
 }
 
@@ -569,42 +569,45 @@ button {
   background: var(--surface-2);
   border: 1px solid var(--border);
   color: var(--text);
-  padding: 10px 12px;
-  border-radius: 9px;
-  font-size: .9rem;
+  padding: var(--sp-3);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-md);
   font-family: inherit;
-  transition: .15s;
+  transition: border-color var(--mo-fast) var(--mo-ease);
 }
 
+/* AUDIT-UI: Artıq `box-shadow` fokus halqası qlobal `:focus-visible` ilə konflikt
+   yaradırdı — istifadəçi həm outline, həm box-shadow görürdü. İndi yalnız
+   `border-color` dəyişir, a11y outline isə `65-a11y-seo.css`-dəki qlobal
+   `:focus-visible` qaydasından gəlir. */
 .field input:focus,
 .field select:focus,
 .field textarea:focus {
   outline: none;
   border-color: var(--coral);
-  box-shadow: 0 0 0 3px var(--coral-dim);
 }
 
 .row2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: var(--sp-3);
 }
 
 .gender-pick {
   display: flex;
-  gap: 8px;
+  gap: var(--sp-2);
 }
 
 .gender-pick button {
   flex: 1;
-  padding: 10px;
-  border-radius: 9px;
+  padding: var(--sp-3);
+  border-radius: var(--r-sm);
   border: 1px solid var(--border);
   background: var(--surface-2);
   color: var(--muted);
   font-weight: 600;
-  font-size: .85rem;
-  transition: .15s;
+  font-size: var(--fs-sm);
+  transition: border-color var(--mo-fast) var(--mo-ease), color var(--mo-fast) var(--mo-ease), background var(--mo-fast) var(--mo-ease);
 }
 
 .gender-pick button.sel {
@@ -616,18 +619,18 @@ button {
 .pill-pick {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
+  gap: var(--sp-2);
 }
 
 .pill-pick button {
-  padding: 6px 11px;
-  border-radius: 999px;
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--r-pill);
   border: 1px solid var(--border);
   background: var(--surface-2);
   color: var(--muted);
-  font-size: .78rem;
+  font-size: var(--fs-xs);
   font-family: var(--mono);
-  transition: .15s;
+  transition: border-color var(--mo-fast) var(--mo-ease), color var(--mo-fast) var(--mo-ease), background var(--mo-fast) var(--mo-ease);
 }
 
 .pill-pick button.sel {
@@ -639,25 +642,23 @@ button {
 .photo-pick {
   display: flex;
   align-items: center;
-  gap: 14px;
-  margin-bottom: 16px;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
 }
 
+/* AUDIT-UI: Xəttin 200-dəki `.avatar` baza tərifinə (flex-shrink, display,
+   align-items, position, transition) BİRLƏŞDİRİLDİ — ölçü/radius/background
+   qaydaları burada qalır, təkrar elan yoxdur. */
 .avatar {
   width: 34px;
   height: 34px;
-  border-radius: 9px;
+  border-radius: var(--r-sm);
   background: var(--surface-2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   font-family: var(--mono);
-  font-size: .8rem;
+  font-size: var(--fs-sm);
   color: var(--coral);
   overflow: hidden;
   border: 1px solid var(--border);
-  flex-shrink: 0;
-  position: relative;
 }
 
 /* Sitat gətirilən postun müəllif avatarı — AUDIT-TASK-10 / Faza 1.4.
@@ -693,16 +694,16 @@ button {
 .photo-pick .avatar {
   width: 56px;
   height: 56px;
-  border-radius: 14px;
+  border-radius: var(--r-md);
   font-size: 1.1rem;
 }
 
 .photo-pick label {
-  font-size: .8rem;
+  font-size: var(--fs-sm);
   color: var(--teal);
   border: 1px dashed var(--teal);
-  padding: 7px 12px;
-  border-radius: 9px;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-sm);
   cursor: pointer;
 }
 
@@ -712,9 +713,9 @@ button {
 
 .btn-primary {
   width: 100%;
-  padding: 12px;
+  padding: var(--sp-3);
   border: none;
-  border-radius: 10px;
+  border-radius: var(--r-md);
   background: linear-gradient(100deg, var(--coral), var(--coral2));
   /* AUDIT-UI: `#fff` idi — ÖZ nişan şərhimizdəki ölçmə ilə ziddiyyət təşkil
      edirdi (dark #4a8fff üzərində ağ 3.15:1 ✗, matrix #00e676 üzərində 1.67:1 ✗).
@@ -724,9 +725,9 @@ button {
      `--on-accent` məhz bunun üçün var: dark/matrix-də tünd, light-da ağ. */
   color: var(--on-accent);
   font-weight: 700;
-  font-size: .92rem;
-  margin-top: 4px;
-  transition: .15s;
+  font-size: var(--fs-md);
+  margin-top: var(--sp-1);
+  transition: filter var(--mo-fast) var(--mo-ease), transform var(--mo-fast) var(--mo-ease);
 }
 
 .btn-primary:hover {
@@ -740,11 +741,11 @@ button {
 }
 
 .form-note {
-  font-size: .74rem;
+  font-size: var(--fs-xs);
   color: var(--muted);
-  margin-top: 10px;
+  margin-top: var(--sp-3);
   text-align: center;
-  line-height: 1.5;
+  line-height: var(--lh-normal);
 }
 
 .form-note b {
@@ -752,9 +753,9 @@ button {
 }
 
 .form-err {
-  font-size: .78rem;
+  font-size: var(--fs-xs);
   color: var(--danger);
-  margin-top: 8px;
+  margin-top: var(--sp-2);
   text-align: center;
-  min-height: 14px;
+  min-height: var(--sp-3);
 }
