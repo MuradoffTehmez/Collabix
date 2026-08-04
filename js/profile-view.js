@@ -386,10 +386,17 @@ function renderStats(sec, d, u, onFollowList){
   );
 }
 
-/** Həftəlik / aylıq XP — "irəliləyirmi" sualının cavabı. */
+/**
+ * Həftəlik / aylıq XP — "irəliləyirmi" sualının cavabı.
+ *
+ * ⚠ DƏYƏR MƏNFİ OLA BİLƏR: pəncərə cəmi kompensasiyaları da daxil edir
+ *   (silinən post XP-ni geri alır). Ona görə işarə şərtidir — sabit `'+'`
+ *   yazsaydıq "+-50" kimi mətn çıxardı.
+ */
 function xpBreakdown(s){
+  const sign = v => (num(v) >= 0 ? '+' : '−') + Math.abs(num(v));
   const row = (lblKey, v, tone) => el('div', { class: 'pf-xpb__i pf-t--' + tone },
-    el('b', {}, '+' + num(v)), el('span', {}, t(lblKey)));
+    el('b', {}, sign(v)), el('span', {}, t(lblKey)));
   return el('div', { class: 'pf-xpb' },
     row('pf.xp_week', s.xpWeek, 'violet'),
     row('pf.xp_month', s.xpMonth, 'blue'),

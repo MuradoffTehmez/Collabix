@@ -123,10 +123,18 @@ export async function profileOverview(c: Ctx, username: string) {
     ).bind(uid),
     // 2. XP pəncərələri — TƏK sorğuda şərti toplama (iki `SUM` üçün iki
     //    gediş etməyə dəyməz).
+    //
+    // 🔴 `amount > 0` SÜZGƏCİ YOXDUR — QƏSDƏN. Əvvəl yalnız müsbət sətirlər
+    //    sayılırdı, yəni rəqəm BRUTTO qazanc idi; `users.xp` isə NETTO-dur
+    //    (silinən məzmunun kompensasiyası `xp_logs`-a MƏNFİ yazılır, bax
+    //    `xp.ts` → `compensateXp`). Nəticə istehsalda göründü:
+    //    «Bu həftə +50237» ilə «Ümumi XP 50025» yan-yana durdu — həftəlik
+    //    qazanc ümumidən BÖYÜK. İki rəqəm eyni kartda göstərilirsə eyni
+    //    mühasibatdan gəlməlidir.
     D(c).prepare(
       `SELECT COALESCE(SUM(CASE WHEN created_at >= ?2 THEN amount END), 0) AS week,
               COALESCE(SUM(CASE WHEN created_at >= ?3 THEN amount END), 0) AS month
-         FROM xp_logs WHERE uid = ?1 AND amount > 0`,
+         FROM xp_logs WHERE uid = ?1`,
     ).bind(uid, weekAgo, monthAgo),
     // 3. Nişanlar — QAZANILAN + QAZANILMAYAN bir sorğuda.
     //    ⚠ `LEFT JOIN`: kilidli nişanlar da qayıdır, çünki UI onları solğun
