@@ -977,17 +977,21 @@ button.ws-card:focus-visible { outline: 2px solid var(--coral); outline-offset: 
 
 /* ═══════════════════════ CƏDVƏL ═══════════════════════ */
 
-.ws-body--table { display: block; }
+.ws-body--table { display: flex; flex-direction: column; height: 100%; min-height: 0; }
 .ws-tbwrap {
   /* ⚠ SÜRÜŞMƏ KONTEYNERİ MƏCBURİDİR: 8 sütunlu cədvəl dar ekranda səhifəni
      üfüqi sürüşdürərdi (responsive auditin P0 meyarı). */
-  overflow-x: auto;
+  overflow: auto;
+  max-height: calc(100vh - var(--ws-topbar) - var(--ws-ctrl-h) - var(--sp-4));
   border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--surface);
 }
 .ws-tb { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
 .ws-tb th {
+  position: sticky;
+  top: 0;
+  z-index: 50;
   background: var(--surface);
   text-align: left;
   padding: var(--sp-2) var(--sp-3);
