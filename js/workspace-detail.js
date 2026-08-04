@@ -24,11 +24,18 @@ let META = { statuses: [], priorities: [], members: [], projects: [], sprints: [
 export function setDetailMeta(m){ META = { ...META, ...m }; }
 
 let panel = null;
+/* 🔴 FON ÖRTÜYÜ AYRICA SAXLANILIR. Əvvəl o, yalnız lokal dəyişən idi və
+   `closeTaskDetail()` yalnız paneli silirdi — örtük DOM-da qalıb BÜTÜN
+   səhifəni kliklənməz edirdi (audit tapdı: hər klik `.ws-panel__back`-ə
+   düşürdü). Açılan hər şey bağlanmalıdır; bağlama funksiyası ONA da
+   çatmalıdır. */
+let backdrop = null;
 let currentId = null;
 
 /* ═══════════════════════ PANEL QABIĞI ═══════════════════════ */
 
 export function closeTaskDetail(){
+  if(backdrop){ backdrop.remove(); backdrop = null; }
   if(!panel) return;
   panel.remove();
   panel = null;
@@ -45,8 +52,17 @@ function onEsc(e){ if(e.key === 'Escape') closeTaskDetail(); }
  *   konteynerləri ilə doludur (Kanban sütunları yan sürüşür) və panel
  *   onların içində qalsaydı KƏSİLƏRDİ.
  */
-export async function openTaskDetail(id){
-  if(currentId === id && panel) return;
+/**
+ * @param {string} id
+ * @param {boolean} [force] eyni tapşırıq açıq olsa belə YENİDƏN çək.
+ *
+ * 🔴 `force` OLMADAN PANEL ÖZÜNÜ YENİLƏYƏ BİLMİRDİ: asılılıq silinəndə,
+ *    taymer dayananda və əl ilə vaxt yazılanda kod `openTaskDetail(x.id)`
+ *    çağırırdı, lakin `currentId === id` yoxlaması dərhal geri qayıdırdı —
+ *    yəni əməliyyat serverdə icra olunurdu, ekranda isə HEÇ NƏ dəyişmirdi.
+ */
+export async function openTaskDetail(id, force = false){
+  if(currentId === id && panel && !force) return;
   closeTaskDetail();
   currentId = id;
 
@@ -54,9 +70,8 @@ export async function openTaskDetail(id){
     class: 'ws-panel', role: 'dialog', 'aria-modal': 'false',
     'aria-label': t('ws.detail'),
   }, el('div', { class: 'ws-panel__sk' }));
-  const back = el('div', { class: 'ws-panel__back', onclick: closeTaskDetail });
-  document.body.append(back, panel);
-  panel.dataset.back = '1';
+  backdrop = el('div', { class: 'ws-panel__back', onclick: closeTaskDetail });
+  document.body.append(backdrop, panel);
   document.addEventListener('keydown', onEsc);
   // Fokus panelə keçir — klaviatura istifadəçisi orada qalsın.
   requestAnimationFrame(() => panel && panel.focus && panel.focus());
@@ -64,7 +79,7 @@ export async function openTaskDetail(id){
   try{
     const d = await api('/ws/tasks/' + id);
     if(currentId !== id) return;             // istifadəçi başqasını açıb
-    renderDetail(d, back);
+    renderDetail(d);
   }catch(e){
     if(!panel) return;
     clear(panel);
@@ -85,7 +100,7 @@ async function patch(id, body){
 
 /* ═══════════════════════ DETAL MƏZMUNU ═══════════════════════ */
 
-function renderDetail(d, back){
+function renderDetail(d){
   const x = d.task;
   clear(panel);
   const p = PRIO[x.priority] || PRIO.Medium;
@@ -205,7 +220,7 @@ function renderDetail(d, back){
     ),
   );
   paintIcons(panel);
-  if(back) back.classList.add('is-on');
+  if(backdrop) backdrop.classList.add('is-on');
 }
 
 const section = (lblKey, ...body) => el('section', { class: 'ws-d__sec' },
@@ -336,7 +351,7 @@ function depBlock(x, d){
           try{
             await api(`/ws/tasks/${x.id}/deps/${dep.id}`, { method: 'DELETE' });
             arr.splice(arr.indexOf(dep), 1);
-            openTaskDetail(x.id);   // sadə yenidən çəkim
+            openTaskDetail(x.id, true);   // sadə yenidən çəkim
           }catch(e){ toast(t('dyn.err_generic'), 'err'); }
         },
       }, ico('x', 12)) : null,
@@ -360,7 +375,7 @@ function timeBlock(x, logs){
     try{
       const r = await api('/ws/tasks/' + x.id + '/timer/' + (startBtn.dataset.on ? 'stop' : 'start'), { method: 'POST' });
       if(r.running){ startBtn.dataset.on = '1'; startBtn.lastChild.textContent = t('ws.timer_stop'); }
-      else { delete startBtn.dataset.on; startBtn.lastChild.textContent = t('ws.timer_start'); openTaskDetail(x.id); }
+      else { delete startBtn.dataset.on; startBtn.lastChild.textContent = t('ws.timer_start'); openTaskDetail(x.id, true); }
       emit('ws-changed');
     }catch(e){ toast(t('dyn.err_generic'), 'err'); }
   });
@@ -371,7 +386,7 @@ function timeBlock(x, logs){
     if(!m) return;
     try{
       await api('/ws/tasks/' + x.id + '/time', { method: 'POST', body: { minutes: m } });
-      manual.value = ''; openTaskDetail(x.id); emit('ws-changed');
+      manual.value = ''; openTaskDetail(x.id, true); emit('ws-changed');
     }catch(e){ toast(t('dyn.err_generic'), 'err'); }
   } }, t('ws.time_add'));
 

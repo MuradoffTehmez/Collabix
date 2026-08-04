@@ -43,6 +43,12 @@ export const S = {
   onOpen: id => openTaskDetail(id),
   onCreate: preset => openCreate(preset),
   onMore: () => loadMore(),
+  /* Cədvəl sütun başlığı sıralamanı dəyişir → SERVERƏ yeni sorğu.
+     Client-də sıralasaydıq yalnız yüklənmiş səhifə sıralanardı. */
+  onSort: () => { syncFilterUI(); reload(); },
+  /* Təqvim ayı / Gantt zoom-u dəyişəndə YALNIZ yenidən çəkim lazımdır —
+     data eynidir, ona görə şəbəkəyə getmirik. */
+  onRedraw: () => renderView($('wsBody'), S, false),
   loading: false,
   hasMore: false,
   nextOffset: null,
@@ -527,7 +533,11 @@ export async function reload(){
   if(!S.tasks.length && !S.columns.length) renderView(host, S, true);
 
   const isBoard = S.view === 'kanban';
-  const q = queryOf(isBoard ? { group: 'status' } : { limit: 60, offset: 0 });
+  /* ⚠ TARİX ƏSASLI GÖRÜNÜŞLƏR DAHA ÇOX SƏTİR İSTƏYİR: təqvim bir ayı,
+     Gantt isə bütün aralığı göstərir. 60 sətirlik səhifə ilə ayın yarısı
+     boş görünərdi və istifadəçi bunu «tapşırıq yoxdur» kimi oxuyardı. */
+  const wide = ['calendar', 'timeline', 'gantt'].includes(S.view);
+  const q = queryOf(isBoard ? { group: 'status' } : { limit: wide ? 200 : 60, offset: 0 });
   try{
     const d = await api('/ws/tasks?' + q.toString());
     if(seq !== reqSeq) return;              // köhnəlmiş cavab — atılır
@@ -616,6 +626,14 @@ function onKey(e){
   }
   const tag = (e.target.tagName || '').toLowerCase();
   if(tag === 'input' || tag === 'textarea' || e.target.isContentEditable) return;
+  /* ⚠ Modal və ya detal paneli açıqkən hərf/rəqəm qısayolları İŞLƏMİR:
+     əks halda «3» basmaq modalın ARXASINDA görünüşü dəyişirdi və istifadəçi
+     modalı bağlayanda tamam başqa ekran görürdü. */
+  const overlay = document.getElementById('modalBg');
+  if((overlay && overlay.classList.contains('active')) || document.querySelector('.ws-panel')){
+    if(e.key === 'Escape'){ clearSelection(); closeTaskDetail(); }
+    return;
+  }
   // `c` → yeni tapşırıq, `1…6` → görünüş, Esc → seçimi təmizlə.
   if(e.key === 'c'){ e.preventDefault(); openCreate(); }
   else if(e.key === 'Escape'){ clearSelection(); closeTaskDetail(); }
@@ -663,6 +681,7 @@ export function mountWorkspace(){
   bus.addEventListener('ws-changed', reload);
 
   return () => {
+    if(timerTick){ clearInterval(timerTick); timerTick = null; }
     document.removeEventListener('keydown', onKey);
     bus.removeEventListener('ws-changed', reload);
     closePopover();
@@ -671,11 +690,17 @@ export function mountWorkspace(){
   };
 }
 
+/* Taymer sayğacının yenilənmə intervalı — dəqiqə dəyişəndə görünsün deyə. */
+let timerTick = null;
+
 /** İşləyən taymer zolağı — səhifə açılışında bərpa olunur. */
 export function renderTimerBar(){
   const bar = $('wsTimer');
   if(!bar) return;
   bar.hidden = !S.timer;
+  // ⚠ İnterval HƏR çəkimdə təmizlənir: əks halda hər yenilənmə bir dənə də
+  //   əlavə edərdi və zolaq saniyədə bir neçə dəfə yenilənərdi (sızma).
+  if(timerTick){ clearInterval(timerTick); timerTick = null; }
   if(!S.timer) return;
   clear(bar);
   const mins = () => Math.max(0, Math.round((Date.now() - S.timer.startedAt) / 60000));
@@ -694,4 +719,11 @@ export function renderTimerBar(){
     }, t('ws.stop')),
   );
   paintIcons(bar);
+  /* 🔴 SAYĞAC İRƏLİLƏMİRDİ: dəyər YALNIZ çəkim anında hesablanırdı, yəni
+     taymer 40 dəqiqə işləsə də zolaqda «0 dəq» qalırdı. */
+  const numNode = bar.querySelector('.ws-timer__m');
+  timerTick = setInterval(() => {
+    if(!S.timer || !numNode.isConnected){ clearInterval(timerTick); timerTick = null; return; }
+    numNode.textContent = mins() + ' ' + t('ws.min');
+  }, 20000);
 }

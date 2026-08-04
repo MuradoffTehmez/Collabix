@@ -1302,6 +1302,15 @@ const D = {
   'ws.trg_due_soon': { az: 'son tarix yaxınlaşanda', en: 'when due soon', ru: 'при приближении срока' },
   'ws.on': { az: 'Aktiv', en: 'On', ru: 'Вкл' },
   'ws.off': { az: 'Sönülü', en: 'Off', ru: 'Выкл' },
+  'ws.key': { az: 'Açar', en: 'Key', ru: 'Ключ' },
+  'ws.prev': { az: 'Əvvəlki', en: 'Previous', ru: 'Назад' },
+  'ws.next': { az: 'Növbəti', en: 'Next', ru: 'Вперёд' },
+  'ws.today': { az: 'Bu gün', en: 'Today', ru: 'Сегодня' },
+  'ws.no_dated': { az: 'Tarixi olan tapşırıq yoxdur. Son tarix və ya başlama tarixi əlavə edin.', en: 'No dated tasks. Add a start or due date.', ru: 'Нет задач с датами. Добавьте дату начала или срок.' },
+  'ws.z_day': { az: 'Gün', en: 'Day', ru: 'День' },
+  'ws.z_week': { az: 'Həftə', en: 'Week', ru: 'Неделя' },
+  'ws.z_month': { az: 'Ay', en: 'Month', ru: 'Месяц' },
+  'ws.z_quarter': { az: 'Rüb', en: 'Quarter', ru: 'Квартал' },
   'ws.loading': { az: 'Yüklənir…', en: 'Loading…', ru: 'Загрузка…' },
 
   /* ---------- İdarəetmə (moderasiya + dəvətlər) ----------

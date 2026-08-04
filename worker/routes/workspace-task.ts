@@ -38,20 +38,23 @@ export async function taskFor(c: Ctx, taskId: string) {
  * Yazma icazəsi.
  *
  * 🔴 İKİ SƏVİYYƏ, QƏSDƏN:
- *    • `own`    — təyin olunan şəxs və ya yaradan: status, yoxlama siyahısı,
- *                 şərh, vaxt jurnalı. Bunlar İŞİN GEDİŞİDİR.
- *    • `manage` — başlıq, təyinat, silinmə, sprint, prioritet: `manage_tasks`
- *                 icazəsi. Bunlar PLANLAMADIR.
+ *    • `own`    — İŞİN GEDİŞİ: status, sıra, yoxlama siyahısı, şərh, vaxt.
+ *                 KOMANDA ÜZVLÜYÜ kifayətdir.
+ *    • `manage` — PLANLAMA: başlıq, təyinat, prioritet, sprint, son tarix,
+ *                 arxiv, silinmə. `manage_tasks` icazəsi tələb olunur.
  *
- * Komanda endpoint-lərindəki eyni ayrım (`team-routes.ts` sətir ~828) burada
- * təkrarlanır ki, iki giriş nöqtəsi eyni qaydaya tabe olsun.
+ * 🔴 DÜZƏLİŞ — `own` ƏVVƏL YALNIZ TƏYİN OLUNANA/YARADANA icazə verirdi və
+ *    əks halda `manage_tasks`-a düşürdü. Nəticə: LÖVHƏ İŞLƏMİRDİ. Təyin
+ *    olunmamış kart (`assignee_id IS NULL`) və miqrasiyadan əvvəlki kartlar
+ *    (`created_by IS NULL`) sıravi üzv üçün SÜRÜŞDÜRÜLƏ BİLMİRDİ — hər
+ *    buraxma 403 verirdi. Kanban-ın bütün mənası kartı hərəkət etdirməkdir;
+ *    Linear/Jira-da da bunun üçün ayrıca icazə tələb olunmur.
+ *
+ *    Planlama sahələri isə `manage_tasks`-da QALIR: kimin nə üzərində
+ *    işlədiyini təyin etmək idarəetmə qərarıdır.
  */
 async function canWrite(c: Ctx, task: any, level: 'own' | 'manage') {
-  const me = c.user!.id;
-  if (level === 'own'
-      && (String(task.assignee_id || '') === me || String(task.created_by || '') === me)) {
-    return requireTeamMember(c, String(task.team_id));
-  }
+  if (level === 'own') return requireTeamMember(c, String(task.team_id));
   return requireTeamPermission(c, String(task.team_id), 'manage_tasks');
 }
 
