@@ -93,10 +93,13 @@ export {
   profileOverview, profileTimeline, recordProfileView, toggleProfilePin,
 } from './routes/profile';
 /* İş sahəsi (Tapşırıqlar) — istifadəçinin BÜTÜN komandalarındakı tapşırıqlar.
-   ⚠ Üç fayla bölünüb: oxu / mutasiya / alt-resurs. Görünürlük qapısı
-     (`scopedWhere`) birincidədir və hər üçü ondan qidalanır. */
-export { wsTasks, wsStats, wsTrend, wsMeta } from './routes/workspace';
-export { wsCreate, wsUpdate, wsBulk, wsMove, wsDetail } from './routes/workspace-task';
+   ⚠ ÖZ QOVLUĞUNDADIR (`routes/workspace/`): oxu (`index`), mutasiya (`task`),
+     alt-resurs (`sub`). Üç fayl `routes/` kökündə dağınıq durmaqdansa bir
+     yerdə saxlanılır — `services/team/` və `services/notification/` ilə eyni
+     naxış. Görünürlük qapısı (`scopedWhere`) `index`-dədir və hər üçü ondan
+     qidalanır. */
+export { wsTasks, wsStats, wsTrend, wsMeta } from './routes/workspace/index';
+export { wsCreate, wsUpdate, wsBulk, wsMove, wsDetail } from './routes/workspace/task';
 export {
   wsCheckAdd, wsCheckPatch, wsCheckDelete,
   wsCommentAdd, wsCommentPatch, wsCommentDelete,
@@ -106,7 +109,7 @@ export {
   wsSprintCreate, wsSprintPatch, wsSprintDelete,
   wsViewSave, wsViewDelete,
   wsAutomationList, wsAutomationCreate, wsAutomationDelete,
-} from './routes/workspace-sub';
+} from './routes/workspace/sub';
 export {
   listRooms, createRoom, deleteRoom, patchRoom, roomMessages, sendRoomMessage,
   editRoomMessage, deleteRoomMessage, listThreads, dmMessages, sendDM,

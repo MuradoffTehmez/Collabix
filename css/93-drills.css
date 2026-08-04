@@ -1,0 +1,347 @@
+/* 93-drills.css — Çalışmalar səhifəsi (`#page-drills`).
+ *
+ * 🔴 AYRI FAYL, çünki AYRI SƏHİFƏDİR. Layihə konvensiyası səhifə başına bir
+ *    CSS faylıdır (88-notifications, 89-users, 91-profile, 92-workspace).
+ *    Əvvəl bu qaydalar `92-workspace.css`-in içində idi — yəni BİR faylda
+ *    İKİ ayrı məhsul sahəsi vardı və «tapşırıq stilini dəyiş» tapşırığı
+ *    çalışma stilini də riskə atırdı.
+ *
+ * ⚠ `92-workspace.css`-DƏN SONRA yüklənir: `--ws-*` ton nişanları orada
+ *   `:root`-da elan olunur və burada YENİDƏN TƏYİN EDİLMİR, sadəcə
+ *   işlədilir. Sıra pozulsa rənglər boş qalar.
+ */
+
+/* ═══════════════════════ ÇALIŞMALAR (#page-drills) ═══════════════════════
+ *
+ * ⚠ İŞ SAHƏSİ İLƏ EYNİ FAYLDA: iki səhifə fərqli sistemlərdir, lakin eyni
+ *   vizual dili paylaşır (kart, çip, statistika, forma idarəediciləri).
+ *   Ayrı fayla qoysaydıq, nişanlar və ölçülər ikinci nüsxə olardı.
+ *
+ * ⚠ `--ws-*` nişanları `:root`-dadır, ona görə burada yenidən elan
+ *   EDİLMİR — sadəcə işlədilir.
+ */
+
+.dr-t--blue { color: var(--ws-blue); }
+.dr-t--violet { color: var(--ws-violet); }
+.dr-t--green { color: var(--ws-green); }
+.dr-t--amber { color: var(--ws-amber); }
+.dr-t--rose { color: var(--ws-rose); }
+.dr-t--teal { color: var(--ws-teal); }
+
+#page-drills .ic svg { color: inherit; }
+
+/* ── Başlıq ── */
+.dr-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-3);
+}
+.dr-title { margin: 0; font-size: var(--fs-2xl); font-weight: 800; letter-spacing: -0.02em; }
+.dr-sub { margin: 4px 0 0; font-size: var(--fs-sm); color: var(--muted); max-width: 62ch; }
+
+/* ── Statistika ── */
+.dr-dash {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(146px, 1fr));
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-3);
+}
+.dr-card {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--sh-1);
+  min-height: 62px;
+  color: var(--text);
+}
+.dr-card__ic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: color-mix(in srgb, currentColor 13%, transparent);
+  flex: 0 0 auto;
+}
+.dr-card__b { display: flex; flex-direction: column; min-width: 0; }
+.dr-card__n {
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.dr-card__l { font-size: var(--fs-xs); color: var(--muted); overflow-wrap: break-word; }
+
+/* ── Axtarış + filtr ── */
+.dr-controls { margin-bottom: var(--sp-3); }
+.dr-searchrow { display: flex; gap: var(--sp-2); align-items: center; flex-wrap: wrap; margin-bottom: var(--sp-2); }
+.dr-search { flex: 1 1 260px; min-width: 0; }
+
+/* 🔴 FORMA İDARƏEDİCİLƏRİ AÇIQ STİLLƏNİR. Layihədə qlobal `input {}` qaydası
+   YOXDUR — stil yalnız `.field input` altında var. `.field`-dən kənarda
+   qalan hər sahə brauzerin DEFAULT görünüşündə qalır (ağ qutu, sistem
+   haşiyəsi) və tünd temada yad element kimi görünür. Köhnə çalışma
+   səhifəsində məhz belə idi. */
+/* ⚠ TİP ÜZRƏ — `.ws-in` ilə eyni səbəb: sinif unudulanda sahə brauzer
+   defaultunda qalmasın. */
+#page-drills input:not([type=checkbox]):not([type=file]):not([type=search]),
+#page-drills select,
+#page-drills textarea,
+.dr-in {
+  width: 100%;
+  min-width: 0;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--body);
+  font-size: var(--fs-sm);
+  transition: border-color var(--mo-fast) var(--mo-ease), box-shadow var(--mo-fast) var(--mo-ease);
+}
+.dr-search > .dr-in { padding-left: 38px; }
+#page-drills input::placeholder,
+#page-drills textarea::placeholder,
+.dr-in::placeholder { color: var(--muted); }
+#page-drills input:not([type=checkbox]):not([type=search]):focus,
+#page-drills select:focus,
+#page-drills textarea:focus,
+.dr-in:focus {
+  outline: none;
+  border-color: var(--coral);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--coral) 18%, transparent);
+}
+.dr-in--sel { flex: 0 0 auto; width: auto; min-width: 160px; }
+.dr-in--ta { min-height: 96px; line-height: 1.55; resize: vertical; }
+
+.dr-cats { display: flex; gap: 6px; flex-wrap: wrap; }
+.dr-cat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  background: var(--bg);
+  color: var(--text-sec);
+  font-family: var(--body);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+  min-height: 28px;
+}
+.dr-cat:hover { border-color: var(--coral2); color: var(--text); }
+.dr-cat.is-on { background: color-mix(in srgb, var(--coral) 14%, transparent); border-color: var(--coral); color: var(--coral); }
+.dr-cat:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+.dr-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: 0 0 auto; }
+
+/* ── Təklif formu ── */
+.dr-form {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--sh-1);
+  margin-bottom: var(--sp-3);
+  animation: ws-drop var(--mo-base) var(--mo-ease);
+}
+.dr-form[hidden] { display: none; }
+.dr-form__h {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: var(--sp-3);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+.dr-form__x { margin-left: auto; }
+.dr-form__b { display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-3); }
+.dr-form__b .c-btn { align-self: flex-start; }
+
+/* ── Kart şəbəkəsi ── */
+.dr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--sp-3);
+}
+.dr-item--green { border-left: 3px solid var(--ws-green); }
+.dr-item--amber { border-left: 3px solid var(--ws-amber); }
+.dr-item--rose { border-left: 3px solid var(--ws-rose); }
+
+.dr-item {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--sh-1);
+  min-height: 0;
+  transition: box-shadow var(--mo-fast) var(--mo-ease), transform var(--mo-fast) var(--mo-ease);
+}
+.dr-item:hover { box-shadow: var(--sh-2); transform: translateY(-1px); }
+.dr-card__top { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.dr-card__del { margin-left: auto; width: 26px; height: 26px; color: var(--muted); }
+.dr-card__del:hover { color: var(--ws-rose); }
+.dr-card__h {
+  margin: 0;
+  font-size: var(--fs-md);
+  font-weight: 700;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.dr-card__d {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-sec);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: pre-wrap;
+}
+.dr-card__foot {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  margin-top: auto;
+  padding-top: 6px;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.dr-card__sp { flex: 1 1 auto; }
+.dr-meta { display: inline-flex; align-items: center; gap: 4px; }
+
+.dr-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, currentColor 13%, transparent);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+.dr-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+}
+.dr-done { display: inline-flex; align-items: center; gap: 5px; color: var(--ws-green); font-weight: 600; }
+
+/* ── Admin panelləri ── */
+.dr-panel {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  margin-bottom: var(--sp-3);
+  overflow: hidden;
+}
+.dr-panel__h {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: var(--sp-3);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+.dr-panel__n {
+  margin-left: auto;
+  padding: 1px 9px;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+}
+.dr-panel__b { display: flex; flex-direction: column; }
+.dr-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.dr-row:last-child { border-bottom: none; }
+.dr-row__b { flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.dr-row__b b { font-size: var(--fs-sm); }
+.dr-row__b p {
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--text-sec);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.dr-row__a { display: flex; gap: 6px; flex-wrap: wrap; align-items: flex-start; }
+.dr-rej { color: var(--ws-rose); }
+.dr-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--fs-xs);
+  color: var(--coral);
+  overflow-wrap: anywhere;
+}
+
+.dr-modal__cat { margin-bottom: var(--sp-2); }
+.dr-modal__d {
+  margin: 0 0 var(--sp-3);
+  font-size: var(--fs-sm);
+  color: var(--text-sec);
+  white-space: pre-wrap;
+  line-height: 1.55;
+}
+
+.dr-sk {
+  height: 150px;
+  border-radius: 14px;
+  background: linear-gradient(90deg, var(--surface-2) 25%,
+    color-mix(in srgb, var(--surface-2) 55%, var(--surface)) 50%, var(--surface-2) 75%);
+  background-size: 200% 100%;
+  animation: ws-shim 1.3s linear infinite;
+}
+
+@media (max-width: 768px) {
+  .dr-head { flex-direction: column; }
+  .dr-head__a { width: 100%; }
+  .dr-head__a .c-btn { width: 100%; }
+  .dr-title { font-size: var(--fs-xl); }
+  .dr-in--sel { width: 100%; min-width: 0; }
+  .dr-dash {
+    display: flex;
+    overflow-x: auto;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+    margin-inline: calc(var(--sp-3) * -1);
+    padding-inline: var(--sp-3);
+  }
+  .dr-dash::-webkit-scrollbar { display: none; }
+  .dr-card { flex: 0 0 150px; scroll-snap-align: start; }
+  .dr-grid { grid-template-columns: 1fr; }
+  .dr-row__a { width: 100%; }
+  .dr-row__a .c-btn { flex: 1 1 auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dr-sk, .dr-form { animation: none; }
+  .dr-item:hover { transform: none; }
+}

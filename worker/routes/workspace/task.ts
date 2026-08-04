@@ -9,10 +9,10 @@
 //    verilir, geri açılanda `compensateXp` ilə alınır və `UNIQUE` indekslər
 //    dövrəni bağlayır (AUDIT-TASK-9 / 9.0). Bu məntiqi burada TƏKRARLASAYDIQ,
 //    iki yol ayrılan kimi "Done → To Do → Done" XP fabrikinə çevrilərdi.
-import { Ctx, json, err, readJson, clampStr, uuid, now } from '../util';
-import { D, badReq, notify, userPush } from './shared';
-import { requireTeamPermission, requireTeamMember } from '../middleware/team-auth';
-import { scopedWhere, WS_STATUSES, WS_PRIORITIES } from './workspace';
+import { Ctx, json, err, readJson, clampStr, uuid, now } from '../../util';
+import { D, badReq, notify, userPush } from '../shared';
+import { requireTeamPermission, requireTeamMember } from '../../middleware/team-auth';
+import { scopedWhere, WS_STATUSES, WS_PRIORITIES } from './index';
 
 const num = (v: unknown) => Number(v) || 0;
 const pick = (v: unknown, list: readonly string[], fb: string) => {
@@ -167,7 +167,7 @@ export async function wsUpdate(c: Ctx, taskId: string) {
 
   let statusChanged = false;
   if (Object.keys(legacy).length) {
-    const { TeamTaskService } = await import('../services/team/task.service');
+    const { TeamTaskService } = await import('../../services/team/task.service');
     const svc = new TeamTaskService(c.env);
     // ⚠ Servis yalnız 4 statusu tanıyır (`To Do`…`Done`); yeni statuslar onun
     //   `normStatus` süzgəcindən keçməz və SÜKUTLA köhnə dəyərə qayıdardı.
@@ -349,8 +349,8 @@ export async function wsMove(c: Ctx, taskId: string) {
     await notifyWatchers(c, taskId, task.title, st);
     // XP: yalnız `Done` keçidi. Sürüşdürmə də tamamlanma sayılır.
     if (st === 'Done' && task.status !== 'Done' && task.assignee_id) {
-      const { grantXp } = await import('../xp');
-      const { USER_TASK_XP } = await import('../services/team/xp');
+      const { grantXp } = await import('../../xp');
+      const { USER_TASK_XP } = await import('../../services/team/xp');
       await grantXp(c.env, String(task.assignee_id), 'team_task', taskId, USER_TASK_XP,
         { alsoCompletedTask: true });
     }

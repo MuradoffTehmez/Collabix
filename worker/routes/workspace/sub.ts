@@ -5,11 +5,11 @@
 //   onsuz da böyükdür. Bölünmə meyarı RESURSDUR, təsadüfi deyil — burada
 //   hamısı "tapşırığa BAĞLI" obyektlərdir və hamısı eyni icazə qapısından
 //   keçir (`taskFor` → görünürlük, `canEdit` → yazma).
-import { Ctx, json, err, readJson, clampStr, uuid, now } from '../util';
-import { D, badReq, notify } from './shared';
-import { requireTeamPermission, requireTeamMember } from '../middleware/team-auth';
-import { WS_LABEL_COLORS } from './workspace';
-import { taskFor } from './workspace-task';
+import { Ctx, json, err, readJson, clampStr, uuid, now } from '../../util';
+import { D, badReq, notify } from '../shared';
+import { requireTeamPermission, requireTeamMember } from '../../middleware/team-auth';
+import { WS_LABEL_COLORS } from './index';
+import { taskFor } from './task';
 
 const num = (v: unknown) => Number(v) || 0;
 

@@ -608,108 +608,172 @@ export function openCreateModal(preset = {}){
   setTimeout(() => title.focus(), 30);
 }
 
-/* ═══════════════════════ SPRİNT / ETİKET / AVTOMATLAŞDIRMA ═══════════════════════ */
+/* ═══════════════════════ İDARƏETMƏ PANELLƏRİ ═══════════════════════
+ *
+ * Sprint · etiket · avtomatlaşdırma — üçü də EYNİ quruluşu paylaşır:
+ *   başlıq → mövcud sətirlərin siyahısı → ayırıcı → yaratma formu → düymə.
+ *
+ * 🔴 ORTAQ QABIQ (`adminPanel`) MƏCBURİDİR. Əvvəl hər panel öz markup-unu
+ *    qururdu və nəticə istifadəçi tərəfindən bildirildi: sahələr ETİKETSİZ
+ *    idi (yalnız placeholder), enləri fərqli idi, düymə sətrin ortasında
+ *    qalırdı. Üç ayrı quruluş üç ayrı dizayn deməkdir — qabıq tək olanda
+ *    fərq mümkün deyil.
+ */
+
+/** Etiketli sahə — modal daxilində HƏMİŞƏ bu işlədilir. */
+const fld = (lblKey, node, hint) => el('label', { class: 'ws-fld' },
+  el('span', { class: 'ws-fld__l' }, t(lblKey)),
+  node,
+  hint ? el('span', { class: 'ws-fld__h' }, t(hint)) : null);
+
+/**
+ * @param {string} titleKey
+ * @param {Node[]} rows mövcud sətirlər
+ * @param {string} emptyKey siyahı boşdursa göstərilən mətn
+ * @param {Node[]} form yaratma sahələri
+ * @param {Node} action yaratma düyməsi
+ */
+function adminPanel(titleKey, rows, emptyKey, form, action){
+  const list = el('div', { class: 'ws-adm-list' });
+  if(rows.length) rows.forEach(r => list.append(r));
+  else list.append(el('p', { class: 'ws-d__none' }, t(emptyKey)));
+  return [
+    el('div', { class: 'section-title' }, t(titleKey)),
+    list,
+    el('div', { class: 'ws-adm__sep' }),
+    el('div', { class: 'ws-adm__form' }, ...form),
+    el('div', { class: 'ws-adm__foot' }, action),
+  ];
+}
+
+/** Komanda seçicisi — üç panelin hamısında eynidir. */
+function teamSelect(){
+  const sel = el('select', { class: 'ws-in' });
+  META.teams.forEach(x => sel.append(el('option', { value: x.id }, x.name)));
+  return sel;
+}
 
 export function openSprintPanel(){
-  const list = el('div', { class: 'ws-adm-list' });
-  const draw = () => {
-    clear(list);
-    if(!META.sprints.length) list.append(el('p', { class: 'ws-d__none' }, t('ws.no_sprints')));
-    META.sprints.forEach(s => list.append(el('div', { class: 'ws-adm' },
-      el('b', {}, s.name),
-      el('span', {}, new Date(s.startsAt).toLocaleDateString() + ' → ' + new Date(s.endsAt).toLocaleDateString()),
-      el('span', { class: 'ws-stat ws-s--' + (s.status === 'active' ? 'green' : 'slate') }, t('ws.sp_' + s.status)),
-      el('button', {
-        class: 'c-icon-btn ws-mini', type: 'button', 'aria-label': t('ws.delete'),
-        onclick: async () => {
-          if(!await confirmDialog(t('ws.sprint_del_q'))) return;
-          try{
-            await api('/ws/sprints/' + s.id, { method: 'DELETE' });
-            META.sprints.splice(META.sprints.indexOf(s), 1); draw(); emit('ws-changed');
-          }catch(e){ toast(t('ws.no_perm'), 'err'); }
-        },
-      }, ico('x', 12)),
-    )));
-    paintIcons(list);
-  };
-  draw();
+  const rows = META.sprints.map(sp => el('div', { class: 'ws-adm' },
+    el('div', { class: 'ws-adm__b' },
+      el('b', {}, sp.name),
+      el('span', { class: 'ws-adm__m' },
+        new Date(sp.startsAt).toLocaleDateString() + ' → ' + new Date(sp.endsAt).toLocaleDateString()),
+    ),
+    el('span', { class: 'ws-stat ws-s--' + (sp.status === 'active' ? 'green' : 'slate') }, t('ws.sp_' + sp.status)),
+    el('button', {
+      class: 'c-icon-btn ws-mini', type: 'button', 'aria-label': t('ws.delete'),
+      onclick: async () => {
+        if(!await confirmDialog(t('ws.sprint_del_q'))) return;
+        try{
+          await api('/ws/sprints/' + sp.id, { method: 'DELETE' });
+          META.sprints.splice(META.sprints.indexOf(sp), 1);
+          emit('ws-changed');
+          openSprintPanel();
+        }catch(e){ toast(t('ws.no_perm'), 'err'); }
+      },
+    }, ico('x', 12)),
+  ));
 
-  const team = el('select', { class: 'ws-d__sel' });
-  META.teams.forEach(x => team.append(el('option', { value: x.id }, x.name)));
+  const team = teamSelect();
   const name = el('input', { class: 'ws-in', placeholder: t('ws.sprint_name'), maxLength: 80 });
   const from = el('input', { class: 'ws-in', type: 'date', value: dateVal(Date.now()) });
   const to = el('input', { class: 'ws-in', type: 'date', value: dateVal(Date.now() + 14 * 86400000) });
+  const err = el('div', { class: 'form-err' });
 
-  showModal([
-    el('div', { class: 'section-title' }, t('ws.sprints')),
-    list,
-    el('div', { class: 'row2' }, team, name),
-    el('div', { class: 'row2' }, from, to),
-    el('button', { class: 'c-btn c-btn--primary', onclick: async () => {
-      if(!name.value.trim() || !team.value) return;
-      try{
-        const r = await api('/ws/sprints', { method: 'POST', body: {
-          teamId: team.value, name: name.value.trim(), startsAt: tsOf(from.value), endsAt: tsOf(to.value),
-        } });
-        META.sprints.unshift({ id: r.id, teamId: team.value, name: name.value.trim(),
-          startsAt: tsOf(from.value), endsAt: tsOf(to.value), status: 'planned' });
-        name.value = ''; draw(); emit('ws-changed');
-      }catch(e){ toast(t('ws.no_perm'), 'err'); }
-    } }, t('ws.sprint_create')),
-  ], { wide: true });
+  const create = el('button', { class: 'c-btn c-btn--primary', type: 'button', onclick: async () => {
+    err.textContent = '';
+    if(!name.value.trim()){ err.textContent = t('ws.err_name'); return; }
+    if(!team.value){ err.textContent = t('ws.err_team'); return; }
+    if(tsOf(to.value) <= tsOf(from.value)){ err.textContent = t('ws.err_dates'); return; }
+    create.disabled = true;
+    try{
+      const r = await api('/ws/sprints', { method: 'POST', body: {
+        teamId: team.value, name: name.value.trim(), startsAt: tsOf(from.value), endsAt: tsOf(to.value),
+      } });
+      META.sprints.unshift({ id: r.id, teamId: team.value, name: name.value.trim(),
+        startsAt: tsOf(from.value), endsAt: tsOf(to.value), status: 'planned' });
+      emit('ws-changed');
+      openSprintPanel();
+    }catch(e){ err.textContent = t('ws.no_perm'); }
+    create.disabled = false;
+  } }, ico('edit', 14), t('ws.sprint_create'));
+
+  showModal(adminPanel('ws.sprints', rows, 'ws.no_sprints', [
+    fld('ws.f_team', team),
+    fld('ws.sprint_name', name),
+    el('div', { class: 'ws-adm__row2' }, fld('ws.sp_from', from), fld('ws.sp_to', to)),
+    err,
+  ], create), { wide: true });
 }
 
 export function openLabelPanel(){
-  const list = el('div', { class: 'ws-adm-list' });
-  const draw = () => {
-    clear(list);
-    if(!META.labels.length) list.append(el('p', { class: 'ws-d__none' }, t('ws.no_labels')));
-    META.labels.forEach(l => list.append(el('div', { class: 'ws-adm' },
-      el('span', { class: 'ws-label ws-l--' + l.color }, l.name),
-      el('span', { class: 'ws-d__sp' }),
-      el('button', {
-        class: 'c-icon-btn ws-mini', type: 'button', 'aria-label': t('ws.delete'),
-        onclick: async () => {
-          try{
-            await api('/ws/labels/' + l.id, { method: 'DELETE' });
-            META.labels.splice(META.labels.indexOf(l), 1); draw(); emit('ws-changed');
-          }catch(e){ toast(t('ws.no_perm'), 'err'); }
-        },
-      }, ico('x', 12)),
-    )));
-    paintIcons(list);
-  };
-  draw();
+  const rows = META.labels.map(l => el('div', { class: 'ws-adm' },
+    el('span', { class: 'ws-label ws-l--' + l.color }, l.name),
+    el('span', { class: 'ws-adm__m' }, (META.teams.find(x => x.id === l.teamId) || {}).name || ''),
+    el('span', { class: 'ws-d__sp' }),
+    el('button', {
+      class: 'c-icon-btn ws-mini', type: 'button', 'aria-label': t('ws.delete'),
+      onclick: async () => {
+        try{
+          await api('/ws/labels/' + l.id, { method: 'DELETE' });
+          META.labels.splice(META.labels.indexOf(l), 1);
+          emit('ws-changed');
+          openLabelPanel();
+        }catch(e){ toast(t('ws.no_perm'), 'err'); }
+      },
+    }, ico('x', 12)),
+  ));
 
-  const team = el('select', { class: 'ws-d__sel' });
-  META.teams.forEach(x => team.append(el('option', { value: x.id }, x.name)));
+  const team = teamSelect();
   const name = el('input', { class: 'ws-in', placeholder: t('ws.label_name'), maxLength: 40 });
-  const color = el('select', { class: 'ws-d__sel' });
-  ['slate', 'blue', 'violet', 'green', 'amber', 'rose', 'teal', 'cyan', 'lime', 'orange']
-    .forEach(cv => color.append(el('option', { value: cv }, cv)));
+  const err = el('div', { class: 'form-err' });
 
-  showModal([
-    el('div', { class: 'section-title' }, t('ws.labels')),
-    list,
-    el('div', { class: 'row2' }, team, name),
-    color,
-    el('button', { class: 'c-btn c-btn--primary', onclick: async () => {
-      if(!name.value.trim() || !team.value) return;
-      try{
-        const l = await api('/ws/labels', { method: 'POST', body: {
-          teamId: team.value, name: name.value.trim(), color: color.value,
-        } });
-        META.labels.push(l); name.value = ''; draw(); emit('ws-changed');
-      }catch(e){ toast(e.message || t('ws.no_perm'), 'err'); }
-    } }, t('ws.label_create')),
-  ], { wide: true });
+  /* Rəng seçimi — `<select>` DEYİL, görünən nümunələr.
+     ⚠ Açar adları («slate», «rose») istifadəçiyə heç nə demir; rəngi
+       seçərkən onu GÖRMƏK lazımdır. Açılan siyahıda isə rəng görünmür. */
+  let color = 'blue';
+  const swatches = el('div', { class: 'ws-swatches' },
+    ['slate', 'blue', 'violet', 'green', 'amber', 'rose', 'teal', 'cyan', 'lime', 'orange'].map(cv =>
+      el('button', {
+        class: 'ws-sw ws-l--' + cv + (cv === color ? ' is-on' : ''),
+        type: 'button', 'aria-label': cv, title: cv,
+        onclick: e => {
+          color = cv;
+          swatches.querySelectorAll('.ws-sw').forEach(n => n.classList.remove('is-on'));
+          e.currentTarget.classList.add('is-on');
+        },
+      })));
+
+  const create = el('button', { class: 'c-btn c-btn--primary', type: 'button', onclick: async () => {
+    err.textContent = '';
+    if(!name.value.trim()){ err.textContent = t('ws.err_name'); return; }
+    if(!team.value){ err.textContent = t('ws.err_team'); return; }
+    create.disabled = true;
+    try{
+      const l = await api('/ws/labels', { method: 'POST', body: {
+        teamId: team.value, name: name.value.trim(), color,
+      } });
+      META.labels.push(l);
+      emit('ws-changed');
+      openLabelPanel();
+    }catch(e){ err.textContent = (e && e.message) || t('ws.no_perm'); }
+    create.disabled = false;
+  } }, ico('edit', 14), t('ws.label_create'));
+
+  showModal(adminPanel('ws.labels', rows, 'ws.no_labels', [
+    fld('ws.f_team', team),
+    fld('ws.label_name', name),
+    fld('ws.label_color', swatches),
+    err,
+  ], create), { wide: true });
 }
 
 export function openAutomationPanel(){
   const list = el('div', { class: 'ws-adm-list' }, el('p', { class: 'ws-d__none' }, t('ws.loading')));
   showModal([
     el('div', { class: 'section-title' }, t('ws.automation')),
-    el('p', { class: 'ws-d__none' }, t('ws.automation_hint')),
+    el('p', { class: 'ws-adm__note' }, ico('info', 13), t('ws.automation_hint')),
     list,
   ], { wide: true });
 
@@ -717,17 +781,17 @@ export function openAutomationPanel(){
     clear(list);
     if(!d.rules.length){ list.append(el('p', { class: 'ws-d__none' }, t('ws.no_rules'))); return; }
     d.rules.forEach(r => list.append(el('div', { class: 'ws-adm' },
-      el('b', {}, r.name),
-      el('span', {}, tOr('ws.trg_' + r.trigger, r.trigger)),
+      el('div', { class: 'ws-adm__b' },
+        el('b', {}, r.name),
+        el('span', { class: 'ws-adm__m' }, tOr('ws.trg_' + r.trigger, r.trigger)),
+      ),
       el('span', { class: 'ws-stat ws-s--' + (r.enabled ? 'green' : 'slate') },
         t(r.enabled ? 'ws.on' : 'ws.off')),
       el('button', {
         class: 'c-icon-btn ws-mini', type: 'button', 'aria-label': t('ws.delete'),
         onclick: async () => {
-          try{
-            await api('/ws/automations/' + r.id, { method: 'DELETE' });
-            openAutomationPanel();
-          }catch(e){ toast(t('ws.no_perm'), 'err'); }
+          try{ await api('/ws/automations/' + r.id, { method: 'DELETE' }); openAutomationPanel(); }
+          catch(e){ toast(t('ws.no_perm'), 'err'); }
         },
       }, ico('x', 12)),
     )));

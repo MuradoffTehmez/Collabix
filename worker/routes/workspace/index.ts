@@ -21,8 +21,8 @@
 // ⚠ SAYT ADMİNİ İSTİSNA DEYİL: admin paneli komandaları ayrıca moderasiya
 //   edir. İş sahəsi ŞƏXSİ ekrandır — admin burada da yalnız öz komandalarını
 //   görür, əks halda "mənim tapşırıqlarım" 40 min sətir olardı.
-import { Ctx, json, clampStr, now } from '../util';
-import { D } from './shared';
+import { Ctx, json, clampStr, now } from '../../util';
+import { D } from '../shared';
 
 /* ═══════════════════════ TAKSONOMİYA ═══════════════════════
  *

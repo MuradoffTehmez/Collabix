@@ -76,7 +76,7 @@ export async function upload(c: Ctx) {
   if (kind === 'task') {
     const taskId = c.url.searchParams.get('taskId') || '';
     if (!taskId) return badReq('taskId tələb olunur.');
-    const { taskFor } = await import('./workspace-task');
+    const { taskFor } = await import('./workspace/task');
     const task = await taskFor(c, taskId);
     if (!task) return badReq('Tapşırıq tapılmadı.');
     const { requireTeamMember } = await import('../middleware/team-auth');

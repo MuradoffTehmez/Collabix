@@ -86,5 +86,9 @@
 /* İş sahəsi (Tapşırıqlar) — Kanban, siyahı, detal paneli. */
 @import './92-workspace.css';
 
+/* Çalışmalar (öyrənmə tapşırıqları) — ayrı səhifə, ayrı fayl.
+   ⚠ `92`-dən SONRA: `--ws-*` nişanları oradan gəlir. */
+@import './93-drills.css';
+
 /* 🔴 HƏMİŞƏ SONUNCU */
 @import './90-utilities.css';

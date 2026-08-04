@@ -223,7 +223,125 @@ button.ws-card:focus-visible { outline: 2px solid var(--coral); outline-offset: 
 /* ⚠ `width: 100%` DƏ LAZIMDIR: `.c-search` flex konteynerdir və input
    default `size` atributuna görə ~200px qalırdı — sətirdə boş yer olsa da
    sahə böyümürdü. */
-.ws-search > input { padding-left: 38px; padding-right: 62px; width: 100%; }
+/* 🔴 AXTARIŞ SAHƏSİ TAM STİLLƏNİR — YALNIZ PADDING KİFAYƏT ETMİR.
+ *
+ * `15-components.css`-dəki `.c-search > input` qaydası YALNIZ üç sabit
+ * seçiciyə bağlıdır (`.app-search`, `.search-bar > input`, `#userSearch`) və
+ * buradakı sahə onlardan biri deyil. Nəticə ölçüldü: sahə brauzerin DEFAULT
+ * görünüşündə qalırdı — `border: 2px inset rgb(118,118,118)`, ağ fon, tünd
+ * temada tam yad element. (İstifadəçi iki dəfə bildirdi.)
+ */
+.ws-search > input {
+  width: 100%;
+  min-width: 0;
+  padding: 9px 62px 9px 38px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--body);
+  font-size: var(--fs-sm);
+  transition: border-color var(--mo-fast) var(--mo-ease), box-shadow var(--mo-fast) var(--mo-ease);
+}
+
+/* ═══════════════════════ FORMA İDARƏEDİCİLƏRİ ═══════════════════════
+ *
+ * 🔴 SEÇİCİ ELEMENT TİPİ ÜZRƏDİR, SİNİF ÜZRƏ YOX.
+ *
+ *    Əvvəl hər sahəyə ayrıca sinif verilirdi (`.ws-d__date`, `.ws-in`…) və
+ *    yeni sahə əlavə edən hər kəs sinifi yazmağı unutduqda o, brauzer
+ *    defaultunda qalırdı. Ölçmə bunu təsdiqlədi: detal panelindəki YEDDİ
+ *    sahədən hamısı `border: 2px inset rgb(118,118,118)` ilə idi.
+ *
+ *    Layihədə qlobal `input {}` qaydası YOXDUR (stil yalnız `.field`
+ *    altındadır), ona görə burada səhifə daxilində TİP üzrə qayda verilir —
+ *    belədə unudulmuş sinif səbəbindən stilsiz sahə MÜMKÜN DEYİL.
+ *
+ * ⚠ `[type=checkbox]` və `[type=file]` istisnadır: onların öz forması var.
+ */
+#page-tasks input:not([type=checkbox]):not([type=file]):not([type=range]):not([type=search]),
+#page-tasks select,
+#page-tasks textarea,
+.ws-panel input:not([type=checkbox]):not([type=file]),
+.ws-panel select,
+.ws-panel textarea,
+.ws-in {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--body);
+  font-size: var(--fs-xs);
+  transition: border-color var(--mo-fast) var(--mo-ease), box-shadow var(--mo-fast) var(--mo-ease);
+}
+#page-tasks input::placeholder,
+.ws-panel input::placeholder,
+.ws-panel textarea::placeholder,
+.ws-in::placeholder { color: var(--muted); }
+
+#page-tasks input:not([type=checkbox]):not([type=search]):focus,
+#page-tasks select:focus,
+#page-tasks textarea:focus,
+.ws-panel input:not([type=checkbox]):focus,
+.ws-panel select:focus,
+.ws-panel textarea:focus,
+.ws-in:focus {
+  outline: none;
+  border-color: var(--coral);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--coral) 16%, transparent);
+}
+
+/* Tünd temada tarix sahəsinin təqvim ikonu qara qalır və görünmür. */
+:root:not([data-theme="light"]) input[type="date"]::-webkit-calendar-picker-indicator,
+:root:not([data-theme="light"]) input[type="month"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+}
+
+/* Ölçü istisnaları — ümumi qaydadan SONRA gəlir. */
+.ws-d__num { max-width: 120px; }
+.ws-check-add { margin-top: 6px; border-style: dashed; background: none; }
+.ws-cm__in { font-size: var(--fs-sm); resize: vertical; }
+.ws-d__desc { font-size: var(--fs-sm); line-height: 1.55; resize: vertical; }
+.ws-d__title { font-size: var(--fs-lg); font-weight: 700; }
+
+/* 🔴 AXTARIŞ SAHƏSİ ÜMUMİ QAYDADAN İSTİSNA EDİLİB (`:not([type=search])`).
+ *
+ * ÖLÇÜLƏN QÜSUR: ikon placeholder mətninin ÜSTÜNƏ düşürdü (16px örtmə).
+ * Səbəb spesifiklik idi — `#page-tasks input:not([type=checkbox])
+ * :not([type=file]):not([type=range])` (1,3,1) `.ws-search > input`
+ * qaydasını (0,1,1) udurdu və `padding-left`-i 38px-dən 10px-ə salırdı.
+ *
+ * ⚠ `:not()` SPESİFİKLİYİ ARTIRIR: onun daxilindəki ƏN SPESİFİK arqument
+ *   sayılır, yəni üç atribut seçicisi (0,3,0) əlavə edir. Bunu unutmaq
+ *   asandır — ona görə həll spesifiklik yarışı DEYİL, İSTİSNA-dır:
+ *   axtarış sahəsi ümumi qaydaya heç vaxt düşmür.
+ */
+#page-tasks .ws-search > input,
+#page-drills .dr-search > input {
+  width: 100%;
+  min-width: 0;
+  padding: 9px 62px 9px 38px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--body);
+  font-size: var(--fs-sm);
+  transition: border-color var(--mo-fast) var(--mo-ease), box-shadow var(--mo-fast) var(--mo-ease);
+}
+#page-drills .dr-search > input { padding-right: var(--sp-3); }
+#page-tasks .ws-search > input::placeholder,
+#page-drills .dr-search > input::placeholder { color: var(--muted); }
+#page-tasks .ws-search > input:focus,
+#page-drills .dr-search > input:focus {
+  outline: none;
+  border-color: var(--coral);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--coral) 18%, transparent);
+}
 .ws-kbd {
   position: absolute;
   right: 10px;
@@ -1207,329 +1325,60 @@ button.ws-card:focus-visible { outline: 2px solid var(--coral); outline-offset: 
 .ws-cm__b ul, .ws-cm__b ol { margin: 4px 0 0; padding-left: 20px; font-size: var(--fs-sm); }
 .ws-cm__b img { max-width: 100%; border-radius: 8px; }
 
-/* ═══════════════════════ ÇALIŞMALAR (#page-drills) ═══════════════════════
+/* ═══════════════════════ İDARƏETMƏ PANELİ (modal) ═══════════════════════
  *
- * ⚠ İŞ SAHƏSİ İLƏ EYNİ FAYLDA: iki səhifə fərqli sistemlərdir, lakin eyni
- *   vizual dili paylaşır (kart, çip, statistika, forma idarəediciləri).
- *   Ayrı fayla qoysaydıq, nişanlar və ölçülər ikinci nüsxə olardı.
- *
- * ⚠ `--ws-*` nişanları `:root`-dadır, ona görə burada yenidən elan
- *   EDİLMİR — sadəcə işlədilir.
+ * ⚠ MODAL `#modalCard`-DADIR, `#page-tasks`-də YOX. Ona görə yuxarıdakı tip
+ *   üzrə qaydalar bura ÇATMIR və sahələr `.ws-in` sinfi ilə stillənir.
+ *   (Bu, istifadəçinin bildirdiyi «modaldakı sahələr ağ qalır» halının
+ *   kökü idi.)
  */
+.ws-fld { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.ws-fld__l { font-size: var(--fs-xs); font-weight: 600; color: var(--muted); }
+.ws-fld__h { font-size: var(--fs-xs); color: var(--muted); }
 
-.dr-t--blue { color: var(--ws-blue); }
-.dr-t--violet { color: var(--ws-violet); }
-.dr-t--green { color: var(--ws-green); }
-.dr-t--amber { color: var(--ws-amber); }
-.dr-t--rose { color: var(--ws-rose); }
-.dr-t--teal { color: var(--ws-teal); }
-
-#page-drills .ic svg { color: inherit; }
-
-/* ── Başlıq ── */
-.dr-head {
+.ws-adm__form { display: flex; flex-direction: column; gap: var(--sp-3); }
+.ws-adm__row2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+.ws-adm__sep { height: 1px; background: var(--border); margin: var(--sp-3) 0; }
+.ws-adm__foot { display: flex; justify-content: flex-end; margin-top: var(--sp-3); }
+.ws-adm__b { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 auto; }
+.ws-adm__m { font-size: var(--fs-xs); color: var(--muted); }
+.ws-adm__note {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--sp-3);
-  flex-wrap: wrap;
-  margin-bottom: var(--sp-3);
-}
-.dr-title { margin: 0; font-size: var(--fs-2xl); font-weight: 800; letter-spacing: -0.02em; }
-.dr-sub { margin: 4px 0 0; font-size: var(--fs-sm); color: var(--muted); max-width: 62ch; }
-
-/* ── Statistika ── */
-.dr-dash {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(146px, 1fr));
-  gap: var(--sp-2);
-  margin-bottom: var(--sp-3);
-}
-.dr-card {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  padding: var(--sp-2) var(--sp-3);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface);
-  box-shadow: var(--sh-1);
-  min-height: 62px;
-  color: var(--text);
-}
-.dr-card__ic {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  background: color-mix(in srgb, currentColor 13%, transparent);
-  flex: 0 0 auto;
-}
-.dr-card__b { display: flex; flex-direction: column; min-width: 0; }
-.dr-card__n {
-  font-size: var(--fs-lg);
-  font-weight: 800;
-  line-height: 1.1;
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
-}
-.dr-card__l { font-size: var(--fs-xs); color: var(--muted); overflow-wrap: break-word; }
-
-/* ── Axtarış + filtr ── */
-.dr-controls { margin-bottom: var(--sp-3); }
-.dr-searchrow { display: flex; gap: var(--sp-2); align-items: center; flex-wrap: wrap; margin-bottom: var(--sp-2); }
-.dr-search { flex: 1 1 260px; min-width: 0; }
-
-/* 🔴 FORMA İDARƏEDİCİLƏRİ AÇIQ STİLLƏNİR. Layihədə qlobal `input {}` qaydası
-   YOXDUR — stil yalnız `.field input` altında var. `.field`-dən kənarda
-   qalan hər sahə brauzerin DEFAULT görünüşündə qalır (ağ qutu, sistem
-   haşiyəsi) və tünd temada yad element kimi görünür. Köhnə çalışma
-   səhifəsində məhz belə idi. */
-.dr-in {
-  width: 100%;
-  min-width: 0;
-  padding: 9px 12px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface);
-  color: var(--text);
-  font-family: var(--body);
-  font-size: var(--fs-sm);
-  transition: border-color var(--mo-fast) var(--mo-ease), box-shadow var(--mo-fast) var(--mo-ease);
-}
-.dr-search > .dr-in { padding-left: 38px; }
-.dr-in::placeholder { color: var(--muted); }
-.dr-in:focus {
-  outline: none;
-  border-color: var(--coral);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--coral) 18%, transparent);
-}
-.dr-in--sel { flex: 0 0 auto; width: auto; min-width: 160px; }
-.dr-in--ta { min-height: 96px; line-height: 1.55; resize: vertical; }
-
-.dr-cats { display: flex; gap: 6px; flex-wrap: wrap; }
-.dr-cat {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 11px;
-  border: 1px solid var(--border);
-  border-radius: var(--r-pill);
-  background: var(--bg);
-  color: var(--text-sec);
-  font-family: var(--body);
-  font-size: var(--fs-xs);
-  cursor: pointer;
-  min-height: 28px;
-}
-.dr-cat:hover { border-color: var(--coral2); color: var(--text); }
-.dr-cat.is-on { background: color-mix(in srgb, var(--coral) 14%, transparent); border-color: var(--coral); color: var(--coral); }
-.dr-cat:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
-.dr-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: 0 0 auto; }
-
-/* ── Təklif formu ── */
-.dr-form {
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: var(--surface);
-  box-shadow: var(--sh-1);
-  margin-bottom: var(--sp-3);
-  animation: ws-drop var(--mo-base) var(--mo-ease);
-}
-.dr-form[hidden] { display: none; }
-.dr-form__h {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: var(--sp-3);
-  border-bottom: 1px solid var(--border);
-  font-size: var(--fs-sm);
-  font-weight: 700;
-}
-.dr-form__x { margin-left: auto; }
-.dr-form__b { display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-3); }
-.dr-form__b .c-btn { align-self: flex-start; }
-
-/* ── Kart şəbəkəsi ── */
-.dr-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: var(--sp-3);
-}
-.dr-item--green { border-left: 3px solid var(--ws-green); }
-.dr-item--amber { border-left: 3px solid var(--ws-amber); }
-.dr-item--rose { border-left: 3px solid var(--ws-rose); }
-
-.dr-item {
-  display: flex;
-  flex-direction: column;
   gap: 7px;
-  padding: var(--sp-3);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: var(--surface);
-  box-shadow: var(--sh-1);
-  min-height: 0;
-  transition: box-shadow var(--mo-fast) var(--mo-ease), transform var(--mo-fast) var(--mo-ease);
-}
-.dr-item:hover { box-shadow: var(--sh-2); transform: translateY(-1px); }
-.dr-card__top { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.dr-card__del { margin-left: auto; width: 26px; height: 26px; color: var(--muted); }
-.dr-card__del:hover { color: var(--ws-rose); }
-.dr-card__h {
-  margin: 0;
-  font-size: var(--fs-md);
-  font-weight: 700;
-  line-height: 1.3;
-  overflow-wrap: anywhere;
-}
-.dr-card__d {
-  margin: 0;
-  font-size: var(--fs-sm);
-  color: var(--text-sec);
-  line-height: 1.5;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  white-space: pre-wrap;
-}
-.dr-card__foot {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  flex-wrap: wrap;
-  margin-top: auto;
-  padding-top: 6px;
-  font-size: var(--fs-xs);
-  color: var(--muted);
-}
-.dr-card__sp { flex: 1 1 auto; }
-.dr-meta { display: inline-flex; align-items: center; gap: 4px; }
-
-.dr-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 2px 9px;
-  border-radius: var(--r-pill);
-  background: color-mix(in srgb, currentColor 13%, transparent);
-  font-size: var(--fs-xs);
-  font-weight: 600;
-}
-.dr-state {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: var(--fs-xs);
-  font-weight: 700;
-}
-.dr-done { display: inline-flex; align-items: center; gap: 5px; color: var(--ws-green); font-weight: 600; }
-
-/* ── Admin panelləri ── */
-.dr-panel {
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: var(--surface);
-  margin-bottom: var(--sp-3);
-  overflow: hidden;
-}
-.dr-panel__h {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: var(--sp-3);
-  border-bottom: 1px solid var(--border);
-  font-size: var(--fs-sm);
-  font-weight: 700;
-}
-.dr-panel__n {
-  margin-left: auto;
-  padding: 1px 9px;
-  border-radius: var(--r-pill);
-  background: var(--surface-2);
-  color: var(--muted);
-  font-family: var(--mono);
-  font-size: var(--fs-xs);
-}
-.dr-panel__b { display: flex; flex-direction: column; }
-.dr-row {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--sp-3);
-  padding: var(--sp-3);
-  border-bottom: 1px solid var(--border);
-  flex-wrap: wrap;
-}
-.dr-row:last-child { border-bottom: none; }
-.dr-row__b { flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-.dr-row__b b { font-size: var(--fs-sm); }
-.dr-row__b p {
-  margin: 0;
-  font-size: var(--fs-xs);
-  color: var(--text-sec);
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  display: -webkit-box;
-  -webkit-line-clamp: 4;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.dr-row__a { display: flex; gap: 6px; flex-wrap: wrap; align-items: flex-start; }
-.dr-rej { color: var(--ws-rose); }
-.dr-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: var(--fs-xs);
-  color: var(--coral);
-  overflow-wrap: anywhere;
-}
-
-.dr-modal__cat { margin-bottom: var(--sp-2); }
-.dr-modal__d {
   margin: 0 0 var(--sp-3);
-  font-size: var(--fs-sm);
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface-2);
+  font-size: var(--fs-xs);
   color: var(--text-sec);
-  white-space: pre-wrap;
-  line-height: 1.55;
 }
+.ws-adm__note .ic { flex: 0 0 auto; margin-top: 1px; color: var(--muted); }
 
-.dr-sk {
-  height: 150px;
-  border-radius: 14px;
-  background: linear-gradient(90deg, var(--surface-2) 25%,
-    color-mix(in srgb, var(--surface-2) 55%, var(--surface)) 50%, var(--surface-2) 75%);
-  background-size: 200% 100%;
-  animation: ws-shim 1.3s linear infinite;
+.ws-adm-list { max-height: 260px; overflow-y: auto; }
+
+/* Rəng nümunələri — açar adı yerinə RƏNGİN ÖZÜ göstərilir. */
+.ws-swatches { display: flex; gap: 7px; flex-wrap: wrap; }
+.ws-sw {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background: var(--lc, var(--ws-slate));
+  cursor: pointer;
+  padding: 0;
 }
+.ws-sw:hover { transform: scale(1.08); }
+.ws-sw.is-on { border-color: var(--text); box-shadow: 0 0 0 2px var(--surface) inset; }
+.ws-sw:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
 
-@media (max-width: 768px) {
-  .dr-head { flex-direction: column; }
-  .dr-head__a { width: 100%; }
-  .dr-head__a .c-btn { width: 100%; }
-  .dr-title { font-size: var(--fs-xl); }
-  .dr-in--sel { width: 100%; min-width: 0; }
-  .dr-dash {
-    display: flex;
-    overflow-x: auto;
-    scrollbar-width: none;
-    scroll-snap-type: x proximity;
-    margin-inline: calc(var(--sp-3) * -1);
-    padding-inline: var(--sp-3);
-  }
-  .dr-dash::-webkit-scrollbar { display: none; }
-  .dr-card { flex: 0 0 150px; scroll-snap-align: start; }
-  .dr-grid { grid-template-columns: 1fr; }
-  .dr-row__a { width: 100%; }
-  .dr-row__a .c-btn { flex: 1 1 auto; }
-}
+/* ⚠ Modal daxilindəki sahələr `.ws-in` ilə gəlir — burada yalnız ölçü
+   düzəlişi var, əsas görünüş yuxarıdakı ortaq qaydadadır. */
+#modalCard .ws-in { font-size: var(--fs-sm); padding: 9px 11px; }
 
-@media (prefers-reduced-motion: reduce) {
-  .dr-sk, .dr-form { animation: none; }
-  .dr-item:hover { transform: none; }
+@media (max-width: 480px) {
+  .ws-adm__row2 { grid-template-columns: 1fr; }
 }
 
 /* ═══════════════════════ UYĞUNLAŞAN GÖRÜNÜŞ ═══════════════════════ */
