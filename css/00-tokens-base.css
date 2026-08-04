@@ -170,7 +170,7 @@
   padding: 0;
 }
 
-body {
+html, body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--body);
