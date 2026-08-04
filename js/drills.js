@@ -1,4 +1,12 @@
-// Tapşırıqlar: kateqoriya tabları, həll göndərmə, admin yoxlaması (approve/reject).
+// ÇALIŞMALAR (öyrənmə tapşırıqları): kateqoriya tabları, həll göndərmə,
+// admin yoxlaması (approve/reject).
+//
+// 🔴 BU, KOMANDA TAPŞIRIQLARI DEYİL. Repoda iki ayrı sistem var:
+//   BU FAYL          → `tasks` + `submissions` cədvəlləri, öyrənmə çalışması
+//   `js/workspace.js`→ `team_tasks`, layihə idarəetməsi (Kanban, sprint)
+// Modul əvvəl `js/tasks.js` adlanırdı və «Tapşırıqlar» səhifəsini tuturdu;
+// iş sahəsi qurulanda ad qarışıqlıq yaradırdı, ona görə `drills` oldu.
+// Səhifə: `#page-drills`, marşrut: `#drills`.
 import {
   state, watchTasks, createTask, deleteTask, reviewTask,
   watchMyPendingTasks, watchPendingTasks,
@@ -150,7 +158,7 @@ function renderPendingTasks(list, isAdminView){
   });
 }
 
-export function initTasks(){
+export function initDrills(){
   rebuildTaskCatSelect();
   bus.addEventListener('taxonomy-updated', () => { rebuildTaskCatSelect(); buildTabs(); });
   document.getElementById('proposeTaskBtn').addEventListener('click', () => {
@@ -175,7 +183,7 @@ export function initTasks(){
   });
 }
 
-export function mountTasks(){
+export function mountDrills(){
   document.getElementById('taskForm').classList.add('hidden');
   document.getElementById('adminSubmissions').classList.toggle('hidden', !state.isAdmin);
   buildTabs();

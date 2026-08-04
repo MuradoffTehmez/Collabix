@@ -675,6 +675,9 @@
     <button class="nav-item" data-page="notifs"><span class="ic" data-icon="bell"></span> <span data-i18n="nav.notifs"></span><span class="nav-badge" id="notifBadge"></span></button>
     <button class="nav-item" data-page="users"><span class="ic" data-icon="userSearch"></span> <span data-i18n="nav.users"></span></button>
     <button class="nav-item" data-page="tasks"><span class="ic" data-icon="tasks"></span> <span data-i18n="nav.tasks"></span></button>
+    <!-- ⚠ Öyrənmə çalışmaları AYRI bənddir: «Tapşırıqlar» artıq komanda iş
+         sahəsidir (Kanban/sprint), bu isə həll göndərilən çalışmalardır. -->
+    <button class="nav-item" data-page="drills"><span class="ic" data-icon="poll"></span> <span data-i18n="nav.drills"></span></button>
     <button class="nav-item" data-page="teams"><span class="ic" data-icon="users"></span> <span data-i18n="nav.teams"></span></button>
     <button class="nav-item" data-page="stats"><span class="ic" data-icon="chart"></span> <span data-i18n="nav.stats"></span></button>
     <button class="nav-item" data-page="saved"><span class="ic" data-icon="bookmark"></span> <span data-i18n="nav.saved"></span></button>
@@ -1060,7 +1063,19 @@
       </button>
     </div>
 
+    <!-- 🔴 İŞ SAHƏSİ — komanda tapşırıqları (Kanban, sprint, təyinat).
+         Öyrənmə çalışmaları AŞAĞIDA, `#page-drills`-dədir: iki sistem
+         qarışdırılmamalıdır (sxem izahı `migrations/0054`). -->
     <div class="page" id="page-tasks">
+      <div class="ws-head" id="wsHead"></div>
+      <div class="ws-dash" id="wsDash"></div>
+      <div class="ws-timer" id="wsTimer" hidden></div>
+      <div class="ws-controls" id="wsControls"></div>
+      <div class="ws-bulk" id="wsBulk" hidden></div>
+      <div class="ws-body" id="wsBody"></div>
+    </div>
+
+    <div class="page" id="page-drills">
       <h1 class="page-title" data-i18n="nav.tasks"></h1>
       <p class="page-sub" data-i18n="tasks.sub"></p>
       <button class="btn-small u-margin-bottom-14px" id="proposeTaskBtn" data-i18n="task.propose"></button>

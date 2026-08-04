@@ -31,7 +31,12 @@ import { initChat, mountChat } from './chat.js';
 import { initDM, mountDM, subscribeThreads } from './dm.js';
 import { mountUsers, mountPubProfile } from './users.js';
 import { initPublic, showPublicPage, hidePublic, setPublicAuthState, PUBLIC_PAGES, PUB_PATHS } from './public.js';
-import { initTasks, mountTasks } from './tasks.js';
+// ⚠ İKİ AYRI TAPŞIRIQ SİSTEMİ:
+//   `workspace` → komanda tapşırıqları (Kanban, sprint) — «Tapşırıqlar»
+//   `drills`    → öyrənmə çalışmaları (həll göndər, admin təsdiqi) — «Çalışmalar»
+// Adları qarışdırmaq marşrutu yanlış səhifəyə bağlayar.
+import { initDrills, mountDrills } from './drills.js';
+import { mountWorkspace } from './workspace.js';
 import { initTeams, mountTeams, mountTeam } from './teams.js';
 import { initStats, mountStats } from './stats.js';
 import { initProfile, mountProfile } from './profile.js';
@@ -136,7 +141,7 @@ async function doLogin(){
 /* ================= naviqasiya ================= */
 const MOUNTS = {
   home: mountHome, chat: mountChat, dm: mountDM, notifs: mountNotifs,
-  users: mountUsers, tasks: mountTasks, teams: mountTeams, team: mountTeam, stats: mountStats, saved: mountSaved,
+  users: mountUsers, tasks: mountWorkspace, drills: mountDrills, teams: mountTeams, team: mountTeam, stats: mountStats, saved: mountSaved,
   // Sessiya siyahısı hər dəfə Parametrlərə girildikdə YENİDƏN çəkilir — başqa
   // cihazdan giriş edildikdə köhnə siyahı qalmasın.
   // ⚠ Profil mount-u İKİ işi görür: `mountProfile` təmizləyici funksiya
@@ -514,7 +519,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initComposer();
   initChat();
   initDM();
-  initTasks();
+  initDrills();
   initTeams();
   initStats();
   initProfile();
@@ -605,6 +610,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const menu = el('div', { class: 'more-menu' },
       item('◎', 'İstifadəçilər', 'users'),
       item('☑', 'Tapşırıqlar', 'tasks'),
+      item('✎', 'Çalışmalar', 'drills'),
       item('▤', 'Statistika', 'stats'),
       item('★', 'Saxlanılanlar', 'saved'),
       item('⚙', 'Parametrlər', 'settings'),

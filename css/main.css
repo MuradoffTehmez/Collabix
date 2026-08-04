@@ -83,5 +83,8 @@
      status rəngləri profil səhifəsində boş qalardı. */
 @import './91-profile.css';
 
+/* İş sahəsi (Tapşırıqlar) — Kanban, siyahı, detal paneli. */
+@import './92-workspace.css';
+
 /* 🔴 HƏMİŞƏ SONUNCU */
 @import './90-utilities.css';

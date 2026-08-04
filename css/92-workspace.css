@@ -1,0 +1,906 @@
+/* 92-workspace.css — İş sahəsi (Tapşırıqlar): Kanban, siyahı, detal paneli.
+ *
+ * ⚠ `91-profile.css`-DƏN SONRA, `90-utilities.css`-DƏN ƏVVƏL.
+ *
+ * 🔴 NİŞANLAR `:root`-DADIR, `#page-tasks`-də YOX. Səbəb ölçülüb: detal paneli
+ *    və menyular `body`-yə portal edilir; nişanlar səhifə seçicisinə bağlı
+ *    olsaydı, portal olunan qat onları GÖRMƏZDİ və `color-mix(...)` etibarsız
+ *    olub bütün elanı SÜKUTLA atardı (profil örtük seçicisində məhz bu oldu).
+ */
+
+:root {
+  /* Sütun ölçüləri — bütün breakpoint-lərdə eyni ritm. */
+  --ws-col-w: 300px;
+  --ws-gap: var(--sp-3);
+  --ws-panel-w: 460px;
+  --ws-topbar: 57px;
+
+  /* Status tonları */
+  --ws-slate: #94a3b8;
+  --ws-blue: #3b82f6;
+  --ws-cyan: #06b6d4;
+  --ws-violet: #a855f7;
+  --ws-amber: #f59e0b;
+  --ws-teal: #14b8a6;
+  --ws-green: #22c55e;
+  --ws-rose: #e5484d;
+  --ws-lime: #84cc16;
+  --ws-orange: #f97316;
+
+  /* Prioritet tonları — statusdan AYRI şkala: ikisi eyni kartda yan-yana
+     durur və eyni rəngdən qidalansaydılar bir-birini oxunmaz edərdi. */
+  --ws-crit: #dc2626;
+  --ws-urgent: #ea580c;
+  --ws-high: #d97706;
+  --ws-med: #64748b;
+  --ws-low: #94a3b8;
+}
+
+:root[data-theme="light"] {
+  --ws-slate: #64748b;
+  --ws-blue: #1d63d1;
+  --ws-cyan: #0e7490;
+  --ws-violet: #7e22ce;
+  --ws-amber: #b45309;
+  --ws-teal: #0f766e;
+  --ws-green: #15803d;
+  --ws-rose: #be123c;
+  --ws-lime: #4d7c0f;
+  --ws-orange: #c2410c;
+  --ws-crit: #b91c1c;
+  --ws-urgent: #c2410c;
+  --ws-high: #b45309;
+  --ws-med: #475569;
+  --ws-low: #64748b;
+}
+
+/* Ton yardımçıları — `currentColor` ilə işləyən hər şey bunlardan qidalanır. */
+.ws-s--slate { color: var(--ws-slate); }
+.ws-s--blue { color: var(--ws-blue); }
+.ws-s--cyan { color: var(--ws-cyan); }
+.ws-s--violet { color: var(--ws-violet); }
+.ws-s--amber { color: var(--ws-amber); }
+.ws-s--teal { color: var(--ws-teal); }
+.ws-s--green { color: var(--ws-green); }
+.ws-s--rose { color: var(--ws-rose); }
+.ws-t--blue { color: var(--ws-blue); }
+.ws-t--violet { color: var(--ws-violet); }
+.ws-t--green { color: var(--ws-green); }
+.ws-t--amber { color: var(--ws-amber); }
+.ws-t--rose { color: var(--ws-rose); }
+.ws-t--teal { color: var(--ws-teal); }
+.ws-t--cyan { color: var(--ws-cyan); }
+.ws-p--crit { color: var(--ws-crit); }
+.ws-p--urgent { color: var(--ws-urgent); }
+.ws-p--high { color: var(--ws-high); }
+.ws-p--med { color: var(--ws-med); }
+.ws-p--low { color: var(--ws-low); }
+.ws-l--slate { --lc: var(--ws-slate); }
+.ws-l--blue { --lc: var(--ws-blue); }
+.ws-l--violet { --lc: var(--ws-violet); }
+.ws-l--green { --lc: var(--ws-green); }
+.ws-l--amber { --lc: var(--ws-amber); }
+.ws-l--rose { --lc: var(--ws-rose); }
+.ws-l--teal { --lc: var(--ws-teal); }
+.ws-l--cyan { --lc: var(--ws-cyan); }
+.ws-l--lime { --lc: var(--ws-lime); }
+.ws-l--orange { --lc: var(--ws-orange); }
+
+#page-tasks .ic svg { color: inherit; }
+
+/* ═══════════════════════ BAŞLIQ ═══════════════════════ */
+
+.ws-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-3);
+}
+.ws-title { margin: 0; font-size: var(--fs-2xl); font-weight: 800; letter-spacing: -0.02em; }
+.ws-sub { margin: 4px 0 0; font-size: var(--fs-sm); color: var(--muted); max-width: 60ch; }
+.ws-head__a { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+
+/* ═══════════════════════ İDARƏ PANELİ ═══════════════════════ */
+
+.ws-dash {
+  display: grid;
+  /* ⚠ 148px, 132 YOX: rus dilində «Заблокировано» kimi uzun tək söz dar
+     kartda söz ortasından qırılırdı. Ölçü ən uzun etiketə görə seçilib. */
+  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-3);
+}
+.ws-card {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  text-align: left;
+  font-family: var(--body);
+  min-height: 58px;
+  /* 🔴 `color` AÇIQ: bunlar `<button>`-dur və brauzerin default düymə rəngi
+     tünddür — tünd temada rəqəm görünməz olardı (profil layihə kartındakı
+     eyni tələ). Ton sinfi `.ws-t--*` SONRA gəlir və ikonu rəngləyir. */
+  color: var(--text);
+  transition: border-color var(--mo-fast) var(--mo-ease), transform var(--mo-fast) var(--mo-ease);
+}
+button.ws-card { cursor: pointer; }
+button.ws-card:hover { border-color: currentColor; transform: translateY(-1px); }
+button.ws-card:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+.ws-card--hero {
+  position: relative;
+  container-type: inline-size;
+  min-height: 74px;
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--sh-1);
+}
+.ws-card__ic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+}
+.ws-card--hero .ws-card__ic {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: color-mix(in srgb, currentColor 13%, transparent);
+}
+.ws-card__b { display: flex; flex-direction: column; min-width: 0; }
+.ws-card__n {
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.ws-card--hero .ws-card__n { font-size: var(--fs-xl); }
+.ws-card__l {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  /* ⚠ `overflow-wrap` MƏCBURİDİR: dar kartda "Заблокировано" kimi uzun tək
+     söz sətrə sığmır və `overflow:hidden` onu SÖZ ORTASINDAN kəsirdi.
+     Sarma olmadan `line-clamp` heç nə etmir — o, YALNIZ sətir sayını
+     məhdudlaşdırır, sətir yaratmır. */
+  overflow-wrap: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Mini qrafik — kartın sağ kənarında, məzmunu itələmir.
+   ⚠ DAR KARTDA GİZLƏNİR (aşağıdakı container sorğusu): 140px-lik kartda o,
+     etiketin üstünə minirdi. */
+.ws-spark {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 22px;
+  opacity: .5;
+}
+.ws-spark i {
+  display: block;
+  width: 4px;
+  height: var(--h, 10%);
+  min-height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+}
+
+/* ═══════════════════════ AXTARIŞ + FİLTR ═══════════════════════ */
+
+.ws-controls {
+  position: sticky;
+  top: var(--ws-topbar);
+  z-index: 30;
+  background: var(--bg);
+  padding: var(--sp-2) 0;
+  margin-bottom: var(--sp-2);
+  border-bottom: 1px solid var(--border);
+}
+.ws-searchrow { display: flex; gap: var(--sp-2); align-items: center; flex-wrap: wrap; }
+.ws-search { flex: 1 1 260px; min-width: 0; }
+/* ⚠ `15-components.css`-dəki `.c-search > input` padding qaydası yalnız üç
+   sabit seçiciyə bağlıdır — buradakı sahə onlardan biri deyil, ona görə
+   ikonun altına düşməsin deyə padding AÇIQ verilir (kataloq/bildiriş
+   mərkəzində eyni düzəliş). */
+/* ⚠ `width: 100%` DƏ LAZIMDIR: `.c-search` flex konteynerdir və input
+   default `size` atributuna görə ~200px qalırdı — sətirdə boş yer olsa da
+   sahə böyümürdü. */
+.ws-search > input { padding-left: 38px; padding-right: 62px; width: 100%; }
+.ws-kbd {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  font-family: var(--mono);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 2px 5px;
+}
+.ws-filterbtn { position: relative; }
+.ws-fbadge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 17px;
+  height: 17px;
+  border-radius: 9px;
+  background: var(--coral);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+}
+.ws-fbadge[hidden] { display: none; }
+
+.ws-views { display: inline-flex; gap: 2px; border: 1px solid var(--border); border-radius: 10px; padding: 2px; }
+.ws-view {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background var(--mo-fast) var(--mo-ease), color var(--mo-fast) var(--mo-ease);
+}
+.ws-view:hover { background: var(--surface-2); color: var(--text); }
+.ws-view.is-on { background: color-mix(in srgb, var(--coral) 14%, transparent); color: var(--coral); }
+.ws-view:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+
+.ws-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--sp-3);
+  margin-top: var(--sp-3);
+  padding: var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--sh-1);
+  animation: ws-drop var(--mo-base) var(--mo-ease);
+}
+.ws-filters[hidden] { display: none; }
+.ws-fg { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ws-fg__l { font-size: var(--fs-xs); font-weight: 700; color: var(--muted); }
+.ws-fg select {
+  width: 100%;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--body);
+  font-size: var(--fs-xs);
+}
+.ws-fg--toggles { justify-content: flex-end; gap: 8px; }
+.ws-check { display: flex; align-items: center; gap: 7px; font-size: var(--fs-xs); cursor: pointer; }
+.ws-pills { display: flex; gap: 5px; flex-wrap: wrap; }
+.ws-pill {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  background: var(--bg);
+  color: var(--text-sec);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+  min-height: 26px;
+}
+.ws-pill.is-on { background: color-mix(in srgb, var(--coral) 14%, transparent); border-color: var(--coral); color: var(--coral); }
+.ws-pill:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+.ws-filters__foot { grid-column: 1 / -1; display: flex; gap: var(--sp-2); justify-content: flex-end; flex-wrap: wrap; }
+
+.ws-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: var(--sp-2); }
+.ws-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  color: var(--text-sec);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+  min-height: 24px;
+}
+.ws-chip:hover { border-color: var(--coral2); }
+.ws-chip--saved { color: var(--coral); }
+
+@keyframes ws-drop { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+/* Kart 190px-dən dardırsa qrafik gizlənir — etiket üstünlük təşkil edir. */
+@container (max-width: 190px) {
+  .ws-spark { display: none; }
+}
+
+/* ═══════════════════════ TAYMER ZOLAĞI ═══════════════════════ */
+
+.ws-timer {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 7px var(--sp-3);
+  border: 1px solid color-mix(in srgb, var(--ws-amber) 40%, var(--border));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--ws-amber) 8%, var(--bg));
+  font-size: var(--fs-xs);
+  margin-bottom: var(--sp-2);
+  color: var(--ws-amber);
+}
+.ws-timer[hidden] { display: none; }
+.ws-timer__t { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ws-timer__m { margin-left: auto; font-variant-numeric: tabular-nums; }
+
+/* ═══════════════════════ TOPLU ƏMƏLİYYAT ═══════════════════════ */
+
+.ws-bulk {
+  position: sticky;
+  top: calc(var(--ws-topbar) + 60px);
+  z-index: 29;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: 12px;
+  background: var(--coral);
+  color: #fff;
+  box-shadow: var(--sh-2);
+  margin-bottom: var(--sp-2);
+}
+/* ⚠ `hidden` atributu `display` qaydasına UDUZUR — açıq bərpa (layihə qeydi). */
+.ws-bulk[hidden] { display: none; }
+.ws-bulk__n { font-weight: 700; font-size: var(--fs-sm); }
+.ws-bulk .c-btn { background: rgba(255,255,255,.16); color: #fff; border-color: transparent; }
+.ws-bulk .c-btn:hover { background: rgba(255,255,255,.26); }
+.ws-bulk .c-icon-btn { margin-left: auto; color: #fff; }
+
+/* ═══════════════════════ LÖVHƏ (Kanban) ═══════════════════════ */
+
+.ws-body--kanban {
+  display: flex;
+  gap: var(--ws-gap);
+  overflow-x: auto;
+  padding-bottom: var(--sp-3);
+  /* Sütunlar tam hündürlükdə: səhifə deyil, SÜTUN sürüşür — başlıqlar
+     görünən qalır (Linear/Jira davranışı). */
+  align-items: flex-start;
+  scroll-snap-type: x proximity;
+}
+.ws-col {
+  flex: 0 0 var(--ws-col-w);
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 260px);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  scroll-snap-align: start;
+  transition: border-color var(--mo-fast) var(--mo-ease), background var(--mo-fast) var(--mo-ease);
+}
+.ws-col.is-over {
+  border-color: var(--coral);
+  background: color-mix(in srgb, var(--coral) 6%, var(--surface));
+}
+.ws-col__h {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  border-radius: 14px 14px 0 0;
+  z-index: 1;
+}
+.ws-col__h h2 { margin: 0; font-size: var(--fs-sm); font-weight: 700; color: var(--text); }
+.ws-col__dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: 0 0 auto; }
+.ws-col__n {
+  margin-left: auto;
+  font-size: var(--fs-xs);
+  font-family: var(--mono);
+  color: var(--muted);
+  background: var(--surface-2);
+  border-radius: var(--r-pill);
+  padding: 1px 7px;
+}
+.ws-col__add { width: 26px; height: 26px; }
+.ws-col__b {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: var(--sp-2);
+  overflow-y: auto;
+  min-height: 80px;
+}
+.ws-col__empty {
+  padding: var(--sp-4) var(--sp-2);
+  text-align: center;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+}
+.ws-col__more {
+  border: none;
+  background: none;
+  color: var(--coral);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+  padding: 6px;
+}
+
+/* ═══════════════════════ TAPŞIRIQ KARTI ═══════════════════════ */
+
+.ws-card-t {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--border);
+  border-left: 3px solid currentColor;
+  border-radius: 10px;
+  background: var(--bg);
+  cursor: pointer;
+  transition: box-shadow var(--mo-fast) var(--mo-ease), transform var(--mo-fast) var(--mo-ease);
+}
+.ws-card-t:hover { box-shadow: var(--sh-2); transform: translateY(-1px); }
+.ws-card-t:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+.ws-card-t.is-drag { opacity: .45; }
+.ws-card-t.is-sel { border-color: var(--coral); background: color-mix(in srgb, var(--coral) 7%, var(--bg)); }
+.ws-card-t--list { border-radius: 10px; }
+
+.ws-card-t__top { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ws-selbox { width: 14px; height: 14px; cursor: pointer; flex: 0 0 auto; }
+.ws-key {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  background: var(--surface-2);
+  border-radius: 5px;
+  padding: 1px 5px;
+}
+.ws-key--lg { font-size: var(--fs-xs); padding: 3px 8px; }
+.ws-prio { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; }
+.ws-stat {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, currentColor 13%, transparent);
+  font-size: 10px;
+  font-weight: 600;
+}
+.ws-card-t__h {
+  margin: 0;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--text);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.ws-card-t__foot {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  font-size: 10px;
+  color: var(--muted);
+}
+.ws-card-t__sp { flex: 1 1 auto; }
+.ws-meta__i { display: inline-flex; align-items: center; gap: 3px; }
+.ws-av { width: 22px; height: 22px; border-radius: 7px; font-size: .6rem; flex: 0 0 auto; }
+.ws-av--none {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--border);
+  color: var(--muted);
+}
+
+.ws-due { display: inline-flex; align-items: center; gap: 3px; }
+.ws-due--over { color: var(--ws-rose); font-weight: 700; }
+.ws-due--today { color: var(--ws-amber); font-weight: 700; }
+.ws-due--soon { color: var(--ws-amber); }
+.ws-due--done { color: var(--ws-green); }
+
+.ws-labels { display: flex; gap: 4px; flex-wrap: wrap; }
+.ws-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 7px;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--lc, var(--ws-slate)) 15%, transparent);
+  color: var(--lc, var(--ws-slate));
+  font-size: 10px;
+  font-weight: 600;
+  border: none;
+  cursor: default;
+}
+.ws-labels--lg .ws-label { font-size: var(--fs-xs); padding: 3px 9px; cursor: pointer; }
+.ws-label-add {
+  font-size: var(--fs-xs);
+  border: 1px dashed var(--border);
+  border-radius: var(--r-pill);
+  background: none;
+  color: var(--muted);
+  padding: 2px 7px;
+}
+
+.ws-prog { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--muted); }
+.ws-prog i {
+  flex: 1 1 auto;
+  height: 4px;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  position: relative;
+  overflow: hidden;
+}
+.ws-prog i::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--p, 0%);
+  background: var(--ws-green);
+  border-radius: inherit;
+  transition: width var(--mo-base) var(--mo-ease);
+}
+.ws-prog--lg { font-size: var(--fs-xs); margin-bottom: var(--sp-2); }
+.ws-prog--lg i { height: 7px; }
+.ws-prog[hidden] { display: none; }
+
+/* ═══════════════════════ SİYAHI ═══════════════════════ */
+
+.ws-body--list { display: flex; flex-direction: column; gap: var(--sp-3); }
+.ws-group { border: 1px solid var(--border); border-radius: 14px; background: var(--surface); overflow: hidden; }
+.ws-group__h {
+  position: sticky;
+  top: calc(var(--ws-topbar) + 58px);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+.ws-group__h b { margin-left: auto; font-family: var(--mono); color: var(--muted); font-weight: 600; }
+.ws-group__b { display: flex; flex-direction: column; gap: 6px; padding: var(--sp-2); }
+.ws-sentinel { height: 1px; }
+
+/* ═══════════════════════ SKELET ═══════════════════════ */
+
+.ws-sk {
+  border-radius: 10px;
+  background: linear-gradient(90deg, var(--surface-2) 25%,
+    color-mix(in srgb, var(--surface-2) 55%, var(--surface)) 50%, var(--surface-2) 75%);
+  background-size: 200% 100%;
+  animation: ws-shim 1.3s linear infinite;
+}
+.ws-sk--head { height: 38px; margin-bottom: 8px; }
+.ws-sk--card { height: 84px; margin-bottom: 7px; }
+.ws-sk--row { height: 62px; }
+.ws-sklist { display: flex; flex-direction: column; gap: 8px; }
+.ws-body--kanban .ws-col:has(.ws-sk) { padding: var(--sp-2); }
+@keyframes ws-shim { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+/* Hazırlanan görünüşlər üçün açıq yer tutucu. */
+.ws-soon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 60px 20px;
+  color: var(--muted);
+  text-align: center;
+}
+.ws-soon h3 { margin: 0; font-size: var(--fs-md); color: var(--text); }
+.ws-soon p { margin: 0; font-size: var(--fs-sm); }
+
+/* ═══════════════════════ MENYU ═══════════════════════ */
+
+/* ⚠ `position` ELANI YOXDUR — panel `body`-yə portal edilir və `.c-pop`
+   (`position: fixed`) qüvvədə qalmalıdır (layihə qeydi). */
+.ws-menu {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--sh-3);
+  padding: 5px;
+  min-width: 200px;
+}
+.ws-menu__i {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font-family: var(--body);
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.ws-menu__i:hover { background: var(--surface-2); }
+
+/* ═══════════════════════ DETAL PANELİ ═══════════════════════ */
+
+.ws-panel__back {
+  position: fixed;
+  inset: 0;
+  z-index: 1150;
+  background: rgba(0, 0, 0, .35);
+  opacity: 0;
+  animation: ws-fade var(--mo-base) var(--mo-ease) forwards;
+}
+.ws-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1160;
+  width: min(var(--ws-panel-w), 100vw);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--sh-3);
+  animation: ws-slide var(--mo-base) var(--mo-ease);
+}
+@keyframes ws-slide { from { transform: translateX(100%); } to { transform: none; } }
+@keyframes ws-fade { to { opacity: 1; } }
+
+.ws-panel__h {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  border-bottom: 1px solid var(--border);
+  flex: 0 0 auto;
+}
+.ws-panel__b { flex: 1 1 auto; overflow-y: auto; padding: var(--sp-3); }
+.ws-panel__sk { height: 100%; }
+.ws-d__sp { flex: 1 1 auto; }
+
+.ws-d__title {
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: none;
+  color: var(--text);
+  font-family: var(--body);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  line-height: 1.3;
+  resize: vertical;
+  padding: 6px 8px;
+  /* ⚠ `field-sizing` YALNIZ Chrome 123+-dədir. Firefox/Safari-də sahə
+     `rows="1"` ilə bir sətir qalardı və uzun başlıq görünməzdi — ona görə
+     ƏSAS ölçü `min-height`-dir, `field-sizing` isə üstündən gələn təkmilləşmə. */
+  min-height: 2.6em;
+  field-sizing: content;
+}
+.ws-d__title:hover { border-color: var(--border); }
+.ws-d__title:focus { border-color: var(--coral); outline: none; }
+.ws-d__crumb { display: flex; align-items: center; gap: 5px; font-size: var(--fs-xs); color: var(--muted); margin: 4px 0 var(--sp-3) 8px; }
+
+.ws-d__grid { display: grid; grid-template-columns: 1fr; gap: 7px; margin-bottom: var(--sp-3); }
+.ws-d__row { display: grid; grid-template-columns: 96px 1fr; align-items: center; gap: var(--sp-2); }
+.ws-d__l { font-size: var(--fs-xs); color: var(--muted); }
+.ws-d__v { font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
+.ws-d__sel, .ws-d__date, .ws-d__num {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--body);
+  font-size: var(--fs-xs);
+}
+.ws-d__num { max-width: 120px; }
+
+.ws-d__sec { margin-bottom: var(--sp-4); }
+.ws-d__h {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--muted);
+}
+.ws-d__h4 { margin: var(--sp-2) 0 5px; font-size: var(--fs-xs); color: var(--muted); font-weight: 600; }
+.ws-d__none { margin: 0; font-size: var(--fs-xs); color: var(--muted); }
+.ws-d__inline { display: flex; gap: var(--sp-2); align-items: center; flex-wrap: wrap; margin-bottom: var(--sp-2); }
+.ws-d__desc {
+  width: 100%;
+  padding: 9px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--body);
+  font-size: var(--fs-sm);
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.ws-check-list { display: flex; flex-direction: column; gap: 2px; }
+.ws-check-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 7px;
+  font-size: var(--fs-sm);
+}
+.ws-check-item:hover { background: var(--surface-2); }
+.ws-check-item.is-done span { text-decoration: line-through; color: var(--muted); }
+.ws-check-item span { flex: 1 1 auto; overflow-wrap: anywhere; }
+.ws-check-add {
+  width: 100%;
+  margin-top: 6px;
+  padding: 7px 9px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font-family: var(--body);
+  font-size: var(--fs-xs);
+}
+.ws-mini { width: 22px; height: 22px; flex: 0 0 auto; }
+
+.ws-sub-list, .ws-dep-list, .ws-time-list, .ws-adm-list { display: flex; flex-direction: column; gap: 5px; }
+.ws-sub-item, .ws-dep, .ws-time, .ws-adm {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  font-size: var(--fs-xs);
+  color: var(--text);
+  text-align: left;
+  font-family: var(--body);
+  width: 100%;
+}
+.ws-sub-item { cursor: pointer; }
+.ws-sub-item:hover, .ws-dep:hover { border-color: var(--coral2); }
+.ws-sub-item__t, .ws-dep__t { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ws-dep__t { border: none; background: none; color: var(--text); cursor: pointer; font-family: var(--body); text-align: left; }
+
+.ws-cm-list { display: flex; flex-direction: column; gap: var(--sp-2); }
+.ws-cm { display: flex; gap: 8px; align-items: flex-start; }
+.ws-cm__b { flex: 1 1 auto; min-width: 0; }
+.ws-cm__h { display: flex; align-items: baseline; gap: 7px; font-size: var(--fs-xs); color: var(--muted); }
+.ws-cm__h b { color: var(--text); }
+.ws-cm__h i { font-style: normal; font-size: 10px; }
+.ws-cm__b p { margin: 2px 0 0; font-size: var(--fs-sm); line-height: 1.5; overflow-wrap: anywhere; }
+.ws-cm__form { display: flex; gap: var(--sp-2); align-items: flex-end; margin-top: var(--sp-2); }
+.ws-cm__in {
+  flex: 1 1 auto;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--body);
+  font-size: var(--fs-sm);
+  resize: vertical;
+}
+
+.ws-act { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.ws-act li { font-size: var(--fs-xs); color: var(--text-sec); display: flex; gap: 5px; flex-wrap: wrap; }
+.ws-act time { color: var(--muted); margin-left: auto; }
+.ws-act i { font-style: normal; color: var(--muted); }
+
+.ws-d__danger {
+  display: flex;
+  gap: var(--sp-2);
+  padding-top: var(--sp-3);
+  border-top: 1px dashed var(--border);
+  flex-wrap: wrap;
+}
+.ws-d__del { color: var(--ws-rose); }
+
+/* ═══════════════════════ UYĞUNLAŞAN GÖRÜNÜŞ ═══════════════════════ */
+
+@media (max-width: 1024px) {
+  :root { --ws-col-w: 260px; }
+  .ws-dash { grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); }
+}
+
+@media (max-width: 768px) {
+  .ws-head { flex-direction: column; }
+  .ws-head__a { width: 100%; }
+  .ws-head__a .c-btn { flex: 1 1 auto; }
+  .ws-title { font-size: var(--fs-xl); }
+
+  /* Statistika sarmaq əvəzinə yan sürüşür — 12 kart üç sıra tutub lövhəni
+     ekrandan qovurdu (kataloq və profildəki eyni həll). */
+  .ws-dash {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    margin-inline: calc(var(--sp-3) * -1);
+    padding-inline: var(--sp-3);
+  }
+  .ws-dash::-webkit-scrollbar { display: none; }
+  .ws-card { flex: 0 0 138px; scroll-snap-align: start; }
+
+  .ws-col { max-height: none; }
+  .ws-view { width: var(--tap); height: var(--tap); }
+  .ws-panel { width: 100vw; }
+
+  /* 🔴 FİLTR PANELİ ALT VƏRƏQƏ — dar ekranda 10 sahəli grid səhifəni iki
+     ekran aşağı itələyirdi (kataloqdakı eyni qərar). */
+  .ws-filters {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: auto;
+    z-index: 1000;
+    max-height: 84vh;
+    overflow-y: auto;
+    grid-template-columns: 1fr;
+    border-radius: 18px 18px 0 0;
+    box-shadow: var(--sh-3);
+    animation: ws-sheet var(--mo-base) var(--mo-ease);
+    padding-bottom: max(var(--sp-4), env(safe-area-inset-bottom));
+  }
+  .ws-filters__foot { position: sticky; bottom: 0; background: var(--surface); padding-top: var(--sp-2); }
+}
+
+@keyframes ws-sheet { from { transform: translateY(100%); } to { transform: none; } }
+
+@media (max-width: 480px) {
+  :root { --ws-col-w: 82vw; }
+  .ws-d__row { grid-template-columns: 1fr; gap: 3px; }
+  .ws-kbd { display: none; }
+  .ws-card { flex: 0 0 124px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ws-sk { animation: none; }
+  .ws-panel, .ws-panel__back, .ws-filters { animation: none; }
+  .ws-panel__back { opacity: 1; }
+  .ws-card-t:hover, button.ws-card:hover { transform: none; }
+  .ws-prog i::after { transition: none; }
+}
