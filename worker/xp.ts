@@ -208,7 +208,43 @@ export async function grantXp(
 
   const res = await env.DB.batch(stmts);
   const changed = Number(res[1]?.meta?.changes || 0) > 0;
+  if (changed) await logLevelUp(env, uid, amount);
   return changed ? { granted: true } : { granted: false, reason: 'duplicate' };
+}
+
+/**
+ * Səviyyə artımını `activities` cədvəlinə yazır — profil taymlaynının mənbəyi.
+ *
+ * 🔴 NİYƏ MƏHZ BURADA: `grantXp` XP-ni dəyişən YEGANƏ yoldur (admin düzəlişi
+ *    də ondan keçir). Hadisəni post/şərh/task yollarında ayrı-ayrı yazsaydıq,
+ *    biri unudulan kimi taymlaynda deşik yaranardı və bunu heç bir test
+ *    tutmazdı — çünki səviyyə artımı nadir hadisədir.
+ *
+ * ⚠ HESABLAMA DƏQİQDİR, TƏXMİNİ DEYİL: yeni XP oxunur və KÖHNƏ dəyər
+ *   `newXp - amount` kimi geri hesablanır. Əvvəlcədən oxusaydıq, paralel iki
+ *   qazanc arasında yarış olardı və ya səviyyə iki dəfə qeyd edilərdi.
+ *
+ * ⚠ ƏLAVƏ OXU YALNIZ UĞURLU VERİLMƏDƏ: təkrar (idempotent) çağırışlarda bu
+ *   funksiya heç işləmir.
+ *
+ * ⚠ FAIL-SOFT: taymlayn bəzəkdir — burada atılan xəta post yaratmağı
+ *   çökdürməməlidir.
+ */
+async function logLevelUp(env: Env, uid: string, amount: number): Promise<void> {
+  try {
+    const row = await env.DB.prepare('SELECT xp FROM users WHERE id = ?').bind(uid).first<any>();
+    const newXp = Number(row?.xp || 0);
+    const { levelFromXp } = await import('./level');
+    const [before, after] = await Promise.all([
+      levelFromXp(env, Math.max(0, newXp - amount)),
+      levelFromXp(env, newXp),
+    ]);
+    if (after <= before) return;
+    await env.DB.prepare(
+      `INSERT INTO activities (id, uid, actor_id, kind, ref_id, detail, created_at)
+       VALUES (?1, ?2, ?2, 'level_up', ?3, ?3, ?4)`,
+    ).bind(uuid(), uid, String(after), now()).run();
+  } catch { /* XP axını dayanmamalıdır */ }
 }
 
 /**

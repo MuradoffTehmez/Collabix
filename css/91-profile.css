@@ -1,0 +1,1078 @@
+/* 91-profile.css — Profil ekranı (öz profil `#page-profil` + publik `#page-u`).
+ *
+ * ⚠ `89-users.css`-DƏN SONRA, `90-utilities.css`-DƏN ƏVVƏL:
+ *   `--ud-*` nişanları (status/rank/kateqoriya rəngləri) orada hər üç səhifə
+ *   üçün elan olunur və burada YENİDƏN TƏYİN EDİLMİR. Bu fayl yalnız profilə
+ *   xas `--pf-*` nişanlarını gətirir.
+ *
+ * 🔴 SABİT HEX FON YOXDUR. Spesifikasiya `#F7F9FC` fon + ağ kart deyir; açıq
+ *    temada `var(--bg)`/`var(--surface)` onsuz da bunu verir. Sabit yazsaydıq
+ *    dark/matrix/cyberpunk temalarında profil saytın qalanından qoparadı.
+ *
+ * 🔴 İKİ SƏHİFƏ, BİR QAT: `#page-profil` və `#page-u` EYNİ `pf-*` siniflərini
+ *    işlədir. Fərq yalnız əməliyyat sütunundadır (redaktə vs izlə/mesaj) —
+ *    yəni istifadəçi öz profilinin kənardan necə göründüyünü bilir.
+ */
+
+/* 🔴 NİŞANLAR `:root`-DADIR, SƏHİFƏ SEÇİCİSİNDƏ YOX.
+ *
+ * Səbəb ölçülüb: örtük seçicisi `openPopover()` ilə `body`-yə PORTAL edilir
+ * (kart daxilində `position: absolute` işləmir — layihə qeydi). Nişanlar
+ * `#page-profil`-ə bağlı olsaydı, portal olunan panel onların HEÇ BİRİNİ
+ * görməzdi: `color-mix(... var(--pf-violet) ...)` naməlum rənglə etibarsız
+ * olur, bütün elan atılır və doqquz naxışın hamısı EYNİ tünd kvadrat kimi
+ * görünürdü — yəni seçim UI-ı seçim göstərmirdi.
+ *
+ * ⚠ `--pf-*` prefiksi qlobal elan üçün onsuz da təhlükəsizdir: ad toqquşması
+ *   yoxdur və dəyərlər yalnız profil siniflərində oxunur.
+ */
+:root {
+  /* Bölmə ritmi — bütün breakpoint-lərdə eyni. */
+  --pf-gap: var(--sp-4);
+  --pf-avatar: 112px;
+  --pf-cover-h: 168px;
+  --pf-rail-w: 300px;
+  /* Yapışqan tab sətri üçün ofset — topbar hündürlüyü. */
+  --pf-topbar: 57px;
+
+  /* Statistika tonları. Hər ton BİR MƏNA daşıyır (sosial / irəliləyiş /
+     məzmun / nüfuz) — dekorativ deyil. */
+  --pf-blue: #3b82f6;
+  --pf-violet: #a855f7;
+  --pf-green: #22c55e;
+  --pf-amber: #f59e0b;
+  --pf-rose: #e5484d;
+  --pf-teal: #14b8a6;
+  --pf-gold: #eab308;
+  --pf-muted: var(--muted);
+}
+
+/* Açıq temada tonlar bir pillə tündləşir — ağ səthdə 3:1 həddi.
+   Ölçmə `88-notifications.css` / `89-users.css` ilə eynidir. */
+:root[data-theme="light"] {
+  --pf-blue: #1d63d1;
+  --pf-violet: #7e22ce;
+  --pf-green: #15803d;
+  --pf-amber: #b45309;
+  --pf-rose: #be123c;
+  --pf-teal: #0f766e;
+  --pf-gold: #a16207;
+}
+
+.pf-t--blue { color: var(--pf-blue); }
+.pf-t--violet { color: var(--pf-violet); }
+.pf-t--green { color: var(--pf-green); }
+.pf-t--amber { color: var(--pf-amber); }
+.pf-t--rose { color: var(--pf-rose); }
+.pf-t--teal { color: var(--pf-teal); }
+.pf-t--gold { color: var(--pf-gold); }
+.pf-t--muted { color: var(--pf-muted); }
+
+/* Rank rəngləri — kataloqdakı `--ud-*` nişanlarından qidalanır. */
+.pf-r--bronze { color: var(--ud-bronze); }
+.pf-r--silver { color: var(--ud-silver); }
+.pf-r--gold { color: var(--ud-gold); }
+.pf-r--diamond { color: var(--ud-diamond); }
+.pf-r--master { color: var(--ud-master); }
+.pf-r--legend { color: var(--ud-legend); }
+
+/* ═══════════════════════ BAŞLIQ ═══════════════════════ */
+
+.pf-hero {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: var(--sh-1);
+  overflow: hidden;
+  margin-bottom: var(--pf-gap);
+}
+
+/* ── Örtük naxışları ───────────────────────────────────────────────────
+ * ⚠ ŞƏKİL DEYİL, CSS: yüklənən örtük moderasiya səthi açardı və 4 temada
+ *   kontrastı pozardı (bax miqrasiya 0052). Naxışlar tema rənglərindən
+ *   qurulduğu üçün hər temada avtomatik uyğun görünür. */
+.pf-cover {
+  position: relative;
+  height: var(--pf-cover-h);
+  background: var(--surface-2);
+}
+.pf-cover--aurora {
+  background:
+    radial-gradient(60% 120% at 20% 0%, color-mix(in srgb, var(--coral) 30%, transparent), transparent 70%),
+    radial-gradient(50% 100% at 85% 20%, color-mix(in srgb, var(--teal) 26%, transparent), transparent 70%),
+    var(--surface-2);
+}
+.pf-cover--mesh {
+  background:
+    radial-gradient(40% 80% at 10% 20%, color-mix(in srgb, var(--pf-violet) 26%, transparent), transparent 65%),
+    radial-gradient(45% 90% at 70% 10%, color-mix(in srgb, var(--pf-blue) 24%, transparent), transparent 65%),
+    radial-gradient(50% 90% at 95% 80%, color-mix(in srgb, var(--pf-rose) 18%, transparent), transparent 70%),
+    var(--surface-2);
+}
+.pf-cover--grid {
+  background-color: var(--surface-2);
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--pf-blue) 16%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--pf-blue) 16%, transparent) 1px, transparent 1px);
+  background-size: 26px 26px;
+}
+.pf-cover--dusk {
+  background: linear-gradient(120deg,
+    color-mix(in srgb, var(--pf-violet) 42%, var(--surface-2)),
+    color-mix(in srgb, var(--pf-blue) 32%, var(--surface-2)));
+}
+.pf-cover--forest {
+  background: linear-gradient(120deg,
+    color-mix(in srgb, var(--pf-green) 40%, var(--surface-2)),
+    color-mix(in srgb, var(--pf-teal) 32%, var(--surface-2)));
+}
+.pf-cover--ember {
+  background: linear-gradient(120deg,
+    color-mix(in srgb, var(--pf-amber) 42%, var(--surface-2)),
+    color-mix(in srgb, var(--pf-rose) 34%, var(--surface-2)));
+}
+.pf-cover--ocean {
+  background: linear-gradient(120deg,
+    color-mix(in srgb, var(--pf-blue) 40%, var(--surface-2)),
+    color-mix(in srgb, var(--pf-teal) 34%, var(--surface-2)));
+}
+.pf-cover--mono {
+  background: linear-gradient(120deg, var(--surface-2), color-mix(in srgb, var(--border) 90%, var(--surface-2)));
+}
+
+.pf-cover__edit {
+  position: absolute;
+  right: var(--sp-3);
+  top: var(--sp-3);
+  background: var(--surface);
+}
+
+.pf-hero__body {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-4);
+  padding: 0 var(--sp-5) var(--sp-4);
+  /* Avatar örtüyün üstünə çıxır. */
+  margin-top: calc(var(--pf-avatar) / -2);
+}
+
+.pf-ava { position: relative; flex: 0 0 auto; }
+.pf-ava .avatar {
+  width: var(--pf-avatar);
+  height: var(--pf-avatar);
+  border-radius: 24px;
+  border: 4px solid var(--surface);
+  box-shadow: var(--sh-2);
+  font-size: 2.2rem;
+  transition: transform var(--mo-base) var(--mo-ease);
+}
+.pf-ava .avatar img { width: 100%; height: 100%; object-fit: cover; }
+.pf-ava:hover .avatar { transform: scale(1.03); }
+.pf-status { width: 22px; height: 22px; border-width: 4px; right: 6px; bottom: 6px; }
+
+/* Ad sütunu avatarın altından yox, YANINDAN başlayır — ona görə örtüyün
+   altına düşən hissə qədər aşağı itələnir. */
+.pf-id { flex: 1 1 auto; min-width: 0; padding-top: calc(var(--pf-avatar) / 2 + var(--sp-2)); }
+
+.pf-nameline { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.pf-name {
+  margin: 0;
+  font-size: var(--fs-2xl);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+.pf-rank {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: var(--r-pill);
+  border: 1px solid currentColor;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+}
+.pf-rank i { font-style: normal; opacity: .75; font-family: var(--mono); }
+
+.pf-handle {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  margin-top: 3px;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+.pf-at { font-family: var(--mono); }
+
+.pf-meta {
+  display: flex;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  margin-top: var(--sp-2);
+  font-size: var(--fs-xs);
+  color: var(--text-sec);
+}
+.pf-meta__i { display: inline-flex; align-items: center; gap: 5px; }
+.pf-meta__i .ic { color: var(--muted); }
+
+.pf-bio {
+  margin: var(--sp-3) 0 0;
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+  color: var(--text-sec);
+  max-width: 68ch;
+  overflow-wrap: anywhere;
+}
+.pf-goals {
+  display: flex;
+  gap: 6px;
+  margin: var(--sp-2) 0 0;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.pf-goals .ic { flex: 0 0 auto; margin-top: 2px; color: var(--coral); }
+
+.pf-links { display: flex; gap: 6px; flex-wrap: wrap; margin-top: var(--sp-3); }
+.pf-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  background: var(--bg);
+  font-size: var(--fs-xs);
+  color: var(--text-sec);
+  text-decoration: none;
+  min-height: 30px;
+  transition: border-color var(--mo-fast) var(--mo-ease), color var(--mo-fast) var(--mo-ease);
+}
+.pf-link:hover { border-color: var(--coral2); color: var(--text); }
+.pf-link:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+
+.pf-actions {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  flex: 0 0 auto;
+  padding-top: calc(var(--pf-avatar) / 2 + var(--sp-2));
+}
+
+/* ── XP zolağı ─────────────────────────────────────────────────────── */
+.pf-xp { padding: 0 var(--sp-5) var(--sp-4); }
+.pf-xp__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--sp-3);
+  font-size: var(--fs-xs);
+  margin-bottom: 6px;
+}
+.pf-xp__lvl { font-weight: 700; }
+.pf-xp__num { color: var(--muted); }
+.pf-xp__bar {
+  height: 8px;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.pf-xp__fill {
+  display: block;
+  height: 100%;
+  width: var(--pf-xp-pct, 0%);
+  border-radius: inherit;
+  background: currentColor;
+  transition: width 520ms var(--mo-ease);
+}
+
+/* ═══════════════════════ BÖLMƏ NAVİQASİYASI ═══════════════════════ */
+
+.pf-tabs {
+  position: sticky;
+  top: var(--pf-topbar);
+  z-index: 30;
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 6px 0;
+  margin-bottom: var(--pf-gap);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.pf-tabs::-webkit-scrollbar { display: none; }
+.pf-tab {
+  flex: 0 0 auto;
+  padding: 7px 13px;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background var(--mo-fast) var(--mo-ease), color var(--mo-fast) var(--mo-ease);
+}
+.pf-tab:hover { background: var(--surface-2); color: var(--text); }
+.pf-tab.is-on { background: color-mix(in srgb, var(--coral) 14%, transparent); color: var(--coral); }
+.pf-tab:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+
+/* ═══════════════════════ MƏHDUD ═══════════════════════ */
+
+.pf-layout { display: block; }
+
+.pf-sec {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--sh-1);
+  padding: var(--sp-4);
+  margin-bottom: var(--pf-gap);
+  /* ⚠ Yapışqan tab sətri bölmə başlığını ÖRTMƏSİN: `#pf-…` linkinə klik
+     ediləndə brauzer bölməni yuxarı gətirir, lakin `position: sticky` tab
+     sətri onun üstündə qalır. `scroll-margin-top` sürüşmə hədəfini həmin
+     hündürlük qədər aşağı salır (topbar + tab sətri + nəfəs). */
+  scroll-margin-top: calc(var(--pf-topbar) + 56px);
+  /* ⚠ `content-visibility` QƏSDƏN YOXDUR. O, `contain: paint` tətbiq edir və
+     bölmə daxilindəki portal olunmayan hər şeyi kəsir (layihə qeydi:
+     kataloqdakı menyu qüsuru). Profil bölmələri onsuz da azdır (7 ədəd) —
+     virtuallaşdırma qazancı riskə dəymir. */
+}
+.pf-sec__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-3);
+}
+.pf-sec__h {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  font-size: var(--fs-md);
+  font-weight: 700;
+}
+.pf-sec__h .ic { color: var(--muted); }
+.pf-count {
+  margin-left: auto;
+  padding: 2px 9px;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  font-family: var(--mono);
+}
+.pf-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: var(--sp-3) 0 var(--sp-2);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+/* ═══════════════════════ STATİSTİKA ═══════════════════════ */
+
+.pf-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(124px, 1fr));
+  gap: var(--sp-2);
+}
+.pf-stats--hero {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  margin-bottom: var(--sp-2);
+}
+
+.pf-stat {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  text-align: left;
+  font-family: var(--body);
+  min-height: 60px;
+}
+button.pf-stat { cursor: pointer; }
+button.pf-stat:hover { border-color: currentColor; transform: translateY(-1px); }
+button.pf-stat:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+.pf-stat { transition: border-color var(--mo-fast) var(--mo-ease), transform var(--mo-fast) var(--mo-ease); }
+
+/* 🔴 «Statistikalar eyni görünməsin» — böyük kartda ikon dolu dairədədir,
+   kiçikdə sadə qlifdir. Fərq ölçüdə DEYİL, quruluşdadır. */
+.pf-stat__ic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  color: inherit;
+}
+.pf-stat--hero {
+  min-height: 76px;
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--sh-1);
+}
+.pf-stat--hero .pf-stat__ic {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: color-mix(in srgb, currentColor 13%, transparent);
+}
+.pf-stat__txt { display: flex; flex-direction: column; min-width: 0; }
+.pf-stat__n {
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.pf-stat--hero .pf-stat__n { font-size: var(--fs-xl); }
+.pf-stat__l {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  /* İki sətir — «Töhfə balı» kimi uzun etiket kəsilməsin. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.pf-xpb {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
+  padding-top: var(--sp-3);
+  border-top: 1px dashed var(--border);
+}
+.pf-xpb__i { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.pf-xpb__i b { font-size: var(--fs-md); font-weight: 800; font-variant-numeric: tabular-nums; }
+.pf-xpb__i span { font-size: var(--fs-xs); color: var(--muted); }
+
+/* ═══════════════════════ INSIGHTS (yalnız sahibinə) ═══════════════════════ */
+
+.pf-ins {
+  margin-top: var(--sp-3);
+  padding: var(--sp-3);
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+}
+.pf-ins__h {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  margin-bottom: var(--sp-2);
+}
+.pf-ins__note {
+  margin-left: auto;
+  font-weight: 500;
+  color: var(--muted);
+  font-size: var(--fs-xs);
+}
+.pf-ins__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: var(--sp-2);
+}
+.pf-ins__i { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.pf-ins__i b { font-size: var(--fs-md); font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; }
+.pf-ins__i span { font-size: var(--fs-xs); color: var(--muted); text-align: center; }
+
+/* ═══════════════════════ NİŞANLAR ═══════════════════════ */
+
+.pf-achs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: var(--sp-2);
+}
+.pf-ach {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  min-height: 54px;
+}
+.pf-ach.is-on { border-color: color-mix(in srgb, var(--ud-gold) 45%, var(--border)); }
+/* ⚠ Rəng TƏK siqnal deyil: kilidli nişanda irəliləyiş MƏTNİ və zolağı var. */
+.pf-ach.is-off { opacity: .72; }
+.pf-ach--gold.is-on { background: color-mix(in srgb, var(--ud-gold) 8%, var(--bg)); }
+.pf-ach__ic { font-size: 1.35rem; line-height: 1; flex: 0 0 auto; }
+.pf-ach__b { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 auto; }
+.pf-ach__n {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pf-ach__d, .pf-ach__p { font-size: var(--fs-xs); color: var(--muted); font-variant-numeric: tabular-nums; }
+.pf-ach__bar {
+  display: block;
+  height: 4px;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  overflow: hidden;
+  margin-top: 3px;
+}
+.pf-ach__fill {
+  display: block;
+  height: 100%;
+  width: var(--pf-ach-pct, 0%);
+  border-radius: inherit;
+  background: var(--coral);
+}
+.pf-ach__u { flex: 0 0 auto; color: var(--ud-master); }
+
+/* ═══════════════════════ BACARIQLAR ═══════════════════════ */
+
+.pf-skgrp { margin-bottom: var(--sp-3); }
+.pf-skgrp:last-child { margin-bottom: 0; }
+.pf-skgrp__h {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.pf-skgrp__h b {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-weight: 600;
+  color: var(--muted);
+}
+.pf-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: 0 0 auto;
+}
+.pf-skills { display: flex; gap: 6px; flex-wrap: wrap; }
+.pf-skill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  font-size: var(--fs-xs);
+  min-height: 28px;
+}
+.pf-skill__n { color: var(--text); font-weight: 600; }
+.pf-skill__lv { color: var(--muted); font-size: var(--fs-xs); }
+.pf-skill__y {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+/* Sertifikat — yalnız ikon, amma `title` + `aria` mətni var. */
+.pf-skill__c { display: inline-flex; color: var(--pf-green); }
+
+/* Fəaliyyət zolağı çipin ALTINDADIR — eni artırmır, ona görə sıxlıq itmir. */
+.pf-skill { position: relative; overflow: hidden; }
+.pf-skill__bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: color-mix(in srgb, currentColor 18%, transparent);
+}
+.pf-skill__fill {
+  display: block;
+  height: 100%;
+  width: var(--pf-sk-pct, 0%);
+  background: currentColor;
+}
+
+/* ═══════════════════════ AKTİVLİK ═══════════════════════ */
+
+.pf-streaks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-3);
+}
+.pf-streak {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: var(--sp-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+}
+.pf-streak b { font-size: var(--fs-md); font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; }
+.pf-streak span { font-size: var(--fs-xs); color: var(--muted); text-align: center; }
+
+/* ═══════════════════════ LAYİHƏLƏR ═══════════════════════ */
+
+.pf-projs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: var(--sp-2);
+}
+.pf-proj {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  text-align: left;
+  font-family: var(--body);
+  /* 🔴 `color` AÇIQ YAZILMALIDIR: bu, `<button>`-dur və brauzerin default
+     düymə rəngi TÜNDDÜR. Açıq temada təsadüfən oxunaqlı görünür, TÜND temada
+     isə layihə adı fonla eyni tonda itir. (Eyni tələ ikonlarda da olub:
+     `<button>` daxilindəki SVG rəngi valideyndən alır.) */
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color var(--mo-fast) var(--mo-ease), transform var(--mo-fast) var(--mo-ease);
+}
+.pf-proj:hover { border-color: var(--coral2); transform: translateY(-1px); }
+.pf-proj:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+.pf-proj__top { display: flex; align-items: center; gap: var(--sp-2); }
+.pf-proj__logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--coral) 16%, transparent);
+  color: var(--coral);
+  font-weight: 800;
+  flex: 0 0 auto;
+}
+.pf-proj__logo--sm { width: 24px; height: 24px; border-radius: 7px; font-size: var(--fs-xs); }
+.pf-proj__name {
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pf-proj__d {
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--text-sec);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.pf-proj__foot {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.pf-proj__m { display: inline-flex; align-items: center; gap: 4px; }
+.pf-proj__t { margin-left: auto; }
+.pf-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+.pf-tag--own { color: var(--ud-gold); }
+
+/* ═══════════════════════ SANCILMIŞ ═══════════════════════ */
+
+.pf-pins { margin-bottom: var(--sp-3); }
+.pf-pin {
+  display: flex;
+  align-items: stretch;
+  gap: var(--sp-2);
+  border: 1px solid color-mix(in srgb, var(--coral) 32%, var(--border));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--coral) 5%, var(--bg));
+  margin-bottom: 6px;
+}
+.pf-pin__body {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: var(--sp-2) var(--sp-3);
+  background: none;
+  border: none;
+  text-align: left;
+  font-family: var(--body);
+  color: var(--text);   /* `<button>` default rəngi — bax `.pf-proj` qeydi */
+  cursor: pointer;
+}
+.pf-pin__body:focus-visible { outline: 2px solid var(--coral); outline-offset: -2px; }
+.pf-pin__body p {
+  margin: 0 0 4px;
+  font-size: var(--fs-sm);
+  color: var(--text);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.pf-pin__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.pf-pin__meta span { display: inline-flex; align-items: center; gap: 4px; }
+.pf-pin__t { margin-left: auto; }
+.pf-pin__x { align-self: center; margin-right: 6px; }
+
+/* ═══════════════════════ PAYLAŞIMLAR ═══════════════════════ */
+
+/* ⚠ SİNİF `.feed-card`-dır, `.post-card` YOX: `js/feed.js` → `postCard()`
+   kök elementə məhz bu adı verir. Yanlış seçici SƏSSİZCƏ heç nə etməzdi —
+   kart onsuz da görünərdi, sadəcə aralıqlar və sancaq zolağı işləməzdi. */
+.pf-posts { display: flex; flex-direction: column; gap: 0; }
+.pf-posts > .feed-card { margin-bottom: var(--sp-3); }
+.pf-posts > .feed-card:last-child { margin-bottom: 0; }
+.pf-sentinel { height: 1px; }
+
+/* Sancaqlanmış post kartı — sol kənarda aksent zolağı. */
+.pf-post--pinned { border-left: 3px solid var(--coral); }
+.pf-post__pin {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  transition: color var(--mo-fast) var(--mo-ease), border-color var(--mo-fast) var(--mo-ease);
+}
+.pf-post__pin:hover { color: var(--coral); border-color: var(--coral2); }
+.pf-post__pin.is-on { color: var(--coral); border-color: var(--coral); }
+.pf-post__pin:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+
+/* ═══════════════════════ TAYMLAYN ═══════════════════════ */
+
+.pf-tl {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 var(--sp-4);
+  position: relative;
+}
+/* Şaquli xətt — hadisələr arasındakı davamlılıq. */
+.pf-tl::before {
+  content: '';
+  position: absolute;
+  left: 13px;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  background: var(--border);
+}
+.pf-tli {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  padding: var(--sp-2) 0 var(--sp-2) var(--sp-3);
+  animation: pf-in var(--mo-base) var(--mo-ease) both;
+  animation-delay: var(--pf-d, 0ms);
+}
+.pf-tli__ic {
+  position: absolute;
+  left: calc(var(--sp-4) * -1 + 5px);
+  top: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 2px solid currentColor;
+}
+.pf-tli__b { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1 1 auto; }
+.pf-tli__k {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.pf-tli__t {
+  font-size: var(--fs-sm);
+  color: var(--text-sec);
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.pf-tli__d { flex: 0 0 auto; font-size: var(--fs-xs); color: var(--muted); }
+.pf-tli.is-link { cursor: pointer; border-radius: 8px; }
+.pf-tli.is-link:hover { background: var(--surface-2); }
+.pf-more { margin-top: var(--sp-2); }
+/* 🔴 `hidden` ATRİBUTU `display` QAYDASINA UDUZUR: `.c-btn` `display: inline-flex`
+   elan edir və spesifiklik bərabər olduğu üçün (0,1,0 vs 0,1,0) UA-nın
+   `[hidden]{display:none}` qaydası MƏĞLUB olur — `more.hidden = true` heç nə
+   etmir və "Daha çox" düyməsi taymlayn boş olanda belə görünür.
+   (Eyni qüsur bildiriş mərkəzinin toplu əməliyyat sətrində də olub.) */
+.pf-more[hidden] { display: none; }
+
+/* ═══════════════════════ SAĞ SÜTUN ═══════════════════════ */
+
+.pf-rail { display: none; }
+.pf-rail__b {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  padding: var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+.pf-rail__h {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--muted);
+}
+.pf-rail__list { display: flex; flex-direction: column; gap: 4px; }
+.pf-rail__i {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 6px;
+  border-radius: 9px;
+  font-size: var(--fs-xs);
+  color: var(--text-sec);
+  min-height: 34px;
+}
+.pf-rail__i--btn {
+  border: none;
+  background: none;
+  text-align: left;
+  font-family: var(--body);
+  cursor: pointer;
+  width: 100%;
+}
+.pf-rail__i--btn:hover { background: var(--surface-2); color: var(--text); }
+.pf-rail__i--btn:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+.pf-rail__t { margin-left: auto; color: var(--muted); }
+.pf-rail__av { width: 26px; height: 26px; border-radius: 8px; font-size: .7rem; flex: 0 0 auto; }
+.pf-rail__empty { margin: 0; font-size: var(--fs-xs); color: var(--muted); }
+.pf-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.pf-teamchip { border: none; cursor: pointer; font-family: var(--body); min-height: 26px; }
+.pf-teamchip:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+
+/* ═══════════════════════ ÖRTÜK SEÇİCİSİ ═══════════════════════ */
+
+/* ⚠ `position` ELANI YOXDUR: panel `body`-yə portal edilir və `.c-pop`
+   qaydası (`position: fixed`) qüvvədə qalmalıdır (layihə qeydi). */
+.pf-pop {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--sh-3);
+  padding: var(--sp-3);
+  width: min(320px, calc(100vw - 24px));
+}
+.pf-pop__h { font-size: var(--fs-xs); font-weight: 700; color: var(--muted); margin-bottom: var(--sp-2); }
+.pf-covpick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+/* ⚠ NÜMUNƏ XANASI 56px-DİR, 46px YOX: `aurora`/`mesh` radial qradiyentdir və
+   kiçik qutuda rəng dayanacaqları kadrdan çıxıb hamısı eyni tünd görünürdü —
+   yəni seçim UI-ı seçilə bilən fərq göstərmirdi. */
+.pf-covopt {
+  height: 56px;
+  border-radius: 10px;
+  border: 2px solid var(--border);
+  cursor: pointer;
+}
+.pf-covopt:hover { border-color: var(--coral2); }
+.pf-covopt.is-on { border-color: var(--coral); box-shadow: 0 0 0 2px color-mix(in srgb, var(--coral) 30%, transparent); }
+.pf-covopt:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+
+/* ═══════════════════════ REDAKTOR: TƏCRÜBƏ / SERTİFİKAT ═══════════════════════
+ *
+ * ⚠ Modal `#page-profil`-dən KƏNARDADIR (`body` səviyyəsində), ona görə bu
+ *   qaydalar səhifə seçicisinə bağlana BİLMƏZ — `--pf-*` nişanları burada
+ *   işlədilmir, yalnız qlobal tema nişanları. */
+.skill-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: var(--sp-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+.skill-meta__empty { margin: 0; font-size: var(--fs-xs); color: var(--muted); }
+.skill-meta__row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+.skill-meta__n { flex: 1 1 120px; font-size: var(--fs-xs); font-weight: 600; min-width: 0; }
+.skill-meta__y, .skill-meta__c {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.skill-meta__y input {
+  width: 62px;
+  padding: 5px 7px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--mono);
+}
+.skill-meta__c input { width: 16px; height: 16px; }
+
+/* ═══════════════════════ SKELET ═══════════════════════ */
+
+.pf-skwrap { display: flex; flex-direction: column; gap: var(--sp-2); }
+.pf-skwrap .pf-stats { margin: 0; }
+.pf-sk {
+  border-radius: 12px;
+  background: linear-gradient(90deg,
+    var(--surface-2) 25%,
+    color-mix(in srgb, var(--surface-2) 55%, var(--surface)) 50%,
+    var(--surface-2) 75%);
+  background-size: 200% 100%;
+  animation: pf-shim 1.3s linear infinite;
+}
+.pf-sk--stat { height: 60px; }
+.pf-sk--big { height: 76px; }
+.pf-sk--row { height: 54px; }
+
+@keyframes pf-shim {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+@keyframes pf-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ═══════════════════════ UYĞUNLAŞAN GÖRÜNÜŞ ═══════════════════════
+ * Breakpoint konvensiyası (RESPONSIVE.md): 360 / 480 / 768 / 1024 / 1280. */
+
+/* 🔴 SAĞ SÜTUN YALNIZ ≥1280px — kataloqla EYNİ hədd. Aşağıda o, əsas
+   sütunun altına düşməkdənsə TAMAMİLƏ gizlədilir: məzmunu köməkçidir
+   (tövsiyə, son nişan) və mobil ekranda profili uzadardı. */
+@media (min-width: 1280px) {
+  .pf-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--pf-rail-w);
+    gap: var(--pf-gap);
+    align-items: start;
+  }
+  .pf-rail {
+    display: block;
+    position: sticky;
+    top: calc(var(--pf-topbar) + 58px);
+  }
+}
+
+@media (max-width: 1024px) {
+  #page-profil, #page-u { --pf-avatar: 96px; --pf-cover-h: 140px; }
+  .pf-achs { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+}
+
+@media (max-width: 768px) {
+  #page-profil, #page-u { --pf-avatar: 84px; --pf-cover-h: 112px; }
+
+  .pf-hero__body {
+    flex-direction: column;
+    gap: var(--sp-3);
+    padding: 0 var(--sp-4) var(--sp-4);
+  }
+  .pf-id, .pf-actions { padding-top: 0; }
+  .pf-actions { width: 100%; }
+  .pf-actions .c-btn { flex: 1 1 auto; }
+  .pf-xp { padding: 0 var(--sp-4) var(--sp-4); }
+  .pf-name { font-size: var(--fs-xl); }
+  .pf-sec { padding: var(--sp-3); }
+
+  /* Statistikalar sarmaq əvəzinə yan sürüşür — 12 kart üç sıra tutub
+     səhifəni aşağı itələyirdi (kataloqdakı eyni həll). */
+  .pf-stats {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    margin-inline: calc(var(--sp-3) * -1);
+    padding-inline: var(--sp-3);
+  }
+  .pf-stats::-webkit-scrollbar { display: none; }
+  .pf-stat { flex: 0 0 130px; scroll-snap-align: start; }
+  .pf-stat--hero { flex: 0 0 158px; }
+
+  /* Toxunuş hədəfləri (75-touch.css qatının üstündə açıq bərpa). */
+  .pf-tab { min-height: var(--tap); display: inline-flex; align-items: center; }
+  .pf-post__pin { width: var(--tap); height: var(--tap); }
+  .pf-pin__x { width: var(--tap); height: var(--tap); }
+}
+
+@media (max-width: 480px) {
+  #page-profil, #page-u { --pf-avatar: 72px; --pf-cover-h: 96px; }
+  .pf-projs, .pf-achs { grid-template-columns: 1fr; }
+  .pf-covpick { grid-template-columns: repeat(2, 1fr); }
+  .pf-meta { gap: var(--sp-2); }
+  .pf-tli__d { display: none; }   /* nisbi vaxt `title`-da qalır */
+}
+
+@media (max-width: 360px) {
+  .pf-stat { flex: 0 0 120px; }
+  .pf-links .pf-link span { display: none; }   /* yalnız ikon */
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pf-sk { animation: none; }
+  .pf-tli { animation: none; }
+  .pf-xp__fill { transition: none; }
+  .pf-ava:hover .avatar { transform: none; }
+  .pf-proj:hover, button.pf-stat:hover { transform: none; }
+}

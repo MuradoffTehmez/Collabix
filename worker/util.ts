@@ -290,6 +290,13 @@ export function mapUser(r: any, self = false): any {
     status: r.status ?? '',
     followersCount: r.followers_count ?? 0,
     followingCount: r.following_count ?? 0,
+    // Miqrasiya 0052 — profil sahələri.
+    // ⚠ `cover` NAXIŞ AÇARIDIR, URL DEYİL (bax miqrasiya şərhi). Boş sətir =
+    //   default naxış; client onu ağ siyahıdan keçirib sinifə çevirir.
+    cover: r.cover ?? '',
+    // {"Python":{"y":3,"c":1}} — `progLevels`-ə PARALEL, onu əvəz ETMİR.
+    skillMeta: fromJSON(r.skill_meta, {}),
+    reputation: r.reputation ?? 0,
     activeProjectId: r.active_project_id || null,
     showProjectOnProfile: r.show_project_on_profile !== 0,
   };
@@ -353,6 +360,9 @@ export function mapPost(
     reactions: reactCounts?.get(r.id) || {},
     myReaction: myReacts?.get(r.id) || null,
     pinnedAt: r.pinned_at || null,
+    // Miqrasiya 0052 — MÜƏLLİFİN profil sancağı. `pinnedAt` (qlobal, admin)
+    // ilə QARIŞDIRILMAMALIDIR: fərqli sütun, fərqli icazə, fərqli sıra.
+    profilePinnedAt: r.profile_pinned_at || null,
     hiddenAt: r.hidden_at || null,
     // Görünürlük/planlaşdırma (0045) — kartda göstərici üçün lazımdır.
     visibility: r.visibility || 'public',

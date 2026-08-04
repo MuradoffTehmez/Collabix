@@ -11,6 +11,7 @@ import {
 import { grantXp } from '../xp';
 import { D, badReq, notify } from './shared';
 import { USER_STATUSES } from './directory';
+import { PROFILE_COVERS, sanitizeSkillMeta } from './profile';
 
 /* ================= USERS / PROFİL ================= */
 export async function listUsers(c: Ctx) {
@@ -56,6 +57,21 @@ export async function patchMe(c: Ctx) {
     if (!USER_STATUSES.has(s)) return badReq('Naməlum status.');
     sets.push('status = ?');
     vals.push(s);
+  }
+  // Örtük naxışı (miqrasiya 0052) — status ilə EYNİ SƏBƏBDƏN ağ siyahıdadır:
+  // dəyər CSS sinif adına çevrilir, ona görə sərbəst mətn buraxıla bilməz.
+  if ('cover' in b) {
+    const cv = clampStr(b.cover, 20);
+    if (!PROFILE_COVERS.has(cv)) return badReq('Naməlum örtük.');
+    sets.push('cover = ?');
+    vals.push(cv);
+  }
+  // Bacarıq meta-sı — server tərəfli təmizləmədən keçir (`profile.ts`).
+  // ⚠ Aşağıdakı ümumi JSON döngüsünə SALINMADI: oradakılar olduğu kimi
+  //   yazılır, bu isə forma yoxlaması tələb edir.
+  if ('skillMeta' in b) {
+    sets.push('skill_meta = ?');
+    vals.push(JSON.stringify(sanitizeSkillMeta(b.skillMeta)));
   }
   for (const k of ['progLevels', 'langLevels', 'lookingFor', 'activityDays'] as const) {
     if (k in b) {

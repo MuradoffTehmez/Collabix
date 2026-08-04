@@ -148,6 +148,16 @@ const ROUTES: Route[] = [
      ⚠ Naxış `[\w.]+`-dir, `[\w-]+` YOX: istifadəçi adında nöqtə ola bilər
        (`validUsername`: `[a-z0-9._]`) və defis ola bilməz. */
   { method: 'GET', pattern: /^\/api\/users\/([\w.]+)\/profile$/, handler: R.publicProfile, auth: true, rl: 'read' },
+  /* Profil mərkəzi (miqrasiya 0052).
+     ⚠ ÜÇ AYRI ENDPOINT, bir nəhəng cavab YOX: başlıq ən yavaş bloku
+       gözləməməlidir (bax `routes/profile.ts` yükləmə modeli).
+     ⚠ `overview` `read` səbətindədir, lakin altı sorğuluq `batch` icra edir —
+       `heavy` deyil, çünki hədləri sabitdir (3 sancaq, 6 layihə, 15 nişan). */
+  { method: 'GET', pattern: /^\/api\/users\/([\w.]+)\/overview$/, handler: R.profileOverview, auth: true, rl: 'read' },
+  { method: 'GET', pattern: /^\/api\/users\/([\w.]+)\/timeline$/, handler: R.profileTimeline, auth: true, rl: 'read' },
+  /* Baxış sayğacı — `write` səbətində: sayğacı artırır. Client sessiya başına
+     bir dəfə göndərir, server isə öz-özünə baxışı bağlayır. */
+  { method: 'POST', pattern: /^\/api\/users\/([\w.]+)\/view$/, handler: R.recordProfileView, auth: true, rl: 'write' },
   { method: 'GET', pattern: /^\/api\/users\/([\w-]+)\/follow-lists$/, handler: R.followLists, auth: true, rl: 'read' },
   { method: 'GET', pattern: /^\/api\/users\/([\w-]+)\/progress$/, handler: R.progressOf, auth: true, rl: 'read' },
   { method: 'PUT', pattern: /^\/api\/follows\/([\w-]+)$/, handler: R.followPut, auth: true, rl: 'write' },
@@ -187,6 +197,12 @@ const ROUTES: Route[] = [
   { method: 'DELETE', pattern: /^\/api\/posts\/([\w-]+)\/reaction$/, handler: R.postReactionDelete, auth: true, rl: 'write' },
   { method: 'PUT', pattern: /^\/api\/posts\/([\w-]+)\/pin$/, handler: R.postPin, auth: true, rl: 'admin' },
   { method: 'DELETE', pattern: /^\/api\/posts\/([\w-]+)\/pin$/, handler: R.postUnpin, auth: true, rl: 'admin' },
+  /* 🔴 PROFİL SANCAĞI — YUXARIDAKI QLOBAL SANCAQLA EYNİ ŞEY DEYİL.
+     Yuxarıdakı `rl: 'admin'`-dir və lentin başındakı postu təyin edir;
+     bu isə MÜƏLLİFİN öz profilindəki seçimidir (miqrasiya 0052,
+     `posts.profile_pinned_at`). Eyni endpoint-ə yığılsaydılar, ya müəllif
+     lenti sancaqlaya bilərdi, ya admin yoxlaması profil sancağını bağlayardı. */
+  { method: 'POST', pattern: /^\/api\/posts\/([\w-]+)\/profile-pin$/, handler: R.toggleProfilePin, auth: true, rl: 'write' },
   { method: 'PUT', pattern: /^\/api\/posts\/([\w-]+)\/hide$/, handler: R.postHide, auth: true, rl: 'admin' },
   { method: 'DELETE', pattern: /^\/api\/posts\/([\w-]+)\/hide$/, handler: R.postRestore, auth: true, rl: 'admin' },
   { method: 'POST', pattern: /^\/api\/posts\/([\w-]+)\/report$/, handler: R.postReport, auth: true, rl: 'write' },

@@ -87,6 +87,11 @@ export {
 export {
   usersDirectory, suggestedUsers, directoryStats, exportDirectory, publicProfile,
 } from './routes/directory';
+/* Profil domeni — kataloqdan AYRI (biri çox istifadəçinin az sahəsini, digəri
+   bir istifadəçinin çox sahəsini oxuyur; bax `routes/profile.ts` başlığı). */
+export {
+  profileOverview, profileTimeline, recordProfileView, toggleProfilePin,
+} from './routes/profile';
 export {
   listRooms, createRoom, deleteRoom, patchRoom, roomMessages, sendRoomMessage,
   editRoomMessage, deleteRoomMessage, listThreads, dmMessages, sendDM,

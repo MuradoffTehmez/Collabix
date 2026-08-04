@@ -1188,59 +1188,25 @@
     </div>
 
     <div class="page" id="page-profil">
-      <h1 class="page-title" data-i18n="nav.profile"></h1>
-      <p class="page-sub" data-i18n="prof.sub"></p>
-      <!-- ⚠ Publik profillə EYNİ `pp-*` qatını işlədir: eyni istifadəçi öz
-           səhifəsində və kənar baxışda FƏRQLİ görünməməlidir. Fərq yalnız
-           əməliyyat sütunundadır (redaktə vs izlə/mesaj). -->
-      <section class="pp-card">
-        <div class="pp-cover"></div>
-        <div class="pp-head">
-          <div class="pp-avatar" id="profAvatarWrap">
-            <div class="avatar" id="profAvatar">?</div>
-          </div>
-          <div class="pp-id">
-            <h2 class="pp-name" id="profName" data-i18n="app.guest"></h2>
-            <div class="pp-handle" id="profTag"></div>
-            <div class="ud-meta pp-meta" id="profMeta"></div>
-            <div class="profile-bio pp-bio" id="profBio"></div>
-            <div class="ud-xp pp-xp" id="profXp"></div>
-            <div class="pp-chips" id="profSkillChips"></div>
-            <div class="streak-track" id="profStreakTrack"></div>
-          </div>
-          <div class="pp-actions">
-            <button class="c-btn c-btn--primary c-btn--sm" id="profEditBtn"><span class="ic" data-icon="edit" data-icon-size="15"></span><span data-i18n="prof.edit"></span></button>
-          </div>
-        </div>
-      </section>
-      <div class="pp-stats" id="profFollowCounts"></div>
-      <!-- TASK-8 / Bənd 6 — profil tamlığı + XP nudge (100%-də gizlənir) -->
+      <!-- 🔴 BAŞLIQ/ALTBAŞLIQ SİLİNDİ: profilin başlığı istifadəçinin ADIDIR.
+           "Profil" sözü + izah sətri hero-nun üstündə 96px yer tutub heç nə
+           demirdi (spesifikasiya: "boş sahəni israf etmə"). `<h1>` indi
+           hero-nun içindədir — sənəd strukturunda yenə tək h1 var.
+
+           ⚠ TASK-8 / Bənd 6 — tamlıq nudge-i HERO-DAN ƏVVƏLDİR: o, hərəkət
+             çağırışıdır və profilin sonunda görünsəydi heç kim görməzdi. -->
       <div id="profCompleteness" class="cmp-host"></div>
-      <!-- ⚠ KÖHNƏ `.stat-row` SİLİNDİ: seriya, XP və tapşırıq sayı artıq
-           `#profFollowCounts` (pp-stats) sətrində və rank zolağındadır — eyni
-           üç rəqəm ekranda İKİ dəfə görünürdü. `renderCard()` hələ də bu
-           id-ləri yazır, ona görə onlar gizli qutuda saxlanılır (kod
-           dəyişikliyi minimal, davranış eyni). -->
-      <div class="u-display-none" aria-hidden="true">
-        <span id="profStreakNum"></span><span id="profXPNum"></span>
-        <span id="profLevel"></span><span id="profTaskNum"></span>
-      </div>
-      <div class="section-title"><span class="ic" data-icon="award" data-icon-size="16"></span><span data-i18n="prof.badges"></span></div>
-      <div class="badge-row" id="badgeRow"></div>
-      <div class="section-title" data-i18n="prof.heatmap"></div>
-      <div class="heatmap" id="activityHeatmap"></div>
-      <div class="section-title" data-i18n="prof.prog"></div>
-      <div class="progress-list" id="progressList"></div>
-      <div class="section-title" data-i18n="prof.social"></div>
-      <div class="social-row" id="profSocial"></div>
+      <!-- Profil qatı `js/profile-view.js` tərəfindən qurulur — publik
+           profil (`#page-u`) ilə EYNİ renderer. Şablon markup-u qəsdən
+           yoxdur: iki səhifə iki şablon saxlasaydı, onlar ayrılardı. -->
+      <div id="profHost"></div>
       <!-- İdarəetmə bölmələri — PRD §12 (moderator namizədliyi) və §6 (dəvət).
            ⚠ Profil səhifəsindədir, ayrıca səhifə DEYİL: hər ikisi istifadəçinin
-              öz hesabına aiddir və naviqasiyada üçüncü bənd yaratmaq lazım deyil. -->
+              öz hesabına aiddir və naviqasiyada üçüncü bənd yaratmaq lazım deyil.
+           ⚠ PROFİL QATINDAN KƏNARDADIR: `renderProfile()` host-u təmizləyir,
+              ona görə bu bloklar onun İÇİNDƏ ola bilməz. -->
       <div id="govModeratorBox" class="u-margin-top-24px"></div>
       <div id="govInviteBox" class="u-margin-top-16px"></div>
-
-      <div class="section-title" data-i18n="prof.myposts"></div>
-      <div id="myPosts"></div>
     </div>
 
     <div class="page" id="page-settings">

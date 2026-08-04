@@ -1,307 +1,115 @@
-// Öz profil: redaktə (ad, bio, avatar, tag-lar, sosial), heatmap, nişanlar,
-// sahələr üzrə irəliləyiş, öz postlarının idarəsi.
+// Öz profil səhifəsi — redaktor, tamlıq nudge-i və idarəetmə blokları.
+//
+// 🔴 EKRANIN ÖZÜ BURADA DEYİL: `js/profile-view.js` (publik profil ilə ORTAQ).
+//    Bax həmin faylın başlığı — iki ayrı quruluşun niyə birləşdirildiyi orada
+//    izah olunub.
 import { api } from './api.js';
 import {
   state, updateMyProfile, uploadAvatar, deleteMyAvatar, watchTasks, watchMySubmissions,
-  updateMySettings, fetchProgressOf, fetchFollowingOf, fetchFollowersOf, isMutual,
+  updateMySettings,
 } from './store.js';
 import { changePassword, changeUsername } from './auth.js';
-import {
-  el, clear, avatarNode, nameWithBadge, resizeImage, levelFromXP, BADGES,
-  authErrMessage, bus,
-} from './util.js';
-import { toast, showModal, closeModal, emptyState, setTheme, getTheme, THEMES } from './ui.js';
-import { t, setLang, getLang, LANGS, fmtMonthYear } from './i18n.js';
-// Rank/status/kateqoriya — kataloqla ORTAQ saf modul (bax həmin faylın başlığı).
-import { rankOf, xpProgress, statusOf, skillCatClass } from './profile-kit.js';
-import { getPosts, postCard } from './feed.js';
+import { el, clear, avatarNode, resizeImage, authErrMessage, bus } from './util.js';
+import { toast, showModal, closeModal, setTheme, getTheme, THEMES } from './ui.js';
+import { t, setLang, getLang, LANGS } from './i18n.js';
+// Profil ekranı + örtük seçicisi — publik profillə ORTAQ renderer.
+import { renderProfile, openCoverPicker } from './profile-view.js';
 import { openFollowList } from './users.js';
-import { paintIcons } from './icon-set.js';
-import { tax, SKILL_LEVELS } from './taxonomy.js';
+import { tax } from './taxonomy.js';
 import { skillLevelPicker, ageFromBirthDate } from './wizard.js';
 import { renderCompleteness } from './completeness.js';
-import { renderHeatmapInto } from './heatmap.js';
 
 let unsubTasks = null, unsubSubs = null;
-let cachedTasks = [], cachedSubs = [];
+let view = null;          // aktiv `renderProfile` nəticəsi
+let lastRenderKey = '';   // təkrar render-in qarşısını alır (aşağıya bax)
 
-/* ═══════════════════════ ÖZ PROFİL KARTI ═══════════════════════
+/* ═══════════════════════ ÖZ PROFİL ═══════════════════════
  *
- * ⚠ PUBLİK PROFİLLƏ EYNİ VİZUAL QATI (`pp-*`) və EYNİ endpoint-i işlədir
- *   (`/api/users/:username/profile`). Əvvəl iki səhifə iki ayrı koddan
- *   çəkilirdi: burada `state.myFollowers.size`, orada ayrıca fetch — nəticədə
- *   eyni hesab iki yerdə iki fərqli izləyici sayı göstərə bilirdi.
+ * 🔴 SƏHİFƏ ARTIQ BURADA QURULMUR — `js/profile-view.js`.
+ *    Əvvəl öz profil `index.html`-dəki şablondan, publik profil isə tam
+ *    JS-dən qurulurdu. İki quruluş = iki həqiqət: nişanlar yalnız burada,
+ *    ortaq komandalar yalnız orada idi; saylar iki mənbədən gəlib fərqlənirdi.
+ *    İndi hər ikisi EYNİ renderer-dir, fərq yalnız `mode`-dadır.
  *
- * ⚠ İKİ MƏRHƏLƏLİ RENDER: əvvəlcə `state.me` ilə ANİ çəkilir (səhifə boş
- *   qalmasın), sonra server cavabı ilə saylar dəqiqləşir.
+ * ⚠ BU MODULDA QALANLAR: redaktor (modal), tamlıq nudge-i və idarəetmə
+ *   blokları — hamısı YALNIZ sahibinə aiddir və publik profildə yeri yoxdur.
  */
-let profExtra = null;   // { teamsCount, projectsCount, followersCount, followingCount }
 
-function profMetaBits(me){
-  const bits = [];
-  if(me.company) bits.push(['building', me.company]);
-  const loc = [me.city, me.country].filter(Boolean).join(', ');
-  if(loc) bits.push(['mapPin', loc]);
-  if(me.joinedAt) bits.push(['calendar', t('users.c_joined').replace('{d}', fmtMonthYear(me.joinedAt))]);
-  return bits;
+/**
+ * Render açarı — profilin GÖRÜNƏN hissəsini təsvir edən sətir.
+ *
+ * 🔴 NİYƏ LAZIMDIR: `renderAll` iki hadisəyə bağlıdır (`feed-updated`,
+ *    `users-updated`) və onlar lentdə hər dəyişiklikdə atəşlənir. Hər dəfə
+ *    `renderProfile()` çağırsaydıq, səhifə tam yenidən qurulardı: sürüşmə
+ *    mövqeyi itərdi, sonsuz sürüşmə ilə yüklənmiş postlar silinərdi və
+ *    şəbəkəyə eyni sorğular təkrar gedərdi. Açar dəyişməyibsə render atlanır.
+ */
+function renderKey(me){
+  return [
+    me.uid, me.name, me.username, me.photoURL, me.bio, me.company, me.status,
+    me.cover, me.xp, me.streak, me.tasksCompleted,
+    JSON.stringify(me.progLevels || {}), JSON.stringify(me.langLevels || {}),
+    JSON.stringify(me.skillMeta || {}), JSON.stringify(me.lookingFor || []),
+    me.github, me.linkedin, me.telegram, me.instagram, me.website, me.goals,
+  ].join('|');
 }
 
-function renderCard(){
+function mountView(){
+  const host = document.getElementById('profHost');
+  if(!host) return;
   const me = state.me;
 
-  // Avatar — `replaceWith` ƏVƏZİNƏ sabit örtük: əvvəlki üsul hər render-də
-  // element kimliyini dəyişirdi və ölçü inline stillə bərpa olunmalı idi.
-  const wrap = document.getElementById('profAvatarWrap');
-  clear(wrap);
-  const av = avatarNode(me, 'avatar');
-  av.id = 'profAvatar';
-  wrap.append(av);
-  const st = statusOf(me);
-  wrap.append(el('span', {
-    class: 'ud-status ud-s--' + st.tone, title: t(st.key), 'aria-label': t(st.key),
-  }));
-
-  const nameEl = document.getElementById('profName');
-  clear(nameEl);
-  nameEl.append(nameWithBadge(me));
-
-  // ⚠ Əvvəl bu sətir `<user @ad · Bakı />` kimi psevdo-XML idi. Dekorativ
-  //   sintaksis istifadəçi adını mətndən ayırmırdı və ekran oxuyucusu onu
-  //   "kiçikdir user at ad" kimi oxuyurdu.
-  const tag = document.getElementById('profTag');
-  clear(tag);
-  tag.append(el('span', {}, '@' + (me.username || '')));
-  if(st.tone === 'hiring') tag.append(el('span', { class: 'ud-badge ud-s--hiring' }, t('users.st_hiring')));
-
-  const metaBox = document.getElementById('profMeta');
-  clear(metaBox);
-  profMetaBits(me).forEach(pair => metaBox.append(
-    el('span', { class: 'ud-meta__i' },
-      el('span', { class: 'ic', 'data-icon': pair[0], 'data-icon-size': '13' }), pair[1])));
-  paintIcons(metaBox);
-
-  const bioContainer = document.getElementById('profBio');
-  clear(bioContainer);
-  bioContainer.textContent = me.bio || '';
-
-  if (me.showProjectOnProfile && me.activeProjectId) {
-    bioContainer.appendChild(el('div', { class: 'prof-active-project' },
-      el('span', { class: 'ic', 'data-icon': 'zap', 'data-icon-size': '14' }),
-      ' ' + t('prof.active_project'),
-    ));
-    paintIcons(bioContainer);
-  }
-
-  /* ── Rank + XP tərəqqi ── */
-  const xpBox = document.getElementById('profXp');
-  clear(xpBox);
-  const r = rankOf(me.xp);
-  const p = xpProgress(me.xp);
-  const fill = el('span', { class: 'ud-xp__fill ud-r--' + r.tone });
-  // CSSOM — CSP HTML `style="…"` atributunu bloklayır (layihə qeydi).
-  fill.style.setProperty('--ud-xp-pct', p.pct + '%');
-  xpBox.append(
-    el('div', { class: 'ud-xp__top' },
-      el('span', { class: 'ud-rank ud-r--' + r.tone },
-        el('span', { class: 'ic', 'data-icon': 'crown', 'data-icon-size': '11' }),
-        r.label, el('i', {}, 'Lv' + r.lvl)),
-      el('span', { class: 'ud-xp__num' },
-        p.isMax ? t('users.rk_max') : t('users.rk_next').replace('{n}', String(p.remaining))),
-    ),
-    el('div', {
-      class: 'ud-xp__bar', role: 'progressbar',
-      'aria-valuenow': String(p.pct), 'aria-valuemin': '0', 'aria-valuemax': '100',
-    }, fill),
-  );
-  paintIcons(xpBox);
-
-  /* ── Sosial saylar ── */
-  // Mənbə sırası: server cavabı (dəqiq) → client keşi (ani).
-  const followers = profExtra ? profExtra.followersCount : state.myFollowers.size;
-  const following = profExtra ? profExtra.followingCount : state.myFollowing.size;
-  const fc = document.getElementById('profFollowCounts');
-  clear(fc);
-  const statBtn = (n, key, onclick) => el('button', { class: 'pp-stat', type: 'button', onclick },
-    el('b', {}, String(n || 0)), el('span', {}, t(key)));
-  const statBox = (n, key) => el('div', { class: 'pp-stat pp-stat--static' },
-    el('b', {}, String(n || 0)), el('span', {}, t(key)));
-  fc.append(
-    statBtn(followers, 'soc.followers', () => openFollowList(me.uid, 'followers')),
-    statBtn(following, 'soc.following', () => openFollowList(me.uid, 'following')),
-    statBox(profExtra ? profExtra.teamsCount : 0, 'users.c_teams'),
-    statBox(profExtra ? profExtra.projectsCount : 0, 'users.c_projects'),
-    statBox(me.streak || 0, 'usr.streak'),
-    statBox(me.tasksCompleted || 0, 'usr.tasks'),
-  );
-
-  /* ── Bacarıq nişanları (kataloqla eyni kateqoriya rəngləri) ── */
-  const chips = document.getElementById('profSkillChips');
-  clear(chips);
-  const levels = { ...(me.progLevels || {}), ...(me.langLevels || {}) };
-  const plain = [...(me.prog || []), ...(me.langs || [])];
-  const shown = new Set();
-  plain.forEach(label => {
-    if(shown.has(label)) return;
-    shown.add(label);
-    chips.append(el('span', {
-      class: 'ud-skill ' + skillCatClass(label),
-      title: levels[label] ? label + ' · ' + levels[label] : label,
-    }, label, levels[label] ? el('i', {}, levels[label].slice(0, 1)) : null));
+  if(view){ view.destroy(); view = null; }
+  view = renderProfile(host, {
+    user: me,
+    mode: 'self',
+    sharedTeams: [],
+    // İzləyici/izlənilən siyahısı `users.js`-dədir — callback ilə ötürülür,
+    // çünki `profile-view.js` ondan asılı OLMAMALIDIR (dövr riski).
+    onFollowList: (uid, tab) => openFollowList(uid, tab),
+    onCover: () => {
+      const anchor = host.querySelector('.pf-cover__edit');
+      openCoverPicker(anchor, me.cover || '', async key => {
+        try{
+          await updateMyProfile({ cover: key });
+          toast(t('pf.cover_saved'));
+          renderAll(true);
+        }catch(e){ toast(t('dyn.err_generic'), 'err'); }
+      });
+    },
+    actions: () => [
+      el('button', { class: 'c-btn c-btn--primary c-btn--sm', id: 'profEditBtn', onclick: () => openEditModal() },
+        el('span', { class: 'ic', 'data-icon': 'edit', 'data-icon-size': '15' }),
+        el('span', {}, t('prof.edit'))),
+      el('button', {
+        class: 'c-btn c-btn--ghost c-btn--sm', type: 'button',
+        onclick: () => shareOwnProfile(me),
+      }, el('span', { class: 'ic', 'data-icon': 'share', 'data-icon-size': '15' }),
+      el('span', {}, t('pf.share'))),
+      el('button', {
+        class: 'c-icon-btn', type: 'button', 'aria-label': t('nav.settings'), title: t('nav.settings'),
+        onclick: () => openEditModal('settings'),
+      }, el('span', { class: 'ic', 'data-icon': 'settings', 'data-icon-size': '16' })),
+    ],
   });
-  (me.lookingFor || []).forEach(x => chips.append(el('span', { class: 'ud-skill cat-spoken' },
-    el('span', { class: 'ic', 'data-icon': 'search', 'data-icon-size': '11' }), x)));
-  paintIcons(chips);
-
-  document.getElementById('profStreakNum').textContent = me.streak || 0;
-  document.getElementById('profXPNum').textContent = me.xp || 0;
-  document.getElementById('profLevel').textContent = 'Lv ' + levelFromXP(me.xp);
-  document.getElementById('profTaskNum').textContent = me.tasksCompleted || 0;
-
-  // Yeddi nöqtə = son 7 gün seriyası. Əvvəl NƏ olduğu heç yerdə yazılmırdı —
-  // izahsız rəngli kvadratlar sırası kimi görünürdü. İndi başlıq + əlçatan ad.
-  const track = document.getElementById('profStreakTrack');
-  clear(track);
-  const days = Math.min(me.streak || 0, 7);
-  track.setAttribute('role', 'img');
-  track.setAttribute('aria-label', t('prof.streak_track').replace('{n}', String(days)));
-  track.title = t('prof.streak_track').replace('{n}', String(days));
-  for(let i = 0; i < 7; i++){
-    track.append(el('div', { class: 'd' + (i < days ? ' on' : '') }));
-  }
-
-  const social = document.getElementById('profSocial');
-  clear(social);
-  const socials = [
-    ['Instagram', me.instagram], ['GitHub', me.github],
-    ['LinkedIn', me.linkedin], ['Telegram', me.telegram], ['Sayt', me.website],
-  ].filter(pair => pair[1]);
-  socials.forEach(pair => social.append(
-    el('span', { class: 'pp-social' }, el('b', {}, pair[0]), ' ' + pair[1])));
-  if(!socials.length) social.append(
-    el('span', { class: 'pp-social' }, el('b', {}, '—'), ' ' + t('prof.no_social')));
 }
 
 /**
- * Server tərəfli sayları çəkir (komanda/layihə/izləyici) və kartı yeniləyir.
- * ⚠ Uğursuzluq SƏSSİZ udulur: saylar bəzəkdir, profil onsuz da tam işləkdir.
+ * Profil linkinin paylaşılması — `navigator.share`, yoxdursa kopyalama.
+ *
+ * ⚠ `share` YALNIZ istifadəçi JEStİNDƏN çağırıla bilər, ona görə burada
+ *   `await` ilə dərinə getmirik: `catch` sükutla kopyalamaya keçir.
  */
-function loadProfExtra(){
-  const me = state.me;
-  if(!me || !me.username) return;
-  api('/users/' + encodeURIComponent(me.username) + '/profile')
-    .then(d => {
-      if(!d || !d.user) return;
-      profExtra = {
-        teamsCount: d.user.teamsCount || 0,
-        projectsCount: d.user.projectsCount || 0,
-        followersCount: d.user.followersCount || 0,
-        followingCount: d.user.followingCount || 0,
-      };
-      renderCard();
-    })
-    .catch(() => {});
+async function shareOwnProfile(me){
+  const url = location.origin + '/#u/' + (me.username || '');
+  try{
+    if(navigator.share){ await navigator.share({ title: me.name || me.username, url }); return; }
+  }catch(e){ /* istifadəçi ləğv etdi və ya dəstək yoxdur → kopyala */ }
+  try{
+    await navigator.clipboard.writeText(url);
+    toast(t('users.a_copied'));
+  }catch(e){ toast(t('dyn.err_generic'), 'err'); }
 }
-
-function renderBadges(){
-  const me = state.me;
-  // ⚠ Kimlik `state.authUser.uid`-dən götürülür, `state.me.uid`-dən YOX.
-  //   `state.me` store.js-də `users` map-i ilə birləşdirilir və oradakı sətir
-  //   `uid` daşımaya bilər → filtr 0 qaytarırdı və "İlk paylaşım" nişanı
-  //   60 postu olan hesabda belə KİLİDLİ qalırdı. `renderMyPosts` onsuz da
-  //   `authUser.uid` işlədir; iki funksiya eyni mənbədən oxumalıdır.
-  const myUid = state.authUser.uid;
-  const stats = {
-    posts: getPosts().filter(p => p.authorUid === myUid).length,
-    streak: me.streak || 0, xp: me.xp || 0, tasksCompleted: me.tasksCompleted || 0,
-  };
-  const row = document.getElementById('badgeRow');
-  clear(row);
-  BADGES.forEach(b => {
-    const earned = b.test(stats);
-    row.append(el('div', {
-      class: 'badge-chip' + (earned ? ' earned' : ' locked'),
-      title: t(b.nameKey),
-      // Rəng/solğunluq TƏK siqnal olmasın (WCAG color-not-only): vəziyyət
-      // ekran oxuyucusuna da bildirilir.
-      'aria-label': t(b.nameKey) + ' — ' + t(earned ? 'badge.earned' : 'badge.locked'),
-    },
-      el('span', { class: 'b-ic ic', 'data-icon': b.ic, 'data-icon-size': '20' }),
-      el('span', { class: 'b-name' }, t(b.nameKey)),
-    ));
-  });
-  paintIcons(row);
-}
-
-// Heatmap datası ARTIQ normalized `user_activity` cədvəlindən gəlir (Bənd 9),
-// `users.activity_days` JSON blob-undan yox. Fərq: blob hər fəaliyyətdə tam
-// oxunub geri yazılırdı və illər keçdikcə böyüyürdü.
-//
-// Keş dərhal göstərilir, server datası gələndə üzərinə yazılır — profil
-// açılışı şəbəkəni gözləmir.
-function renderHeatmap(){
-  const box = document.getElementById('activityHeatmap');
-  renderHeatmapInto(box, state.me.activityDays || {});
-  if(!state.me.username) return;
-  api('/users/' + encodeURIComponent(state.me.username) + '/activity')
-    .then(d => renderHeatmapInto(box, d.activityDays || {}))
-    .catch(() => {});   // heatmap bəzəkdir — alınmasa keş qalır
-}
-
-// Sahə üzrə irəliləyiş — real fəaliyyətdən: postlar (tag üzrə) + təsdiqlənmiş
-// task-lar + XP. Bal = post×10 + task×50; səviyyə hədləri: 0/50/150/300.
-let progressCache = {};
-const PROG_THRESHOLDS = [0, 50, 150, 300];
-function progressLevel(points){
-  if(points >= PROG_THRESHOLDS[3]) return SKILL_LEVELS[2] + ' +';
-  if(points >= PROG_THRESHOLDS[2]) return SKILL_LEVELS[2];
-  if(points >= PROG_THRESHOLDS[1]) return SKILL_LEVELS[1];
-  return SKILL_LEVELS[0];
-}
-function renderProgress(){
-  const box = document.getElementById('progressList');
-  clear(box);
-  // Taksonomiyadakı bütün sahələr + istifadəçinin seçdikləri + data olanlar
-  const myCats = new Set([...(state.me.prog || []), ...(state.me.langs || []), ...Object.keys(progressCache)]);
-  const cats = [...myCats];
-  if(!cats.length){ box.append(el('p', { style: 'color:var(--muted); font-size:.8rem;' }, t('prof.no_prog'))); return; }
-  cats.forEach(c => {
-    const d = progressCache[c] || {};
-    const points = (d.posts || 0) * 10 + (d.tasks || 0) * 50 + (d.xp || 0);
-    const nextCap = PROG_THRESHOLDS.find(x => x > points) || (points + 100);
-    const pct = Math.min(100, Math.round(points / nextCap * 100));
-    box.append(el('div', { class: 'row' },
-      el('span', { class: 'name' }, c),
-      el('div', { class: 'track' }, el('div', { class: 'fill', style: 'width:' + pct + '%' })),
-      el('span', { class: 'pct', title: `${d.posts || 0} post · ${d.tasks || 0} task` }, progressLevel(points)),
-    ));
-  });
-}
-
-function renderMyPosts(){
-  const box = document.getElementById('myPosts');
-  clear(box);
-  const mine = getPosts().filter(p => p.authorUid === state.authUser.uid);
-  if(!mine.length){ box.append(emptyState('message', t('usr.no_posts'))); return; }
-
-  // Paylaşım statistikası: orijinal / re-post / sitat sayı + alınan ümumi paylaşım (shareCount).
-  const orig = mine.filter(p => (p.postType || 'original') === 'original').length;
-  const reposts = mine.filter(p => p.postType === 'repost').length;
-  const quotes = mine.filter(p => p.postType === 'quote').length;
-  const sharesReceived = mine.reduce((s, p) => s + (p.shareCount || 0), 0);
-  const statChip = (label, val) => el('div', { class: 'share-stat', style: 'display:flex; flex-direction:column; align-items:center; padding:6px 12px; background:var(--surface-2); border:1px solid var(--border); border-radius:10px; min-width:64px;' },
-    el('span', { style: 'font-size:1.05rem; font-weight:700;' }, String(val)),
-    el('span', { style: 'font-size:.66rem; color:var(--muted);' }, label));
-  box.append(el('div', { class: 'share-stats-row', style: 'display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;' },
-    statChip(t('prof.stat_orig'), orig),
-    statChip(t('prof.stat_repost'), reposts),
-    statChip(t('prof.stat_quote'), quotes),
-    statChip(t('prof.stat_shares'), sharesReceived),
-  ));
-
-  // Redaktə/silmə daxil tam idarə üçün feed kartından istifadə olunur.
-  mine.forEach(p => box.append(postCard(p)));
-}
-
 /* ---------- tab-lı profil redaktoru ---------- */
 const fld = (label, node, hint) => el('div', { class: 'field' },
   el('label', {}, label), node,
@@ -382,9 +190,54 @@ function openEditModal(initialTab = 'general'){
     lfBox.append(el('button', { type: 'button', class: 'pp' + ((me.lookingFor || []).includes(x) ? ' sel' : ''),
       onclick: e => e.target.classList.toggle('sel') }, x));
   });
+  /* Təcrübə ili + sertifikat (miqrasiya 0052 → `users.skill_meta`).
+   *
+   * ⚠ SƏVİYYƏ İLƏ EYNİ ŞEY DEYİL: səviyyə ("Qabaqcıl") özünüqiymətdir, il isə
+   *   faktdır. Spesifikasiya hər ikisini istəyir və onlar bir-birini əvəz
+   *   etmir — 1 illik "Qabaqcıl" ilə 8 illik "Orta" fərqli mesajdır.
+   *
+   * ⚠ SİYAHI SEÇİMDƏN TÖRƏYİR: yalnız seçilmiş bacarıqlar üçün sətir olur.
+   *   Bütün taksonomiya üçün sətir yaratsaydıq, redaktorda 23 boş sahə olardı.
+   */
+  const metaBox = el('div', { class: 'skill-meta' });
+  const metaState = { ...(me.skillMeta || {}) };
+  const rebuildMeta = () => {
+    const chosen = [...Object.keys(progPick.getSelection()), ...Object.keys(langPick.getSelection())];
+    clear(metaBox);
+    if(!chosen.length){
+      metaBox.append(el('p', { class: 'skill-meta__empty' }, t('pf.meta_none')));
+      return;
+    }
+    chosen.forEach(name => {
+      const cur = metaState[name] || { y: 0, c: 0 };
+      const years = el('input', {
+        type: 'number', min: '0', max: '30', value: String(cur.y || ''),
+        placeholder: '0', 'aria-label': name + ' — ' + t('pf.sk_years'),
+      });
+      years.addEventListener('input', () => {
+        metaState[name] = { ...(metaState[name] || { c: 0 }), y: Math.max(0, Math.min(30, parseInt(years.value, 10) || 0)) };
+      });
+      const cert = el('input', { type: 'checkbox', checked: !!cur.c, 'aria-label': name + ' — ' + t('pf.sk_cert') });
+      cert.addEventListener('change', () => {
+        metaState[name] = { ...(metaState[name] || { y: 0 }), c: cert.checked ? 1 : 0 };
+      });
+      metaBox.append(el('div', { class: 'skill-meta__row' },
+        el('span', { class: 'skill-meta__n' }, name),
+        el('label', { class: 'skill-meta__y' }, years, el('span', {}, t('pf.sk_unit'))),
+        el('label', { class: 'skill-meta__c' }, cert, el('span', {}, t('pf.sk_cert'))),
+      ));
+    });
+  };
+  // Seçim dəyişəndə sətirlər yenilənir. Hadisə çipdən QALXIR, ona görə
+  // valideyndə dinləmək kifayətdir (`skillLevelPicker`-in öz `onchange`-i yoxdur).
+  progPick.addEventListener('click', rebuildMeta);
+  langPick.addEventListener('click', rebuildMeta);
+  rebuildMeta();
+
   const tabSkills = el('div', {},
     fld('Proqramlaşdırma dilləri', progPick, 'Klik: Başlanğıc → Orta → Qabaqcıl → çıxart'),
     fld('Öyrəndiyi / bildiyi dillər', langPick),
+    fld(t('pf.meta_title'), metaBox, t('pf.meta_hint')),
     fld('Öyrənmə hədəfləri', goalsIn),
     fld('Nə axtarıram?', lfBox),
   );
@@ -531,6 +384,11 @@ function openEditModal(initialTab = 'general'){
         // Miqrasiya 0050 — kataloq sahələri.
         company: companyIn.value.trim(), status: statusIn.value,
         progLevels, langLevels,
+        // ⚠ META SEÇİMƏ GÖRƏ SÜZÜLÜR: istifadəçi bacarığı çıxarıbsa, onun ili
+        //   də getməlidir. Süzməsəydik, sətir bazada YETİM qalar və bacarıq
+        //   geri əlavə olunanda köhnə il "birdən" peyda olardı.
+        skillMeta: Object.fromEntries(Object.entries(metaState)
+          .filter(([k, v]) => (k in progLevels || k in langLevels) && (v.y || v.c))),
         prog: Object.keys(progLevels), langs: Object.keys(langLevels),
         goals: goalsIn.value.trim(),
         lookingFor: [...lfBox.querySelectorAll('.pp.sel')].map(b => b.textContent),
@@ -554,16 +412,21 @@ function openEditModal(initialTab = 'general'){
 }
 
 /* ---------- init / mount ---------- */
-export function initProfile(){
-  document.getElementById('profEditBtn').addEventListener('click', () => openEditModal());
-}
 
-function renderAll(){
+/**
+ * ⚠ ARTIQ `profEditBtn`-Ə BAĞLANMIR: düymə hər render-də YENİDƏN yaradılır
+ *   (profil qatı JS-dən qurulur), ona görə bir dəfəlik `addEventListener`
+ *   ilk render-dən sonra ölü qalardı. `onclick` indi düymənin özündədir.
+ */
+export function initProfile(){ /* bağlama lazım deyil — bax yuxarıdakı qeyd */ }
+
+function renderAll(force = false){
   if(!document.getElementById('page-profil').classList.contains('active')) return;
-  renderCard(); renderBadges(); renderHeatmap(); renderProgress(); renderMyPosts();
-  // Server tərəfli saylar (komanda/layihə/izləyici) — ANİ render-dən sonra
-  // gəlir və `renderCard()`-u bir daha çağırır.
-  loadProfExtra();
+  const key = renderKey(state.me);
+  if(force || key !== lastRenderKey){
+    lastRenderKey = key;
+    mountView();
+  }
   // TASK-8 / Bənd 6 — tamlıq indikatoru. Çatışmayan sahə çipi redaktoru açır.
   renderCompleteness(document.getElementById('profCompleteness'), state.me, () => openEditModal());
 }
@@ -572,19 +435,29 @@ function onProfileBonus(){
   toast(t('cmp.bonus_earned'));
 }
 
+/* 🔴 SARĞI MƏCBURİDİR, `renderAll`-u BİRBAŞA VERMƏK OLMAZ: `addEventListener`
+ *    dinləyiciyə `Event` obyektini ötürür və o, TRUTHY-dir — yəni `force`
+ *    parametri hər lent yeniləməsində `true` olardı və profil hər dəfə
+ *    tamamilə yenidən qurulardı (sürüşmə mövqeyi + yüklənmiş postlar itərdi).
+ *    Məhz `renderKey` mexanizminin qarşısını almaq istədiyi hal. */
+const onBusUpdate = () => renderAll(false);
+
 export function mountProfile(){
-  renderAll();
+  lastRenderKey = '';
+  renderAll(true);
   bus.addEventListener('profile-bonus', onProfileBonus);
-  fetchProgressOf(state.authUser.uid).then(p => { progressCache = p; renderProgress(); }).catch(() => {});
-  unsubTasks = watchTasks(list => { cachedTasks = list; });
-  unsubSubs = watchMySubmissions(list => { cachedSubs = list; });
-  bus.addEventListener('feed-updated', renderAll);
-  bus.addEventListener('users-updated', renderAll);
+  unsubTasks = watchTasks(() => {});
+  unsubSubs = watchMySubmissions(() => {});
+  // ⚠ `feed-updated` HƏLƏ DƏ dinlənilir (post silinsə sancaq siyahısı köhnəlir),
+  //   lakin `renderKey` dəyişməyibsə render ATLANIR — bax `renderKey` şərhi.
+  bus.addEventListener('feed-updated', onBusUpdate);
+  bus.addEventListener('users-updated', onBusUpdate);
   return () => {
     if(unsubTasks){ unsubTasks(); unsubTasks = null; }
     if(unsubSubs){ unsubSubs(); unsubSubs = null; }
-    bus.removeEventListener('feed-updated', renderAll);
-    bus.removeEventListener('users-updated', renderAll);
+    if(view){ view.destroy(); view = null; }
+    bus.removeEventListener('feed-updated', onBusUpdate);
+    bus.removeEventListener('users-updated', onBusUpdate);
     bus.removeEventListener('profile-bonus', onProfileBonus);
   };
 }

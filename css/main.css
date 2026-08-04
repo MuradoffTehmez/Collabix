@@ -77,5 +77,11 @@
      spesifiklikdə qalib gəlsin deyə sıra belədir (tədrici köçürmə). */
 @import './89-users.css';
 
+/* Profil ekranı (`#page-profil` + `#page-u`).
+   ⚠ `89-users.css`-DƏN SONRA: `--ud-*` nişanları orada hər üç səhifə üçün
+     elan olunur və profil qatı onlardan qidalanır. Əvvəl gəlsəydi, rank/
+     status rəngləri profil səhifəsində boş qalardı. */
+@import './91-profile.css';
+
 /* 🔴 HƏMİŞƏ SONUNCU */
 @import './90-utilities.css';

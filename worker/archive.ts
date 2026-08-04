@@ -132,6 +132,25 @@ async function pruneSecurityEvents(env: Env): Promise<number> {
 }
 
 /**
+ * Profil baxışlarının saxlama müddəti — 400 gün (miqrasiya 0052).
+ *
+ * ⚠ NİYƏ TƏMİZLƏNİR: cədvəl hər istifadəçi üçün GÜNDƏ BİR sətir yığır.
+ *   Profil "son 30 gün" və "ümumi" göstərir; ümumi say üçün 400 gündən köhnə
+ *   gündəlik bölgü LAZIM DEYİL. Təmizlik olmasaydı, bu, `notifications` ilə
+ *   eyni sinif problem olardı — sonsuz böyüyən cədvəl.
+ *
+ * ⚠ HƏDD `date` MƏTN SÜTUNU ÜZRƏDİR (ISO 'YYYY-MM-DD') — leksikoqrafik
+ *   müqayisə burada xronoloji müqayisə ilə eynidir, ona görə indeks işləyir.
+ */
+async function pruneProfileViews(env: Env): Promise<number> {
+  const cutoff = new Date(now() - 400 * 86400000).toISOString().slice(0, 10);
+  const res = await env.DB.prepare(
+    'DELETE FROM profile_views WHERE date < ?',
+  ).bind(cutoff).run();
+  return res.meta?.changes ?? 0;
+}
+
+/**
  * Silinmiş hesabların mesajlarının arxivdən FİZİKİ silinməsi — §8.6 variant (c).
  *
  * Oxu yolundakı filtr (variant b) mesajları dərhal ƏLÇATMAZ edir, lakin bayt
@@ -233,11 +252,12 @@ export async function runArchiveJob(env: Env): Promise<Record<string, unknown>> 
   const rollup = await refreshStatsRollup(env);
   const analyzed = await runAnalyze(env);
   const notifs = await pruneNotifications(env);
+  const views = await pruneProfileViews(env);
 
   const summary = {
     hotDays: hotDays(env), rooms, dms,
     prunedSessions: sessions, prunedEvents: events, purge,
-    rollup, analyzed, prunedNotifications: notifs,
+    rollup, analyzed, prunedNotifications: notifs, prunedProfileViews: views,
   };
   console.log('arxiv işi tamamlandı', JSON.stringify(summary));
   return summary;

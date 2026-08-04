@@ -198,6 +198,24 @@ export async function feed(c: Ctx) {
   const pinFirst = '(p.pinned_at IS NULL), p.pinned_at DESC, ';
   const hiddenFilter = c.isAdmin ? '' : ' AND p.hidden_at IS NULL';
 
+  /* ── Müəllif filtri (profil səhifəsi) ───────────────────────────────────
+   * 🔴 NİYƏ AYRICA ENDPOINT YAZILMADI: profil postları ÜÇÜN ayrı sorğu
+   *    yazmaq görünürlük qaydalarını (`visFilter`), reaksiya/sorğu toplu
+   *    yükləməsini və keyset kursorunu TƏKRARLAMAQ demək idi. Görünürlük
+   *    təhlükəsizlik qaydasıdır — iki nüsxə saxlamaq gec-tez onları
+   *    ayırar və `private` post profildə görünərdi.
+   *
+   * ⚠ Müəllif rejimində QLOBAL sancaq sırası əvəzinə PROFİL sancağı işləyir
+   *   (miqrasiya 0052): lentdə admin sancağı başdadır, profildə isə müəllifin
+   *   öz seçimi. İkisi fərqli sütunlardır və qarışdırılmamalıdır.
+   *
+   * ⚠ ƏVVƏLKİ VƏZİYYƏT: publik profil postları `feedCache`-dən süzürdü —
+   *   yəni YALNIZ lentə onsuz da düşmüş son postlar görünürdü (ən çox 10) və
+   *   lent açılmamışdan əvvəl profil "paylaşım yoxdur" deyirdi. */
+  const authorId = clampStr(c.url.searchParams.get('author') || '', 40).trim();
+  const authorFilter = authorId ? ' AND p.author_id = ?5' : '';
+  const profilePin = authorId ? '(p.profile_pinned_at IS NULL), p.profile_pinned_at DESC, ' : pinFirst;
+
   /* ── Görünürlük + planlaşdırma filtri (0045) ────────────────────────────
    * ⚠ Sütunları əlavə edib BURANI unutmaq təhlükəsizlik qüsuru olardı:
    *   'private' post hamıya görünərdi.
@@ -222,8 +240,8 @@ export async function feed(c: Ctx) {
 
   const offset = !chrono && cursor && /^\d+$/.test(cursor) ? Number(cursor) : 0;
   const where = (chrono && after)
-    ? `WHERE u.blocked = 0${hiddenFilter}${visFilter} AND (p.created_at < ?1 OR (p.created_at = ?1 AND p.id < ?2))`
-    : `WHERE u.blocked = 0${hiddenFilter}${visFilter}`;
+    ? `WHERE u.blocked = 0${hiddenFilter}${visFilter}${authorFilter} AND (p.created_at < ?1 OR (p.created_at = ?1 AND p.id < ?2))`
+    : `WHERE u.blocked = 0${hiddenFilter}${visFilter}${authorFilter}`;
   const query = `
     SELECT p.*,
            s.id AS s_id, s.author_id AS s_author_id, s.author_name AS s_author_name,
@@ -233,21 +251,31 @@ export async function feed(c: Ctx) {
     JOIN users u ON p.author_id = u.id
     LEFT JOIN posts s ON p.shared_post_id = s.id
     ${where}
-    ORDER BY ${pinFirst}${ORDER[sort]}
+    ORDER BY ${profilePin}${ORDER[sort]}
     LIMIT ${limit + 1}${chrono ? '' : ` OFFSET ${offset}`}
   `;
-  /* ⚠ HƏR BUDAQDA EYNİ DÖRD PARAMETR bağlanır:
+  /* ⚠ DÖRD SABİT PARAMETR + ŞƏRTİ BEŞİNCİ:
    *   ?1/?2 — keyset cursor (yalnız `new` + cursor olanda SQL-də görünür)
    *   ?3    — `now()` (yalnız `trending` ORDER BY-da)
    *   ?4    — cari istifadəçi (görünürlük filtri — HƏMİŞƏ var)
+   *   ?5    — müəllif (YALNIZ `?author=` verilibsə SQL-də görünür)
    *
-   * Əvvəl bind budağa görə dəyişirdi və hər yeni parametr əlavə edəndə
-   * budaqlardan biri unudulub "bağlanmamış parametr" xətası verirdi.
-   * Nömrəli yer tutucularda istifadə olunmayan indeksə dəyər vermək
-   * təhlükəsizdir — SQLite ən böyük indeksə qədər yer ayırır. */
-  const rows = await D(c).prepare(query)
-    .bind(after?.ts ?? null, after?.id ?? null, now(), c.user!.id)
-    .all<any>();
+   * 🔴 DÜZƏLİŞ — ƏVVƏLKİ ŞƏRH SƏHV İDİ. Burada belə yazılmışdı: *"istifadə
+   *    olunmayan indeksə dəyər vermək təhlükəsizdir — SQLite ən böyük
+   *    indeksə qədər yer ayırır."* Doğru hissə: SQLite ƏN BÖYÜK İNDEKSƏ qədər
+   *    yer ayırır. Səhv nəticə: bu, "artıq dəyər vermək olar" demək DEYİL.
+   *    D1 bind sayının həmin ƏN BÖYÜK İNDEKSƏ bərabər olmasını tələb edir və
+   *    fərq olanda `D1_ERROR: Wrong number of parameter bindings` atır.
+   *
+   *    Əvvəl bu görünmürdü, çünki `?4` (görünürlük) HƏMİŞƏ SQL-də idi, yəni
+   *    maksimum indeks həmişə 4 olurdu və 4 dəyər bağlanırdı. `?5` şərti
+   *    olduğu üçün qayda ilk dəfə pozuldu: müəllifsiz sorğuda maksimum indeks
+   *    4-dür, bağlanan isə 5 — və LENT TAMAMİLƏ çökdü (500).
+   *
+   * ⚠ Ona görə beşinci dəyər YALNIZ filtr aktiv olanda əlavə olunur. */
+  const params: unknown[] = [after?.ts ?? null, after?.id ?? null, now(), c.user!.id];
+  if (authorId) params.push(authorId);
+  const rows = await D(c).prepare(query).bind(...params).all<any>();
 
   // `limit + 1` çəkilir ki, "daha var?" sualı ƏLAVƏ SORĞU olmadan cavablansın.
   const hasMore = rows.results.length > limit;

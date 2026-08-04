@@ -75,6 +75,11 @@
 }
 
 .empty-state .ic {
+  /* 🔴 `display: flex` MƏCBURİDİR. Baza `.ic` qaydası `inline-flex`-dir və
+     `margin-inline: auto` SƏTİRDAXİLİ elementi MƏRKƏZLƏŞDİRMİR — nəticədə
+     ikon mətnlə eyni sətirdə qalıb onun üstünə minirdi. Qüsur bütün boş
+     vəziyyətlərdə var idi, sadəcə az yerdə göründüyü üçün gözdən qaçmışdı. */
+  display: flex;
   width: 28px;
   height: 28px;
   margin-inline: auto;

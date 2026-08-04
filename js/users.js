@@ -24,10 +24,14 @@ import { tax } from './taxonomy.js';
 // Rank/status/kateqoriya məntiqi SAF moduldadır — profil səhifəsi də onu
 // işlədir və eyni istifadəçi iki ekranda eyni görünməlidir.
 import { rankOf, xpProgress, statusOf, skillCatClass, rebuildCatIndex } from './profile-kit.js';
-import { renderHeatmapInto } from './heatmap.js';
+// Publik profil ekranı — ÖZ profillə ORTAQ renderer (bax həmin faylın başlığı).
+import { renderProfile } from './profile-view.js';
 
-let feedCache = []; // Filled by feed.js
-export function setFeedCache(posts){ feedCache = posts; }
+/* ⚠ `setFeedCache` SİLİNDİ (və `feedCache` ilə birlikdə): publik profil
+   paylaşımları ƏVVƏL həmin keşdən süzülürdü — yəni yalnız lentə onsuz da
+   yüklənmiş son 10 post görünürdü və lent açılmamışdan əvvəl profil
+   "paylaşım yoxdur" deyirdi. İndi postlar serverdən `?author=` filtri ilə
+   səhifələnir, keşə ehtiyac qalmır. */
 
 /* ═══════════════════════ İZLƏMƏ DÜYMƏSİ ═══════════════════════ */
 
@@ -1074,185 +1078,63 @@ export function mountPubProfile(username){
   skeletons(box, 3);
 
   let stopped = false;
-  let heatBox = null;
-
-  const render = (u, sharedTeams) => {
-    clear(box);
-    const isSelf = !!u.isSelf;
-    const r = rankOf(u.xp);
-    const p = xpProgress(u.xp);
-    const s = statusOf(u);
-    const loc = [u.city, u.country].filter(Boolean).join(', ');
-
-    updateDynamicSEO({
-      title: u.name + ' (@' + u.username + ')',
-      description: u.bio || ('Collabix profile of ' + u.name),
-      url: location.origin + '/#u/' + u.username,
-      schema: {
-        '@context': 'https://schema.org',
-        '@type': 'ProfilePage',
-        dateCreated: new Date(u.joinedAt || Date.now()).toISOString(),
-        mainEntity: {
-          '@type': 'Person',
-          name: u.name,
-          alternateName: u.username,
-          description: u.bio || '',
-          image: location.origin + (u.photoURL ? u.photoURL : '/favicon.svg'),
-        },
-      },
-    });
-
-    /* ── Başlıq kartı ───────────────────────────────────────────────── */
-    const avatar = el('div', { class: 'pp-avatar' }, avatarNode(u, 'avatar'),
-      el('span', { class: 'ud-status ud-s--' + s.tone, title: t(s.key), 'aria-label': t(s.key) }));
-
-    const metaBits = [];
-    if(u.company) metaBits.push(['building', u.company]);
-    if(loc) metaBits.push(['mapPin', loc]);
-    if(u.joinedAt) metaBits.push(['calendar', t('users.c_joined').replace('{d}', fmtMonthYear(u.joinedAt))]);
-    const seen = lastSeenText(u);
-    if(seen) metaBits.push(['clock', seen]);
-
-    const xpFill = el('span', { class: 'ud-xp__fill ud-r--' + r.tone });
-    // CSSOM — CSP HTML `style="…"` atributunu bloklayır (layihə qeydi).
-    xpFill.style.setProperty('--ud-xp-pct', p.pct + '%');
-
-    const actions = isSelf
-      ? el('div', { class: 'pp-actions' },
-        el('button', { class: 'c-btn c-btn--primary c-btn--sm', onclick: () => emit('nav', { page: 'profil' }) },
-          el('span', { class: 'ic', 'data-icon': 'edit', 'data-icon-size': '15' }), t('pub.edit')))
-      : el('div', { class: 'pp-actions' },
-        el('button', { class: 'c-btn c-btn--primary c-btn--sm', onclick: () => tryOpenDM(u) },
-          el('span', { class: 'ic', 'data-icon': 'send', 'data-icon-size': '15' }), t('users.a_msg')),
-        followBtn(u),
-        el('button', {
-          class: 'c-icon-btn', type: 'button', 'aria-label': t('users.a_more'),
-          onclick: function(e){ e.stopPropagation(); openUserMenu(this, u); },
-        }, el('span', { class: 'ic', 'data-icon': 'more', 'data-icon-size': '16' })));
-
-    box.append(el('section', { class: 'pp-card' },
-      el('div', { class: 'pp-cover' }),
-      el('div', { class: 'pp-head' },
-        avatar,
-        el('div', { class: 'pp-id' },
-          el('h1', { class: 'pp-name' }, nameWithBadge(u)),
-          el('div', { class: 'pp-handle' },
-            el('span', {}, '@' + u.username),
-            s.tone === 'hiring' ? el('span', { class: 'ud-badge ud-s--hiring' }, t('users.st_hiring')) : null,
-            u.followsMe && !isSelf ? el('span', { class: 'ud-mutual ud-mutual--f' }, t('users.c_follows_you')) : null,
-          ),
-          metaBits.length ? el('div', { class: 'ud-meta pp-meta' }, metaBits.map(([ic, txt]) =>
-            el('span', { class: 'ud-meta__i' },
-              el('span', { class: 'ic', 'data-icon': ic, 'data-icon-size': '13' }), txt))) : null,
-          u.bio ? el('p', { class: 'pp-bio' }, u.bio) : null,
-          u.goals ? el('p', { class: 'pp-goals' },
-            el('span', { class: 'ic', 'data-icon': 'flag', 'data-icon-size': '13' }), u.goals) : null,
-          el('div', { class: 'ud-xp pp-xp' },
-            el('div', { class: 'ud-xp__top' },
-              el('span', { class: 'ud-rank ud-r--' + r.tone },
-                el('span', { class: 'ic', 'data-icon': 'crown', 'data-icon-size': '11' }),
-                r.label, el('i', {}, 'Lv' + r.lvl)),
-              el('span', { class: 'ud-xp__num' },
-                p.isMax ? t('users.rk_max') : t('users.rk_next').replace('{n}', String(p.remaining))),
-            ),
-            el('div', {
-              class: 'ud-xp__bar', role: 'progressbar',
-              'aria-valuenow': String(p.pct), 'aria-valuemin': '0', 'aria-valuemax': '100',
-            }, xpFill),
-          ),
-        ),
-        actions,
-      ),
-    ));
-
-    /* ── Sosial saylar ──────────────────────────────────────────────── */
-    const countBtn = (n, key, onclick) => el('button', {
-      class: 'pp-stat', type: 'button', onclick,
-    }, el('b', {}, String(n || 0)), el('span', {}, t(key)));
-
-    box.append(el('div', { class: 'pp-stats' },
-      countBtn(u.followersCount, 'soc.followers', () => openFollowList(u.uid, 'followers')),
-      countBtn(u.followingCount, 'soc.followingOf', () => openFollowList(u.uid, 'following')),
-      el('div', { class: 'pp-stat pp-stat--static' }, el('b', {}, String(u.teamsCount || 0)), el('span', {}, t('users.c_teams'))),
-      el('div', { class: 'pp-stat pp-stat--static' }, el('b', {}, String(u.projectsCount || 0)), el('span', {}, t('users.c_projects'))),
-      el('div', { class: 'pp-stat pp-stat--static' }, el('b', {}, String(u.streak || 0)), el('span', {}, t('usr.streak'))),
-      el('div', { class: 'pp-stat pp-stat--static' }, el('b', {}, String(u.tasksCompleted || 0)), el('span', {}, t('usr.tasks'))),
-    ));
-
-    /* ── Ortaq kontekst ─────────────────────────────────────────────── */
-    if(!isSelf && (sharedTeams.length || u.mutualProjects)){
-      box.append(el('section', { class: 'pp-block' },
-        el('h2', { class: 'pp-h' }, t('pub.shared')),
-        el('div', { class: 'pp-chips' },
-          sharedTeams.map(x => el('button', {
-            class: 'ud-mutual pp-teamchip', type: 'button',
-            onclick: () => emit('nav', { page: 'team/' + x.slug }),
-          }, el('span', { class: 'ic', 'data-icon': 'users', 'data-icon-size': '11' }), x.name)),
-          u.mutualProjects ? el('span', { class: 'ud-mutual' },
-            el('span', { class: 'ic', 'data-icon': 'folder', 'data-icon-size': '11' }),
-            t('users.c_mutual_p').replace('{n}', String(u.mutualProjects))) : null,
-        ),
-      ));
-    }
-
-    /* ── Bacarıqlar ─────────────────────────────────────────────────── */
-    const chips = skillChips(u, 99);
-    if(chips || (u.lookingFor || []).length){
-      box.append(el('section', { class: 'pp-block' },
-        el('h2', { class: 'pp-h' }, t('users.all_skills')),
-        chips,
-        (u.lookingFor || []).length ? el('div', { class: 'pp-chips' },
-          (u.lookingFor || []).map(x => el('span', { class: 'ud-skill cat-spoken' },
-            el('span', { class: 'ic', 'data-icon': 'search', 'data-icon-size': '11' }), x))) : null,
-      ));
-    }
-
-    /* ── Sosial linklər ─────────────────────────────────────────────── */
-    const socials = [
-      ['GitHub', 'github', u.github], ['LinkedIn', 'linkedin', u.linkedin],
-      ['Instagram', 'instagram', u.instagram], ['Telegram', 'telegram', u.telegram],
-      ['Website', 'website', u.website],
-    ].filter(x => x[2]);
-    if(socials.length){
-      box.append(el('section', { class: 'pp-block' },
-        el('h2', { class: 'pp-h' }, t('pub.links')),
-        el('div', { class: 'pp-chips' }, socials.map(([label, , val]) =>
-          el('span', { class: 'pp-social' }, el('b', {}, label), String(val)))),
-      ));
-    }
-
-    /* ── Aktivlik xəritəsi ──────────────────────────────────────────── */
-    heatBox = el('div', { class: 'heatmap' });
-    box.append(el('section', { class: 'pp-block' },
-      el('h2', { class: 'pp-h' }, t('usr.act_map')), heatBox));
-    renderHeatmapInto(heatBox, u.activityDays || {});
-    api('/users/' + encodeURIComponent(u.username) + '/activity')
-      .then(d => { if(!stopped) renderHeatmapInto(heatBox, d.activityDays || {}); })
-      .catch(() => {});
-
-    /* ── Paylaşımlar ────────────────────────────────────────────────── */
-    const posts = feedCache.filter(x => x.authorUid === u.uid).slice(0, 10);
-    const postBox = el('div', {});
-    box.append(el('section', { class: 'pp-block' },
-      el('h2', { class: 'pp-h' }, t('usr.posts')), postBox));
-    if(posts.length){
-      import('./feed.js').then(({ postCard }) => {
-        if(stopped) return;
-        posts.forEach(x => postBox.append(postCard(x)));
-      });
-    } else {
-      postBox.append(emptyState('message', t('usr.no_posts')));
-    }
-
-    paintIcons(box);
-  };
+  let view = null;
 
   api('/users/' + encodeURIComponent(username || '') + '/profile')
     .then(d => {
       if(stopped) return;
+      const u = d.user;
       // Keşi də yenilə — DM/mention kimi başqa ekranlar ondan oxuyur.
-      if(d.user && d.user.uid) state.users.set(d.user.uid, { ...(state.users.get(d.user.uid) || {}), ...d.user });
-      render(d.user, d.sharedTeams || []);
+      if(u && u.uid) state.users.set(u.uid, { ...(state.users.get(u.uid) || {}), ...u });
+
+      updateDynamicSEO({
+        title: u.name + ' (@' + u.username + ')',
+        description: u.bio || ('Collabix profile of ' + u.name),
+        url: location.origin + '/#u/' + u.username,
+        schema: {
+          '@context': 'https://schema.org',
+          '@type': 'ProfilePage',
+          dateCreated: new Date(u.joinedAt || Date.now()).toISOString(),
+          mainEntity: {
+            '@type': 'Person',
+            name: u.name,
+            alternateName: u.username,
+            description: u.bio || '',
+            image: location.origin + (u.photoURL ? u.photoURL : '/favicon.svg'),
+          },
+        },
+      });
+
+      /* 🔴 ÖZ PROFİLLƏ EYNİ RENDERER: `js/profile-view.js`. Əvvəl bu funksiya
+         səhifəni özü qururdu və nəticədə publik profildə nişanlar, layihələr,
+         taymlayn və statistika YOX idi — eyni istifadəçi iki səhifədə iki
+         fərqli məhsul kimi görünürdü. */
+      view = renderProfile(box, {
+        user: u,
+        sharedTeams: d.sharedTeams || [],
+        mode: u.isSelf ? 'self' : 'public',
+        onFollowList: (uid, tab) => openFollowList(uid, tab),
+        actions: () => u.isSelf
+          ? [el('button', {
+            class: 'c-btn c-btn--primary c-btn--sm',
+            onclick: () => emit('nav', { page: 'profil' }),
+          }, el('span', { class: 'ic', 'data-icon': 'edit', 'data-icon-size': '15' }), t('pub.edit'))]
+          : [
+            el('button', { class: 'c-btn c-btn--primary c-btn--sm', onclick: () => tryOpenDM(u) },
+              el('span', { class: 'ic', 'data-icon': 'send', 'data-icon-size': '15' }), t('users.a_msg')),
+            followBtn(u),
+            el('button', {
+              class: 'c-icon-btn', type: 'button', 'aria-label': t('users.a_more'),
+              onclick: function(e){ e.stopPropagation(); openUserMenu(this, u); },
+            }, el('span', { class: 'ic', 'data-icon': 'more', 'data-icon-size': '16' })),
+          ],
+      });
+
+      /* Baxış sayğacı — SESSİYA BAŞINA BİR DƏFƏ.
+         ⚠ Mühafizə `sessionStorage`-dədir, yəni keçilə bilər. Bu, qəsdəndir:
+           baxış sayı NÜFUZ göstəricisidir, icazə qərarı deyil (bax server
+           şərhi). Server öz-özünə baxışı onsuz da saymır. */
+      recordView(u);
     })
     .catch(e => {
       if(stopped) return;
@@ -1261,15 +1143,25 @@ export function mountPubProfile(username){
         e && e.status === 404 ? t('pub.not_found').replace('{u}', '@' + (username || '?')) : t('users.err')));
     });
 
-  // İzləmə dəyişəndə yalnız düymə vəziyyəti dəyişir — bütün səhifəni yenidən
-  // çəkmək sürüşmə mövqeyini itirərdi.
   return () => {
     stopped = true;
+    if(view){ view.destroy(); view = null; }
     // 🔴 SEO SIFIRLANIR: `updateDynamicSEO` başlığı dəyişirdi, lakin heç nə
     //    onu geri qaytarmırdı — profildən çıxdıqdan sonra da tab başlığı
     //    "@filan | Collabix" qalırdı və əlfəcin YANLIŞ adla saxlanılırdı.
     resetDynamicSEO();
   };
+}
+
+/** Profil baxışını qeyd edir — sessiya başına bir dəfə, öz profilində heç vaxt. */
+function recordView(u){
+  if(!u || !u.username || u.isSelf) return;
+  const key = 'cbx_pv_' + u.username;
+  try{
+    if(sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, '1');
+  }catch(e){ /* private rejimdə sessionStorage ata bilər — sayğac yenə göndərilir */ }
+  api('/users/' + encodeURIComponent(u.username) + '/view', { method: 'POST' }).catch(() => {});
 }
 
 /* ---------- profil modalı (köhnə keçidlər üçün — səhifəyə yönləndirir) ---------- */

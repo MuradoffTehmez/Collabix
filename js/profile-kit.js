@@ -10,7 +10,7 @@
 // 🔴 ƏSAS QAYDA: eyni istifadəçi kataloqda və profil səhifəsində EYNİ
 //    görünməlidir. Rank rəngi və ya status etiketi iki yerdə fərqli
 //    hesablansaydı, istifadəçi onları müqayisə edən kimi fərqi görərdi.
-import { levelFromXP, LEVEL_THRESHOLDS, isOnline } from './util.js';
+import { levelFromXP, LEVEL_THRESHOLDS, isOnline, bus } from './util.js';
 import { t } from './i18n.js';
 import { tax } from './taxonomy.js';
 
@@ -109,7 +109,104 @@ export function rebuildCatIndex(){
   }
 }
 
+/* 🔴 İNDEKS TAKSONOMİYA GƏLƏNDƏ AVTOMATİK SIFIRLANIR.
+ *
+ * PROBLEM: `taxonomy.js`-dəki DEFAULT siyahılarda `category` sahəsi YOXDUR —
+ * kateqoriya YALNIZ serverdən gəlir (`taxonomies.category`, miqrasiya 0050).
+ * İndeks server cavabından ƏVVƏL qurulsa, HƏR bacarıq `cat-other` olur və
+ * profildə hamısı "Digər" qrupuna düşür.
+ *
+ * ƏVVƏL bunu `users.js` özü həll edirdi (`mountUsers` daxilində
+ * `rebuildCatIndex()`). Yəni qayda "hər ekran özü yadda saxlamalıdır" idi və
+ * profil ekranı əlavə olunan kimi pozuldu — məhz belə də oldu.
+ * İndi bilik SAHİBİNDƏDİR: indeks öz etibarsızlaşmasını özü idarə edir.
+ *
+ * ⚠ `bus` `util.js`-dədir və bu modul onu onsuz da import edir — yeni asılılıq
+ *   yaranmır. */
+bus.addEventListener('taxonomy-updated', () => { catIndex = null; });
+
 export function skillCatClass(label){
   if(!catIndex) rebuildCatIndex();
   return catIndex.get(label) || 'cat-other';
+}
+
+/**
+ * label → kateqoriya AÇARI (`lang`, `web`, …).
+ *
+ * ⚠ `skillCatClass`-dan törəyir, PARALEL CƏDVƏL DEYİL: profil bacarıqları
+ *   kateqoriyaya görə QRUPLAŞDIRIR, kataloq isə yalnız rəngləyir. İki ayrı
+ *   uyğunluq cədvəli saxlasaydıq, biri yenilənəndə digəri köhnə qalardı.
+ */
+export function skillCatOf(label){
+  return skillCatClass(label).replace(/^cat-/, '');
+}
+
+/** Kateqoriya sırası — profil bölmələrinin GÖRÜNMƏ sırası. */
+export const SKILL_CAT_ORDER = [
+  'lang', 'web', 'db', 'cloud', 'devops', 'security', 'embedded', 'design', 'spoken', 'other',
+];
+
+/* ═══════════════════════ ÖRTÜK NAXIŞLARI ═══════════════════════
+ *
+ * ⚠ SİYAHI SERVERDƏKİ `PROFILE_COVERS` İLƏ EYNİ OLMALIDIR
+ *   (`worker/routes/profile.ts`). Server ağ siyahısı təhlükəsizlik qapısıdır,
+ *   bu isə seçim UI-ıdır — burada olmayan açar seçilə bilməz, serverdə
+ *   olmayan açar isə rədd edilir.
+ */
+export const COVERS = ['', 'aurora', 'mesh', 'grid', 'dusk', 'forest', 'ember', 'ocean', 'mono'];
+
+/** Naxış açarı → CSS sinfi. Naməlum açar default-a düşür (səssiz, sınmır). */
+export function coverClass(key){
+  return COVERS.includes(key || '') ? ('pf-cover--' + (key || 'aurora')) : 'pf-cover--aurora';
+}
+
+/* ═══════════════════════ AKTİVLİK STATİSTİKASI ═══════════════════════
+ *
+ * 🔴 CLIENT-DƏ HESABLANIR, SERVERDƏ YOX — çünki datası ONSUZ DA gəlir:
+ *    `/api/users/:u/activity` bütün günlərin xəritəsini qaytarır və heatmap
+ *    onu çəkir. Server tərəfdə ayrıca "seriya" sorğusu eyni sətirləri İKİNCİ
+ *    dəfə oxumaq olardı.
+ *
+ * ⚠ GÜN AÇARI UTC-DİR (`user_activity.date` ISO 'YYYY-MM-DD'). Yerli vaxtla
+ *   hesablasaydıq, gecə yarısına yaxın istifadəçidə seriya bir gün sürüşərdi.
+ */
+export function activityStats(days = {}){
+  const keys = Object.keys(days).filter(k => (days[k] || 0) > 0).sort();
+  const total = keys.reduce((s, k) => s + (days[k] || 0), 0);
+  if(!keys.length) return { total: 0, current: 0, longest: 0, bestDay: null, bestCount: 0, topWeekday: -1 };
+
+  const dayMs = 86400000;
+  const asTs = k => Date.parse(k + 'T00:00:00Z');
+
+  // Ən uzun seriya — ardıcıl günlərin sayı.
+  let longest = 1, run = 1;
+  for(let i = 1; i < keys.length; i++){
+    run = (asTs(keys[i]) - asTs(keys[i - 1]) === dayMs) ? run + 1 : 1;
+    if(run > longest) longest = run;
+  }
+
+  // Cari seriya — bu gündən (və ya dünəndən) geriyə.
+  // ⚠ DÜNƏN DƏ QƏBUL OLUNUR: istifadəçi hələ bu gün heç nə etməyibsə, dünənki
+  //   seriya SIFIRLANMIŞ sayılmamalıdır — gün hələ bitməyib.
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const set = new Set(keys);
+  let cursor = asTs(todayKey);
+  if(!set.has(todayKey)) cursor -= dayMs;
+  let current = 0;
+  while(set.has(new Date(cursor).toISOString().slice(0, 10))){
+    current++;
+    cursor -= dayMs;
+  }
+
+  // Ən məhsuldar gün + ən aktiv həftə günü.
+  let bestDay = keys[0], bestCount = days[keys[0]] || 0;
+  const weekdays = [0, 0, 0, 0, 0, 0, 0];
+  for(const k of keys){
+    const c = days[k] || 0;
+    if(c > bestCount){ bestCount = c; bestDay = k; }
+    weekdays[new Date(asTs(k)).getUTCDay()] += c;
+  }
+  const topWeekday = weekdays.indexOf(Math.max(...weekdays));
+
+  return { total, current, longest, bestDay, bestCount, topWeekday };
 }

@@ -14,7 +14,7 @@ import {
 } from './util.js';
 import { toast, confirmDialog, showModal, closeModal, skeletons, emptyState } from './ui.js';
 import { api } from './api.js';
-import { openProfileModal, setFeedCache } from './users.js';
+import { openProfileModal } from './users.js';
 import { markdownNode } from './markdown.js';
 // `highlightOptions` artıq `code-block.js`-dədir (dil nişanı orada qurulur).
 import { mentionify, attachMentionAutocomplete } from './mention.js';
@@ -994,7 +994,6 @@ function reconcilePosts(container, list, emptyNode){
 // Silinən postu keşdən + açıq siyahılardan çıxarır (remount/reload olmadan).
 function removePostLocally(postId){
   posts = posts.filter(x => x.id !== postId);
-  setFeedCache(posts);
   [document.getElementById('homeFeed'), document.getElementById('savedFeed')].forEach(box => {
     if(!box) return;
     const index = cardIndexes.get(box);
@@ -1704,7 +1703,6 @@ export function subscribeFeed(){
   return watchFeed(items => {
     posts = items;
     deriveMyReposts(items);
-    setFeedCache(items);
     emit('feed-updated');
   });
 }
