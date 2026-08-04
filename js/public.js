@@ -358,14 +358,25 @@ async function renderTestimonials(){
   if(!items.length) return;
 
   const track = el('div', { class: 'testi-track' });
-  items.forEach(x => {
+  items.forEach((x, i) => {
+    const angle = 135 + (i * 45);
+    const avGradient = `linear-gradient(${angle}deg, var(--coral), var(--violet))`;
     track.append(el('div', { class: 'testi-card', role: 'group' },
-      starRow(x.rating || 5),
-      el('p', { class: 'testi-text' }, '"' + tf(x.text) + '"'),
-      el('div', { class: 'testi-author' },
-        el('div', { class: 'avatar' }, (x.authorName || '?').charAt(0)),
-        el('div', {}, el('b', {}, x.authorName || '—'), el('span', {}, tf(x.authorTitle))),
-      ),
+      el('div', { class: 'testi-bg-quote' }, '“'),
+      el('div', { class: 'testi-content' },
+        starRow(x.rating || 5),
+        el('p', { class: 'testi-text' }, '"' + tf(x.text) + '"'),
+        el('div', { class: 'testi-author' },
+          el('div', { class: 'testi-avatar', style: `background: ${avGradient}` }, (x.authorName || '?').charAt(0)),
+          el('div', { class: 'testi-meta' },
+            el('b', {}, x.authorName || '—'),
+            el('span', { class: 'tm-role' }, tf(x.authorTitle)),
+            el('div', { class: 'tm-badges' },
+              el('span', { class: 'tm-badge' }, t('testi.verified'))
+            )
+          )
+        )
+      )
     ));
   });
 

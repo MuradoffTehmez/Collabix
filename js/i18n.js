@@ -103,6 +103,8 @@ const D = {
 
   /* ---------- testimonials ---------- */
   'testi.title':   { az: 'İstifadəçilər nə deyir?', en: 'What users say', ru: 'Отзывы' },
+  'testi.subtitle':{ az: 'Minlərlə proqramçı və tələbə artıq Collabix ilə öyrənir və inkişaf edir.', en: 'Thousands of developers and students are already learning and growing with Collabix.', ru: 'Тысячи разработчиков и студентов уже учатся и развиваются с Collabix.' },
+  'testi.verified':{ az: 'Təsdiqlənmiş istifadəçi', en: 'Verified Member', ru: 'Подтвержденный пользователь' },
   'testi.prev':    { az: 'Əvvəlki rəy', en: 'Previous testimonial', ru: 'Предыдущий отзыв' },
   'testi.next':    { az: 'Növbəti rəy', en: 'Next testimonial', ru: 'Следующий отзыв' },
   'testi.goto':    { az: 'Rəyə keç', en: 'Go to testimonial', ru: 'Перейти к отзыву' },

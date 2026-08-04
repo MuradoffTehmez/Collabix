@@ -218,18 +218,18 @@
   grid-template-columns: auto 1fr auto;
   grid-template-areas: 'prev view next' 'dots dots dots';
   align-items: center;
-  gap: 10px;
+  gap: 24px;
 }
 
 .testi-viewport {
   grid-area: view;
   overflow: hidden;
-  border-radius: var(--radius);
+  border-radius: 24px;
 }
 
 .testi-track {
   display: flex;
-  transition: transform .45s cubic-bezier(.22, .61, .36, 1);
+  transition: transform .6s cubic-bezier(.16, 1, .3, 1);
   will-change: transform;
 }
 
@@ -240,28 +240,21 @@
   animation: none;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-}
-
-.testi-carousel .testi-card:hover {
-  transform: none;
-}
-
-.testi-carousel .testi-text {
-  flex: 1;
 }
 
 .testi-arrow {
-  width: 36px;
-  height: 36px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   border: 1px solid var(--border);
-  background: var(--surface-2);
+  background: var(--surface);
   color: var(--text);
-  font-size: 1.3rem;
+  font-size: 1.5rem;
   line-height: 1;
   cursor: pointer;
-  transition: transform .16s ease, border-color .16s ease, background-color .16s ease;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+  z-index: 10;
 }
 
 .testi-arrow.prev { grid-area: prev; }
@@ -269,8 +262,8 @@
 
 .testi-arrow:hover {
   border-color: var(--coral);
-  background: var(--surface);
-  transform: scale(1.08);
+  box-shadow: 0 6px 16px var(--coral-dim);
+  transform: scale(1.05);
 }
 
 .testi-arrow:focus-visible {
@@ -282,8 +275,9 @@
   grid-area: dots;
   display: flex;
   justify-content: center;
-  gap: 7px;
-  margin-top: 4px;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
 }
 
 .testi-dot {
@@ -291,15 +285,21 @@
   height: 8px;
   padding: 0;
   border: 0;
-  border-radius: 50%;
+  border-radius: 4px;
   background: var(--border);
   cursor: pointer;
-  transition: transform .16s ease, background-color .16s ease;
+  transition: width .3s ease, background-color .3s ease, transform .2s ease;
+}
+
+.testi-dot:hover {
+  background: var(--muted);
+  transform: scale(1.2);
 }
 
 .testi-dot.on {
+  width: 24px;
   background: var(--coral);
-  transform: scale(1.35);
+  transform: scale(1);
 }
 
 .testi-dot:focus-visible {
