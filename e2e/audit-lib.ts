@@ -342,8 +342,8 @@ export async function collectViolations(page: Page): Promise<Violation[]> {
           ra.top < rb.bottom && ra.bottom > rb.top
         ) {
           // Əgər biri digərinin içindədirsə, əhəmiyyət vermə (məsələn, dropdown içindəki menu)
-          if (ra.width * ra.height > rb.width * rb.height && ra.contains(b)) continue;
-          if (rb.width * rb.height > ra.width * ra.height && rb.contains(a)) continue;
+          if (ra.width * ra.height > rb.width * rb.height && a.contains(b)) continue;
+          if (rb.width * rb.height > ra.width * ra.height && b.contains(a)) continue;
           addViolation('layout-overlap', `Elementlər üst‑üstə düşür: ${sel(a)} və ${sel(b)}`, a);
           break;
         }
