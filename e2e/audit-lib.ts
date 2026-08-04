@@ -58,119 +58,114 @@ export interface AuditResult {
   screenshot?: string;       // base64 (visual regression üçün)
 }
 
-// ─── Köməkçi funksiyalar (browser daxilində) ──────────────────────────────
-
-function buildDomPath(el: Element): string {
-  const parts: string[] = [];
-  let current: Element | null = el;
-  while (current && current !== document.documentElement) {
-    let selector = current.tagName.toLowerCase();
-    if (current.id) {
-      selector += '#' + current.id;
-      parts.unshift(selector);
-      break; // ID unikal olduğu üçün dayan
-    }
-    // index əlavə et (nth‑child)
-    const parent = current.parentElement;
-    if (parent) {
-      const children = Array.from(parent.children);
-      const index = children.indexOf(current) + 1;
-      selector += `:nth-child(${index})`;
-    }
-    parts.unshift(selector);
-    current = current.parentElement;
-  }
-  return parts.join(' > ');
-}
-
-function getCssCause(el: HTMLElement, category: Violation['category']): string {
-  const st = getComputedStyle(el);
-  switch (category) {
-    case 'overflow-x':
-    case 'element-overflow':
-      return `width:${st.width}, max-width:${st.maxWidth}, overflow-x:${st.overflowX}`;
-    case 'text-clip':
-      return `white-space:${st.whiteSpace}, overflow:${st.overflow}, text-overflow:${st.textOverflow}`;
-    case 'touch-target':
-      return `min-width:${st.minWidth}, min-height:${st.minHeight}, padding:${st.padding}`;
-    case 'flex-wrap':
-      return `flex-wrap:${st.flexWrap}, flex-shrink:${st.flexShrink}`;
-    case 'grid-wrap':
-      return `grid-template-columns:${st.gridTemplateColumns}, overflow:${st.overflow}`;
-    case 'fixed-sticky-collision':
-      return `position:${st.position}, top:${st.top}, z-index:${st.zIndex}`;
-    case 'z-index-conflict':
-      return `z-index:${st.zIndex}, position:${st.position}`;
-    default:
-      return '';
-  }
-}
-
-function getRecommendation(category: Violation['category'], detail: string): string {
-  const recs: Record<Violation['category'], string> = {
-    'overflow-x': 'Səhifədə üfüqi scroll yaranır. "overflow-x: hidden" əlavə edin və ya daşan elementi kiçildin.',
-    'element-overflow': 'Element viewportdan kənara çıxır. "max-width: 100%" və "box-sizing: border-box" tətbiq edin.',
-    'touch-target': 'Toxunma hədəfi çox kiçikdir (minimum 44×44 px). Padding və ya ölçü artırın.',
-    'text-clip': 'Mətn kəsilir. "white-space: normal", "overflow: visible" və ya "word-break: break-word" istifadə edin.',
-    'layout-overlap': 'Elementlər üst‑üstə düşür. Z‑index və ya mövqe tənzimləyin.',
-    'flex-wrap': 'Flex elementlər konteynerə sığmır. "flex-wrap: wrap" əlavə edin və ya flex‑baza azaldın.',
-    'grid-wrap': 'Grid elementlər daşır. "grid-template-columns: repeat(auto‑fit, minmax(...))" istifadə edin.',
-    'fixed-sticky-collision': 'Fixed/sticky elementlər toqquşur. "top", "bottom" dəyərlərini nəzərdən keçirin.',
-    'horizontal-scroll-container': 'Horizontal scroll konteyneri qeyri‑intentionaldır. "max-width: 100%" və "overflow-x: hidden" yoxlayın.',
-    'media-overflow': 'Media element (img, svg, video) konteynerdən daşır. "max-width: 100%; height: auto" tətbiq edin.',
-    'table-overflow': 'Cədvəl ekrandan kənara çıxır. "overflow-x: auto" olan konteynerə sarın və ya "table-layout: fixed" istifadə edin.',
-    'modal-responsive': 'Modal/drawer ekrandan böyükdür. "max-height: 90vh; overflow-y: auto" əlavə edin.',
-    'drawer-responsive': 'Drawer tam görünmür. "width: 100%; max-width: 400px" kimi məhdudiyyət qoyun.',
-    'sidebar-collapse': 'Sidebar kiçik ekranda daralmır. "display: none" və ya "transform: translateX" ilə gizlədin.',
-    'navbar-collapse': 'Navbar elementləri sığmır. "flex-wrap: wrap" və ya hamburger menyu əlavə edin.',
-    'z-index-conflict': 'Z‑index toqquşması var. Üst‑üstə düşən elementlərin z‑index səviyyələrini tənzimləyin.',
-    'scrollbar-detection': 'Scrollbar görünür və layout dəyişir. "overflow: auto" əvəzinə "overlay" və ya sabit en ayırın.',
-    'cls': 'Layout shift baş verir (CLS > 0.1). Şəkillərə ölçü verin, reklamlar üçün yer ayırın.',
-    'safe-area': 'iPhone notch/status bar altında qalır. "padding: env(safe-area-inset-*)" əlavə edin.',
-    'landscape': 'Landscape rejimində layout pozulur. Media query ilə fərqli tənzimləmə edin.',
-    'zoom': '200% zoom-da mətn və elementlər sığmır. "rem" və "vw/vh" istifadə edin, sabit px azaldın.',
-    'accessibility': 'Responsive WCAG tələbləri pozulur. Kontrast, toxunma hədəfi, mətn ölçüsü yoxlayın.',
-    'visual-regression': 'Görünüş fərqlidir (baseline ilə müqayisə). Ekran görüntüsü yoxlayın.',
-  };
-  return recs[category] || 'Tövsiyə: CSS xassələrini nəzərdən keçirin.';
-}
-
-function getPriority(category: Violation['category']): 'P0' | 'P1' | 'P2' | 'P3' {
-  const map: Record<Violation['category'], 'P0' | 'P1' | 'P2' | 'P3'> = {
-    'overflow-x': 'P0',
-    'element-overflow': 'P0',
-    'touch-target': 'P1',
-    'text-clip': 'P1',
-    'layout-overlap': 'P1',
-    'flex-wrap': 'P2',
-    'grid-wrap': 'P2',
-    'fixed-sticky-collision': 'P1',
-    'horizontal-scroll-container': 'P1',
-    'media-overflow': 'P2',
-    'table-overflow': 'P2',
-    'modal-responsive': 'P1',
-    'drawer-responsive': 'P1',
-    'sidebar-collapse': 'P2',
-    'navbar-collapse': 'P2',
-    'z-index-conflict': 'P2',
-    'scrollbar-detection': 'P2',
-    'cls': 'P0',
-    'safe-area': 'P1',
-    'landscape': 'P2',
-    'zoom': 'P1',
-    'accessibility': 'P1',
-    'visual-regression': 'P3',
-  };
-  return map[category] || 'P3';
-}
-
 // ─── Əsas yoxlama funksiyası (page.evaluate daxilində işləyir) ────────────
-
+// BÜTÜN KÖMƏKÇİ FUNKSİYALAR DAXİLDƏ TƏYİN OLUNUR – beləliklə, "not defined" xətası aradan qalxır.
 export async function collectViolations(page: Page): Promise<Violation[]> {
   return page.evaluate(() => {
-    const out: Violation[] = [];
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
+    // ─── Köməkçi funksiyalar (yalnız bu evaluate scope‑unda mövcuddur) ───
+
+    function getPriority(category: Violation['category']): 'P0' | 'P1' | 'P2' | 'P3' {
+      const map: Record<Violation['category'], 'P0' | 'P1' | 'P2' | 'P3'> = {
+        'overflow-x': 'P0',
+        'element-overflow': 'P0',
+        'touch-target': 'P1',
+        'text-clip': 'P1',
+        'layout-overlap': 'P1',
+        'flex-wrap': 'P2',
+        'grid-wrap': 'P2',
+        'fixed-sticky-collision': 'P1',
+        'horizontal-scroll-container': 'P1',
+        'media-overflow': 'P2',
+        'table-overflow': 'P2',
+        'modal-responsive': 'P1',
+        'drawer-responsive': 'P1',
+        'sidebar-collapse': 'P2',
+        'navbar-collapse': 'P2',
+        'z-index-conflict': 'P2',
+        'scrollbar-detection': 'P2',
+        'cls': 'P0',
+        'safe-area': 'P1',
+        'landscape': 'P2',
+        'zoom': 'P1',
+        'accessibility': 'P1',
+        'visual-regression': 'P3',
+      };
+      return map[category] || 'P3';
+    }
+
+    function getCssCause(el: HTMLElement, category: Violation['category']): string {
+      const st = getComputedStyle(el);
+      switch (category) {
+        case 'overflow-x':
+        case 'element-overflow':
+          return `width:${st.width}, max-width:${st.maxWidth}, overflow-x:${st.overflowX}`;
+        case 'text-clip':
+          return `white-space:${st.whiteSpace}, overflow:${st.overflow}, text-overflow:${st.textOverflow}`;
+        case 'touch-target':
+          return `min-width:${st.minWidth}, min-height:${st.minHeight}, padding:${st.padding}`;
+        case 'flex-wrap':
+          return `flex-wrap:${st.flexWrap}, flex-shrink:${st.flexShrink}`;
+        case 'grid-wrap':
+          return `grid-template-columns:${st.gridTemplateColumns}, overflow:${st.overflow}`;
+        case 'fixed-sticky-collision':
+          return `position:${st.position}, top:${st.top}, z-index:${st.zIndex}`;
+        case 'z-index-conflict':
+          return `z-index:${st.zIndex}, position:${st.position}`;
+        default:
+          return '';
+      }
+    }
+
+    function getRecommendation(category: Violation['category'], detail: string): string {
+      const recs: Record<Violation['category'], string> = {
+        'overflow-x': 'Səhifədə üfüqi scroll yaranır. "overflow-x: hidden" əlavə edin və ya daşan elementi kiçildin.',
+        'element-overflow': 'Element viewportdan kənara çıxır. "max-width: 100%" və "box-sizing: border-box" tətbiq edin.',
+        'touch-target': 'Toxunma hədəfi çox kiçikdir (minimum 44×44 px). Padding və ya ölçü artırın.',
+        'text-clip': 'Mətn kəsilir. "white-space: normal", "overflow: visible" və ya "word-break: break-word" istifadə edin.',
+        'layout-overlap': 'Elementlər üst‑üstə düşür. Z‑index və ya mövqe tənzimləyin.',
+        'flex-wrap': 'Flex elementlər konteynerə sığmır. "flex-wrap: wrap" əlavə edin və ya flex‑baza azaldın.',
+        'grid-wrap': 'Grid elementlər daşır. "grid-template-columns: repeat(auto‑fit, minmax(...))" istifadə edin.',
+        'fixed-sticky-collision': 'Fixed/sticky elementlər toqquşur. "top", "bottom" dəyərlərini nəzərdən keçirin.',
+        'horizontal-scroll-container': 'Horizontal scroll konteyneri qeyri‑intentionaldır. "max-width: 100%" və "overflow-x: hidden" yoxlayın.',
+        'media-overflow': 'Media element (img, svg, video) konteynerdən daşır. "max-width: 100%; height: auto" tətbiq edin.',
+        'table-overflow': 'Cədvəl ekrandan kənara çıxır. "overflow-x: auto" olan konteynerə sarın və ya "table-layout: fixed" istifadə edin.',
+        'modal-responsive': 'Modal/drawer ekrandan böyükdür. "max-height: 90vh; overflow-y: auto" əlavə edin.',
+        'drawer-responsive': 'Drawer tam görünmür. "width: 100%; max-width: 400px" kimi məhdudiyyət qoyun.',
+        'sidebar-collapse': 'Sidebar kiçik ekranda daralmır. "display: none" və ya "transform: translateX" ilə gizlədin.',
+        'navbar-collapse': 'Navbar elementləri sığmır. "flex-wrap: wrap" və ya hamburger menyu əlavə edin.',
+        'z-index-conflict': 'Z‑index toqquşması var. Üst‑üstə düşən elementlərin z‑index səviyyələrini tənzimləyin.',
+        'scrollbar-detection': 'Scrollbar görünür və layout dəyişir. "overflow: auto" əvəzinə "overlay" və ya sabit en ayırın.',
+        'cls': 'Layout shift baş verir (CLS > 0.1). Şəkillərə ölçü verin, reklamlar üçün yer ayırın.',
+        'safe-area': 'iPhone notch/status bar altında qalır. "padding: env(safe-area-inset-*)" əlavə edin.',
+        'landscape': 'Landscape rejimində layout pozulur. Media query ilə fərqli tənzimləmə edin.',
+        'zoom': '200% zoom-da mətn və elementlər sığmır. "rem" və "vw/vh" istifadə edin, sabit px azaldın.',
+        'accessibility': 'Responsive WCAG tələbləri pozulur. Kontrast, toxunma hədəfi, mətn ölçüsü yoxlayın.',
+        'visual-regression': 'Görünüş fərqlidir (baseline ilə müqayisə). Ekran görüntüsü yoxlayın.',
+      };
+      return recs[category] || 'Tövsiyə: CSS xassələrini nəzərdən keçirin.';
+    }
+
+    function buildDomPath(el: Element): string {
+      const parts: string[] = [];
+      let cur: Element | null = el;
+      while (cur && cur !== document.documentElement) {
+        let selector = cur.tagName.toLowerCase();
+        if (cur.id) {
+          selector += '#' + cur.id;
+          parts.unshift(selector);
+          break;
+        }
+        const parent = cur.parentElement;
+        if (parent) {
+          const children = Array.from(parent.children);
+          const index = children.indexOf(cur) + 1;
+          selector += `:nth-child(${index})`;
+        }
+        parts.unshift(selector);
+        cur = cur.parentElement;
+      }
+      return parts.join(' > ');
+    }
 
     // ── Seçici yaratma ──
     const sel = (el: Element): string => {
@@ -193,30 +188,7 @@ export async function collectViolations(page: Page): Promise<Violation[]> {
       return true;
     };
 
-    // ── DOM yolu ──
-    const domPath = (el: Element): string => {
-      const parts: string[] = [];
-      let cur: Element | null = el;
-      while (cur && cur !== document.documentElement) {
-        let selector = cur.tagName.toLowerCase();
-        if (cur.id) {
-          selector += '#' + cur.id;
-          parts.unshift(selector);
-          break;
-        }
-        const parent = cur.parentElement;
-        if (parent) {
-          const children = Array.from(parent.children);
-          const index = children.indexOf(cur) + 1;
-          selector += `:nth-child(${index})`;
-        }
-        parts.unshift(selector);
-        cur = cur.parentElement;
-      }
-      return parts.join(' > ');
-    };
-
-    // ── Ümumi köməkçi: pozuntu əlavə et ──
+    // ── Pozuntu əlavə etmək üçün ümumi funksiya ──
     const addViolation = (
       category: Violation['category'],
       detail: string,
@@ -228,7 +200,7 @@ export async function collectViolations(page: Page): Promise<Violation[]> {
         category,
         detail,
         selector: sel(element),
-        domPath: domPath(element),
+        domPath: buildDomPath(element),
         priority: getPriority(category),
         cssCause: getCssCause(e, category),
         recommendation: getRecommendation(category, detail),
@@ -236,6 +208,11 @@ export async function collectViolations(page: Page): Promise<Violation[]> {
       };
       out.push(v);
     };
+
+    // ─── Nəticə massivi ──────────────────────────────────────────────────────
+    const out: Violation[] = [];
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
 
     // ════════════════════════════════════════════════════════════
     // 1) Mövcud yoxlamalar (saxlanılır)
@@ -318,9 +295,6 @@ export async function collectViolations(page: Page): Promise<Violation[]> {
     // ════════════════════════════════════════════════════════════
 
     // 2.1 Layout overlap (üst‑üstə düşmə)
-    // Sadə yanaşma: bütün position: absolute/fixed elementləri yoxla
-    const positioned = document.querySelectorAll('[style*="position: absolute"], [style*="position: fixed"]');
-    // Daha etibarlı: getComputedStyle ilə
     const allEls = document.querySelectorAll('*');
     const positionedEls: HTMLElement[] = [];
     for (const el of allEls) {
@@ -330,7 +304,6 @@ export async function collectViolations(page: Page): Promise<Violation[]> {
         positionedEls.push(e);
       }
     }
-    // Cüt‑cüt yoxla (məhdud sayda)
     for (let i = 0; i < positionedEls.length && i < 30; i++) {
       for (let j = i + 1; j < positionedEls.length && j < 30; j++) {
         const a = positionedEls[i];
@@ -341,7 +314,6 @@ export async function collectViolations(page: Page): Promise<Violation[]> {
           ra.left < rb.right && ra.right > rb.left &&
           ra.top < rb.bottom && ra.bottom > rb.top
         ) {
-          // Əgər biri digərinin içindədirsə, əhəmiyyət vermə (məsələn, dropdown içindəki menu)
           if (ra.width * ra.height > rb.width * rb.height && a.contains(b)) continue;
           if (rb.width * rb.height > ra.width * ra.height && b.contains(a)) continue;
           addViolation('layout-overlap', `Elementlər üst‑üstə düşür: ${sel(a)} və ${sel(b)}`, a);
@@ -357,7 +329,6 @@ export async function collectViolations(page: Page): Promise<Violation[]> {
       const st = getComputedStyle(e);
       if (st.display === 'flex' || st.display === 'inline-flex') {
         if (st.flexWrap === 'nowrap') {
-          // Əgər uşaqların cəmi eni konteynerdən çoxdursa
           let totalWidth = 0;
           for (const child of e.children) {
             const r = (child as HTMLElement).getBoundingClientRect();
@@ -370,7 +341,6 @@ export async function collectViolations(page: Page): Promise<Violation[]> {
         }
       }
     }
-    // Grid
     const gridContainers = document.querySelectorAll('[style*="display: grid"], [style*="display: inline-grid"]');
     for (const el of gridContainers) {
       const e = el as HTMLElement;
@@ -378,9 +348,7 @@ export async function collectViolations(page: Page): Promise<Violation[]> {
       if (st.display === 'grid' || st.display === 'inline-grid') {
         const cols = st.gridTemplateColumns;
         if (cols && cols !== 'none' && !cols.includes('auto') && !cols.includes('fr')) {
-          // Sabit enli grid – daşma ola bilər
           let totalColWidth = 0;
-          // sadə: bütün uşaqların enini yığ
           for (const child of e.children) {
             const r = (child as HTMLElement).getBoundingClientRect();
             totalColWidth += r.width + parseFloat(getComputedStyle(child as HTMLElement).marginLeft || '0') +
@@ -398,13 +366,10 @@ export async function collectViolations(page: Page): Promise<Violation[]> {
     for (const el of fixedSticky) {
       const e = el as HTMLElement;
       if (!visible(e)) continue;
-      const st = getComputedStyle(e);
       const r = e.getBoundingClientRect();
-      // Əgər fixed element viewportun xaricindədirsə
       if (r.top < -10 || r.bottom > vh + 10 || r.left < -10 || r.right > vw + 10) {
         addViolation('fixed-sticky-collision', `Fixed/sticky element viewportdan kənar: top=${Math.round(r.top)}`, el);
       }
-      // Başqa fixed/sticky ilə toqquşma (sadə)
       for (const other of fixedSticky) {
         if (other === el) continue;
         const ro = (other as HTMLElement).getBoundingClientRect();
@@ -423,7 +388,6 @@ export async function collectViolations(page: Page): Promise<Violation[]> {
     for (const el of scrollContainers) {
       const e = el as HTMLElement;
       if (e.scrollWidth > e.clientWidth + 2) {
-        // Əgər kod bloku, cədvəl və ya xüsusi class varsa, burax
         if (e.closest('pre, code, .table-wrap, .data-table, .heatmap, .chart')) continue;
         addViolation('horizontal-scroll-container', `Konteyner üfüqi scroll edir (scrollW ${e.scrollWidth} > clientW ${e.clientWidth})`, el);
       }
@@ -471,8 +435,6 @@ export async function collectViolations(page: Page): Promise<Violation[]> {
     for (const el of sidebars) {
       if (!visible(el)) continue;
       const e = el as HTMLElement;
-      const st = getComputedStyle(e);
-      // Əgər sidebar eni > 250px və ekran kiçikdirsə
       if (vw < 768 && e.offsetWidth > 250) {
         addViolation('sidebar-collapse', `Sidebar eni ${Math.round(e.offsetWidth)}px kiçik ekranda çox böyükdür`, el);
       }
@@ -483,7 +445,6 @@ export async function collectViolations(page: Page): Promise<Violation[]> {
     for (const el of navbars) {
       if (!visible(el)) continue;
       const e = el as HTMLElement;
-      // Əgər navbar uşaqları sığmırsa
       const children = Array.from(e.children);
       let totalChildWidth = 0;
       for (const child of children) {
@@ -508,7 +469,6 @@ export async function collectViolations(page: Page): Promise<Violation[]> {
         zMap[st.position].push(e);
       }
     }
-    // Əgər eyni position-da z-index fərqi > 10 olan elementlər üst‑üstə düşürsə
     for (const pos of ['absolute', 'fixed', 'relative', 'sticky']) {
       const list = zMap[pos] || [];
       for (let i = 0; i < list.length && i < 20; i++) {
@@ -532,10 +492,9 @@ export async function collectViolations(page: Page): Promise<Violation[]> {
       }
     }
 
-    // 2.11 Scrollbar detection (viewport scrollbar görünürsə)
+    // 2.11 Scrollbar detection
     const hasScrollbar = document.documentElement.scrollHeight > vh || document.documentElement.scrollWidth > vw;
     if (hasScrollbar) {
-      // Əgər scrollbar səbəbiylə layout dəyişibsə (məsələn, body eni dəyişib)
       const bodyWidth = document.body.getBoundingClientRect().width;
       if (bodyWidth > vw && document.documentElement.scrollWidth > vw) {
         addViolation('scrollbar-detection', 'Scrollbar görünür və layout dəyişir (body eni viewportdan böyük)', document.body);
@@ -555,7 +514,6 @@ export async function collectViolations(page: Page): Promise<Violation[]> {
     } catch (_) { /* bəzi brauzerlər dəstəkləməyə bilər */ }
 
     // 2.13 Safe-area (iPhone notch)
-    // Əgər fixed element top:0 və padding-top: env(safe-area-inset-top) yoxdursa
     const fixedTop = document.querySelectorAll('[style*="position: fixed"][style*="top: 0"]');
     for (const el of fixedTop) {
       const e = el as HTMLElement;
@@ -567,7 +525,6 @@ export async function collectViolations(page: Page): Promise<Violation[]> {
 
     // 2.14 Landscape orientation
     if (window.matchMedia('(orientation: landscape)').matches) {
-      // Landscape-də layout pozuntusu: məsələn, elementlər çox hündürdür
       const tallEls = document.querySelectorAll('*');
       for (const el of tallEls) {
         const e = el as HTMLElement;
@@ -580,17 +537,13 @@ export async function collectViolations(page: Page): Promise<Violation[]> {
       }
     }
 
-    // 2.15 Zoom (200%) – emulyasiya edilmir, yalnız xəbərdarlıq
-    // Həqiqi zoom-u yoxlamaq üçün devicePixelRatio istifadə edilə bilər, amma bu etibarlı deyil.
-    // Biz sadəcə mətn ölçülərini yoxlayırıq: əgər 1rem > 16px deyilsə, zoom ola bilər.
+    // 2.15 Zoom (200%)
     const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize);
     if (rootFontSize > 20) {
       addViolation('zoom', 'Zoom səviyyəsi yüksəkdir (root font-size > 20px). 200% zoom-da layout pozula bilər.', document.documentElement);
     }
 
     // 2.16 Accessibility responsive checks (WCAG)
-    // a) Contrast: sadə yoxlama – mətnin fonu ilə kontrastı? Çox mürəkkəb, buraxırıq.
-    // b) Text resizing: mətn ölçüsü px ilə verilibsə
     const textEls = document.querySelectorAll('p, span, div, h1, h2, h3, h4, h5, h6, a, button, label');
     for (const el of textEls) {
       const e = el as HTMLElement;
@@ -603,14 +556,10 @@ export async function collectViolations(page: Page): Promise<Violation[]> {
           break;
         }
       }
-      // Touch target artıq yoxlanılıb.
     }
 
-    // 2.17 Visual regression hook – screenshot tutulur (xaricdə)
-    // Burada yalnız işarə qoyuruq, faktiki screenshot page.screenshot() ilə xaricdə çəkiləcək.
-    // Heç bir pozuntu əlavə etmirik, amma nəticəyə əlavə edə bilərik.
+    // 2.17 Visual regression hook – screenshot xaricdə çəkilir, burada əlavə yoxlama yoxdur.
 
-    // ─── Nəticə ──────────────────────────────────────────────────────────────
     return out;
   });
 }
@@ -624,7 +573,7 @@ export function computeScore(violations: Violation[]): number {
     const p = v.priority || 'P3';
     penalty += weights[p] || 1;
   }
-  const maxPenalty = 100; // 10 * 10 max
+  const maxPenalty = 100;
   const score = Math.max(0, 100 - Math.min(penalty, maxPenalty));
   return Math.round(score);
 }
@@ -662,8 +611,6 @@ export async function runFullAudit(
   let totalScores = 0;
 
   for (const pageInfo of pages) {
-    // Giriş tələb olunarsa, əvvəlcədən hazır olmalıdır (storageState)
-    // Burada sadəcə navigation edirik.
     await page.goto(pageInfo.url, { waitUntil: 'networkidle' });
     if (pageInfo.open) {
       await pageInfo.open(page);
@@ -671,13 +618,12 @@ export async function runFullAudit(
 
     for (const vp of viewports) {
       await page.setViewportSize({ width: vp.w, height: vp.h });
-      await page.waitForTimeout(300); // layout stabilləşməsi üçün
+      await page.waitForTimeout(300);
 
       const violations = await collectViolations(page);
       const score = computeScore(violations);
       const summary = summarize(violations);
 
-      // Screenshot (opsional) – base64
       let screenshot: string | undefined;
       try {
         const buffer = await page.screenshot({ fullPage: true });
