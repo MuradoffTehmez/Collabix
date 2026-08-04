@@ -64,43 +64,22 @@
 }
 
 .feat-card:hover {
-  transform: translateY(-4px);
-  border-color: var(--coral);
-  box-shadow: var(--sh-3);
+  transform: translateY(-6px) scale(1.01);
+  border-color: color-mix(in srgb, var(--coral) 60%, transparent);
+  box-shadow: 0 12px 32px -8px color-mix(in srgb, var(--coral) 15%, transparent);
 }
 
-/* ---------- Ana#6: sticky nav + backdrop blur ---------- */
-.pub-header {
-  background: color-mix(in srgb, var(--bg) 92%, transparent);
-  backdrop-filter: blur(6px);
-  transition: background-color var(--mo-base) var(--mo-ease), box-shadow var(--mo-base) var(--mo-ease), backdrop-filter var(--mo-base) var(--mo-ease);
+/* Mobile menu slide-in */
+@keyframes menuSlideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.pub-header.scrolled {
-  background: color-mix(in srgb, var(--bg) 72%, transparent);
-  backdrop-filter: blur(16px) saturate(140%);
-  box-shadow: var(--sh-3);
+.ph-mobile.open {
+  animation: menuSlideDown 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
-/* aktiv naviqasiya linki — alt xətt vurğusu */
-.ph-nav a {
-  position: relative;
-}
-
-.ph-nav a.active {
-  color: var(--text);
-}
-
-.ph-nav a.active::after {
-  content: '';
-  position: absolute;
-  left: 8px;
-  right: 8px;
-  bottom: 2px;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--coral);
-}
+/* NavBar specific overrides removed to avoid conflict with updated 50-public.css */
 
 /* ---------- Ana#7: texnologiya nişanları (loqolu badge) ---------- */
 .tech-badge {

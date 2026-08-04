@@ -6,14 +6,16 @@
   position: sticky;
   top: 0;
   z-index: 80;
-  background: color-mix(in srgb, var(--bg) 82%, transparent);
-  backdrop-filter: blur(14px);
-  border-bottom: 1px solid var(--border);
-  transition: box-shadow .2s;
+  background: color-mix(in srgb, var(--bg) 60%, transparent);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease, backdrop-filter 0.3s ease;
 }
 
 .pub-header.scrolled {
-  box-shadow: var(--sh-3);
+  background: color-mix(in srgb, var(--bg) 85%, transparent);
+  box-shadow: 0 4px 24px -6px rgba(0, 0, 0, 0.2);
 }
 
 .ph-inner {
@@ -37,23 +39,30 @@
 }
 
 .ph-nav a {
-  padding: 8px 13px;
-  border-radius: 9px;
+  padding: 8px 14px;
+  border-radius: 12px;
   color: var(--muted);
-  font-size: .88rem;
+  font-size: .9rem;
   font-weight: 500;
   cursor: pointer;
-  transition: .15s;
+  transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+  position: relative;
 }
 
 .ph-nav a:hover {
   color: var(--text);
-  background: var(--surface-2);
+  background: color-mix(in srgb, var(--surface-2) 60%, transparent);
+  transform: translateY(-1px);
 }
 
 .ph-nav a.active {
-  color: var(--coral);
-  background: var(--coral-dim);
+  color: var(--text);
+  background: color-mix(in srgb, var(--coral) 12%, transparent);
+}
+
+.ph-nav a:focus-visible, .ph-search:focus-visible, .ph-theme:focus-visible, .ph-burger:focus-visible, .btn-primary:focus-visible, .btn-small:focus-visible, .btn-mini:focus-visible {
+  outline: 2px solid var(--coral);
+  outline-offset: 4px;
 }
 
 .ph-actions {
@@ -107,30 +116,32 @@
 .ph-theme {
   background: none;
   border: 1px solid var(--border);
-  border-radius: 9px;
-  padding: 6px 9px;
-  font-size: .85rem;
-  /* 🔴 `color` YOX İDİ — ikon SVG-dir və `currentColor` işlədir, `<button>`
-     isə brauzer default-u olaraq `buttontext` (praktikada QARA) alırdı.
-     Nəticə: tünd və matrix temalarında tema düyməsinin ikonu qara fonda qara
-     çıxırdı, yəni GÖRÜNMÜRDÜ. Açıq temada təsadüfən işləyirdi, ona görə
-     qüsur uzun müddət gizli qaldı. */
+  border-radius: 12px;
+  padding: 8px 10px;
+  font-size: .9rem;
   color: var(--text);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: border-color .16s ease, color .16s ease;
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .ph-theme:hover {
   border-color: var(--coral);
   color: var(--coral);
+  background: color-mix(in srgb, var(--coral) 8%, transparent);
+  transform: translateY(-1px);
 }
 
 .ph-theme .ic {
   display: inline-flex;
   font-size: 0;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.ph-theme:hover .ic {
+  transform: rotate(15deg);
 }
 
 .ph-burger {
@@ -232,16 +243,16 @@
 .hero-inner {
   position: relative;
   z-index: 1;
-  max-width: 760px;
+  max-width: 960px; /* Increased for wider scaling */
   margin: 0 auto;
 }
 
 .hero h1 {
   font-family: var(--display);
-  font-size: clamp(2rem, 5vw, 3.2rem);
+  font-size: clamp(2.5rem, 6vw + 0.5rem, 5.5rem);
   font-weight: 800;
-  line-height: 1.12;
-  letter-spacing: -.02em;
+  line-height: 1.05;
+  letter-spacing: -.03em;
   /* ⚠ Sətirləri bərabərləşdirir. Onsuz başlıq "…İnkişaf / et." kimi qırılırdı
      və son sətirdə tək söz ("dul sətir") qalırdı — premium başlıqda ən çox
      gözə dəyən tipoqrafik qüsur budur. Dəstəklənməyən brauzerdə sadəcə
@@ -530,6 +541,13 @@
   border-radius: var(--radius);
   padding: 18px;
   box-shadow: var(--sh-3);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sb-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--coral) 40%, transparent);
+  box-shadow: var(--sh-4);
 }
 
 .sb-card h3 {
@@ -1767,8 +1785,8 @@
    niyə əhəmiyyətli olduğunu izah etmirdi. İndi iki sütun. */
 .codeshow {
   display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-  gap: 40px;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 60px;
   align-items: center;
 }
 
@@ -1790,8 +1808,16 @@
 
 .cs-feats li {
   display: flex;
-  gap: 13px;
+  gap: 16px;
   align-items: flex-start;
+  padding: 8px;
+  border-radius: 12px;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.cs-feats li:hover {
+  background: color-mix(in srgb, var(--surface) 50%, transparent);
+  transform: translateX(4px);
 }
 
 .cs-feats b {

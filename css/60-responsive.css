@@ -344,3 +344,35 @@
     padding: 6px 7px;
   }
 }
+
+/* ==== Breakpoint: 1440 (Wide Desktop) ==== */
+@media (min-width: 1440px) {
+  .pub-section, .ph-inner, .pf-inner, .pf-bottom { max-width: 1320px; }
+  .feat-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+/* ==== Breakpoint: 1536 (Ultra-wide 1) ==== */
+@media (min-width: 1536px) {
+  .pub-section, .ph-inner, .pf-inner, .pf-bottom { max-width: 1400px; }
+}
+
+/* ==== Breakpoint: 1728 (Ultra-wide 2) ==== */
+@media (min-width: 1728px) {
+  .pub-section, .ph-inner, .pf-inner, .pf-bottom { max-width: 1560px; }
+  .pub-section { padding: 60px 40px; }
+  .hero { padding: 120px 40px 90px; }
+}
+
+/* ==== Breakpoint: 1920 (4K/Large Monitor) ==== */
+@media (min-width: 1920px) {
+  .pub-section, .ph-inner, .pf-inner, .pf-bottom { max-width: 1760px; }
+  .hero-inner { max-width: 1200px; }
+}
+
+/* ==== Breakpoint: 2560 (5K/Ultra Monitor) ==== */
+@media (min-width: 2560px) {
+  .pub-section, .ph-inner, .pf-inner, .pf-bottom { max-width: 2200px; }
+  .pub-section { padding: 80px 60px; }
+  .hero { padding: 160px 60px 120px; }
+  .hero-inner { max-width: 1400px; }
+}
