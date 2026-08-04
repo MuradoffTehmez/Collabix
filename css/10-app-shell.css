@@ -321,7 +321,7 @@
 
 h1.page-title {
   font-family: var(--display);
-  font-size: 1.75rem;
+  font-size: clamp(1.15rem, 0.95rem + 1.1vw, 1.75rem);
   font-weight: 800;
   margin-bottom: 4px;
   letter-spacing: -.01em;
@@ -389,7 +389,7 @@ h1.page-title {
 
 .stat-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: var(--sp-3);
   margin-bottom: var(--sp-5);
 }
@@ -410,7 +410,7 @@ h1.page-title {
 
 .stat-card .num {
   font-family: var(--display);
-  font-size: 1.7rem;
+  font-size: clamp(1.3rem, 1rem + 1.2vw, 1.7rem);
   font-weight: 800;
 }
 

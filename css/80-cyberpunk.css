@@ -10,6 +10,11 @@
   --scrollbar-track: #111827;
   --scrollbar-thumb: #00F5FF;
   --scrollbar-thumb-hover: #FF0088;
+  
+  /* Cyberpunk Font Overrides via Tokens */
+  --body: 'Orbitron', sans-serif;
+  --display: 'Space Grotesk', sans-serif;
+
   /* Firefox */
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);

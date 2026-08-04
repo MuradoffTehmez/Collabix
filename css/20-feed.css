@@ -75,27 +75,19 @@
   font-size: var(--fs-xs);
   font-weight: 600;
   color: var(--primary);
-  background: rgba(74, 143, 255, .1);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
   padding: 2px var(--sp-2);
   border-radius: var(--r-sm);
   letter-spacing: .02em;
   text-transform: uppercase;
   white-space: nowrap;
   line-height: 1.5;
-  border: 1px solid rgba(74, 143, 255, .15);
+  border: 1px solid color-mix(in srgb, var(--primary) 15%, transparent);
 }
 
-:root[data-theme="matrix"] .role-badge {
-  color: var(--primary);
-  background: rgba(0, 230, 118, .1);
-  border-color: rgba(0, 230, 118, .15);
-}
-
-:root[data-theme="light"] .role-badge {
-  color: var(--primary);
-  background: rgba(47, 111, 224, .08);
-  border-color: rgba(47, 111, 224, .12);
-}
+/* ⚠ Per-theme overrides SİLİNDİ: `color-mix(... var(--primary) ...)` istifadə
+   edildiyi üçün tema dəyişəndə rənglər AVTOMATİK izləyir — hər tema üçün
+   təkrar yazmağa ehtiyac yoxdur. */
 
 /* --- Three-dot menu --- */
 .card-menu-wrap {

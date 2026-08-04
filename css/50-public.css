@@ -79,14 +79,14 @@
   padding: 8px 13px;
   border-radius: 999px;
   font-size: .8rem;
-  width: 190px;
+  width: clamp(120px, 15vw, 190px);
   transition: .2s;
 }
 
 .ph-search:focus {
   outline: none;
   border-color: var(--coral);
-  width: 230px;
+  width: clamp(160px, 20vw, 230px);
 }
 
 .lang-switch {
@@ -207,7 +207,7 @@
 
 .pub-h1 {
   font-family: var(--display);
-  font-size: 2rem;
+  font-size: clamp(1.4rem, 1.1rem + 1.5vw, 2rem);
   font-weight: 800;
   margin-bottom: 18px;
   letter-spacing: -.02em;
@@ -215,9 +215,9 @@
 
 .pub-h2 {
   font-family: var(--display);
-  font-size: 1.45rem;
+  font-size: clamp(1.15rem, 0.95rem + 1.2vw, 1.45rem);
   font-weight: 800;
-  margin: 34px 0 18px;
+  margin: clamp(20px, 16px + 1.5vw, 34px) 0 18px;
   letter-spacing: -.01em;
 }
 
@@ -235,7 +235,7 @@
 .hero {
   position: relative;
   overflow: hidden;
-  padding: 90px 22px 70px;
+  padding: clamp(50px, 40px + 4vw, 90px) clamp(12px, 10px + 1.5vw, 22px) clamp(40px, 30px + 3vw, 70px);
   text-align: center;
   border-bottom: 1px solid var(--border);
 }
@@ -303,8 +303,20 @@
 .pub-grid {
   display: grid;
   grid-template-columns: 1fr 300px;
-  gap: 34px;
+  gap: clamp(16px, 14px + 2vw, 34px);
   align-items: start;
+}
+
+@media (max-width: 960px) {
+  .pub-grid {
+    grid-template-columns: 1fr;
+  }
+  .pub-sidebar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--sp-3);
+    position: static;
+  }
 }
 
 .feat-grid {

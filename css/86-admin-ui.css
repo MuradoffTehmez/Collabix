@@ -514,8 +514,8 @@
   display: block;
 }
 
-/* Mobile responsive sidebar */
-@media (max-width: 768px) {
+/* Mobile responsive sidebar — TABLET */
+@media (max-width: 1024px) {
   .admin-layout {
     flex-direction: column;
     gap: 16px;
@@ -530,16 +530,59 @@
     padding: 12px;
     white-space: nowrap;
     -webkit-overflow-scrolling: touch;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    border-radius: 12px 12px 0 0;
   }
 
   .admin-sidebar-btn {
     width: auto;
     padding: 10px 16px;
-    /* ⚠ TASK-9 responsive auditi (`text-clip`): sidebar mobildə üfüqi sürüşən
-       zolağa çevrilir, lakin flex uşaqları default olaraq SIXILIR
-       (`flex-shrink: 1`). 6 düymə 360 px-ə sığmadığı üçün hər birinin mətni
-       kəsilirdi (scrollW 127 > clientW 47). Sürüşən zolaqda düymələr öz təbii
-       enini saxlamalıdır — sıxılma yox, sürüşmə olmalıdır. */
+    /* ⚠ TASK-9 responsive auditi (`text-clip`): sidebar tablet/mobildə üfüqi
+       sürüşən zolağa çevrilir, lakin flex uşaqları default olaraq SIXILIR
+       (`flex-shrink: 1`). Sürüşən zolaqda düymələr öz təbii enini saxlamalıdır. */
     flex: 0 0 auto;
+  }
+
+  /* Admin card — daha sıx padding */
+  .admin-card {
+    padding: 18px;
+  }
+
+  /* Admin toolbar — stack on tablet */
+  .admin-toolbar.search-bar {
+    flex-wrap: wrap;
+  }
+
+  .admin-toolbar.search-bar input {
+    min-width: 0;
+  }
+}
+
+/* Mobile responsive sidebar — PHONE */
+@media (max-width: 480px) {
+  .admin-card {
+    padding: 14px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+  }
+
+  .admin-sidebar {
+    padding: 8px;
+    border-radius: 8px 8px 0 0;
+  }
+
+  .admin-sidebar-btn {
+    padding: 8px 12px;
+    font-size: 13px;
+    min-height: 40px;
+  }
+
+  #page-admin .page-title {
+    font-size: clamp(1.3rem, 1rem + 1.2vw, 2rem);
+  }
+
+  #page-admin .section-title {
+    font-size: clamp(1.1rem, 0.9rem + 0.8vw, 1.5rem);
   }
 }
