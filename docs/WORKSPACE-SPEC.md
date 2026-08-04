@@ -230,7 +230,7 @@ unudulmaması üçündür. Sayt admini də istisna deyil: iş sahəsi şəxsi ek
 ⚠ `position` **REAL**-dır: iki kartın arasına buraxmaq üçün orta ədəd
 kifayətdir (`(a+b)/2`), bütün sütunu yenidən nömrələmək lazım gəlmir.
 
-### 7.3 Endpoint-lər (34)
+### 7.3 Endpoint-lər (34 `/api/ws/*` + mövcud `/api/upload`)
 
 | Qrup | Yollar |
 |---|---|
