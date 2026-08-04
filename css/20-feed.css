@@ -126,8 +126,8 @@
   right: 0;
   min-width: 180px;
   background: var(--surface);
-  backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
   border: 1px solid var(--card-border);
   border-radius: 14px;
   padding: 6px;
@@ -205,8 +205,8 @@
   overflow: hidden;
   border: 1px solid var(--card-border);
   background: var(--code-bg);
-  backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   box-shadow:
     0 0 0 1px rgba(255,255,255,.03),
     0 2px 8px rgba(0,0,0,.08);
@@ -286,14 +286,21 @@
 
 .code-lang-badge {
   font-family: var(--mono);
-  font-size: .66rem;
+  /* 🔴 `.66rem` (10.56px) idi — layihənin öz sənədləşdirilmiş həddindən
+     aşağı (`15-components.css`: "ƏN KİÇİK ÖLÇÜ 12px"). Audit bunu bütün
+     4 temada və 11 endə qeyd etdi. Nişan qutusu mətnə görə böyüyür,
+     ona görə ölçü artımı layouta təsir etmir. */
+  font-size: var(--fs-xs);
   font-weight: 600;
   color: var(--accent);
-  background: rgba(94, 234, 234, .08);
+  /* 🔴 `rgba(94,234,234,…)` HARDCODED idi — bu, `--accent`-in dark temadakı
+     dəyəridir və light/matrix/cyberpunk-də nişan fonunu temadan ayırırdı.
+     `color-mix` ilə fon artıq temanı avtomatik izləyir. */
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
   padding: 3px 10px;
   border-radius: 8px;
   letter-spacing: .02em;
-  border: 1px solid rgba(94, 234, 234, .1);
+  border: 1px solid color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
 :root[data-theme="matrix"] .code-lang-badge {
@@ -742,6 +749,7 @@
   cursor: pointer;
   transition: background 180ms ease, color 180ms ease, transform 120ms ease;
   position: relative;
+  -webkit-user-select: none;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
@@ -1970,7 +1978,9 @@
 
 .lightbox .modal-img {
   max-width: 100%;
+  /* `dvh` fallback — landşaftda şəkil görünən sahədən hündür qalırdı. */
   max-height: 78vh;
+  max-height: 78dvh;
   border-radius: var(--r-md);
   display: block;
 }

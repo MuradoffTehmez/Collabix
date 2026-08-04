@@ -7,8 +7,8 @@
   top: 0;
   z-index: 80;
   background: color-mix(in srgb, var(--bg) 60%, transparent);
-  backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
   border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
   transition: background-color 0.3s ease, box-shadow 0.3s ease, backdrop-filter 0.3s ease;
 }
@@ -548,6 +548,7 @@
 
 .sb-card {
   background: color-mix(in srgb, var(--surface) 75%, transparent);
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -1676,6 +1677,7 @@
   border-radius: 14px;
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--surface) 88%, transparent);
+  -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
   box-shadow: var(--sh-3);
   padding: 11px 13px;

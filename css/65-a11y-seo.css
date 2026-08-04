@@ -212,7 +212,16 @@
     transform: none;
     flex-direction: column;
   }
-  .social-share-panel .share-btn { width: 34px; height: 34px; font-size: .8rem; }
+  /* 🔴 Burada `34px` yazılırdı, amma HEÇ VAXT 34px render OLUNMURDU:
+     `75-touch.css`-dəki `button:not(…):not(…):not(…)` seçicisi (0,3,1)
+     spesifikliyi ilə bu qaydanı (0,2,0) üstələyib `min-width/min-height`-i
+     40px-ə qaldırırdı (audit ölçdü: `40×40`, səbəb `min-width:40px`).
+     Yəni bəyannamə ilə reallıq bir-birinə uyğun deyildi.
+     İndi hər ikisi 44-dür — dizayn niyyəti ilə render nəticəsi eyniləşir.
+     ⚠ Bu, TOXUNMA aralığıdır (481–1024px; ≤480-də panel onsuz da gizlənir),
+       yəni barmaq hədəfi kiçilməli DEYİL, böyüməlidir.
+       Şrift ölçüsü kiçik qalır — dairə böyüyür, ikon yox. */
+  .social-share-panel .share-btn { width: 44px; height: 44px; font-size: .8rem; }
 }
 @media (max-width: 480px) {
   .social-share-panel { display: none !important; }

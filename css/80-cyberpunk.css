@@ -203,8 +203,8 @@
 [data-theme="cyberpunk"] .testi-card,
 [data-theme="cyberpunk"] .modal-content {
   background: rgba(10, 15, 28, 0.72) !important;
-  backdrop-filter: blur(20px) !important;
   -webkit-backdrop-filter: blur(20px) !important;
+  backdrop-filter: blur(20px) !important;
   border: none !important;
   border-radius: 0 !important;
   position: relative;

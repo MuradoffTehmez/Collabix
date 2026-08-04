@@ -230,6 +230,7 @@
   align-items: flex-start;
   padding: 12vh 16px 16px;
   background: rgba(0, 0, 0, .55);
+  -webkit-backdrop-filter: blur(3px);
   backdrop-filter: blur(3px);
   opacity: 0;
   transition: opacity .16s ease;
@@ -245,7 +246,10 @@
 
 .palette {
   width: min(560px, 100%);
+  /* `dvh` fallback — komanda palitrası mobildə klaviatura açılanda görünən
+     sahədən çıxırdı. */
   max-height: 70vh;
+  max-height: 70dvh;
   display: flex;
   flex-direction: column;
   border: 1px solid var(--border);

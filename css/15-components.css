@@ -448,8 +448,14 @@
   width: 100%;
   max-width: 560px;
   /* ⚠ `max-height` + daxili sürüşmə: uzun məzmunlu modal mobil ekranda
-     ekrandan çıxıb düymələrini əlçatmaz edirdi. */
+     ekrandan çıxıb düymələrini əlçatmaz edirdi.
+     ⚠ İki bəyannamə QƏSDƏN ardıcıldır (bax `87-chat-modern.css` eyni naxış):
+       `vh` mobil brauzerdə ünvan sətri gizlənəndə DƏYİŞMİR və həmişə ƏN BÖYÜK
+       hündürlüyü bildirir — yəni modal görünən sahədən hündür olur və düymələri
+       yenidən əlçatmaz qalır. `dvh` real görünən sahəni verir; onu
+       dəstəkləməyən brauzer ikinci bəyannaməni atır və `vh` qüvvədə qalır. */
   max-height: min(88vh, 760px);
+  max-height: min(88dvh, 760px);
   display: flex;
   flex-direction: column;
   background: var(--surface);
@@ -545,6 +551,7 @@
   .c-modal {
     max-width: none;
     max-height: 92vh;
+    max-height: 92dvh;
     border-radius: var(--radius) var(--radius) 0 0;
     border-bottom: none;
   }

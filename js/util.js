@@ -105,6 +105,11 @@ export function avatarNode(user, cls = 'avatar', online = false){
     const img = document.createElement('img');
     img.src = user.photoURL;
     img.alt = '';
+    // Avatar lentdə/siyahıda ONLARLA dəfə yaradılır — layihədəki digər 6 şəkil
+    // sahəsində bu atributlar var idi, yalnız burada çatmırdı. `.avatar img`
+    // ölçünü CSS-də sabitlədiyi üçün gec yüklənmə CLS yaratmır.
+    img.loading = 'lazy';
+    img.decoding = 'async';
     a.append(img);
   } else {
     const hue = hashHue((user && (user.uid || user.username || user.name)) || '?');

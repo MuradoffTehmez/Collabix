@@ -340,9 +340,14 @@ h1.page-title {
     min-height: 44px;
   }
 
-  /* Footer — tək sütun */
+  /* 🔴 ÖLÜ QAYDA İDİ: burada `flex-direction: column` yazılırdı, halbuki
+     `.pf-inner` GRID-dir (`50-public.css:963` — `1.4fr 1fr 1fr 1.2fr 1.4fr`).
+     `flex-direction` grid konteynerə HEÇ BİR TƏSİR ETMİR, yəni şərhdəki
+     "tək sütun" heç vaxt baş vermirdi. Faktiki sütun sayını
+     `53-admin-polish.css` idarə edir: ≤960 → 2 sütun, ≤560 → 1 sütun.
+     Yanlış bəyannamə silindi; sütun məntiqi TƏK YERDƏ qalsın deyə burada
+     təkrarlanmır — yalnız aralıq tənzimlənir. */
   .pf-inner {
-    flex-direction: column;
     gap: var(--sp-5);
   }
 
@@ -376,9 +381,10 @@ h1.page-title {
     -webkit-overflow-scrolling: touch;
   }
 
-  /* Komanda çat qutusu — viewport əsaslı */
+  /* Komanda çat qutusu — viewport əsaslı (`dvh` fallback naxışı ilə) */
   .team-chat-box {
     height: min(500px, 60vh);
+    height: min(500px, 60dvh);
   }
 }
 
@@ -419,10 +425,8 @@ h1.page-title {
     grid-template-columns: 1fr;
   }
 
-  /* Bottom nav etiketləri kiçildilir */
-  .bottom-nav button small {
-    font-size: 10px;
-  }
+  /* Bottom nav etiket ölçüsü buradan SİLİNDİ — `40-admin.css`-dəki tək
+     fluid clamp() qaydası bütün enləri əhatə edir (qeyri-monoton şkala). */
 
   /* Bildiriş/istifadəçi statistika kartları — daha dar minmax */
   .nc-stats,
@@ -559,10 +563,6 @@ h1.page-title {
 
 /* ==== Breakpoint: 360 (kiçik telefon) ==== */
 @media (max-width: 360px) {
-  .bottom-nav button small {
-    font-size: var(--fs-xs);
-  }
-
   .at-icon-btn {
     min-width: 34px;
     padding: 6px 7px;
@@ -640,10 +640,7 @@ h1.page-title {
     min-width: 0;
     padding: 4px 2px;
   }
-
-  .bottom-nav button small {
-    font-size: 9px;
-  }
+  /* etiket ölçüsü: `40-admin.css`-dəki clamp() — burada override YOXDUR */
 
   /* Notification/User stat kartları — tək sütun */
   .nc-stats,

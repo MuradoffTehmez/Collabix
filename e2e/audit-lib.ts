@@ -72,7 +72,10 @@ export async function collectViolations(page: Page): Promise<Violation[]> {
     const vw = de.clientWidth;
     const vh = de.clientHeight;
 
-    const CAP = 10;                      // kateqoriya başına maksimum qeyd
+    // Kateqoriya başına maksimum qeyd. 10 idi — çox aşağı: bir səhifədə 10-dan
+    // artıq toxunma pozuntusu olanda qalanı DOM sırasına görə kəsilirdi və
+    // reyestr TAM olmurdu (`.code-copy` kimi aşağıda qalan elementlər itirdi).
+    const CAP = 60;
     const counts: Record<string, number> = {};
 
     // ═══════════ Köməkçilər ═══════════
@@ -499,12 +502,33 @@ export async function collectViolations(page: Page): Promise<Violation[]> {
       return false;
     };
 
+    // ⚠ YIĞILMIŞ (collapsed) KONTEYNER. Akkordeon bağlı olanda
+    //   `.faq-a { grid-template-rows: 0fr }` + `.faq-a-in { overflow: hidden }`
+    //   konteyner hündürlüyünü 0 edir, LAKİN daxildəki elementlər öz rect-lərini
+    //   saxlayır və hamısı eyni nöqtədə "üst-üstə düşür". Bu, gizlədilmiş
+    //   məzmundur, qüsur deyil.
+    const inCollapsed = (el: HTMLElement): boolean => {
+      let p = el.parentElement;
+      while (p && p !== de) {
+        const st = stOf(p);
+        if (st && (st.overflowY === 'hidden' || st.overflowY === 'clip') && p.clientHeight === 0) return true;
+        p = p.parentElement;
+      }
+      return false;
+    };
+
     const textual = snaps.filter(s => {
       if (!s.vis) return false;
       if (s.st.pointerEvents === 'none') return false;
       if (s.r.width < 8 || s.r.height < 8) return false;
       if (parseFloat(s.st.opacity || '1') < 0.9) return false;
       if (hasFixedAncestor(s.el)) return false;
+      if (inCollapsed(s.el)) return false;
+      // ⚠ SƏTİR KEÇİRƏN INLINE ELEMENT. `getBoundingClientRect()` bütün sətir
+      //   qutularının BİRLƏŞMƏSİNİ qaytarır, ona görə iki sətrə bölünən inline
+      //   span həndəsi olaraq qonşusunu "örtür" (məs. `#pfYear` 320px-də).
+      //   Çoxsətirli inline elementin tək düzbucaqlısı yoxdur — buraxılır.
+      if (s.el.getClientRects().length > 1) return false;
       return Array.from(s.el.childNodes).some(n => n.nodeType === 3 && (n.textContent || '').trim().length > 1);
     }).slice(0, 160);
 
@@ -538,11 +562,24 @@ export async function collectViolations(page: Page): Promise<Violation[]> {
     if (vw < 768) {
       for (const s of snaps) {
         if (!s.vis) continue;
-        const hasText = Array.from(s.el.childNodes).some(n => n.nodeType === 3 && (n.textContent || '').trim().length > 1);
-        if (!hasText) continue;
+        const text = Array.from(s.el.childNodes)
+          .filter(n => n.nodeType === 3).map(n => (n.textContent || '').trim()).join('');
+        if (text.length < 2) continue;
+        // ⚠ QLİF PLİTƏSİ mətn deyil, QRAFİKDİR. `.tl-initial` loqosu olmayan
+        //   texnologiya üçün 16×16 plitədə ən çox 2 hərf göstərir
+        //   (`js/techlogos.js:48` — `.slice(0, 2)`) və yanındakı 16px loqo
+        //   şəkilləri ilə vizual paritet saxlayır. Onu "kiçik mətn" saymaq
+        //   yanlışdır; ölçünü qaldırmaq plitəni sındırar.
+        const box = Math.max(s.r.width, s.r.height);
+        if (text.length <= 2 && box <= 20) continue;
         const size = parseFloat(s.st.fontSize);
+        // ⚠ DƏQİQLİK: WCAG-də MİNİMUM şrift ölçüsü YOXDUR. SC 1.4.4 mətnin
+        //   200%-ə qədər böyüdülə bilməsini tələb edir — px dəyərlər brauzer
+        //   zoom-u ilə böyüdüyü üçün onu pozmur. 11px həddi LAYİHƏ
+        //   konvensiyasıdır (`15-components.css`: "ƏN KİÇİK ÖLÇÜ 12px").
         if (size && size < 11) {
-          add('accessibility', `mətn ölçüsü ${size}px < 11px (WCAG 1.4.4)`, s.el, `font-size:${s.st.fontSize}`);
+          add('accessibility', `mətn ölçüsü ${size}px < 11px (layihə konvensiyası)`, s.el,
+            `font-size:${s.st.fontSize}`);
         }
       }
     }

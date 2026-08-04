@@ -737,6 +737,7 @@
 
 .nc-card.is-swiping {
   transition: none;
+  -webkit-user-select: none;
   user-select: none;
   /* Şaquli sürüşmə brauzerə qalır; yalnız yan hərəkəti biz idarə edirik. */
   touch-action: pan-y;

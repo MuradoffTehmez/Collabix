@@ -237,8 +237,17 @@
   gap: 1px;
 }
 
+/* 🔴 ŞKALA QEYRİ-MONOTON İDİ. Dörd ayrı yerdə təyin olunurdu və nəticə
+   ziddiyyətli çıxırdı: baza `.58rem` (9.28px), ≤576 → 10px, ≤360 → 12px,
+   ≤320 → 9px. Yəni 360px ekranda etiket 700px ekrandakından BÖYÜK olurdu,
+   sonra 320-də yenidən 9px-ə düşürdü.
+   İndi TƏK fluid qayda: en artdıqca ölçü monoton artır, döşəmə 10px-dir.
+   ⚠ 12px (layihənin body-mətn həddi) burada MÜMKÜN DEYİL: 320px-də 6 düymə
+     var, hərəsinə ~49px düşür və "Bildiriş" 12px-də sığmır. Bunlar ikon
+     altyazılarıdır, body mətni deyil; 200% zoom-da rem/px hər ikisi
+     böyüdüyü üçün WCAG 1.4.4 pozulmur. */
 .bottom-nav button small {
-  font-size: .58rem;
+  font-size: clamp(10px, 8.5px + 0.45vw, 11px);
   font-family: var(--mono);
 }
 

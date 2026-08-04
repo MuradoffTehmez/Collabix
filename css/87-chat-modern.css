@@ -666,6 +666,7 @@
   font-size: .64rem;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
+  -webkit-user-select: none;
   user-select: none;
 }
 
@@ -1132,8 +1133,8 @@
   line-height: 1.55;
   text-align: right;
   white-space: pre;
+  -webkit-user-select: none;              /* kopyalayanda nömrələr düşməsin */
   user-select: none;              /* kopyalayanda nömrələr düşməsin */
-  -webkit-user-select: none;
   font-variant-numeric: tabular-nums;
 }
 

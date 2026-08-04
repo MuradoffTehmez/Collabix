@@ -178,6 +178,18 @@ html, body {
   overflow-x: hidden;
 }
 
+/* 🔴 MEDİA BAZA MÜQAVİLƏSİ — əvvəl YOX İDİ.
+   Hər `img`/`video` istifadəsi öz qaydasına (`.feed-img`, `.gal-img`,
+   `.avatar img` …) güvənirdi; qaydası olmayan yeni şəkil konteynerini
+   sərbəst daşıya bilirdi. Bu, tək sətirlik struktur qorumadır.
+   ⚠ `height: auto` daha spesifik qaydaları BASMIR: `.avatar img`
+     (0,1,1) buradakı (0,0,1)-dən yüksəkdir və `height:100%`-i saxlayır. */
+img,
+video {
+  max-width: 100%;
+  height: auto;
+}
+
 a {
   color: inherit;
   text-decoration: none;
@@ -212,7 +224,11 @@ button {
 }
 
 #landing {
+  /* `dvh` fallback naxışı: giriş ekranı məzmunu şaquli MƏRKƏZLƏŞDİRİR.
+     `100vh` mobil brauzerdə ünvan sətrini nəzərə almadığı üçün mərkəz
+     görünən sahədən aşağı düşür və forma qismən ekrandan çıxır. */
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -421,6 +437,7 @@ button {
   display: grid;
   grid-template-columns: 1fr 1fr;
   background: var(--surface);
+  -webkit-backdrop-filter: blur(18px);
   backdrop-filter: blur(18px);
   border: 1px solid var(--border);
   border-radius: 22px;
@@ -730,9 +747,7 @@ button {
   transition: filter var(--mo-fast) var(--mo-ease), transform var(--mo-fast) var(--mo-ease);
 }
 
-.btn-primary:hover {
-  /* yuxarıda birləşdirildi */
-}
+/* `.btn-primary:hover` boş qayda idi (məzmunu yuxarıda birləşdirilib) — silindi. */
 
 .btn-primary:disabled {
   opacity: .6;

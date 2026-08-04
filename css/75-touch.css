@@ -44,11 +44,33 @@
 
   /* Pill/çip seçicilər — hündürlük 44px, en məzmuna görə. */
   .pp,
-  .cmp-chip,
-  .testi-dot {
+  .cmp-chip {
     min-height: 44px;
   }
-  .testi-dot { min-width: 44px; }
+
+  /* 🔴 KARUSEL NÖQTƏSİ — qutunu şişirtmək OLMAZ.
+     `.testi-dot` 8×8 px vizual nöqtədir (`51-home-polish.css`). Ona
+     `min-width/min-height: 44px` vermək onu GÖRÜNƏN 40×40 bloka çevirirdi
+     (audit ölçdü: `button.testi-dot → 40×40`, aktiv nöqtə də 24×8 yerinə 40×40).
+     Düzgün həll: toxunma sahəsi PADDING ilə verilir, fon isə `content-box`-a
+     kəsilir — element 8+18+18 = 44px olur, nöqtə isə 8px qalır.
+     ⚠ `box-sizing: content-box` MƏCBURİDİR: qlobal `border-box`-da `width:8px`
+       36px padding-i daxil edərdi və nöqtə tamamilə yox olardı.
+     ⚠ `border-radius: 22px` → daxili radius 22-18 = 4px, yəni orijinal
+       `border-radius: 4px` görünüşü olduğu kimi qalır. */
+  .testi-dot {
+    box-sizing: content-box;
+    padding: 18px;
+    background-clip: content-box;
+    border-radius: 22px;
+  }
+
+  /* 9 nöqtə × 44px = 396px — 320px ekranda bir sətrə sığmır. Padding artıq
+     ayırıcı boşluğu verdiyi üçün `gap` sıfırlanır, qalanı isə sətrə keçir. */
+  .testi-dots {
+    gap: 0;
+    flex-wrap: wrap;
+  }
 
   /* Logo-lar toxunma hədəfi. */
   .at-logo,
@@ -58,16 +80,34 @@
     align-items: center;
   }
 
-  /* Generic düymələr — 40×40 minimum kvadrat hit-area (RESPONSIVE.md kiçik
-     ikonlar üçün icazə verdiyi alt hədd). İkon düymələri (🗑 sil, ✎ redaktə,
-     "+N" nişan) təbii olaraq dardır; `min-width: 40px` onlara barmaq-uyğun
-     hit-area verir. `:not()` istisna: heatmap günü (.hd), sparkline tooltip. */
+  /* 🔴 SPESİFİKLİK TƏLƏSİ — AUDIT-RESP-12-nin KÖK SƏBƏBİ.
+   *
+   * Bu qayda əvvəl `min-height/min-width: 40px` idi. `:not()` zənciri
+   * spesifikliyi (0,3,1)-ə qaldırır — `:not()` özü sayılmasa da ARQUMENTİ sayılır.
+   * Faylda ondan SONRA gələn bütün "44px" qaydaları isə (0,1,0)-dır:
+   *   `.btn-primary`, `.btn-small`, `.btn-mini`, `.btn-danger`, `.pp`, `.cmp-chip`…
+   * Cascade eyni spesifiklikdə sonuncunu seçir, FƏRQLİ spesifiklikdə isə
+   * YÜKSƏYİ — yəni (0,3,1) qalib gəlirdi və faylın 44px niyyəti HEÇ VAXT
+   * icra olunmurdu. Audit bunu ədədlə təsdiqlədi:
+   *   `.btn-primary` → 43px (təbii hündürlük; 44 qaydası tətbiq olunmurdu)
+   *   `.ph-theme`, `.ph-burger`, `.code-copy`, `.code-collapse-btn` → 40px
+   *   `#pubLoginBtn` → 54×40,  `#pubRegBtn` → 146×40
+   *
+   * Həll: baza həddin ÖZÜ 44-dür. Beləliklə spesifiklik yarışı əhəmiyyətini
+   * itirir — hansı qaydanın qalib gəlməsindən asılı olmayaraq nəticə ≥44-dür.
+   * ⚠ `[role=tab]`-a da `:not(.testi-dot)` əlavə olundu: karusel nöqtəsi
+   *   `role="tab"` daşıyır (`js/public.js:403`) və `button:not(.testi-dot)`
+   *   istisnası məhz bu ikinci seçici ucbatından İŞLƏMİRDİ. */
   button:not(.hd):not(.spark-tip):not(.testi-dot),
   [role=button],
-  [role=tab] {
-    min-height: 40px;
-    min-width: 40px;
+  [role=tab]:not(.testi-dot) {
+    min-height: 44px;
+    min-width: 44px;
   }
+
+  /* ⚠ Bu siyahı ARTIQ TƏKRAR DEYİL: `.link-btn`, `.act-btn` və `.view-toggle
+     button` kimi elementlərin bir hissəsi `<a>`/`<span>` ola bilir, yəni
+     yuxarıdakı `button` seçicisi onları tutmur. */
   .btn-mini,
   .btn-small,
   .btn-primary,

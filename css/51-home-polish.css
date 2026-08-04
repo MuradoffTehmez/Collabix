@@ -315,6 +315,7 @@
   border: 1px solid var(--border);
   border-radius: 14px;
   background: color-mix(in srgb, var(--surface) 94%, transparent);
+  -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
   box-shadow: var(--sh-3);
   /* başlanğıc vəziyyət — .in ilə yerinə sürüşür */

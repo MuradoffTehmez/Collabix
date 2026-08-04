@@ -127,6 +127,7 @@
 .drag-handle {
   color: var(--muted);
   cursor: grab;
+  -webkit-user-select: none;
   user-select: none;
   font-size: 1rem;
   letter-spacing: -2px;
