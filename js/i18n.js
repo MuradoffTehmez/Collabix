@@ -1133,6 +1133,76 @@ const D = {
   'pf.rail_sugg': { az: 'Tövsiyə olunanlar', en: 'Suggested', ru: 'Рекомендуем' },
   'pf.rail_none': { az: 'Tövsiyə yoxdur', en: 'Nothing to suggest', ru: 'Нет рекомендаций' },
 
+  /* ---------- İdarəetmə (moderasiya + dəvətlər) ----------
+     ⚠ Bu mətnlər ƏVVƏL `js/governance.js`-də SABİT azərbaycanca idi,
+       ona görə dil dəyişəndə bölmə tərcümə olunmurdu. */
+  'gov.role_note': { az: 'Bu, PLATFORMA roluudur — bütün sayta şamil olur. Komanda daxilindəki rollar ayrıdır və komanda sahibi tərəfindən idarə olunur.', en: 'This is a PLATFORM role — it applies site-wide. Roles inside a team are separate and managed by the team owner.', ru: 'Это роль ПЛАТФОРМЫ — действует на весь сайт. Роли внутри команды отдельные и управляются владельцем команды.' },
+  'gov.role_ok': { az: 'Rol yeniləndi.', en: 'Role updated.', ru: 'Роль обновлена.' },
+  'gov.role_err': { az: 'Rol dəyişdirilə bilmədi.', en: 'Could not change the role.', ru: 'Не удалось изменить роль.' },
+  'gov.chk_age': { az: 'Hesab yaşı (gün)', en: 'Account age (days)', ru: 'Возраст аккаунта (дней)' },
+  'gov.chk_level': { az: 'Səviyyə', en: 'Level', ru: 'Уровень' },
+  'gov.chk_rep': { az: 'Reputasiya', en: 'Reputation', ru: 'Репутация' },
+  'gov.chk_warn': { az: 'Son 30 gündə xəbərdarlıq', en: 'Warnings in the last 30 days', ru: 'Предупреждений за 30 дней' },
+  'gov.chk_verified': { az: 'Təsdiqlənmiş hesab', en: 'Verified account', ru: 'Подтверждённый аккаунт' },
+  'gov.yes': { az: 'bəli', en: 'yes', ru: 'да' },
+  'gov.no': { az: 'xeyr', en: 'no', ru: 'нет' },
+  'gov.note_ph': { az: 'Qeyd (istəyə bağlı)', en: 'Note (optional)', ru: 'Заметка (необязательно)' },
+  'gov.reject_ph': { az: 'Rədd səbəbi — namizəd üçün faydalı olsun', en: 'Reason for rejection — make it useful for the candidate', ru: 'Причина отказа — сделайте её полезной для кандидата' },
+  'gov.approve_btn': { az: 'Təsdiqlə və moderator et', en: 'Approve and make moderator', ru: 'Одобрить и назначить модератором' },
+  'gov.reject_btn': { az: 'Rədd et', en: 'Reject', ru: 'Отклонить' },
+  'gov.approved_ok': { az: 'Namizəd moderator oldu.', en: 'The candidate is now a moderator.', ru: 'Кандидат стал модератором.' },
+  'gov.rejected_ok': { az: 'Müraciət rədd edildi.', en: 'The application was rejected.', ru: 'Заявка отклонена.' },
+  'gov.act_err': { az: 'Əməliyyat alınmadı.', en: 'The action failed.', ru: 'Действие не выполнено.' },
+  'gov.approve_title': { az: 'Moderator təsdiqi', en: 'Moderator approval', ru: 'Подтверждение модератора' },
+  'gov.reject_title': { az: 'Müraciətin rəddi', en: 'Rejecting the application', ru: 'Отклонение заявки' },
+  'gov.forbidden_t': { az: 'Bu bölmə üçün səlahiyyətiniz yoxdur', en: 'You do not have access to this section', ru: 'У вас нет доступа к этому разделу' },
+  'gov.forbidden_d': { az: 'Moderator namizədlərini yalnız MANAGE_ROLES icazəsi olan hesablar (SUPER_ADMIN və OWNER) görə bilər. Bu, qəsdən belədir: rol təyini adi admin səlahiyyətindən yuxarıdır.', en: 'Only accounts with the MANAGE_ROLES permission (SUPER_ADMIN and OWNER) can see moderator candidates. This is deliberate: assigning roles sits above ordinary admin rights.', ru: 'Кандидатов в модераторы видят только аккаунты с правом MANAGE_ROLES (SUPER_ADMIN и OWNER). Это сделано намеренно: назначение ролей выше обычных прав администратора.' },
+  'gov.list_err': { az: 'Siyahı yüklənmədi', en: 'The list could not be loaded', ru: 'Список не загрузился' },
+  'gov.no_pending': { az: 'Baxılmamış müraciət yoxdur', en: 'No pending applications', ru: 'Нет заявок на рассмотрении' },
+  'gov.no_status': { az: 'Bu statusda müraciət yoxdur', en: 'No applications with this status', ru: 'Нет заявок с этим статусом' },
+  'gov.apply_hint': { az: 'Şərtlərə uyğun istifadəçilər profil səhifəsindən müraciət edə bilər.', en: 'Users who meet the requirements can apply from their profile page.', ru: 'Пользователи, отвечающие требованиям, могут подать заявку со своей страницы профиля.' },
+  'gov.mod_title': { az: 'Moderasiya səlahiyyəti', en: 'Moderation rights', ru: 'Права модерации' },
+  'gov.mod_role': { az: 'Platforma rolunuz: {r}', en: 'Your platform role: {r}', ru: 'Ваша роль на платформе: {r}' },
+  'gov.withdraw_btn': { az: 'Müraciəti geri götür', en: 'Withdraw the application', ru: 'Отозвать заявку' },
+  'gov.withdraw_q': { az: 'Müraciətiniz geri götürülsün?', en: 'Withdraw your application?', ru: 'Отозвать вашу заявку?' },
+  'gov.withdraw_ok': { az: 'Müraciət geri götürüldü.', en: 'The application was withdrawn.', ru: 'Заявка отозвана.' },
+  'gov.fail': { az: 'Alınmadı.', en: 'It did not work.', ru: 'Не получилось.' },
+  'gov.locked_hint': { az: 'Yuxarıdakı bütün şərtlər ödəndikdə müraciət düyməsi aktivləşəcək.', en: 'The apply button becomes active once every requirement above is met.', ru: 'Кнопка заявки станет активной, когда все условия выше будут выполнены.' },
+  'gov.apply_title': { az: 'Moderator müraciəti', en: 'Moderator application', ru: 'Заявка в модераторы' },
+  'gov.apply_note': { az: 'Moderatorluq XP ilə avtomatik gəlmir — müraciət edilir və admin qərar verir.', en: 'Moderation is not granted automatically by XP — you apply and an admin decides.', ru: 'Модерация не выдаётся автоматически за XP — вы подаёте заявку, решает администратор.' },
+  'gov.apply_ph': { az: 'Niyə moderator olmaq istəyirsiniz? İcmaya necə kömək edəcəksiniz?', en: 'Why do you want to be a moderator? How will you help the community?', ru: 'Почему вы хотите стать модератором? Чем поможете сообществу?' },
+  'gov.apply_short': { az: 'Ən azı 30 simvol yazın.', en: 'Write at least 30 characters.', ru: 'Напишите минимум 30 символов.' },
+  'gov.apply_sent': { az: 'Müraciətiniz göndərildi.', en: 'Your application was sent.', ru: 'Ваша заявка отправлена.' },
+  'gov.send_err': { az: 'Göndərilmədi.', en: 'It was not sent.', ru: 'Не отправлено.' },
+  'gov.inv_title': { az: 'Dəvətlər', en: 'Invites', ru: 'Приглашения' },
+  'gov.inv_sub': { az: 'Dəvət etdiyiniz hər yeni üzv üçün +{x} XP. İndiyədək: {n} nəfər.', en: '+{x} XP for every new member you invite. So far: {n} people.', ru: '+{x} XP за каждого приглашённого участника. Пока: {n} чел.' },
+  'gov.inv_none': { az: 'Aktiv dəvət kodunuz yoxdur.', en: 'You have no active invite code.', ru: 'У вас нет активного кода приглашения.' },
+  'gov.inv_revoked': { az: 'Kod ləğv edildi.', en: 'The code was revoked.', ru: 'Код отозван.' },
+  'gov.inv_copied': { az: 'Kod kopyalandı.', en: 'The code was copied.', ru: 'Код скопирован.' },
+  'gov.inv_copy_err': { az: 'Kopyalanmadı — kodu əl ilə seçin.', en: 'Copy failed — select the code manually.', ru: 'Не скопировалось — выделите код вручную.' },
+  'gov.inv_created': { az: 'Kod yaradıldı: {c}', en: 'Code created: {c}', ru: 'Код создан: {c}' },
+  'gov.inv_create_err': { az: 'Yaradılmadı.', en: 'It was not created.', ru: 'Не создано.' },
+
+  /* ---------- Nişan və nailiyyət adları ----------
+     ⚠ Açar `badges.code` / `achievements.code` ilə EYNİDİR (miqrasiya 0031).
+       Server etiketi yalnız `label_az` saxlayır, ona görə tərcümə client
+       tərəfdədir; `tOr()` açar tapılmasa server mətnini göstərir. */
+  'bdg.first_post': { az: 'İlk paylaşım', en: 'First post', ru: 'Первый пост' },
+  'bdg.poster_10': { az: '10 paylaşım', en: '10 posts', ru: '10 постов' },
+  'bdg.poster_50': { az: '50 paylaşım', en: '50 posts', ru: '50 постов' },
+  'bdg.commenter_25': { az: '25 şərh', en: '25 comments', ru: '25 комментариев' },
+  'bdg.solver_5': { az: '5 tapşırıq', en: '5 tasks', ru: '5 задач' },
+  'bdg.solver_25': { az: '25 tapşırıq', en: '25 tasks', ru: '25 задач' },
+  'bdg.streak_7': { az: '7 günlük seriya', en: '7-day streak', ru: 'Серия 7 дней' },
+  'bdg.streak_30': { az: '30 günlük seriya', en: '30-day streak', ru: 'Серия 30 дней' },
+  'bdg.xp_1000': { az: '1000 XP', en: '1000 XP', ru: '1000 XP' },
+  'bdg.xp_10000': { az: '10000 XP', en: '10000 XP', ru: '10000 XP' },
+  'bdg.reputable': { az: 'Etibarlı', en: 'Reputable', ru: 'Авторитетный' },
+  'bdg.profile_master': { az: 'Profil tamamlandı', en: 'Profile completed', ru: 'Профиль заполнен' },
+  'bdg.community_voice': { az: 'İcma səsi', en: 'Community voice', ru: 'Голос сообщества' },
+  'bdg.mentor': { az: 'Mentor', en: 'Mentor', ru: 'Наставник' },
+  'bdg.veteran': { az: 'Veteran', en: 'Veteran', ru: 'Ветеран' },
+
   'pf.cover_change': { az: 'Örtüyü dəyiş', en: 'Change cover', ru: 'Сменить обложку' },
   'pf.cover_pick': { az: 'Örtük naxışı', en: 'Cover pattern', ru: 'Узор обложки' },
   'pf.cover_saved': { az: 'Örtük yeniləndi', en: 'Cover updated', ru: 'Обложка обновлена' },
@@ -1540,6 +1610,25 @@ export function t(key){
   if(!e){ reportMissing(key); return humanize(key); }
   return e[current] || e.az || humanize(key);
 }
+/**
+ * Açar varsa tərcümə, yoxdursa VERİLƏN GERİ DÜŞMƏ.
+ *
+ * 🔴 NİYƏ `t()` KİFAYƏT ETMİR: `t()` naməlum açarı "oxunaqlı mətnə" çevirir
+ *    ("bdg.first_post" → "First post") və `reportMissing` ilə xəbərdarlıq
+ *    yazır. Serverdən gələn etiketlər üçün bu YANLIŞ davranışdır — orada
+ *    real mətn var və o, açar adından daha yaxşıdır.
+ *
+ * İstifadə: nişan/nailiyyət adları serverdə YALNIZ Azərbaycanca saxlanılır
+ * (`badges.label_az`). Client `code` üzrə tərcümə tapırsa onu, tapmırsa
+ * server mətnini göstərir — yəni admin yeni nişan əlavə edəndə o, tərcüməsiz
+ * olsa belə DÜZGÜN adla görünür.
+ */
+export function tOr(key, fallback){
+  const e = D[key];
+  if(!e) return fallback;
+  return e[current] || e.az || fallback;
+}
+
 // Çoxdilli field ({az,en,ru}) üçün oxuyucu.
 export function tf(obj){
   if(!obj) return '';

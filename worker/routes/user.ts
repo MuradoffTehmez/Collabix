@@ -9,6 +9,7 @@ import {
   searchNormalize, mapUser, normalizeUsername,
 } from '../util';
 import { grantXp } from '../xp';
+import { isProfileComplete } from '../progression';
 import { D, badReq, notify } from './shared';
 import { USER_STATUSES } from './directory';
 import { PROFILE_COVERS, sanitizeSkillMeta } from './profile';
@@ -110,19 +111,10 @@ export async function patchMe(c: Ctx) {
 const PROFILE_BONUS_XP = 100;
 // Bənd 6-dakı tamlıq sahələri — `js/completeness.js` ilə EYNİ məntiq.
 // İki tərəf ayrılsa client bir faiz, server başqa faiz göstərər.
-function isProfileComplete(u: any): boolean {
-  const prog = fromJSON<Record<string, unknown>>(u.prog_levels, {});
-  const langs = fromJSON<Record<string, unknown>>(u.lang_levels, {});
-  const looking = fromJSON<unknown[]>(u.looking_for, []);
-  return !!u.photo_url
-    && (u.bio || '').trim().length >= 10
-    && (u.goals || '').trim().length >= 5
-    && Object.keys(prog).length > 0
-    && Object.keys(langs).length > 0
-    && looking.length > 0
-    && !!(u.city || '').trim()
-    && !!(u.github || u.linkedin || u.instagram || u.telegram || u.website);
-}
+/* ⚠ `isProfileComplete` ARTIQ BURADA DEYİL — `worker/progression.ts`.
+   Səbəb: eyni tərif İKİ yerdə lazımdır (bonus + «Profil tamamlandı» nişanı,
+   miqrasiya 0053). İki nüsxə saxlasaydıq biri yenilənəndə istifadəçi bonusu
+   alıb nişanı almaya bilərdi. */
 
 async function maybeProfileBonus(c: Ctx, u: any): Promise<boolean> {
   const settings = fromJSON<any>(u.settings, {});

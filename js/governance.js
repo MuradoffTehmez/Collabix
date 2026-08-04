@@ -22,6 +22,9 @@ import { el, clear } from './util.js';
 import { api } from './api.js';
 import { toast, showModal, closeModal, confirmDialog, skeletons } from './ui.js';
 import { state } from './store.js';
+// ⚠ Bu modulun mətnləri ƏVVƏL SABİT azərbaycanca idi — dil dəyişəndə
+//   moderasiya və dəvət bölmələri tərcümə olunmurdu (istifadəçi bildirdi).
+import { t } from './i18n.js';
 
 /* ═══════════════════════ ORTAQ KÖMƏKÇİLƏR ═══════════════════════ */
 
@@ -90,18 +93,18 @@ export async function openRoleEditor(user) {
   }
 
   const note = el('p', { class: 'c-field__hint' },
-    'Bu, PLATFORMA roluudur — bütün sayta şamil olur. Komanda daxilindəki rollar ayrıdır və komanda sahibi tərəfindən idarə olunur.');
+    t('gov.role_note'));
 
   const save = el('button', { class: 'c-btn c-btn--primary' }, 'Rolu dəyiş');
   save.addEventListener('click', async () => {
     save.disabled = true;
     try {
       await api(`/users/${user.uid}/role`, { method: 'PUT', body: { role: sel.value } });
-      toast('Rol yeniləndi.');
+      toast(t('gov.role_ok'));
       closeModal();
       document.dispatchEvent(new CustomEvent('gov:role-changed', { detail: { uid: user.uid } }));
     } catch (e) {
-      toast(e.message || 'Rol dəyişdirilə bilmədi.', 'err');
+      toast(e.message || t('gov.role_err'), 'err');
       save.disabled = false;
     }
   });
@@ -134,21 +137,21 @@ function checkRow(label, ok, current, required) {
 
 function appSnapshot(s) {
   return el('div', { class: 'c-checklist' },
-    checkRow('Hesab yaşı (gün)', s.accountDays >= 90, s.accountDays, 90),
-    checkRow('Səviyyə', s.level >= 10, 'Lv' + s.level, 'Lv10'),
+    checkRow(t('gov.chk_age'), s.accountDays >= 90, s.accountDays, 90),
+    checkRow(t('gov.chk_level'), s.level >= 10, 'Lv' + s.level, 'Lv10'),
     checkRow('Reputasiya', s.reputation >= 500, s.reputation, 500),
-    checkRow('Son 30 gündə xəbərdarlıq', s.warnings30d === 0, s.warnings30d, 0),
-    checkRow('Təsdiqlənmiş hesab', s.verified, s.verified ? 'bəli' : 'xeyr', 'bəli'));
+    checkRow(t('gov.chk_warn'), s.warnings30d === 0, s.warnings30d, 0),
+    checkRow(t('gov.chk_verified'), s.verified, t(s.verified ? 'gov.yes' : 'gov.no'), t('gov.yes')));
 }
 
 async function reviewApp(app, approve) {
   const note = el('textarea', {
     id: 'govNote',
-    placeholder: approve ? 'Qeyd (istəyə bağlı)' : 'Rədd səbəbi — namizəd üçün faydalı olsun',
+    placeholder: t(approve ? 'gov.note_ph' : 'gov.reject_ph'),
   });
   const btn = el('button', {
     class: `c-btn ${approve ? 'c-btn--primary' : 'c-btn--danger'}`,
-  }, approve ? 'Təsdiqlə və moderator et' : 'Rədd et');
+  }, t(approve ? 'gov.approve_btn' : 'gov.reject_btn'));
 
   btn.addEventListener('click', async () => {
     btn.disabled = true;
@@ -156,11 +159,11 @@ async function reviewApp(app, approve) {
       await api(`/admin/moderator-applications/${app.id}/review`, {
         method: 'POST', body: { approve, note: note.value },
       });
-      toast(approve ? 'Namizəd moderator oldu.' : 'Müraciət rədd edildi.');
+      toast(t(approve ? 'gov.approved_ok' : 'gov.rejected_ok'));
       closeModal();
       renderModApps();
     } catch (e) {
-      toast(e.message || 'Əməliyyat alınmadı.', 'err');
+      toast(e.message || t('gov.act_err'), 'err');
       btn.disabled = false;
     }
   });
@@ -168,7 +171,7 @@ async function reviewApp(app, approve) {
   showModal([
     el('div', { class: 'c-modal__head' },
       el('h3', { class: 'c-modal__title' },
-        approve ? 'Moderator təsdiqi' : 'Müraciətin rəddi')),
+        t(approve ? 'gov.approve_title' : 'gov.reject_title'))),
     el('div', { class: 'c-modal__body' },
       userCell(app),
       el('p', { class: 'c-panel__sub' }, app.message),
@@ -202,12 +205,9 @@ export async function renderModApps() {
     //   Adi ADMIN bu tabı açanda "xəta" görməməlidir — səbəbi aydın olmalıdır,
     //   əks halda "panel sınıqdır" deyə bildirəcək.
     if (e.status === 403 || e.code === 'forbidden') {
-      host.append(empty('🔒', 'Bu bölmə üçün səlahiyyətiniz yoxdur',
-        'Moderator namizədlərini yalnız MANAGE_ROLES icazəsi olan hesablar '
-        + '(SUPER_ADMIN və OWNER) görə bilər. Bu, qəsdən belədir: rol təyini '
-        + 'adi admin səlahiyyətindən yuxarıdır.'));
+      host.append(empty('🔒', t('gov.forbidden_t'), t('gov.forbidden_d')));
     } else {
-      host.append(empty('⚠', 'Siyahı yüklənmədi', e.message || ''));
+      host.append(empty('⚠', t('gov.list_err'), e.message || ''));
     }
     return;
   }
@@ -215,8 +215,8 @@ export async function renderModApps() {
   clear(host);
   if (!apps.length) {
     host.append(empty('📭',
-      appFilter === 'pending' ? 'Baxılmamış müraciət yoxdur' : 'Bu statusda müraciət yoxdur',
-      'Şərtlərə uyğun istifadəçilər profil səhifəsindən müraciət edə bilər.'));
+      t(appFilter === 'pending' ? 'gov.no_pending' : 'gov.no_status'),
+      t('gov.apply_hint')));
     return;
   }
 
@@ -279,9 +279,9 @@ export async function renderModeratorSection() {
     host.append(el('div', { class: 'c-panel' },
       el('div', { class: 'c-panel__head' },
         el('div', {},
-          el('h3', { class: 'c-panel__title' }, 'Moderasiya səlahiyyəti'),
+          el('h3', { class: 'c-panel__title' }, t('gov.mod_title')),
           el('p', { class: 'c-panel__sub' },
-            'Platforma rolunuz: ' + d.role))),
+            t('gov.mod_role').replace('{r}', d.role)))),
       el('span', { class: 'c-badge c-badge--accent' }, d.role)));
     return;
   }
@@ -293,14 +293,14 @@ export async function renderModeratorSection() {
 
   const foot = el('div', { style: 'margin-top:20px' });
   if (d.pendingId) {
-    const wd = el('button', { class: 'c-btn c-btn--ghost' }, 'Müraciəti geri götür');
+    const wd = el('button', { class: 'c-btn c-btn--ghost' }, t('gov.withdraw_btn'));
     wd.addEventListener('click', async () => {
-      if (!await confirmDialog('Müraciətiniz geri götürülsün?')) return;
+      if (!await confirmDialog(t('gov.withdraw_q'))) return;
       try {
         await api('/me/moderator-application', { method: 'DELETE' });
-        toast('Müraciət geri götürüldü.');
+        toast(t('gov.withdraw_ok'));
         renderModeratorSection();
-      } catch (e) { toast(e.message || 'Alınmadı.', 'err'); }
+      } catch (e) { toast(e.message || t('gov.fail'), 'err'); }
     });
     foot.append(el('span', { class: 'c-badge c-badge--info' }, 'Müraciətiniz baxılır'), ' ', wd);
   } else if (d.cooldownDays > 0) {
@@ -312,7 +312,7 @@ export async function renderModeratorSection() {
     foot.append(btn);
   } else {
     foot.append(el('p', { class: 'c-field__hint' },
-      'Yuxarıdakı bütün şərtlər ödəndikdə müraciət düyməsi aktivləşəcək.'));
+      t('gov.locked_hint')));
   }
 
   host.append(el('div', { class: 'c-panel' },
@@ -320,14 +320,14 @@ export async function renderModeratorSection() {
       el('div', {},
         el('h3', { class: 'c-panel__title' }, 'Moderator olmaq'),
         el('p', { class: 'c-panel__sub' },
-          'Moderatorluq XP ilə avtomatik gəlmir — müraciət edilir və admin qərar verir.'))),
+          t('gov.apply_note')))),
     checks, foot));
 }
 
 function openApplyModal() {
   const ta = el('textarea', {
     id: 'govApplyMsg',
-    placeholder: 'Niyə moderator olmaq istəyirsiniz? İcmaya necə kömək edəcəksiniz?',
+    placeholder: t('gov.apply_ph'),
   });
   const counter = el('div', { class: 'c-field__hint' }, '0 / 1000 (minimum 30)');
   ta.addEventListener('input', () => {
@@ -337,24 +337,24 @@ function openApplyModal() {
   const send = el('button', { class: 'c-btn c-btn--primary' }, 'Müraciəti göndər');
   send.addEventListener('click', async () => {
     if (ta.value.trim().length < 30) {
-      toast('Ən azı 30 simvol yazın.', 'err');
+      toast(t('gov.apply_short'), 'err');
       return;
     }
     send.disabled = true;
     try {
       await api('/me/moderator-application', { method: 'POST', body: { message: ta.value } });
-      toast('Müraciətiniz göndərildi.');
+      toast(t('gov.apply_sent'));
       closeModal();
       renderModeratorSection();
     } catch (e) {
-      toast(e.message || 'Göndərilmədi.', 'err');
+      toast(e.message || t('gov.send_err'), 'err');
       send.disabled = false;
     }
   });
 
   showModal([
     el('div', { class: 'c-modal__head' },
-      el('h3', { class: 'c-modal__title' }, 'Moderator müraciəti')),
+      el('h3', { class: 'c-modal__title' }, t('gov.apply_title'))),
     el('div', { class: 'c-modal__body' },
       el('div', { class: 'c-field' },
         el('label', { class: 'c-field__label', for: 'govApplyMsg' }, 'Motivasiya'),
@@ -379,7 +379,7 @@ export async function renderInvites() {
   const active = (d.invites || []).filter(i => i.active);
 
   if (!active.length) {
-    list.append(el('p', { class: 'c-field__hint' }, 'Aktiv dəvət kodunuz yoxdur.'));
+    list.append(el('p', { class: 'c-field__hint' }, t('gov.inv_none')));
   }
   for (const i of active) {
     const revoke = el('button', { class: 'c-btn c-btn--sm c-btn--quiet' }, 'Ləğv et');
@@ -387,20 +387,20 @@ export async function renderInvites() {
       if (!await confirmDialog(`${i.code} kodu ləğv edilsin?`)) return;
       try {
         await api(`/me/invites/${i.code}`, { method: 'DELETE' });
-        toast('Kod ləğv edildi.');
+        toast(t('gov.inv_revoked'));
         renderInvites();
-      } catch (e) { toast(e.message || 'Alınmadı.', 'err'); }
+      } catch (e) { toast(e.message || t('gov.fail'), 'err'); }
     });
 
     const copy = el('button', { class: 'c-btn c-btn--sm c-btn--ghost' }, 'Kopyala');
     copy.addEventListener('click', async () => {
       try {
         await navigator.clipboard.writeText(i.code);
-        toast('Kod kopyalandı.');
+        toast(t('gov.inv_copied'));
       } catch {
         // ⚠ Clipboard API HTTPS və istifadəçi jesti tələb edir; alınmasa
         //   kod onsuz da ekranda görünür (`user-select: all`).
-        toast('Kopyalanmadı — kodu əl ilə seçin.', 'err');
+        toast(t('gov.inv_copy_err'), 'err');
       }
     });
 
@@ -416,19 +416,19 @@ export async function renderInvites() {
     create.disabled = true;
     try {
       const r = await api('/me/invites', { method: 'POST' });
-      toast('Kod yaradıldı: ' + r.code);
+      toast(t('gov.inv_created').replace('{c}', r.code));
       renderInvites();
     } catch (e) {
-      toast(e.message || 'Yaradılmadı.', 'err');
+      toast(e.message || t('gov.inv_create_err'), 'err');
     } finally { create.disabled = false; }
   });
 
   host.append(el('div', { class: 'c-panel' },
     el('div', { class: 'c-panel__head' },
       el('div', {},
-        el('h3', { class: 'c-panel__title' }, 'Dəvətlər'),
+        el('h3', { class: 'c-panel__title' }, t('gov.inv_title')),
         el('p', { class: 'c-panel__sub' },
-          `Dəvət etdiyiniz hər yeni üzv üçün +${d.xpPerInvite} XP. İndiyədək: ${d.totalInvited} nəfər.`))),
+          t('gov.inv_sub').replace('{x}', String(d.xpPerInvite)).replace('{n}', String(d.totalInvited))))),
     list,
     el('div', { style: 'margin-top:16px' }, create)));
 }

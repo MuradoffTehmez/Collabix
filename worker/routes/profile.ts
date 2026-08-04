@@ -14,6 +14,8 @@
 //    Hamısı tək cavabda gəlsəydi, başlıq ən yavaş sorğunu gözləyərdi.
 import { Ctx, json, err, clampStr, now } from '../util';
 import { D } from './shared';
+// Profil tamlığı — bonus və nişan ilə EYNİ tərif (bax `progression.ts`).
+import { isProfileComplete } from '../progression';
 
 /** Profildə göstərilən maksimum sancaq / layihə. */
 const PIN_MAX = 3;
@@ -111,13 +113,28 @@ export async function profileOverview(c: Ctx, username: string) {
     //      bəyənmə sayları oradan gəlir. İzləyici sayları isə `users`
     //      sütunlarındandır (0051): iki mənbə arasında sürüşmə olsa,
     //      HƏQİQƏT MƏNBƏYİ yazı yolunun saxladığı sütundur.
+    //
+    // 🔴 KOMANDA/LAYİHƏ SAYLARI DA BURADADIR. Əvvəl UI onları `user`
+    //    obyektindən oxuyurdu — həmin sahələri YALNIZ `/profile` endpoint-i
+    //    hesablayır. Öz profil isə renderer-ə `state.me` verir və orada belə
+    //    sahə yoxdur → kartda "0 layihə / 0 komanda" yazılırdı, halbuki sağ
+    //    sütun eyni layihələri sadalayırdı. İndi mənbə TƏKDİR.
+    //
+    // ⚠ SQL şərhində backtick İŞLƏTMƏ: bu sətir template literal-ın içindədir
+    //   və backtick sətri vaxtından əvvəl bağlayır (parse xətası).
     D(c).prepare(
       `SELECT COALESCE(s.posts, 0)          AS posts,
               COALESCE(s.comments, 0)       AS comments,
               COALESCE(s.likes_received, 0) AS likesReceived,
               COALESCE(s.likes_given, 0)    AS likesGiven,
               u.xp, u.streak, u.reputation, u.tasks_completed AS tasks,
-              u.followers_count AS followers, u.following_count AS following
+              u.followers_count AS followers, u.following_count AS following,
+              -- Komanda/layihə sayları — izahı aşağıdakı JS şərhindədir.
+              (SELECT COUNT(*) FROM team_members tm
+                JOIN teams t2 ON t2.id = tm.team_id
+               WHERE tm.user_id = u.id AND tm.status = 'active'
+                 AND t2.status = 'active')                       AS teams,
+              (SELECT COUNT(*) FROM team_project_members WHERE user_id = u.id) AS projects
          FROM users u LEFT JOIN user_stats s ON s.uid = u.id
         WHERE u.id = ?1`,
     ).bind(uid),
@@ -187,6 +204,10 @@ export async function profileOverview(c: Ctx, username: string) {
   const metrics: Record<string, number> = {
     xp: num(s.xp), streak: num(s.streak), reputation: num(s.reputation),
     tasks: num(s.tasks), posts: num(s.posts), comments: num(s.comments),
+    // ⚠ `profile` SAYĞAC DEYİL, BAYRAQDIR (miqrasiya 0053). Burada
+    //   unutsaydıq, «Profil tamamlandı» nailiyyəti profil TAM olsa belə
+    //   "0 / 1" göstərərdi — yəni server nişanı verib, UI isə əksini yazardı.
+    profile: isProfileComplete(row) ? 1 : 0,
   };
   const mapRule = (r: any) => ({
     code: String(r.code), label: String(r.label_az), icon: r.icon || '',
@@ -203,6 +224,7 @@ export async function profileOverview(c: Ctx, username: string) {
       followers: num(s.followers), following: num(s.following),
       xp: num(s.xp), streak: num(s.streak), reputation: num(s.reputation),
       tasks: num(s.tasks),
+      teams: num(s.teams), projects: num(s.projects),
       xpWeek: num(xpWin.week), xpMonth: num(xpWin.month),
       contribution: contributionScore(metrics, num(s.likesReceived)),
     },

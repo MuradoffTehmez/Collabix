@@ -78,8 +78,39 @@ export async function grantReputation(
 
 /* ═════════════════════ NİŞAN VƏ NAİLİYYƏT ═════════════════════ */
 
-/** Kataloqdakı qayda növləri — `badges.rule_kind` / `achievements.rule_kind`. */
-type RuleKind = 'xp' | 'posts' | 'comments' | 'tasks' | 'streak' | 'reputation';
+/**
+ * Kataloqdakı qayda növləri — `badges.rule_kind` / `achievements.rule_kind`.
+ *
+ * ⚠ `profile` SAYĞAC DEYİL, BAYRAQDIR (0/1): profil tam doldurulubmu.
+ *   Miqrasiya 0053 ilə əlavə olunub — «Profil tamamlandı» nailiyyəti əvvəl
+ *   `xp >= 20` qaydasına bağlı idi və etiketi ilə heç bir əlaqəsi yox idi.
+ */
+type RuleKind = 'xp' | 'posts' | 'comments' | 'tasks' | 'streak' | 'reputation' | 'profile';
+
+/**
+ * Profil tamlığı — `worker/routes/user.ts` → `maybeProfileBonus` ilə EYNİ tərif.
+ *
+ * 🔴 TƏK MƏNBƏ OLMALIDIR: +100 XP bonusu bir tərifə, nişan başqa tərifə
+ *    baxsaydı, istifadəçi bonusu alıb nişanı almaya bilərdi (və ya əksi).
+ *    Sahələr `js/completeness.js`-dəki siyahı ilə də uyğundur — client faizi
+ *    ilə server qərarı ayrılsaydı, göstərici 100% olub nişan verilməzdi.
+ */
+export function isProfileComplete(u: any): boolean {
+  const parse = (v: unknown, fb: any) => {
+    try { return JSON.parse(String(v ?? '')) ?? fb; } catch { return fb; }
+  };
+  const prog = parse(u?.prog_levels, {});
+  const langs = parse(u?.lang_levels, {});
+  const looking = parse(u?.looking_for, []);
+  return !!u?.photo_url
+    && String(u?.bio || '').trim().length >= 10
+    && String(u?.goals || '').trim().length >= 5
+    && Object.keys(prog).length > 0
+    && Object.keys(langs).length > 0
+    && Array.isArray(looking) && looking.length > 0
+    && !!String(u?.city || '').trim()
+    && !!(u?.github || u?.linkedin || u?.instagram || u?.telegram || u?.website);
+}
 
 /**
  * İstifadəçinin cari göstəriciləri — kataloq qaydaları ilə müqayisə üçün.
@@ -88,23 +119,22 @@ type RuleKind = 'xp' | 'posts' | 'comments' | 'tasks' | 'streak' | 'reputation';
  *   olardı. Alt-sorğular bir gedişdə yığılır.
  */
 async function metricsOf(env: Env, uid: string): Promise<Record<RuleKind, number>> {
+  // ⚠ `u.*` tam sətirdir: `isProfileComplete` səkkiz sahəyə baxır, ona görə
+  //   sütunları bir-bir saymaq əvəzinə sətir bütöv çəkilir (yenə TƏK sorğu).
   const r = await env.DB.prepare(
-    `SELECT
-       u.xp                                                        AS xp,
-       u.streak                                                    AS streak,
-       u.reputation                                                AS reputation,
-       u.tasks_completed                                           AS tasks,
-       (SELECT COUNT(*) FROM posts    WHERE author_id = u.id)      AS posts,
-       (SELECT COUNT(*) FROM comments WHERE author_id = u.id)      AS comments
+    `SELECT u.*,
+       (SELECT COUNT(*) FROM posts    WHERE author_id = u.id)      AS post_n,
+       (SELECT COUNT(*) FROM comments WHERE author_id = u.id)      AS comment_n
      FROM users u WHERE u.id = ?`,
   ).bind(uid).first<any>();
   return {
     xp: Number(r?.xp || 0),
     streak: Number(r?.streak || 0),
     reputation: Number(r?.reputation || 0),
-    tasks: Number(r?.tasks || 0),
-    posts: Number(r?.posts || 0),
-    comments: Number(r?.comments || 0),
+    tasks: Number(r?.tasks_completed || 0),
+    posts: Number(r?.post_n || 0),
+    comments: Number(r?.comment_n || 0),
+    profile: isProfileComplete(r) ? 1 : 0,
   };
 }
 

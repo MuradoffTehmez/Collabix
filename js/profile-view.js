@@ -24,7 +24,7 @@ import {
   el, clear, avatarNode, nameWithBadge, lastSeenText, levelFromXP,
   countUp, prefersReducedMotion, onceInView, emit, bus,
 } from './util.js';
-import { t, fmtMonthYear, fmtRelTime } from './i18n.js';
+import { t, tOr, fmtMonthYear, fmtRelTime } from './i18n.js';
 import { toast, emptyState, openPopover, closePopover } from './ui.js';
 import { paintIcons } from './icon-set.js';
 import {
@@ -69,6 +69,17 @@ const TL_META = {
   level_up:    { icon: 'crown',    tone: 'gold',   lbl: 'pf.tl_level' },
 };
 const tlMeta = k => TL_META[k] || { icon: 'chart', tone: 'blue', lbl: 'pf.tl_other' };
+
+/**
+ * Nişan/nailiyyət adı — DİL AYARINA TABE.
+ *
+ * ⚠ Server yalnız `label_az` saxlayır (`badges.label_az`), ona görə etiketi
+ *   olduğu kimi göstərsəydik EN/RU seçilsə belə azərbaycanca qalardı —
+ *   istifadəçinin bildirdiyi qüsur məhz bu idi. Tərcümə `code` üzrə
+ *   axtarılır; tapılmasa server mətni göstərilir (yeni nişan tərcüməsiz
+ *   əlavə oluna bilər və yenə düzgün görünər).
+ */
+const badgeLabel = a => tOr('bdg.' + a.code, a.label);
 
 /**
  * Sosial link → ikon + URL qurucu. Boş sahə göstərilmir.
@@ -356,11 +367,12 @@ function socialRow(u){
 function renderStats(sec, d, u, onFollowList){
   clear(sec.body);
   const s = d.stats || {};
-  const vals = {
-    ...s,
-    projects: num(u.projectsCount), teams: num(u.teamsCount),
-    level: levelFromXP(s.xp),
-  };
+  /* ⚠ `teams`/`projects` ARTIQ `d.stats`-dədir (server hesablayır).
+     Əvvəl `u.teamsCount`/`u.projectsCount` oxunurdu — həmin sahələr YALNIZ
+     `/profile` endpoint-inin cavabında var. Öz profil `state.me` ilə
+     çağırıldığı üçün orada həmişə `undefined` idi və kart "0" yazırdı,
+     halbuki sağ sütun eyni layihələri sadalayırdı. */
+  const vals = { ...s, level: levelFromXP(s.xp) };
 
   const clickable = def => !!(def.act && typeof onFollowList === 'function');
   const card = (def, big) => {
@@ -458,14 +470,14 @@ function renderAchievements(sec, d, isSelf){
     return el('div', {
       class: 'pf-ach' + (done ? ' is-on' : ' is-off') + (a.type === 'ach' ? ' pf-ach--gold' : ''),
       // Rəng/solğunluq TƏK siqnal deyil (WCAG) — vəziyyət mətndə də var.
-      'aria-label': a.label + ' — ' + (done ? t('badge.earned') : t('badge.locked')),
+      'aria-label': badgeLabel(a) + ' — ' + (done ? t('badge.earned') : t('badge.locked')),
       title: done
-        ? a.label + ' · ' + fmtRelTime(a.earnedAt)
-        : a.label + ' · ' + Math.min(num(a.have), num(a.ruleValue)) + '/' + num(a.ruleValue),
+        ? badgeLabel(a) + ' · ' + fmtRelTime(a.earnedAt)
+        : badgeLabel(a) + ' · ' + Math.min(num(a.have), num(a.ruleValue)) + '/' + num(a.ruleValue),
     },
       el('span', { class: 'pf-ach__ic' }, a.icon || (a.type === 'ach' ? '🏆' : '🎖')),
       el('span', { class: 'pf-ach__b' },
-        el('span', { class: 'pf-ach__n' }, a.label),
+        el('span', { class: 'pf-ach__n' }, badgeLabel(a)),
         done
           ? el('span', { class: 'pf-ach__d' }, fmtRelTime(a.earnedAt))
           /* ⚠ `have` HƏDDƏ SIXILIR: server nişanları TƏNBƏL qiymətləndirir
@@ -813,9 +825,13 @@ function timelineFeed(sec, u, isStopped){
 
 function tlItem(e, u, i){
   const m = tlMeta(e.kind);
+  /* ⚠ Nişan/nailiyyət hadisəsində `e.ref` KODDUR — etiket ondan tərcümə
+     olunur (server yalnız azərbaycanca saxlayır, bax `badgeLabel`). */
   const label = e.kind === 'joined' ? t('pf.tl_joined_txt').replace('{n}', u.name || u.username || '')
     : e.kind === 'level_up' ? t('pf.tl_level_txt').replace('{n}', e.label || e.ref)
-      : e.label || t(m.lbl);
+      : (e.kind === 'badge' || e.kind === 'achievement')
+        ? tOr('bdg.' + e.ref, e.label || t(m.lbl))
+        : e.label || t(m.lbl);
   const node = el('li', { class: 'pf-tli pf-t--' + m.tone },
     el('span', { class: 'pf-tli__ic' }, ico(m.icon, 13)),
     el('div', { class: 'pf-tli__b' },
@@ -857,7 +873,7 @@ function renderRail(rail, d, u, sharedTeams){
     rail.append(railBlock('pf.rail_ach', 'award',
       el('div', { class: 'pf-rail__list' }, recent.map(a => el('div', { class: 'pf-rail__i' },
         el('span', { class: 'pf-ach__ic' }, a.icon || '🎖'),
-        el('span', {}, a.label),
+        el('span', {}, badgeLabel(a)),
         el('span', { class: 'pf-rail__t' }, fmtRelTime(a.earnedAt)),
       )))));
   }
