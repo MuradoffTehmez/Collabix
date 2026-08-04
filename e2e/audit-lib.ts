@@ -5,8 +5,9 @@
 // horizontal scroll containers, responsive media, table, modal/drawer, sidebar,
 // navbar, z‑index conflicts, scrollbar, CLS, safe‑area, landscape, zoom,
 // accessibility (WCAG), visual regression hook.
-import type { Page } from '@playwright/test';
+import type { Page, Browser } from '@playwright/test';
 import { E2E_TEAM } from './fixtures';
+import { AUTH_FILE } from './seed';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -602,7 +603,7 @@ export interface FullAuditResult {
 }
 
 export async function runFullAudit(
-  page: Page,
+  browser: Browser,
   pages: AuditPage[] = AUDIT_PAGES,
   viewports: { w: number; h: number }[] = ALL_VIEWPORTS
 ): Promise<FullAuditResult> {
@@ -611,10 +612,18 @@ export async function runFullAudit(
   let totalScores = 0;
 
   for (const pageInfo of pages) {
-    await page.goto(pageInfo.url, { waitUntil: 'networkidle' });
-    if (pageInfo.open) {
-      await pageInfo.open(page);
-    }
+    // Auth səhifələr üçün AUTH_FILE (giriş məlumatları) olan yeni kontekst,
+    // public səhifələr üçün isə təmiz (boş) kontekst yaradılır.
+    const ctx = await browser.newContext(
+      pageInfo.auth ? { storageState: AUTH_FILE } : { storageState: { cookies: [], origins: [] } }
+    );
+    const page = await ctx.newPage();
+
+    try {
+      await page.goto(pageInfo.url, { waitUntil: 'networkidle' });
+      if (pageInfo.open) {
+        await pageInfo.open(page);
+      }
 
     for (const vp of viewports) {
       await page.setViewportSize({ width: vp.w, height: vp.h });
@@ -641,6 +650,11 @@ export async function runFullAudit(
 
       totalViolations += violations.length;
       totalScores += score;
+    }
+    } finally {
+      // Hər səhifədən sonra konteksti bağlayırıq ki, yaddaş dolmasın və
+      // növbəti səhifənin sessiyasına təsir etməsin.
+      await ctx.close();
     }
   }
 

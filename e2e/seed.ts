@@ -28,7 +28,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   E2E_OWNER, E2E_TEAM, E2E_TEAM_PRIVATE, E2E_TEAM_PUBLIC, GENERAL_ROOM_ID,
-} from './fixtures';
+} from './fixtures.ts';
 
 export const TEST_PASS = 'Test12345!';
 

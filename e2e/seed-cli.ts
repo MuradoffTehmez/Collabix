@@ -8,7 +8,7 @@
 //
 // ⚠ `wrangler dev` İŞLƏK OLMALIDIR: istifadəçilər real `/api/auth/register`
 // endpoint-i ilə yaradılır — parol heşi məntiqi burada təkrarlanmır.
-import { seedTestUsers } from './seed';
+import { seedTestUsers } from './seed.ts';
 
 const base = process.argv[2] || process.env.E2E_BASE_URL || 'http://127.0.0.1:8788';
 
