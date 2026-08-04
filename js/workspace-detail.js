@@ -475,7 +475,7 @@ function timeBlock(x, logs){
     }catch(e){ toast(t('dyn.err_generic'), 'err'); }
   });
 
-  const manual = el('input', { type: 'number', min: '1', max: '1440', placeholder: t('ws.min'), class: 'ws-d__num' });
+  const manual = el('input', { type: 'number', min: '1', max: '1440', placeholder: t('ws.min'), class: 'ws-in ws-d__num' });
   const manualBtn = el('button', { class: 'c-btn c-btn--ghost c-btn--sm', type: 'button', onclick: async () => {
     const m = Number(manual.value);
     if(!m) return;
@@ -636,9 +636,9 @@ export function openSprintPanel(){
 
   const team = el('select', { class: 'ws-d__sel' });
   META.teams.forEach(x => team.append(el('option', { value: x.id }, x.name)));
-  const name = el('input', { placeholder: t('ws.sprint_name'), maxLength: 80 });
-  const from = el('input', { type: 'date', value: dateVal(Date.now()) });
-  const to = el('input', { type: 'date', value: dateVal(Date.now() + 14 * 86400000) });
+  const name = el('input', { class: 'ws-in', placeholder: t('ws.sprint_name'), maxLength: 80 });
+  const from = el('input', { class: 'ws-in', type: 'date', value: dateVal(Date.now()) });
+  const to = el('input', { class: 'ws-in', type: 'date', value: dateVal(Date.now() + 14 * 86400000) });
 
   showModal([
     el('div', { class: 'section-title' }, t('ws.sprints')),
@@ -683,7 +683,7 @@ export function openLabelPanel(){
 
   const team = el('select', { class: 'ws-d__sel' });
   META.teams.forEach(x => team.append(el('option', { value: x.id }, x.name)));
-  const name = el('input', { placeholder: t('ws.label_name'), maxLength: 40 });
+  const name = el('input', { class: 'ws-in', placeholder: t('ws.label_name'), maxLength: 40 });
   const color = el('select', { class: 'ws-d__sel' });
   ['slate', 'blue', 'violet', 'green', 'amber', 'rose', 'teal', 'cyan', 'lime', 'orange']
     .forEach(cv => color.append(el('option', { value: cv }, cv)));

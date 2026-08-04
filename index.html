@@ -1075,27 +1075,17 @@
       <div class="ws-body" id="wsBody"></div>
     </div>
 
+    <!-- ÇALIŞMALAR — öyrənmə tapşırıqları (həll göndər → admin təsdiqi → XP).
+         ⚠ «Tapşırıqlar» (`#page-tasks`) BAŞQA sistemdir: komanda layihə
+            idarəetməsi. İkisini qarışdırmaq ən böyük risk idi. -->
     <div class="page" id="page-drills">
-      <h1 class="page-title" data-i18n="nav.tasks"></h1>
-      <p class="page-sub" data-i18n="tasks.sub"></p>
-      <button class="btn-small u-margin-bottom-14px" id="proposeTaskBtn" data-i18n="task.propose"></button>
-      <div class="task-form hidden" id="taskForm">
-        <div class="ttl" id="taskFormTtl" data-i18n="tasks.new_title"></div>
-        <select id="taskCat"></select>
-        <input id="taskTitle" data-i18n-ph="tasks.lbl_title" maxlength="120">
-        <textarea id="taskDesc" data-i18n-ph="tasks.lbl_desc" class="u-min-height-70px" maxlength="3000"></textarea>
-        <button class="btn-small" id="taskCreateBtn" data-i18n="chat.send"></button>
-      </div>
-      <div id="pendingTasksWrap" class="hidden">
-        <div class="section-title" data-i18n="task.pending"></div>
-        <div id="pendingTaskList"></div>
-      </div>
-      <div id="adminSubmissions" class="hidden">
-        <div class="section-title" data-i18n="tasks.pending_adm"></div>
-        <div id="pendingSubList"></div>
-      </div>
-      <div class="task-cat-tabs" id="taskTabs"></div>
-      <div id="taskList"></div>
+      <div class="dr-head" id="drHead"></div>
+      <div class="dr-dash" id="drDash"></div>
+      <div class="dr-controls" id="drControls"></div>
+      <!-- Təklif formu — düymə ilə açılır (yer tutmasın deyə gizli başlayır). -->
+      <div class="dr-form" id="drForm" hidden></div>
+      <div id="drAdmin"></div>
+      <div class="dr-grid" id="drList"></div>
     </div>
 
     <div class="page" id="page-teams">
