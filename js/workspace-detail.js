@@ -13,6 +13,7 @@ import { t, tOr, fmtRelTime } from './i18n.js';
 import { toast, showModal, closeModal, confirmDialog, emptyState } from './ui.js';
 import { paintIcons } from './icon-set.js';
 import { PRIO, ST_TONE } from './workspace-views.js';
+import { markdownNode } from './markdown.js';
 
 const ico = (n, s = 14) => el('span', { class: 'ic', 'data-icon': n, 'data-icon-size': String(s) });
 const slug = v => String(v).toLowerCase().replace(/\s+/g, '_');
@@ -193,6 +194,7 @@ function renderDetail(d){
       labelBlock(x, d.labels),
       section('ws.description', desc),
       checklistBlock(x, d.checklist),
+      attachBlock(x, d.attachments || []),
       subtaskBlock(x, d.subtasks),
       depBlock(x, d),
       timeBlock(x, d.timeLogs),
@@ -259,6 +261,99 @@ function labelBlock(x, labels){
   };
   draw();
   return section('ws.labels', box);
+}
+
+/* ── Qoşmalar ── */
+
+/** Şəkil MIME-ları — yalnız onlar üçün kiçik önizləmə çəkilir. */
+const IMG = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+const fmtSize = n => (n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB'
+  : n >= 1024 ? Math.round(n / 1024) + ' KB' : n + ' B');
+
+/**
+ * Qoşma bloku — sürüşdürüb-buraxma + fayl seçimi.
+ *
+ * ⚠ YÜKLƏMƏ MÖVCUD `/api/upload` YOLUNDAN KEÇİR (`kind=task`). Ayrıca
+ *   endpoint yazsaydıq, üç təhlükəsizlik yoxlaması (əsl ölçü, magic byte,
+ *   piksel bombası) təkrarlanmalı olardı — bax `worker/routes/upload.ts`.
+ *
+ * ⚠ SÜRÜŞDÜRMƏ HADİSƏLƏRİNDƏ `preventDefault` MƏCBURİDİR: əks halda brauzer
+ *   faylı YENİ TABDA açır və istifadəçi səhifədən çıxır.
+ */
+function attachBlock(x, items){
+  const list = el('div', { class: 'ws-att-list' });
+  const zone = el('div', { class: 'ws-att-zone', tabindex: '0', role: 'button',
+    'aria-label': t('ws.attach_add') },
+  ico('paperclip', 15), el('span', {}, t('ws.attach_drop')));
+  const input = el('input', { type: 'file', class: 'u-display-none', multiple: true });
+
+  const draw = () => {
+    clear(list);
+    if(!items.length){ list.append(el('p', { class: 'ws-d__none' }, t('ws.no_attach'))); return; }
+    items.forEach(f => {
+      const isImg = IMG.includes(f.mime);
+      list.append(el('div', { class: 'ws-att' },
+        isImg
+          ? el('img', { class: 'ws-att__th', src: f.url, alt: f.name, loading: 'lazy' })
+          : el('span', { class: 'ws-att__th ws-att__th--f' }, ico('paperclip', 14)),
+        el('a', { class: 'ws-att__n', href: f.url, target: '_blank', rel: 'noopener noreferrer' }, f.name),
+        el('span', { class: 'ws-att__s' }, fmtSize(f.size)),
+        el('button', {
+          class: 'c-icon-btn ws-mini', type: 'button', 'aria-label': t('ws.delete'),
+          onclick: async () => {
+            if(!await confirmDialog(t('ws.attach_del_q'))) return;
+            try{
+              await api(`/ws/tasks/${x.id}/attachments/${f.id}`, { method: 'DELETE' });
+              items.splice(items.indexOf(f), 1);
+              draw(); emit('ws-changed');
+            }catch(e){ toast(t('ws.no_perm'), 'err'); }
+          },
+        }, ico('x', 12)),
+      ));
+    });
+    paintIcons(list);
+  };
+
+  const send = async files => {
+    for(const file of [...files].slice(0, 5)){
+      zone.classList.add('is-busy');
+      try{
+        const fd = new FormData();
+        fd.append('file', file);
+        /* ⚠ `form:`, `body:` YOX — `api()` `body`-ni JSON-a çevirir və
+           FormData `{}` kimi gedirdi (server «Fayl yoxdur» → 400). */
+        const r = await api('/upload?kind=task&taskId=' + encodeURIComponent(x.id), {
+          method: 'POST', form: fd,
+        });
+        items.push({ id: r.key, name: r.fileName, size: r.fileSize, mime: r.mimeType, url: r.url });
+        draw(); emit('ws-changed');
+      }catch(e){
+        toast(e && e.message ? e.message : t('dyn.err_generic'), 'err');
+      }
+      zone.classList.remove('is-busy');
+    }
+    // ⚠ Panel yenidən açılır: server qoşmanın ƏSL `id`-sini verir, yuxarıdakı
+    //   `r.key` isə müvəqqəti göstəricidir — silmə düyməsi onunla işləməzdi.
+    openTaskDetail(x.id, true);
+  };
+
+  zone.addEventListener('click', () => input.click());
+  zone.addEventListener('keydown', e => {
+    if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); input.click(); }
+  });
+  input.addEventListener('change', () => { if(input.files.length) send(input.files); });
+  ['dragenter', 'dragover'].forEach(ev => zone.addEventListener(ev, e => {
+    e.preventDefault(); zone.classList.add('is-over');
+  }));
+  ['dragleave', 'drop'].forEach(ev => zone.addEventListener(ev, e => {
+    e.preventDefault(); zone.classList.remove('is-over');
+  }));
+  zone.addEventListener('drop', e => {
+    if(e.dataTransfer && e.dataTransfer.files.length) send(e.dataTransfer.files);
+  });
+
+  draw();
+  return section('ws.attachments', list, zone, input);
 }
 
 /* ── Yoxlama siyahısı ── */
@@ -412,7 +507,10 @@ function commentBlock(x, comments){
           el('time', {}, fmtRelTime(cm.createdAt)),
           cm.editedAt ? el('i', {}, t('ws.edited')) : null,
         ),
-        el('p', {}, cm.text),
+        /* ⚠ MARKDOWN + SANİTASİYA: `markdownNode` marked + DOMPurify cütündən
+           keçir (layihə qaydası). Xam `textContent` qoysaydıq kod bloku və
+           istinad formatlanmazdı; xam `innerHTML` isə stored-XSS olardı. */
+        markdownNode(cm.text),
       ),
       el('button', {
         class: 'c-icon-btn ws-mini', type: 'button', 'aria-label': t('ws.delete'),

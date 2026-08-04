@@ -100,7 +100,7 @@ export { wsCreate, wsUpdate, wsBulk, wsMove, wsDetail } from './routes/workspace
 export {
   wsCheckAdd, wsCheckPatch, wsCheckDelete,
   wsCommentAdd, wsCommentPatch, wsCommentDelete,
-  wsDepAdd, wsDepDelete, wsWatch,
+  wsDepAdd, wsDepDelete, wsWatch, wsAttachDelete,
   wsTimerStart, wsTimerStop, wsTimeAdd, wsTimerActive,
   wsLabelCreate, wsLabelDelete, wsLabelToggle,
   wsSprintCreate, wsSprintPatch, wsSprintDelete,

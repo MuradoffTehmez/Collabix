@@ -239,6 +239,21 @@ function renderKanban(host, S, ctx){
     host.append(column);
   });
 
+  /* ⚠ DAR EKRANDA KART OLAN İLK SÜTUNA SÜRÜŞÜR.
+     Sütun sırası iş axınıdır (Backlog → … → Done) və dəyişdirilməməlidir,
+     lakin telefonda ekrana YALNIZ BİR sütun sığır — istifadəçi çox vaxt boş
+     «Backlog»-u görüb lövhəni boş sanırdı. Sıra qorunur, sadəcə başlanğıc
+     mövqe faydalı sütuna qoyulur. */
+  if(window.matchMedia && window.matchMedia('(max-width: 768px)').matches){
+    const firstFull = S.columns.findIndex(c => c.tasks.length);
+    if(firstFull > 0){
+      requestAnimationFrame(() => {
+        const target = host.children[firstFull];
+        if(target) host.scrollLeft = target.offsetLeft - 12;
+      });
+    }
+  }
+
   // Sürüşdürmə hadisələri — kartlar hər çəkimdə yenidən yaranır, ona görə
   // dinləyici KONTEYNERƏ bağlanır (delegasiya).
   host.addEventListener('dragstart', e => {

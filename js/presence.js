@@ -66,6 +66,9 @@ function connectWs(){
     // Bildiriş / DM fan-out: siqnal gəlir, məzmunu mövcud poll-lar REST-dən
     // çəkir (`startPoll` events → dərhal tick). Ayrıca render məntiqi yoxdur.
     else if(d.t === 'notif'){ emit('refresh-notifs'); return; }
+    // İş sahəsi: tapşırıq dəyişdi. Məzmun REST-dən çəkilir — bildiriş/DM
+    // ilə eyni naxış (siqnal yüngül, render mövcud yoldan gedir).
+    else if(d.t === 'task'){ emit('ws-remote-change'); return; }
     else if(d.t === 'dm'){
       emit('refresh-threads');
       if(d.pairId) emit('refresh-dm-' + d.pairId);

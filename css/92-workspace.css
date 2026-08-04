@@ -13,7 +13,10 @@
   --ws-col-w: 300px;
   --ws-gap: var(--sp-3);
   --ws-panel-w: 460px;
+  /* ⚠ İkisi də `js/workspace.js` → `syncSticky()` tərəfindən ÖLÇÜLÜB
+     yazılır. Buradakı dəyərlər yalnız ilk kadr üçün ehtiyatdır. */
   --ws-topbar: 57px;
+  --ws-ctrl-h: 70px;
 
   /* Status tonları */
   --ws-slate: #94a3b8;
@@ -358,7 +361,7 @@ button.ws-card:focus-visible { outline: 2px solid var(--coral); outline-offset: 
 
 .ws-bulk {
   position: sticky;
-  top: calc(var(--ws-topbar) + 60px);
+  top: calc(var(--ws-topbar) + var(--ws-ctrl-h));
   z-index: 29;
   display: flex;
   align-items: center;
@@ -473,7 +476,61 @@ button.ws-card:focus-visible { outline: 2px solid var(--coral); outline-offset: 
 .ws-card-t:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
 .ws-card-t.is-drag { opacity: .45; }
 .ws-card-t.is-sel { border-color: var(--coral); background: color-mix(in srgb, var(--coral) 7%, var(--bg)); }
-.ws-card-t--list { border-radius: 10px; }
+/* 🔴 SİYAHI SƏTRİ TAM BAŞQA FORMADIR, kartın kiçildilmiş variantı DEYİL.
+   Əvvəl lövhə kartı olduğu kimi işlədilirdi: başlıq öz sətrində, sağda
+   böyük boşluq, hər sətir ~80px. 40 tapşırıqda bu, üç ekran uzunluğunda
+   monoton divar yaradırdı (spesifikasiya: «boş sahəni israf etmə»).
+
+   ⚠ GRID DEYİL, FLEX. Grid variantında sütun sayı SABİT olur, element sayı
+   isə tapşırıqdan-tapşırığa dəyişir (icraçı var/yox, son tarix var/yox,
+   şərh sayı var/yox). Nəticə ölçüldü: sütun tükənəndə AVATAR İKİNCİ SƏTRƏ
+   düşürdü və sətir hündürlüyü iki dəfə artırdı. Flex-də artıq element
+   sadəcə sıraya düzülür.
+
+   ⚠ `order` MƏCBURİDİR: DOM-da başlıq statusdan SONRA gəlir (kart forması
+   üçün doğrudur), siyahıda isə açardan dərhal sonra olmalıdır — başlıq ən
+   vacib məlumatdır və sağ tərəfə sıxışdırıla bilməz. */
+.ws-card-t--list {
+  display: flex;
+  /* ⚠ `flex-direction` AÇIQ SIFIRLANIR: baza `.ws-card-t` qaydası `column`
+     elan edir və o, miras qalırdı — bütün sətir şaquli yığılıb mərkəzə
+     düzülürdü (ölçüldü). */
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: var(--sp-2);
+  border-radius: 8px;
+  border-left-width: 3px;
+  padding: 5px var(--sp-3);
+  min-height: 38px;
+}
+.ws-card-t--list .ws-card-t__top,
+.ws-card-t--list .ws-card-t__foot { display: contents; }
+
+.ws-card-t--list .ws-selbox { order: 1; }
+.ws-card-t--list .ws-key { order: 2; }
+.ws-card-t--list .ws-card-t__h {
+  order: 3;
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--fs-sm);
+  -webkit-line-clamp: 1;
+  white-space: nowrap;
+}
+.ws-card-t--list .ws-prio { order: 5; flex: 0 0 auto; }
+.ws-card-t--list .ws-stat { order: 6; flex: 0 0 auto; }
+.ws-card-t--list .ws-meta__i { order: 7; flex: 0 0 auto; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ws-card-t--list .ws-due { order: 8; flex: 0 0 auto; }
+.ws-card-t--list .ws-av { order: 9; }
+
+/* Sətirdə YALNIZ ən vacib meta qalır: layihə, son tarix, icraçı.
+   Şərh/qoşma/alt-tapşırıq sayları detal panelindədir — sətri uzatmağa
+   dəyməz. */
+.ws-card-t--list .ws-labels,
+.ws-card-t--list .ws-prog,
+.ws-card-t--list .ws-card-t__sp,
+.ws-card-t--list .ws-meta__i:nth-of-type(n+2) { display: none; }
 
 .ws-card-t__top { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .ws-selbox { width: 14px; height: 14px; cursor: pointer; flex: 0 0 auto; }
@@ -581,10 +638,17 @@ button.ws-card:focus-visible { outline: 2px solid var(--coral); outline-offset: 
 /* ═══════════════════════ SİYAHI ═══════════════════════ */
 
 .ws-body--list { display: flex; flex-direction: column; gap: var(--sp-3); }
-.ws-group { border: 1px solid var(--border); border-radius: 14px; background: var(--surface); overflow: hidden; }
+/* 🔴 `overflow: hidden` SİLİNDİ — o, yapışqan başlığı TAMAMİLƏ söndürürdü.
+   Səbəb: `overflow` dəyəri `visible`-dan fərqli olan ata element sticky üçün
+   SCROLLPORT olur; `.ws-group` isə sürüşmür, ona görə başlıq heç vaxt
+   yapışmırdı və qrup adı sürüşməkdə itirdi. Ölçüldü: başlıq 115px-də
+   dayanmalı ikən −204px-də idi.
+   Künclər indi uşaqların üzərindədir (aşağıda). */
+.ws-group { border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
 .ws-group__h {
   position: sticky;
-  top: calc(var(--ws-topbar) + 58px);
+  top: calc(var(--ws-topbar) + var(--ws-ctrl-h));
+  border-radius: 13px 13px 0 0;
   z-index: 5;
   display: flex;
   align-items: center;
@@ -596,7 +660,13 @@ button.ws-card:focus-visible { outline: 2px solid var(--coral); outline-offset: 
   font-weight: 700;
 }
 .ws-group__h b { margin-left: auto; font-family: var(--mono); color: var(--muted); font-weight: 600; }
-.ws-group__b { display: flex; flex-direction: column; gap: 6px; padding: var(--sp-2); }
+.ws-group__b {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: var(--sp-2);
+  border-radius: 0 0 13px 13px;
+}
 .ws-sentinel { height: 1px; }
 
 /* ═══════════════════════ SKELET ═══════════════════════ */
@@ -852,7 +922,7 @@ button.ws-card:focus-visible { outline: 2px solid var(--coral); outline-offset: 
 .ws-tb { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
 .ws-tb th {
   position: sticky;
-  top: calc(var(--ws-topbar) + 58px);
+  top: calc(var(--ws-topbar) + var(--ws-ctrl-h));
   z-index: 4;
   background: var(--surface);
   text-align: left;
@@ -1124,6 +1194,70 @@ button.ws-card:focus-visible { outline: 2px solid var(--coral); outline-offset: 
   .ws-cal__nav h2 { min-width: 0; font-size: var(--fs-sm); }
 }
 
+/* ═══════════════════════ QOŞMALAR ═══════════════════════ */
+
+.ws-att-list { display: flex; flex-direction: column; gap: 5px; margin-bottom: var(--sp-2); }
+.ws-att {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 7px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg);
+  font-size: var(--fs-xs);
+}
+.ws-att__th {
+  width: 34px;
+  height: 34px;
+  border-radius: 7px;
+  object-fit: cover;
+  flex: 0 0 auto;
+  background: var(--surface-2);
+}
+.ws-att__th--f { display: inline-flex; align-items: center; justify-content: center; color: var(--muted); }
+.ws-att__n {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--text);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ws-att__n:hover { color: var(--coral); text-decoration: underline; }
+.ws-att__s { color: var(--muted); font-variant-numeric: tabular-nums; flex: 0 0 auto; }
+
+.ws-att-zone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: var(--sp-3);
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: none;
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+  transition: border-color var(--mo-fast) var(--mo-ease), background var(--mo-fast) var(--mo-ease);
+}
+.ws-att-zone:hover, .ws-att-zone:focus-visible { border-color: var(--coral2); color: var(--text); }
+.ws-att-zone:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+.ws-att-zone.is-over { border-color: var(--coral); background: color-mix(in srgb, var(--coral) 8%, transparent); }
+.ws-att-zone.is-busy { opacity: .6; pointer-events: none; }
+
+/* Şərhdəki markdown — panel dar olduğu üçün kod bloku sürüşməlidir. */
+.ws-cm__b pre {
+  max-width: 100%;
+  overflow-x: auto;
+  border-radius: 8px;
+  font-size: var(--fs-xs);
+}
+.ws-cm__b p { margin: 2px 0 0; font-size: var(--fs-sm); line-height: 1.5; overflow-wrap: anywhere; }
+.ws-cm__b ul, .ws-cm__b ol { margin: 4px 0 0; padding-left: 20px; font-size: var(--fs-sm); }
+.ws-cm__b img { max-width: 100%; border-radius: 8px; }
+
 /* ═══════════════════════ UYĞUNLAŞAN GÖRÜNÜŞ ═══════════════════════ */
 
 @media (max-width: 1024px) {
@@ -1150,8 +1284,21 @@ button.ws-card:focus-visible { outline: 2px solid var(--coral); outline-offset: 
   .ws-dash::-webkit-scrollbar { display: none; }
   .ws-card { flex: 0 0 138px; scroll-snap-align: start; }
 
-  .ws-col { max-height: none; }
+  /* 🔴 `max-height: none` DEYİL — SÜTUN DAXİLDƏ SÜRÜŞÜR.
+     Məhdudiyyətsiz hündürlükdə 35 kartlıq sütun səhifəni 2200px+ uzadırdı
+     və yanında nəhəng boş sahə qalırdı (ölçüldü). Telefonda lövhə bir
+     sütunu göstərir; sütun öz içində sürüşməlidir, səhifə yox. */
+  .ws-col { max-height: 68vh; }
   .ws-view { width: var(--tap); height: var(--tap); }
+
+  /* 🔴 SİYAHI SƏTRİ MOBİLDƏ DARALIR. `flex-wrap: nowrap` olduğu üçün sətir
+     məzmundan kiçilə bilmir və 390px-də 13px ÜFÜQİ DAŞMA verirdi (layihənin
+     responsive auditində bu, P0-dır). Telefonda layihə adı və status mətni
+     çıxarılır — başlıq, prioritet, son tarix və icraçı qalır. */
+  .ws-card-t--list .ws-meta__i,
+  .ws-card-t--list .ws-stat { display: none; }
+  .ws-card-t--list .ws-prio span { display: none; }
+  .ws-card-t--list { gap: 7px; padding-inline: var(--sp-2); }
   .ws-panel { width: 100vw; }
 
   /* 🔴 FİLTR PANELİ ALT VƏRƏQƏ — dar ekranda 10 sahəli grid səhifəni iki
@@ -1177,10 +1324,11 @@ button.ws-card:focus-visible { outline: 2px solid var(--coral); outline-offset: 
 @keyframes ws-sheet { from { transform: translateY(100%); } to { transform: none; } }
 
 @media (max-width: 480px) {
-  :root { --ws-col-w: 82vw; }
+  :root { --ws-col-w: 84vw; }
   .ws-d__row { grid-template-columns: 1fr; gap: 3px; }
   .ws-kbd { display: none; }
-  .ws-card { flex: 0 0 124px; }
+  /* ⚠ 124px-də «Gecikmiş» kimi etiketlər söz ortasından qırılırdı. */
+  .ws-card { flex: 0 0 142px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

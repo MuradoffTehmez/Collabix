@@ -358,6 +358,8 @@ function toggleFilters(force){
 
 function updateFilterBadge(){
   const n = activeCount();
+  // Çip sətri əlavə olunanda idarə sətri hündürləşir → ofset köhnəlir.
+  requestAnimationFrame(syncSticky);
   const b = $('wsFBadge');
   if(b){ b.textContent = n ? String(n) : ''; b.hidden = !n; }
   renderChips();
@@ -643,9 +645,51 @@ function onKey(e){
   }
 }
 
+/* ═══════════════════════ YAPIŞQAN OFSETLƏR ═══════════════════════
+ *
+ * 🔴 SABİT PİKSEL İŞLƏMİR: qrup başlığı `top: calc(topbar + 58px)` ilə
+ *    115px-də dayanırdı, idarə sətri isə 126px-də bitirdi — başlıq onun
+ *    ALTINDA 11px gizli qalırdı. Fərq dilə, filtr çiplərinin sayına və
+ *    ekran eninə görə dəyişir, yəni «düzgün» sabit ədəd YOXDUR.
+ *
+ * Ona görə hündürlük ÖLÇÜLÜR və CSS nişanına yazılır (bildiriş mərkəzindəki
+ * eyni naxış). `ResizeObserver` çip sətri böyüyəndə də yeniləyir.
+ */
+function syncSticky(){
+  const bar = $('wsControls');
+  /* ⚠ SEÇİCİ DƏQİQ `.app-topbar` OLMALIDIR. `'header'` yazsaydıq (ölçüldü)
+     `querySelector` sənəddə BİRİNCİ `<header>`-i — gizli publik başlığı
+     (`#pubHeader`) tapır, onun hündürlüyü 0-dır və idarə sətri real
+     topbar-ın ALTINA sürüşür. Bildiriş mərkəzi də məhz `.app-topbar`
+     işlədir. */
+  const top = document.querySelector('.app-topbar');
+  if(!bar) return;
+  // Mobil görünüşdə topbar gizlənə bilər → 0 çıxır və düstur uyğunlaşır.
+  const topH = top ? Math.round(top.getBoundingClientRect().height) : 0;
+  document.documentElement.style.setProperty('--ws-topbar', topH + 'px');
+  document.documentElement.style.setProperty('--ws-ctrl-h', Math.round(bar.getBoundingClientRect().height) + 'px');
+}
+
+let stickyRO = null;
+function watchSticky(){
+  syncSticky();
+  if(typeof ResizeObserver === 'undefined') return;
+  stickyRO = new ResizeObserver(() => syncSticky());
+  const bar = $('wsControls');
+  if(bar) stickyRO.observe(bar);
+}
+
 /* ═══════════════════════ MOUNT ═══════════════════════ */
 
 export function initWorkspace(){ /* marşrut cədvəli `mountWorkspace` çağırır */ }
+
+/* Uzaqdan gələn dəyişiklik siqnalı — 1.2 s pəncərədə birləşdirilir.
+   ⚠ Detal paneli açıqkən siyahı yenilənmir: altdakı kartların yenidən
+     çəkilməsi panelin fokusunu və sürüşməsini pozardı. */
+const onRemote = debounce(() => {
+  if(document.querySelector('.ws-panel')) return;
+  reload();
+}, 1200);
 
 export function mountWorkspace(){
   try{
@@ -677,13 +721,20 @@ export function mountWorkspace(){
     });
 
   api('/ws/timer').then(r => { S.timer = r.running ? r : null; renderTimerBar(); }).catch(() => {});
+  watchSticky();
   document.addEventListener('keydown', onKey);
   bus.addEventListener('ws-changed', reload);
+  /* ⚠ UZAQ DƏYİŞİKLİK DEBOUNCE İLƏ: komanda yoldaşı beş kartı ardıcıl
+     köçürəndə beş siqnal gəlir; hər biri üçün ayrıca sorğu göndərmək
+     lövhəni titrədərdi. */
+  bus.addEventListener('ws-remote-change', onRemote);
 
   return () => {
+    if(stickyRO){ stickyRO.disconnect(); stickyRO = null; }
     if(timerTick){ clearInterval(timerTick); timerTick = null; }
     document.removeEventListener('keydown', onKey);
     bus.removeEventListener('ws-changed', reload);
+    bus.removeEventListener('ws-remote-change', onRemote);
     closePopover();
     closeTaskDetail();
     S.sel.clear();

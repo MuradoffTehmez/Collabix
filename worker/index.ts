@@ -241,6 +241,7 @@ const ROUTES: Route[] = [
   { method: 'POST', pattern: /^\/api\/ws\/tasks\/([\w-]+)\/timer\/start$/, handler: R.wsTimerStart, auth: true, rl: 'write' },
   { method: 'POST', pattern: /^\/api\/ws\/tasks\/([\w-]+)\/timer\/stop$/, handler: R.wsTimerStop, auth: true, rl: 'write' },
   { method: 'POST', pattern: /^\/api\/ws\/tasks\/([\w-]+)\/time$/, handler: R.wsTimeAdd, auth: true, rl: 'write' },
+  { method: 'DELETE', pattern: /^\/api\/ws\/tasks\/([\w-]+)\/attachments\/([\w-]+)$/, handler: R.wsAttachDelete, auth: true, rl: 'write' },
   { method: 'PUT', pattern: /^\/api\/posts\/([\w-]+)\/hide$/, handler: R.postHide, auth: true, rl: 'admin' },
   { method: 'DELETE', pattern: /^\/api\/posts\/([\w-]+)\/hide$/, handler: R.postRestore, auth: true, rl: 'admin' },
   { method: 'POST', pattern: /^\/api\/posts\/([\w-]+)\/report$/, handler: R.postReport, auth: true, rl: 'write' },

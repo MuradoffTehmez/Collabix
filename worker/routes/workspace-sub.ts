@@ -13,14 +13,17 @@ import { taskFor } from './workspace-task';
 
 const num = (v: unknown) => Number(v) || 0;
 
-/** Tapşırıq üzərində "işin gedişi" səviyyəli yazma icazəsi. */
-async function canEdit(c: Ctx, task: any) {
-  const me = c.user!.id;
-  if (String(task.assignee_id || '') === me || String(task.created_by || '') === me) {
-    return requireTeamMember(c, String(task.team_id));
-  }
-  return requireTeamMember(c, String(task.team_id));
-}
+/**
+ * Alt-resurslar üçün yazma icazəsi.
+ *
+ * ⚠ HAMISI «İŞİN GEDİŞİ»DİR (yoxlama siyahısı, şərh, vaxt, izləmə, qoşma),
+ *   ona görə TƏK şərt var: komanda üzvlüyü. `workspace-task.ts`-dəki
+ *   `canWrite` isə iki səviyyəlidir, çünki orada PLANLAMA sahələri də var.
+ *
+ * ⚠ Silmə əməliyyatlarında ƏLAVƏ sahiblik yoxlaması ayrıca edilir (şərh və
+ *   qoşma: müəllif, yaxud `manage_tasks`).
+ */
+const canEdit = (c: Ctx, task: any) => requireTeamMember(c, String(task.team_id));
 
 /** Görünən tapşırıq + icazə — hər alt-resurs eyni giriş yolundan keçir. */
 async function gate(c: Ctx, taskId: string) {
@@ -221,6 +224,41 @@ export async function wsDepDelete(c: Ctx, taskId: string, depId: string) {
   if (g.resp) return g.resp;
   await D(c).prepare('DELETE FROM task_dependencies WHERE task_id = ? AND depends_on_id = ?')
     .bind(taskId, depId).run();
+  return json({ ok: true });
+}
+
+/* ═══════════════════════ QOŞMALAR ═══════════════════════ */
+
+/**
+ * Qoşmanın silinməsi — həm sətir, həm R2 obyekti.
+ *
+ * ⚠ R2 SİLİNMƏSİ `waitUntil`-DƏDİR: obyekt qalsa belə ona istinad yoxdur
+ *   (gecə arxiv işi yetimləri təmizləyir), lakin sətir qalsa UI sınıq link
+ *   göstərərdi. Ona görə sıra: ƏVVƏLCƏ D1, sonra R2.
+ *
+ * ⚠ Yükləyən şəxs və ya `manage_tasks` — başqasının faylını sıravi üzv
+ *   silə bilməz.
+ */
+export async function wsAttachDelete(c: Ctx, taskId: string, attId: string) {
+  const g = await gate(c, taskId);
+  if (g.resp) return g.resp;
+  const row = await D(c).prepare(
+    'SELECT r2_key, uploaded_by FROM task_attachments WHERE id = ? AND task_id = ?',
+  ).bind(attId, taskId).first<any>();
+  if (!row) return err('Qoşma tapılmadı.', 404, 'attachment_not_found');
+  if (String(row.uploaded_by) !== c.user!.id) {
+    const denied = await requireTeamPermission(c, String(g.task.team_id), 'manage_tasks');
+    if (denied) return denied;
+  }
+  await D(c).batch([
+    D(c).prepare('DELETE FROM task_attachments WHERE id = ?').bind(attId),
+    D(c).prepare(
+      `UPDATE team_tasks SET attach_count =
+         (SELECT COUNT(*) FROM task_attachments WHERE task_id = ?1) WHERE id = ?1`,
+    ).bind(taskId),
+  ]);
+  c.ctx.waitUntil(c.env.FILES.delete(String(row.r2_key)).catch(() => {}));
+  await logAct(c, taskId, 'attach', '');
   return json({ ok: true });
 }
 

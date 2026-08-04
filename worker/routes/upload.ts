@@ -61,6 +61,30 @@ export async function upload(c: Ctx) {
   // yükləyən şəxsin həmin komandada `manage_files` icazəsi yoxlanılır.
   // Bundan əvvəl komanda faylları `kind=post` ilə gedirdi: yalnız şəkil,
   // 2 MB limit və `posts/{userId}/` açarı — yəni sənəd arxivi işləmirdi.
+  /* ═══ TAPŞIRIQ QOŞMASI (`kind=task`) ═══
+   *
+   * 🔴 NİYƏ AYRICA ENDPOINT YAZILMADI: yükləmə yolunda ÜÇ təhlükəsizlik
+   *    yoxlaması var (əsl ölçü, magic byte, piksel bombası). Onları ikinci
+   *    faylda təkrarlasaydıq, biri yenilənəndə digəri köhnə qalardı — bu,
+   *    məhz stored-XSS vektorunun açıldığı sinif səhvdir.
+   *
+   * ⚠ İCAZƏ KOMANDA FAYLINDAN FƏRQLİDİR: sənəd arxivi `manage_files` istəyir,
+   *   tapşırığa fayl qoşmaq isə İŞİN GEDİŞİDİR — komanda üzvlüyü kifayətdir.
+   *   (Eyni ayrım `workspace-task.ts` → `canWrite`-dadır.)
+   */
+  let taskCtx: { taskId: string; teamId: string } | null = null;
+  if (kind === 'task') {
+    const taskId = c.url.searchParams.get('taskId') || '';
+    if (!taskId) return badReq('taskId tələb olunur.');
+    const { taskFor } = await import('./workspace-task');
+    const task = await taskFor(c, taskId);
+    if (!task) return badReq('Tapşırıq tapılmadı.');
+    const { requireTeamMember } = await import('../middleware/team-auth');
+    const denied = await requireTeamMember(c, String(task.team_id));
+    if (denied) return denied;
+    taskCtx = { taskId, teamId: String(task.team_id) };
+  }
+
   let teamCtx: { teamId: string; category: string } | null = null;
   if (kind === 'team') {
     const teamId = c.url.searchParams.get('teamId') || '';
@@ -78,8 +102,9 @@ export async function upload(c: Ctx) {
     teamCtx = { teamId: String(team.id), category: normalizeCategory(c.url.searchParams.get('category')) };
   }
 
-  const maxSize = kind === 'avatar' ? 1_048_576 : kind === 'team' ? TEAM_MAX_SIZE : 2_097_152;
-  const mb = kind === 'avatar' ? '1' : kind === 'team' ? '10' : '2';
+  const bigKind = kind === 'team' || kind === 'task';
+  const maxSize = kind === 'avatar' ? 1_048_576 : bigKind ? TEAM_MAX_SIZE : 2_097_152;
+  const mb = kind === 'avatar' ? '1' : bigKind ? '10' : '2';
 
   const reject = async (msg: string, reason: string) => {
     await logSecurityEvent(c.env, c.req, {
@@ -100,7 +125,7 @@ export async function upload(c: Ctx) {
 
   const opaqueOk =
     (kind === 'msg' && MSG_OPAQUE_EXT.includes(ext)) ||
-    (kind === 'team' && TEAM_OPAQUE_EXT.includes(ext));
+    (bigKind && TEAM_OPAQUE_EXT.includes(ext));
 
   let contentType: string;
   if (opaqueOk && !sniffed) {
@@ -109,7 +134,7 @@ export async function upload(c: Ctx) {
     contentType = 'application/octet-stream';
   } else {
     if (!sniffed) return reject('Bu fayl tipi dəstəklənmir.', 'unknown_signature');
-    const allowed = kind === 'msg' ? MSG_SNIFFABLE : kind === 'team' ? TEAM_SNIFFABLE : IMAGE_TYPES;
+    const allowed = kind === 'msg' ? MSG_SNIFFABLE : bigKind ? TEAM_SNIFFABLE : IMAGE_TYPES;
     if (!allowed.includes(sniffed)) return reject('Bu fayl tipi dəstəklənmir.', 'type_not_allowed');
     // Elan edilən tip əsl tiplə uyuşmursa bu, sadəcə səhv deyil — qəsdən
     // saxtakarlıq əlamətidir. Yükləməni dayandırıb hadisəni jurnala yazırıq.
@@ -131,9 +156,14 @@ export async function upload(c: Ctx) {
   // `-` simvol sinfinin SONUNDADIR → qaçırılma lazım deyil.
   const safeName = (file.name || 'file').replace(/[^\w.-]/g, '_').slice(0, 80);
   // PDR-dəki komanda qovluq strukturu: /teams/{team_id}/{category}/...
-  const key = teamCtx
-    ? `teams/${teamCtx.teamId}/${teamCtx.category}/${now()}-${uuid().slice(0, 8)}-${safeName}`
-    : `${kind === 'avatar' ? 'avatars' : kind === 'msg' ? 'msgfiles' : 'posts'}/${c.user!.id}/${now()}-${uuid().slice(0, 8)}-${safeName}`;
+  /* ⚠ TAPŞIRIQ QOŞMASI KOMANDA SAHƏSİNDƏDİR (`teams/{id}/tasks/...`):
+     oxu icazəsi `files-auth.ts` tərəfindən komanda üzvlüyünə görə verilir.
+     `posts/{uid}/` altına qoysaydıq, fayl komandadan KƏNARA çıxardı. */
+  const key = taskCtx
+    ? `teams/${taskCtx.teamId}/tasks/${taskCtx.taskId}/${now()}-${uuid().slice(0, 8)}-${safeName}`
+    : teamCtx
+      ? `teams/${teamCtx.teamId}/${teamCtx.category}/${now()}-${uuid().slice(0, 8)}-${safeName}`
+      : `${kind === 'avatar' ? 'avatars' : kind === 'msg' ? 'msgfiles' : 'posts'}/${c.user!.id}/${now()}-${uuid().slice(0, 8)}-${safeName}`;
   await c.env.FILES.put(key, bytes, { httpMetadata: { contentType } });
 
   // AUDIT-TASK-10 / Faza 4 (sarı qrup) — `media` kataloqu.
@@ -152,6 +182,26 @@ export async function upload(c: Ctx) {
     ).bind(key, c.user!.id, teamCtx ? 'team' : kind, contentType, bytes.length, now())
       .run().then(() => {}).catch(() => {}),
   );
+
+  /* Qoşma sətri + denormallaşdırılmış sayğac.
+     ⚠ `waitUntil` DEYİL: kart üzərindəki sayğac dərhal düzgün olmalıdır,
+       əks halda istifadəçi faylı yükləyib panel bağlayanda kartda «0 qoşma»
+       görər və faylı itirdiyini düşünər. */
+  if (taskCtx) {
+    await c.env.DB.batch([
+      c.env.DB.prepare(
+        `INSERT INTO task_attachments (id, task_id, r2_key, name, size, mime, uploaded_by, created_at)
+         VALUES (?,?,?,?,?,?,?,?)`,
+      ).bind(uuid(), taskCtx.taskId, key, safeName, bytes.length, contentType, c.user!.id, now()),
+      /* ⚠ `+ 1` YOXDUR: `batch()` ifadələri ARDICIL icra edir (tək
+         tranzaksiya), yəni bu sətir işləyəndə INSERT ARTIQ olub və
+         `COUNT(*)` yeni qoşmanı onsuz da sayır. `+1` ikiqat sayardı. */
+      c.env.DB.prepare(
+        `UPDATE team_tasks SET attach_count =
+           (SELECT COUNT(*) FROM task_attachments WHERE task_id = ?1) WHERE id = ?1`,
+      ).bind(taskCtx.taskId),
+    ]);
+  }
 
   return json({
     key, url: fileUrl(key), fileName: file.name, fileSize: bytes.length, mimeType: contentType,

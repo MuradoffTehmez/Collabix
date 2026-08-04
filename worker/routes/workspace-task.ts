@@ -10,7 +10,7 @@
 //    dövrəni bağlayır (AUDIT-TASK-9 / 9.0). Bu məntiqi burada TƏKRARLASAYDIQ,
 //    iki yol ayrılan kimi "Done → To Do → Done" XP fabrikinə çevrilərdi.
 import { Ctx, json, err, readJson, clampStr, uuid, now } from '../util';
-import { D, badReq, notify } from './shared';
+import { D, badReq, notify, userPush } from './shared';
 import { requireTeamPermission, requireTeamMember } from '../middleware/team-auth';
 import { scopedWhere, WS_STATUSES, WS_PRIORITIES } from './workspace';
 
@@ -244,6 +244,13 @@ async function notifyWatchers(c: Ctx, taskId: string, title: string, status: str
   ).bind(taskId, c.user!.id).all<any>();
   for (const r of rows.results) {
     await notify(c, String(r.user_id), 'team_task', `«${title}» → ${status}`);
+    /* 🔴 CANLI SİQNAL — MÖVCUD presence WebSocket-i ilə.
+     *
+     * Layihədə artıq fan-out kanalı var: `userPush` presence soketinə kiçik
+     * paket göndərir, client isə MƏZMUNU REST-dən çəkir (bildiriş və DM
+     * eyni naxışdadır). Tapşırıq üçün ayrıca soket açsaydıq, hər istifadəçidə
+     * ikinci daimi bağlantı və ikinci yenidən-qoşulma məntiqi olardı. */
+    await userPush(c, String(r.user_id), { t: 'task' });
   }
 }
 
