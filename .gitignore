@@ -57,3 +57,6 @@ legacy/
 
 # Əl ilə çıxarılan git log dump-ları (repoya aid deyil)
 commits_*.txt
+
+# Responsive audit hesabatları (generasiya olunur, mənbə deyil)
+audit-reports/
