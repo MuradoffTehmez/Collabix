@@ -9,9 +9,8 @@
 #   Səbəb: sürətli qapılar 2 dəqiqədə cavab verir; E2E-ni onlara qarışdırsaq
 #   yazı səhvi üçün 30 dəqiqə gözləmək lazım gələrdi.
 #
-# 🔴 GİT REMOTE: bu fayl yazılan anda repo-nun remote-u YOX idi (Task 2-dən
-# açıq öhdəlik). Fayl hazırdır və remote bağlanan kimi işə düşəcək —
-# `docs/TASK-10-SCOPE.md` §5/1-də sahibi ilə birlikdə qeyd olunub.
+# ✅ GİT REMOTE: remote bağlandı, CI artıq aktivdir.
+# Əvvəlki vəziyyət (Task 2 öhdəliyi) həll olundu.
 name: CI
 
 on:
