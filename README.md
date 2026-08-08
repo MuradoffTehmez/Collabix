@@ -13,7 +13,7 @@
 
 ## 🌐 Overview
 
-**Collabix** is an all-in-one collaboration platform that combines social networking, team management, projects, tasks, real-time chat, file sharing, and a learning hub — designed specifically for developers and tech teams. 
+**Collabix** is an all-in-one collaboration platform that combines social networking, team management, projects, tasks, real-time chat, file sharing, and a learning hub — designed specifically for developers and tech teams.
 
 Built entirely on **Cloudflare Native** architecture and **Vanilla JavaScript** to achieve zero-latency performance without the bloat of heavy frameworks.
 
@@ -32,13 +32,13 @@ To keep this repository clean and professional, all detailed documentation has b
 
 ### 📌 Quick Links
 
-- 🏁 **[Getting Started & Installation](https://github.com/MuradoffTehmez/Collabix/wiki/Getting-Started)**
-- 🏗️ **[System Architecture](https://github.com/MuradoffTehmez/Collabix/wiki/Architecture)**
-- ☁️ **[Cloudflare Ecosystem (D1, R2, KV, DO)](https://github.com/MuradoffTehmez/Collabix/wiki/Cloudflare-Ecosystem)**
-- 🗄️ **[Database Schema](https://github.com/MuradoffTehmez/Collabix/wiki/Database-Schema)**
-- 🛡️ **[Security & Zero Trust](https://github.com/MuradoffTehmez/Collabix/wiki/Security)**
-- 🎮 **[Gamification (XP, Levels, Badges)](https://github.com/MuradoffTehmez/Collabix/wiki/Gamification)**
-- 🗺️ **[Development Roadmap](https://github.com/MuradoffTehmez/Collabix/wiki/Roadmap)**
+* 🏁 **[Getting Started & Installation](https://github.com/MuradoffTehmez/Collabix/wiki/Getting-Started)**
+* 🏗️ **[System Architecture](https://github.com/MuradoffTehmez/Collabix/wiki/Architecture)**
+* ☁️ **[Cloudflare Ecosystem (D1, R2, KV, DO)](https://github.com/MuradoffTehmez/Collabix/wiki/Cloudflare-Ecosystem)**
+* 🗄️ **[Database Schema](https://github.com/MuradoffTehmez/Collabix/wiki/Database-Schema)**
+* 🛡️ **[Security & Zero Trust](https://github.com/MuradoffTehmez/Collabix/wiki/Security)**
+* 🎮 **[Gamification (XP, Levels, Badges)](https://github.com/MuradoffTehmez/Collabix/wiki/Gamification)**
+* 🗺️ **[Development Roadmap](https://github.com/MuradoffTehmez/Collabix/wiki/Roadmap)**
 
 ---
 
@@ -52,9 +52,9 @@ Please read our [Contributing Guidelines](CONTRIBUTING.md) before submitting a P
 
 If you find Collabix useful, consider supporting the development. Your contributions help cover server costs and keep the project alive.
 
-- ☕ **[Buy me a coffee](https://ko-fi.com/muradovtahmaz)**
-- 🌟 **Star this repository** on GitHub!
-- 🤝 Check out our [SPONSORS.md](SPONSORS.md) for more ways to support.
+* ☕ **[Buy me a coffee](https://ko-fi.com/muradovtahmaz)**
+* 🌟 **Star this repository** on GitHub!
+* 🤝 Check out our [SPONSORS.md](SPONSORS.md) for more ways to support.
 
 ## 🛡️ Security
 
