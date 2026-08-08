@@ -1,47 +1,35 @@
-# ⚡ Real-Vaxt Ünsiyyət (Realtime / WebSocket)
+# ⚡ Real-vaxt Arxitekturası (Realtime WebSocket)
 
-> Collabix-in WebSocket və Cloudflare Durable Objects (DO) əsasında işləyən yüksək sürətli real-vaxt məntiqi.
+Collabix heç bir kənar xidmət (məs. Pusher, Socket.io) istifadə etmədən **Cloudflare Durable Objects (DO)** üzərindən yerli olaraq real-vaxt (WebSocket) dəstəyi verir.
 
----
+## 🧱 Əsas Komponentlər
 
-## 🏗️ Niyə Durable Objects (DO)?
+### 1. `RoomDO` (Otaq Mesajlaşması)
 
-WebSocket bağlantıları hər serverdə "state" (vəziyyət) tutmalıdır. Lakin Serverless Worker-lər (Cloudflare) daima yaradılıb məhv edilirlər, yəni stateless-dirlər (vəziyyət saxlamırlar). 
-Bunu həll etmək üçün, xüsusi bir node-da yerləşən və yaddaşı daim qorunan (Stateful) tək bir maşın - **Durable Object (DO)** istifadə edilir. Otaqdakı və ya sistemdəki bütün websocket bağlantıları həmin DO-ya mərkəzləşir və məlumatları bütün müştərilərə eyni anda paylayır (Fan-out).
+Hər bir otaq üçün **ayrıca bir Durable Object instansı** (`idFromName(roomId)`) yaradılır. 
 
----
+- **Mesaj Axını**: 
+  - Brauzer → WS → DO → dərhal broadcast (bütün aktiv istifadəçilərə) → arxa planda asinxron D1 yazısı.
+  - Bu struktur sayəsində mesajın qəbul edilmə və görünmə gecikməsi D1-in yazılma vaxtından asılı deyil.
+- **Performans və Hibernation API**:
+  - Boş duran DO yaddaşda saxlanılmır (Hibernation). Sükut dövründə xərc sıfıra enir.
+- **Təhlükəsizlik və Spam Qoruması (Token-bucket)**:
+  - DO səviyyəsində WebSocket üzərində ani spamın (burst) qarşısını almaq üçün `RATE_BURST = 12` və hər 1.5 saniyəyə bir token artırılması tətbiq olunub. Token vəziyyəti soketin `attachment`-ində saxlanılır ki, hibernation ərzində itməsin.
+- **Avtorizasiya**:
+  - `REAUTH_INTERVAL_MS = 60_000` ilə hər dəqiqə soket sahibinin həmin otağa hələ də giriş icazəsinin olub-olmaması yoxlanılır. Əgər istifadəçi otaqdan çıxarılarsa, WebSocket bağlantısı avtomatik qapanır.
 
-## 🟢 PresenceDO (Mövcudluq və Onlayn Statusu)
+### 2. `PresenceDO` (Qlobal Online/Offline Statusu)
 
-Bu sistem kimin onlayn, kimin oflayn olduğunu qlobal miqyasda ölçür. 
+Bütün platforma üçün **tək bir qlobal instans** (`idFromName('global')`) istifadə olunur.
 
-1. **Heartbeat (Ürəkdöyüntüsü):** Brauzer (Client) tətbiq açıq olduğu müddətcə müəyyən saniyədən bir arxa-planda `PresenceDO`-ya gizli bir `ping` göndərir.
-2. **Statusların Yenilənməsi:** `PresenceDO` öz daxili yaddaşında kimin sonuncu dəfə nə vaxt "ping" atdığını qeyd edir. 
-3. **Yayım (Broadcast):** Tətbiqdəki bütün istifadəçilərə cari statuslar (Məsələn, Tahmaz - Online, Ali - 5 dəqiqə əvvəl) anında göndərilir. Ekranda adların yanındakı Yaşıl/Boz nöqtələr bununla idarə olunur.
+- **İşləmə Məntiqi**: Bütün daxil olmuş istifadəçilər buraya WebSocket açır. Bir istifadəçi onlayn olduqda (gizli deyilsə), digər istifadəçilərə bu məlumat anında ötürülür.
+- **Push Bildirişlər**: Server (worker) hər hansı bir istifadəçinin bütün açıq tablarına yeni bildiriş və ya DM (Direct Message) kimi siqnalları göndərə bilir (`push` metodu vasitəsilə). Məzmun özü isə REST ilə çəkilir, WebSocket yalnız xəbərdar edir.
+- **Multi-Tab Dəstəyi**: Eyni istifadəçinin fərqli tablarda bir neçə bağlantısı ola bilər. Offline status yalnız onun **bütün** soketləri bağlandıqda digərlərinə yayımlanır.
 
----
+## 🛡️ Təhlükəsizlik Mexanizmləri
 
-## 💬 RoomDO (Söhbət Otaqları)
-
-Real-vaxt mesajlaşma və "yazır..." animasiyalarını idarə edir.
-
-### Məlumat Axını (Data Flow)
-
-1. **Bağlantı (Connect):** İstifadəçi otağa girir, Worker onu qəbul edir və WebSocket ilə `RoomDO`-ya yönləndirir (Upgrade edir).
-2. **Mesajlaşma:**
-   - İstifadəçi "Salam" yazır və göndərir.
-   - JS `WebSocket.send()` vasitəsilə JSON göndərir.
-   - `RoomDO` mesajı qəbul edir.
-   - O, mesajı əvvəlcə `D1` (Relyasiyalı məlumat bazası) yaddaşına daimi olaraq yazır.
-   - Sonra `RoomDO` eyni otaqdakı **bütün digər WebSocket müştərilərinə** mesajı dərhal təkrar yayımlayır (Broadcast).
-3. **Typing Indicator:** İstifadəçi klaviaturaya basdıqda (keydown), bazaya heç nə yazılmadan sadəcə yüngül `is_typing` eventi yayılır və ekranda *"Tahmaz yazır..."* effekti görünür.
+- **Kimlik Doğrulama**: WebSocket "upgrade" anında URL-də gələn məlumatlar deyil, server-tərəfli cookie-lərlə doğrulanmış kimlik (index.ts tərəfindən) DO-ya ötürülür.
+- **RPC Zəngləri**: Bir istifadəçi profil ayarlarında bildiriş və ya statusunu gizlədəndə, bu, REST API üzərindən RPC (Remote Procedure Call) ilə DO-ya ötürülür və dərhal qüvvəyə minir.
 
 ---
-
-## 🛜 Bağlantının Bərpası (Exponential Backoff)
-
-İnternet qırılarsa, və ya istifadəçi yeraltı metrodan keçərsə, brauzer WebSocket kəsintisini hiss edir. Kodu `chat.js` və `presence.js`-də yerləşən bərpa mexanizmi (Backoff), dərhal deyil (serveri yükləməmək üçün), saniyələri artıraraq (1s, 2s, 4s, 8s) serverə yenidən qoşulmağa cəhd edir. Bağlantı gələndə mesajlar senkronizasiya edilir.
-
----
-
-**Əvvəlki:** [Oyunlaşdırma (Gamification)](Gamification) | **Növbəti:** [Komandalar və İş Sahələri](Teams-and-Workspaces)
+**Növbəti**: [Komandalar və İş Sahələri →](Teams-and-Workspaces)

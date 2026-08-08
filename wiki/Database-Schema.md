@@ -69,7 +69,10 @@
 | `team_projects` | Komanda layihələri | `id`, `team_id`, `name`, `description`, `status` |
 | `team_tasks` | Kanban tapşırıqları | `id`, `project_id`, `title`, `assignee_id`, `status`, `priority` |
 | `team_files` | Ortaq fayllar | `id`, `team_id`, `name`, `r2_key`, `uploaded_by` |
-
+| `sprints` | İş sahəsi sprintləri | `id`, `team_id`, `name`, `start_date`, `end_date`, `status` |
+| `task_time_logs` | Vaxt izləmə jurnalı | `id`, `task_id`, `user_id`, `minutes`, `description`, `created_at` |
+| `task_comments` | Tapşırıq şərhləri | `id`, `task_id`, `user_id`, `content`, `created_at` |
+| `task_attachments` | Tapşırıq faylları | `id`, `task_id`, `user_id`, `file_name`, `r2_key` |
 ### 🎓 Təhsil
 
 | Cədvəl | Təsvir | Əsas Sütunlar |

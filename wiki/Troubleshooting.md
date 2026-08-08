@@ -14,6 +14,10 @@ npm run db:migrate:local
 ```
 Əmrini icra edib bütün 54 cədvəlin düzgün formalaşdığına əmin olun.
 
+### Xəta: "D1: too many parameters" və ya "IN (?x2000) limits"
+**Səbəb:** SQLite/D1 eyni anda 100-dən çox parametr qəbul edə bilmir. Əgər siz array ilə (`IN (...)`) çoxlu məlumat axtarırsınızsa, bu xəta yaranır. (Məsələn, TASK-8-dəki cron arxivləşdirmə prosesi).
+**Həll:** Massivi (array) 100-100 `chunk`lara (parçalara) bölərək `Promise.all` və ya dövr (loop) içində D1-ə ardıcıl sorğu göndərin.
+
 ### Xəta: "MFA / Magic Link Email Getmir"
 **Səbəb:** E-poçt servisi (Resend) üçün açarınız yoxdur.
 **Həll:** Layihənin kök qovluğundakı `.dev.vars` faylında `RESEND_API_KEY` əlavə edilməlidir.

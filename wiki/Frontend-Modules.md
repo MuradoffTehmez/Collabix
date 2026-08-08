@@ -1,91 +1,64 @@
 # 🧩 Frontend Modulları
 
-> Collabix frontend-i heç bir xarici UI framework (React, Vue) olmadan, tamamilə **Vanilla JavaScript (ES Modules)** ilə inkişaf etdirilmişdir.
+Collabix heç bir frontend framework (React, Vue) olmadan, tamamilə Vanilla JS (ES Modules) ilə yazılmışdır. Aşağıda `js/` qovluğundakı bütün modulların siyahısı verilmişdir.
 
----
-
-## 📂 Struktur İcmalı
-
-`/js/` qovluğunda cəmi **59 ədəd müstəqil modul** yerləşir. Hər modul öz məsuliyyət sahəsini idarə edir.
-
-### 🌟 Əsas Tətbiq Modulları
-
-| Modul | Funksiya | Təsvir |
-|-------|----------|--------|
-| `app.js` | **Tətbiq Qabığı** | SPA (Single Page Application) məntiqini qurur. Hash (`#`) əsaslı marşrutlayıcı (router) və tətbiq həyat dövrü burada idarə olunur. |
-| `api.js` | **Şəbəkə Mühərriki** | Bütün `fetch` sorğuları bu wrapper-dən keçir. Xəta idarəsi, token əlavəsi və Visibility API ilə "smart polling" edir. |
-| `store.js` | **Reaktiv Vəziyyət (State)** | Redux-a bənzər yaddaş idarəsi. Bəyənmələr, izləmələr kimi istifadəçi datalarını önbellekdə saxlayaraq UI-ın cəld reaksiyasını təmin edir. |
-
-### 🔐 Təhlükəsizlik və Hesab
-
-| Modul | Funksiya | Təsvir |
-|-------|----------|--------|
-| `auth.js` | **Autentifikasiya** | Login, Logout və Multi-tab sinxronizasiyasını təşkil edir. |
-| `wizard.js` | **Qeydiyyat Forması** | 4-mərhələli interaktiv qeydiyyat axınını idarə edir. |
-| `mfa.js` | **2FA / TOTP** | İki mərhələli təsdiqin tənzimlənməsi. |
-| `oauth.js` | **Xarici Giriş** | Google, GitHub, LinkedIn hesabları ilə giriş interfeysləri. |
-| `password-reset.js` | **Şifrə Yeniləmə** | Şifrənin sıfırlanması əməliyyatları. |
-
-### 📝 Məzmun və Sosial Lent
-
-| Modul | Funksiya | Təsvir |
-|-------|----------|--------|
-| `feed.js` | **Lent Sistemi** | Sonsuz skroll (infinite scroll), post və şərhlərin render edilməsi. |
-| `composer.js` | **Redaktor** | Yeni post yazmaq üçün blok əsaslı (WYSIWYG) redaktor. |
-| `markdown.js` | **Formatlama** | Mətnin HTML-ə çevrilməsi və `DOMPurify` ilə təmizlənməsi. |
-| `code-block.js` | **Kod Görünüşü** | `highlight.js` vasitəsilə kodların rəngləndirilməsi. |
-| `richmsg.js` | **Zəngin Mesaj** | Mesajlarda qalın, link kimi xüsusiyyətlərin formatlanması. |
-
-### 💬 Ünsiyyət
-
-| Modul | Funksiya | Təsvir |
-|-------|----------|--------|
-| `chat.js` | **Otaqlar** | WebSocket üzərindən qlobal otaqlarda yazışmalar. |
-| `chat-ui.js` | **Chat interfeysi** | Yazışma ekranındakı animasiyalar və "Typing..." göstəriciləri. |
-| `dm.js` | **Şəxsi Mesaj (DM)** | İstifadəçilər arası birbaşa mesajlaşma. |
-| `presence.js` | **Onlayn İzləmə** | Qlobal Heartbeat mühərriki ilə onlayn/oflayn vəziyyət bildirimi. |
-
-### 🏢 Komandalar (Workspace)
-
-| Modul | Funksiya | Təsvir |
-|-------|----------|--------|
-| `teams.js` | **Komandalar** | Komanda idarəetmə interfeysi. |
-| `workspace.js` | **İş Sahəsi** | İş sahəsi idarəetməsi, layihə və tapşırıqlar. |
-| `workspace-views.js` | **Görünüşlər** | Kanban lövhəsi kimi xüsusi görünüşlərin idarəsi. |
-| `workspace-detail.js` | **Detallar** | Tək komanda üzərindəki məlumat panelləri. |
-
-### 👤 Profil və Cəmiyyət
-
-| Modul | Funksiya | Təsvir |
-|-------|----------|--------|
-| `profile.js` | **Profil Məlumatı** | İstifadəçinin profil məlumatlarının çəkilməsi. |
-| `profile-view.js` | **Profil Ekranı** | Profil dizaynının və tab-ların (Lent, Statistikalar) idarəsi. |
-| `users.js` | **Kataloq** | Çox parametrik filtrli istifadəçi axtarış paneli. |
-| `stats.js` | **Statistika** | Fərdi inkişaf və aktivlik qrafikləri. |
-| `heatmap.js` | **Aktivlik Xəritəsi** | GitHub üslublu fəaliyyət rəng xəritəsi. |
-| `completeness.js` | **Profil Dolğunluğu** | Profilin neçə faiz tamamlandığını hesablayan köməkçi. |
-
-### 🛠️ Köməkçi və UI Alətləri
-
-| Modul | Funksiya | Təsvir |
-|-------|----------|--------|
-| `ui.js` | **Interfeys** | Toast mesajları, Modallar (Popup) və Temaların idarəsi. |
-| `util.js` | **Köməkçilər** | XSS-ə qarşı `el()` funksiyası və ümumi formatlayıcılar. |
-| `i18n.js` | **Tərcümə** | 400+ sözlük lüğət. 3 dildə dərhal tərcümə (AZ, EN, RU). |
-| `icons.js` / `icon-set.js` | **İkonlar** | Vektor SVG ikon kitabxanası. |
-| `palette.js` | **Kommanda Paneli**| `Cmd+K` vasitəsilə tətbiqdaxili sürətli axtarış və naviqasiya. |
-| `particles.js` | **Vizual Effekt** | Səhifə arxaplanda hərəkət edən qrafik hissəciklər. |
-| `cyberpunk_fx.js` | **Tema Effekti** | "Matrix" temasında UI elementlərinə glitch və neon effekti verilməsi. |
-| `admin.js` | **Admin Paneli** | Loglar, istifadəçi idarəsi və statistika panelləri. |
-
----
-
-## 🚫 Çərçivə (Framework) Niyə Yoxdur?
-
-Collabix qəsdən kənar böyük çərçivələrdən qaçır:
-1. **Sürət (Zero-Latency):** Brauzer Vanilla JS-i qat-qat sürətli icra edir. Tətbiq bir göz qırpımında açılır.
-2. **Öyrədici Mühit:** Gənc proqramçılar arxa planda baş verənləri "qara qutu" (black-box) daxilində deyil, birbaşa koda baxaraq öyrənə bilərlər.
-
----
-
-**Əvvəlki:** [Verilənlər Bazası Sxemi](Database-Schema) | **Növbəti:** [API Reference](API-Reference)
+| Modul | Ölçü (KB) | Təxmini Məsuliyyət |
+|---|---|---|
+| `about-content.js` | 14.4 | UI və Tətbiq Məntiqi |
+| `admin.js` | 50.4 | Real-vaxt Ünsiyyət (WebSocket) |
+| `api.js` | 5.8 | Core Sistem Modulu |
+| `app.js` | 30.0 | Core Sistem Modulu |
+| `auth.js` | 5.4 | Autentifikasiya və Qeydiyyat |
+| `chat-message.js` | 20.9 | Real-vaxt Ünsiyyət (WebSocket) |
+| `chat-ui.js` | 46.8 | Real-vaxt Ünsiyyət (WebSocket) |
+| `chat.js` | 32.7 | Real-vaxt Ünsiyyət (WebSocket) |
+| `code-block.js` | 4.5 | UI və Tətbiq Məntiqi |
+| `completeness.js` | 3.3 | UI və Tətbiq Məntiqi |
+| `composer.js` | 26.3 | Sosial Lent və Paylaşımlar |
+| `cookies.js` | 3.5 | UI və Tətbiq Məntiqi |
+| `cyberpunk_fx.js` | 4.4 | UI və Tətbiq Məntiqi |
+| `dm.js` | 20.4 | Real-vaxt Ünsiyyət (WebSocket) |
+| `drills.js` | 17.2 | UI və Tətbiq Məntiqi |
+| `error-boundary.js` | 2.8 | UI və Tətbiq Məntiqi |
+| `feed.js` | 76.6 | Sosial Lent və Paylaşımlar |
+| `governance.js` | 18.9 | UI və Tətbiq Məntiqi |
+| `heatmap.js` | 3.6 | UI və Tətbiq Məntiqi |
+| `history.js` | 5.4 | UI və Tətbiq Məntiqi |
+| `i18n.js` | 196.9 | Çoxdillilik (Tərcümələr) |
+| `icon-set.js` | 17.2 | UI və Tətbiq Məntiqi |
+| `icons.js` | 4.6 | UI və Tətbiq Məntiqi |
+| `legal.js` | 64.8 | UI və Tətbiq Məntiqi |
+| `link-preview.js` | 3.2 | UI və Tətbiq Məntiqi |
+| `magic.js` | 3.1 | Autentifikasiya və Qeydiyyat |
+| `markdown.js` | 1.2 | UI və Tətbiq Məntiqi |
+| `mention.js` | 3.1 | UI və Tətbiq Məntiqi |
+| `mfa.js` | 10.8 | Autentifikasiya və Qeydiyyat |
+| `notify.js` | 49.6 | UI və Tətbiq Məntiqi |
+| `oauth.js` | 6.9 | Autentifikasiya və Qeydiyyat |
+| `palette.js` | 9.0 | UI və Tətbiq Məntiqi |
+| `particles.js` | 5.4 | UI və Tətbiq Məntiqi |
+| `password-reset.js` | 8.7 | Autentifikasiya və Qeydiyyat |
+| `presence.js` | 5.1 | Real-vaxt Ünsiyyət (WebSocket) |
+| `profile-kit.js` | 9.5 | İstifadəçi Profilləri və Kataloq |
+| `profile-view.js` | 44.5 | İstifadəçi Profilləri və Kataloq |
+| `profile.js` | 22.9 | İstifadəçi Profilləri və Kataloq |
+| `public.js` | 38.0 | UI və Tətbiq Məntiqi |
+| `richmsg.js` | 7.6 | UI və Tətbiq Məntiqi |
+| `sessions.js` | 3.7 | UI və Tətbiq Məntiqi |
+| `settings.js` | 3.4 | UI və Tətbiq Məntiqi |
+| `sparkline.js` | 2.9 | UI və Tətbiq Məntiqi |
+| `stats.js` | 8.0 | UI və Tətbiq Məntiqi |
+| `store.js` | 36.5 | Core Sistem Modulu |
+| `taxonomy.js` | 4.2 | UI və Tətbiq Məntiqi |
+| `teams.js` | 74.7 | Komandalar və İş Sahələri |
+| `techlogos.data.js` | 18.2 | UI və Tətbiq Məntiqi |
+| `techlogos.js` | 4.5 | UI və Tətbiq Məntiqi |
+| `threat.js` | 6.3 | UI və Tətbiq Məntiqi |
+| `turnstile.js` | 4.3 | UI və Tətbiq Məntiqi |
+| `ui.js` | 16.7 | Core Sistem Modulu |
+| `users.js` | 49.1 | İstifadəçi Profilləri və Kataloq |
+| `util.js` | 18.4 | Core Sistem Modulu |
+| `wizard.js` | 20.1 | Autentifikasiya və Qeydiyyat |
+| `workspace-detail.js` | 35.4 | Komandalar və İş Sahələri |
+| `workspace-views.js` | 29.6 | Komandalar və İş Sahələri |
+| `workspace.js` | 33.7 | Komandalar və İş Sahələri |
