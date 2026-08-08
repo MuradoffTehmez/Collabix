@@ -66,4 +66,4 @@ Profil səhifəsində, GitHub profillərində olduğu kimi 365 günlük, rəngl�
 
 ---
 
-**Əvvəlki:** [RBAC](RBAC) | **Növbəti:** [Realtime (WebSocket)](Realtime)
+**Əvvəlki:** [← Xüsusiyyətlər](Features) | **Növbəti:** [Real-vaxt Ünsiyyət →](Realtime)

@@ -222,4 +222,4 @@ Oxuma yolu (mesajlar İTMİR):
 
 ---
 
-**Əvvəlki:** [← Arxitektura](Architecture) | **Növbəti:** [Xüsusiyyətlər Kataloqu →](Features)
+**Əvvəlki:** [← Cloudflare Ekosistemi](Cloudflare-Ecosystem) | **Növbəti:** [Frontend Modulları →](Frontend-Modules)

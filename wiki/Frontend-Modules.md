@@ -62,3 +62,7 @@ Collabix heç bir frontend framework (React, Vue) olmadan, tamamilə Vanilla JS 
 | `workspace-detail.js` | 35.4 | Komandalar və İş Sahələri |
 | `workspace-views.js` | 29.6 | Komandalar və İş Sahələri |
 | `workspace.js` | 33.7 | Komandalar və İş Sahələri |
+
+---
+
+**Əvvəlki:** [← Verilənlər Bazası Sxemi](Database-Schema) | **Növbəti:** [API Sənədləri →](API-Reference)

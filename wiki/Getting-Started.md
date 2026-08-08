@@ -235,4 +235,4 @@ Collabix/
 
 ---
 
-**Növbəti:** [Sistem Arxitekturası →](Architecture)
+**Əvvəlki:** [← Ana Səhifə](Home) | **Növbəti:** [Sistem Arxitekturası →](Architecture)

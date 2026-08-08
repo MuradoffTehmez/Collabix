@@ -19,8 +19,8 @@ Collabix-in Vanilla JS istifadə etməsinin iki təməl səbəbi var:
 Hesabınız silindikdə bütün fərdi identifikasiya məlumatlarınız qalıcı olaraq sistemdən ləğv edilir (Zero Trust və GDPR tələbləri). Lakin otaqlara və qlobal sistemə göndərdiyiniz bəzi ismarıclar və faydalı postlar (əgər reaksiyalar və böyük müzakirə toplayıbsa) adınız "Silinmiş İstifadəçi" olaraq dəyişdirilməklə platformada qala bilər.
 
 ### Qaranlıq Rejim (Dark Mode) və digər temaları necə aktiv edə bilərəm?
-Interfeysin yuxarı sağ küncündəki (Profil və Ayarlar hissəsində) "Tema" ikonasını klikləyərək İşıqlı, Qaranlıq və ya xüsusi **Matrix/Cyberpunk** temalarına keçid edə bilərsiniz. 
+Interfeysin yuxarı sağ küncündəki (Profil və Ayarlar hissəsində) "Tema" ikonasını klikləyərək İşıqlı, Qaranlıq və ya xüsusi **Matrix/Cyberpunk** temalarına keçid edə bilərsiniz.
 
 ---
 
-**Əvvəlki:** [Deploy Təlimatı (Deployment)](Deployment) | **Növbəti:** [Problemlərin Həlli (Troubleshooting)](Troubleshooting)
+**Əvvəlki:** [← Yol Xəritəsi](Roadmap) | **Növbəti:** [Problemlərin Həlli →](Troubleshooting)

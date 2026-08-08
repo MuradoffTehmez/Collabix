@@ -47,4 +47,4 @@ npm run db:migrate:local
 
 ---
 
-**Əvvəlki:** [FAQ (Tez-tez Verilən Suallar)](FAQ) | **Növbəti:** [Əlaqə və Dəstək (Support)](Support)
+**Əvvəlki:** [← Tez-tez Verilən Suallar](FAQ) | **Növbəti:** [Əlaqə və Dəstək →](Support)

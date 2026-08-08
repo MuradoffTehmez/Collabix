@@ -279,3 +279,7 @@ Bu sənəddə layihədəki bütün API endpointlərinin siyahısı və icraçıl
 | `GET` | `/api/users/search` | async (c) => TR(c |
 | `GET` | `/api/users/suggestions` | async (c) => TR(c |
 | `POST` | `/api/upload` | R.upload |
+
+---
+
+**Əvvəlki:** [← Frontend Modulları](Frontend-Modules) | **Növbəti:** [Təhlükəsizlik →](Security)

@@ -46,4 +46,4 @@ Collabix fərqli ekran ölçülərində (Mobile, Tablet, Desktop) işləmək mə
 
 ---
 
-**Əvvəlki:** [Töhfə Vermə (Contributing)](Contributing) | **Növbəti:** [Deploy Təlimatı (Deployment)](Deployment)
+**Əvvəlki:** [← Töhfə Vermə Təlimatı](Contributing) | **Növbəti:** [Deploy Təlimatı →](Deployment)

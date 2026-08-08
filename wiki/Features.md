@@ -340,4 +340,4 @@ Komanda
 
 ---
 
-**Əvvəlki:** [← Təhlükəsizlik](Security) | **Növbəti:** [Yol Xəritəsi →](Roadmap)
+**Əvvəlki:** [← RBAC Sistemi](RBAC) | **Növbəti:** [Oyunlaşdırma Sistemi →](Gamification)

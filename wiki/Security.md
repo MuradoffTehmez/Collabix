@@ -313,4 +313,4 @@ Audit logları:
 
 ---
 
-**Əvvəlki:** [← API Reference](API-Reference) | **Növbəti:** [Xüsusiyyətlər Kataloqu →](Features)
+**Əvvəlki:** [← API Sənədləri](API-Reference) | **Növbəti:** [Autentifikasiya Sistemi →](Authentication)

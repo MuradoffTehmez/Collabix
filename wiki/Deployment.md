@@ -63,4 +63,4 @@ npm run deploy
 
 ---
 
-**Əvvəlki:** [Test Strategiyası (Testing)](Testing) | **Növbəti:** [FAQ (Tez-tez Verilən Suallar)](FAQ)
+**Əvvəlki:** [← Test Strategiyası](Testing) | **Növbəti:** [Yol Xəritəsi →](Roadmap)

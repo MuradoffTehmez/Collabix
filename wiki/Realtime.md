@@ -33,3 +33,7 @@ Bütün platforma üçün **tək bir qlobal instans** (`idFromName('global')`) i
 
 ---
 **Növbəti**: [Komandalar və İş Sahələri →](Teams-and-Workspaces)
+
+---
+
+**Əvvəlki:** [← Oyunlaşdırma Sistemi](Gamification) | **Növbəti:** [Komandalar və İş Sahələri →](Teams-and-Workspaces)

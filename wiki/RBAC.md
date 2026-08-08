@@ -50,4 +50,4 @@ Hər bir şərt ödənildikdə, API əməliyyatı icra edir.
 
 ---
 
-**Əvvəlki:** [Autentifikasiya](Authentication) | **Növbəti:** [Oyunlaşdırma (Gamification)](Gamification)
+**Əvvəlki:** [← Autentifikasiya Sistemi](Authentication) | **Növbəti:** [Xüsusiyyətlər →](Features)

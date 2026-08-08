@@ -85,4 +85,4 @@ Queues, asinxron tapşırıqların idarə edilməsi üçündür.
 
 ---
 
-**Əvvəlki:** [Sistem Arxitekturası](Architecture) | **Növbəti:** [Verilənlər Bazası Sxemi](Database-Schema)
+**Əvvəlki:** [← Sistem Arxitekturası](Architecture) | **Növbəti:** [Verilənlər Bazası Sxemi →](Database-Schema)

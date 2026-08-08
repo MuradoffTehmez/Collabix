@@ -305,4 +305,4 @@ Recruitment ←→ Marketplace
 
 ---
 
-**Əvvəlki:** [← Xüsusiyyətlər](Features) | **Növbəti:** [Töhfə Vermə →](Contributing)
+**Əvvəlki:** [← Deploy Təlimatı](Deployment) | **Növbəti:** [Tez-tez Verilən Suallar →](FAQ)

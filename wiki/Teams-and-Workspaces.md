@@ -39,3 +39,7 @@ Bu cədvəl hər bir layihə tapşırığının əsas məlumatlarını saxlayır
   
 ---
 **Əvvəlki**: [Real-vaxt Arxitekturası ←](Realtime)
+
+---
+
+**Əvvəlki:** [← Real-vaxt Ünsiyyət](Realtime) | **Növbəti:** [Töhfə Vermə Təlimatı →](Contributing)

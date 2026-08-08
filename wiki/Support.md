@@ -37,4 +37,4 @@ Layihə rəhbəri və müəllifi Təhməz Muradov ilə birbaşa əlaqə saxlaya 
 
 ---
 
-**Əvvəlki:** [Problemlərin Həlli (Troubleshooting)](Troubleshooting) | **Ana Səhifə:** [Wiki Ana Səhifə (Home)](Home)
+**Əvvəlki:** [← Problemlərin Həlli](Troubleshooting)

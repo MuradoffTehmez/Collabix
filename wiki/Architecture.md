@@ -220,4 +220,4 @@ npx wrangler deploy --env staging
 
 ---
 
-**Əvvəlki:** [← Quraşdırma Təlimatı](Getting-Started) | **Növbəti:** [Verilənlər Bazası Sxemi →](Database-Schema)
+**Əvvəlki:** [← Quraşdırma Təlimatı](Getting-Started) | **Növbəti:** [Cloudflare Ekosistemi →](Cloudflare-Ecosystem)

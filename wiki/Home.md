@@ -79,3 +79,7 @@ Platformanın əsas məqsədi proqramçıların gündəlik istifadə etdiyi çox
 ---
 
 > 📝 **Qeyd:** Bu Wiki daima yenilənir. Hər hansı bir səhv və ya çatışmazlıq görsəniz, [Issue açaraq](https://github.com/MuradoffTehmez/Collabix/issues/new) bizə bildirin.
+
+---
+
+**Növbəti:** [Quraşdırma Təlimatı →](Getting-Started)

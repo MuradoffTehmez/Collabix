@@ -57,4 +57,4 @@ PR-lər yalnız bütün testlərdən keçdikdən və Audit edildikdən sonra qə
 
 ---
 
-**Əvvəlki:** [Komandalar və İş Sahələri](Teams-and-Workspaces) | **Növbəti:** [Test Strategiyası (Testing)](Testing)
+**Əvvəlki:** [← Komandalar və İş Sahələri](Teams-and-Workspaces) | **Növbəti:** [Test Strategiyası →](Testing)

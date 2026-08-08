@@ -57,4 +57,4 @@ Collabix istifadəçilərə əlavə təhlükəsizlik qatı (Layer) kimi 2FA tək
 
 ---
 
-**Əvvəlki:** [API Reference](API-Reference) | **Növbəti:** [RBAC (İcazə Sistemi)](RBAC)
+**Əvvəlki:** [← Təhlükəsizlik](Security) | **Növbəti:** [RBAC Sistemi →](RBAC)
