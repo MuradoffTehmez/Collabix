@@ -2,7 +2,7 @@
   <img src="banner.png" alt="Collabix Banner" />
 
   <h1>Collabix</h1>
-  <p><b>The platform for developers, creators and innovators to build the future — together.</b></p>
+  <p><b>Gələcəyi birlikdə qurmaq üçün tərtibatçılar, yaradıcılar və innovatorlar platforması.</b></p>
 
   <!-- Badges -->
   <a href="https://github.com/MuradoffTehmez/Collabix/wiki"><img src="https://img.shields.io/badge/Docs-Wiki-blue?style=for-the-badge&logo=wikipedia" alt="Wiki" /></a>
@@ -11,57 +11,61 @@
   <a href="https://github.com/MuradoffTehmez/Collabix/blob/master/LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge" alt="License" /></a>
 </div>
 
-## 🌐 Overview
+## 🌐 Ümumi Baxış
 
-**Collabix** is an all-in-one collaboration platform that combines social networking, team management, projects, tasks, real-time chat, file sharing, and a learning hub — designed specifically for developers and tech teams.
+**Collabix** — xüsusilə tərtibatçılar və texnoloji komandalar üçün dizayn edilmiş, özündə sosial şəbəkə, komanda idarəetməsi, layihələr, tapşırıqlar, real-vaxt söhbətlər (chat), fayl mübadiləsi və öyrənmə mərkəzini birləşdirən "all-in-one" (hər şey daxil) əməkdaşlıq platformasıdır.
 
-Built entirely on **Cloudflare Native** architecture and **Vanilla JavaScript** to achieve zero-latency performance without the bloat of heavy frameworks.
+Heç bir ağır framework olmadan, **Cloudflare Native** arxitekturası və **Vanilla JavaScript** üzərində qurulub ki, "sıfır gecikmə" (zero-latency) performansına nail olunsun.
 
-### 🚀 Core Pillars
+### 🚀 Əsas Sütunlar
 
-* 👥 **Connect:** Build meaningful connections with developers and creators.
-* 💻 **Collaborate:** Work together on projects, tasks, and ideas seamlessly in real-time.
-* 📁 **Create:** Share your knowledge, build amazing things, and bring your ideas to life.
-* 🎓 **Learn:** Discover, contribute, and grow in our learning hub and task system.
-
----
-
-## 📚 Comprehensive Documentation (Wiki)
-
-To keep this repository clean and professional, all detailed documentation has been meticulously organized in our [GitHub Wiki](https://github.com/MuradoffTehmez/Collabix/wiki). Please refer to the Wiki for everything from local setup to system architecture.
-
-### 📌 Quick Links
-
-* 🏁 **[Getting Started & Installation](https://github.com/MuradoffTehmez/Collabix/wiki/Getting-Started)**
-* 🏗️ **[System Architecture](https://github.com/MuradoffTehmez/Collabix/wiki/Architecture)**
-* ☁️ **[Cloudflare Ecosystem (D1, R2, KV, DO)](https://github.com/MuradoffTehmez/Collabix/wiki/Cloudflare-Ecosystem)**
-* 🗄️ **[Database Schema](https://github.com/MuradoffTehmez/Collabix/wiki/Database-Schema)**
-* 🛡️ **[Security & Zero Trust](https://github.com/MuradoffTehmez/Collabix/wiki/Security)**
-* 🎮 **[Gamification (XP, Levels, Badges)](https://github.com/MuradoffTehmez/Collabix/wiki/Gamification)**
-* 🗺️ **[Development Roadmap](https://github.com/MuradoffTehmez/Collabix/wiki/Roadmap)**
+* 👥 **Bağlantı Qur (Connect):** Tərtibatçılar və yaradıcılarla mənalı əlaqələr qurun.
+* 💻 **Əməkdaşlıq Et (Collaborate):** Layihələr, tapşırıqlar və ideyalar üzərində komanda ilə real-vaxtda birlikdə işləyin.
+* 📁 **Yarat (Create):** Biliyinizi paylaşın, möhtəşəm məhsullar qurun və ideyalarınızı həyata keçirin.
+* 🎓 **Öyrən (Learn):** Tapşırıqlar və tədris sistemimizdə inkişaf edin, kəşf edin və icmaya töhfə verin.
 
 ---
 
-## 🤝 Contributing
+## 📚 Əhatəli Sənədləşdirmə (Wiki)
 
-We believe in the power of the open-source community! Whether you want to fix a bug, add a new feature, or improve documentation, your help is welcome.
+Bu repozitoriyanı təmiz və səliqəli saxlamaq üçün bütün detallı sənədləşdirmə işləri müntəzəm olaraq [GitHub Wiki](https://github.com/MuradoffTehmez/Collabix/wiki) bölməsinə köçürülmüşdür. Lokal quraşdırmadan tutmuş sistem arxitekturasına qədər hər şeyi orada tapa bilərsiniz.
 
-Please read our [Contributing Guidelines](CONTRIBUTING.md) before submitting a Pull Request.
+### 📌 Sürətli Keçidlər (Quick Links)
 
-## 💖 Support Collabix
+- 🏁 **[Başlanğıc və Quraşdırma (Getting Started)](https://github.com/MuradoffTehmez/Collabix/wiki/Getting-Started)**
+- 🏗️ **[Sistem Arxitekturası (Architecture)](https://github.com/MuradoffTehmez/Collabix/wiki/Architecture)**
+- ☁️ **[Cloudflare Ekosistemi (D1, R2, KV, DO)](https://github.com/MuradoffTehmez/Collabix/wiki/Cloudflare-Ecosystem)**
+- 🗄️ **[Verilənlər Bazası Sxemi (Database Schema)](https://github.com/MuradoffTehmez/Collabix/wiki/Database-Schema)**
+- 🛡️ **[Təhlükəsizlik və Zero Trust (Security)](https://github.com/MuradoffTehmez/Collabix/wiki/Security)**
+- 🎮 **[Oyunlaşdırma (XP, Səviyyə, Nişanlar)](https://github.com/MuradoffTehmez/Collabix/wiki/Gamification)**
+- 🗺️ **[İnkişaf Yol Xəritəsi (Roadmap)](https://github.com/MuradoffTehmez/Collabix/wiki/Roadmap)**
 
-If you find Collabix useful, consider supporting the development. Your contributions help cover server costs and keep the project alive.
+---
 
-* ☕ **[Buy me a coffee](https://ko-fi.com/muradovtahmaz)**
-* 🌟 **Star this repository** on GitHub!
-* 🤝 Check out our [SPONSORS.md](SPONSORS.md) for more ways to support.
+## 🤝 Töhfə Vermə (Contributing)
 
-## 🛡️ Security
+Biz açıq mənbə (open-source) cəmiyyətinin gücünə inanırıq! Əgər hər hansı xətanı düzəltmək, yeni xüsusiyyət əlavə etmək və ya sənədləri inkişaf etdirmək istəyirsinizsə, dəstəyinizə həmişə açığıq.
 
-If you discover a security vulnerability, please do NOT open an issue. Read our [Security Policy](SECURITY.md) for instructions on how to responsibly disclose it.
+Pull Request göndərməzdən öncə zəhmət olmasa [Töhfə Təlimatını (Contributing Guidelines)](CONTRIBUTING.md) oxuyun.
+
+## 💖 Collabix-i Dəstəkləyin
+
+Əgər Collabix-i faydalı hesab edirsinizsə, layihəni dəstəkləməyi nəzərdən keçirin. Sizin ianələriniz server (infrastruktur) xərclərini qarşılamağa və layihəni yaşatmağa kömək edir.
+
+- ☕ **[Mənə bir qəhvə al (Ko-Fi)](https://ko-fi.com/muradovtahmaz)**
+- 🌟 GitHub-da **bu repozitoriyanı ulduzlayın (Star)!**
+- 🤝 Digər dəstək yolları üçün [SPONSORS.md](SPONSORS.md) faylına baxın.
+
+## 🛡️ Təhlükəsizlik
+
+Əgər hər hansı bir təhlükəsizlik zəifliyi taparsanız, xahiş edirik bunu ictimai olaraq İssue bölməsində açmayın. Məsuliyyətli bildiriş (responsible disclosure) üçün [Təhlükəsizlik Siyasətimizi (Security Policy)](SECURITY.md) oxuyun.
+
+## 📄 Lisenziya
+
+Bu layihə MIT Lisenziyası altında lisenziyalaşdırılıb - detallar üçün [LICENSE](LICENSE) faylına baxa bilərsiniz (mövcuddursa).
 
 <br>
 <div align="center">
-  <i>Built for Developers • Open Source Friendly • Modern & Fast • Secure & Reliable • Global Community</i><br><br>
+  <i>Proqramçılar üçün Hazırlanıb • Open Source Dəstəkli • Müasir və Sürətli • Təhlükəsiz və Etibarlı • Qlobal İcma</i><br><br>
   <b>🌐 <a href="https://collabix.az">Collabix.az</a></b>
 </div>
