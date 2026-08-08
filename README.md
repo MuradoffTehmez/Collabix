@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="banner.png" alt="Collabix Banner" />
+  <img src="docs/banner.png" alt="Collabix Banner" />
 
   <h1>Collabix</h1>
   <p><b>Gələcəyi birlikdə qurmaq üçün tərtibatçılar, yaradıcılar və innovatorlar platforması.</b></p>
