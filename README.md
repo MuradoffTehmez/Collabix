@@ -62,7 +62,7 @@ Pull Request göndərməzdən öncə zəhmət olmasa [Töhfə Təlimatını (Con
 
 ## 📄 Lisenziya
 
-Bu layihə MIT Lisenziyası altında lisenziyalaşdırılıb - detallar üçün [LICENSE](LICENSE) faylına baxa bilərsiniz (mövcuddursa).
+Bu layihə MIT Lisenziyası altında lisenziyalaşdırılıb - detallar üçün [LICENSE](LICENSE) faylına baxa bilərsiniz.
 
 <br>
 <div align="center">
