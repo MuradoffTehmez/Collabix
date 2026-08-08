@@ -76,10 +76,12 @@ Platformanın əsas məqsədi proqramçıların gündəlik istifadə etdiyi çox
 **Təhməz Muradov**  
 *Founder • Full Stack Developer • Software Architect • AI & Cloud Engineer*
 
+Daha ətraflı məlumat üçün **[Müəllif Haqqında](Author)** səhifəsinə baxa bilərsiniz.
+
 ---
 
 > 📝 **Qeyd:** Bu Wiki daima yenilənir. Hər hansı bir səhv və ya çatışmazlıq görsəniz, [Issue açaraq](https://github.com/MuradoffTehmez/Collabix/issues/new) bizə bildirin.
 
 ---
 
-**Növbəti:** [Quraşdırma Təlimatı →](Getting-Started)
+**Əvvəlki:** [← Müəllif Haqqında](Author) | **Növbəti:** [Quraşdırma Təlimatı →](Getting-Started)

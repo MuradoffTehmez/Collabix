@@ -37,4 +37,4 @@ Layihə rəhbəri və müəllifi Təhməz Muradov ilə birbaşa əlaqə saxlaya 
 
 ---
 
-**Əvvəlki:** [← Problemlərin Həlli](Troubleshooting)
+**Əvvəlki:** [← Problemlərin Həlli](Troubleshooting) | **Növbəti:** [Müəllif Haqqında →](Author)
