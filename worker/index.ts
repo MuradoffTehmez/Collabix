@@ -944,6 +944,43 @@ async function handleRequest(
       }
     }
 
+    /* 🔴 BE-005 — SOFT 404 BAĞLANIR.
+     *
+     *   Əvvəl naməlum HƏR yol SPA qabığına düşürdü və `HTTP 200` alırdı:
+     *   ölçüldü — `GET /bele-sehife-yoxdur-99999` → 200, `X-Robots-Tag` yox.
+     *   Axtarış robotu üçün bu, mövcud olmayan sonsuz sayda URL-in "keçərli
+     *   səhifə" kimi indekslənməsi deməkdir.
+     *
+     * ⚠ TANINAN YOLLARIN SİYAHISI BURADA TƏKRARLANMIR.
+     *   `matchPublicRoute()` (yuxarıda, `seo.ts`) publik marşrutların TƏK
+     *   həqiqət mənbəyidir və tanıdığı hər yol artıq qayıdıb. Bura yalnız
+     *   `null` qaytardığı — yəni ƏSL naməlum — yollar çatır. Burada ikinci ağ
+     *   siyahı saxlasaydıq, yeni səhifə əlavə edən developer onu bir yerdə
+     *   yazıb digərini unutduqda səhifə F5-də 404 verər, tətbiq daxilində isə
+     *   işləyərdi — məhz bu asimmetriya ən çətin tapılan qüsur növüdür.
+     *   YENİ PUBLİK SƏHİFƏ = `seo.ts` → `matchPublicRoute`, başqa yer yoxdur.
+     *
+     * ⚠ `/api/*`, `/files/*`, `/robots.txt`, `/sitemap.xml`, `/llms.txt`,
+     *   `/og/*` bura ÇATMIR — hamısı yuxarıda emal olunur.
+     *
+     * ⚠ FAYL UZANTISI OLAN YOLLAR İSTİSNADIR (`.js`, `.css`, `.woff2`, `.png`,
+     *   `.webmanifest` …): onlar asset serverinə getməlidir. Ora göndərməsək
+     *   HTML qabığını `Content-Type: text/html` ilə qaytarmış olardıq və
+     *   brauzer onu skript kimi icra etməyə çalışıb MIME xətası verərdi.
+     */
+    const isDoc = request.method === 'GET' || request.method === 'HEAD';
+    const hasExt = /\.[a-z0-9]{2,5}$/i.test(path);
+
+    if (isDoc && !hasExt) {
+      // Qabıq yenə verilir (istifadəçi boş ekran görməsin), STATUS isə 404-dür.
+      const shell = await env.ASSETS.fetch(new Request(new URL('/', url), request));
+      const o = withSecurityHeaders(shell, true);
+      o.headers.set('Content-Type', 'text/html; charset=utf-8');
+      o.headers.set('Cache-Control', 'no-cache');
+      o.headers.set('X-Robots-Tag', 'noindex');
+      return new Response(o.body, { status: 404, headers: o.headers });
+    }
+
     // Statik sayt (Vite build) — SPA fallback assets konfiqindədir
     const res = await env.ASSETS.fetch(request);
     const isHtml = (res.headers.get('Content-Type') || '').includes('text/html');
