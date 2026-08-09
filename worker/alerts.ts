@@ -28,7 +28,16 @@ export type AlertName =
   /** `SUM(xp_logs) != users.xp` → jurnaldan kənarda XP dəyişir. */
   | 'xp_invariant_drift'
   /** `Origin` yad olduğu üçün bloklanan sorğu. */
-  | 'csrf_blocked';
+  | 'csrf_blocked'
+  /**
+   * Silinmiş hesaba istinad edən sətirlər tapıldı — BACKEND AUDIT / BE-001.
+   *
+   * ⚠ Bu, xidmət nasazlığı DEYİL, məlumat çirkliliyidir: 55 cədvəldə FK yoxdur,
+   *   yəni kaskad təmizləyicisi bir cədvəli buraxsa heç nə sınmır və problem
+   *   yalnız zamanla böyüyür. Siqnal `xp_invariant_drift` ilə eyni sinifdəndir —
+   *   sükutla baş verən bir şeyi görünən edir.
+   */
+  | 'orphan_rows_found';
 
 /**
  * Siqnal yazır.

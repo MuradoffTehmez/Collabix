@@ -3,6 +3,7 @@ import { Env, Ctx, err, fromJSON } from './util';
 import { resolveUser, rateLimit, peekUid, RL, RateBucket } from './auth';
 import { logSecurityEvent, csrfSuspicion } from './security';
 import { runArchiveJob } from './archive';
+import { runOrphanScan } from './services/cascade';
 import { handleQueueBatch } from './queue';
 import { SystemEvent } from './events';
 import * as R from './routes';
@@ -676,6 +677,22 @@ export default {
   async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     ctx.waitUntil(runArchiveJob(env).catch(e => {
       log('error', 'archive_job_failed', { message: e?.message || String(e) });
+    }));
+    /* 🔴 BE-001 — YETİM SƏTİR SKANERİ.
+     *
+     *   55 cədvəldə FK yoxdur, yəni kaskad təmizləyicisi bir cədvəli buraxsa
+     *   heç nə sınmır: sətirlər sükutla yığılır və sayğaclar mövcud olmayan
+     *   istifadəçini saymağa davam edir. Skaner "təmizdir" iddiasını hər gün
+     *   ÖLÇÜR — `xp_invariant` ilə eyni fəlsəfə.
+     *
+     * ⚠ AYRI `waitUntil`: arxivləmə ilə ardıcıl bağlasaydıq, arxiv sınanda
+     *   skaner heç vaxt işləməzdi və qüsur iki qat gizlənərdi.
+     *
+     * ⚠ Skaner heç nə DÜZƏLTMİR, yalnız sayır. Avtomatik silmə səhv siyasətlə
+     *   birləşəndə məlumat itkisinə çevrilir; siqnal isə geri qaytarıla biləndir.
+     */
+    ctx.waitUntil(runOrphanScan(env).catch(e => {
+      log('error', 'orphan_scan_failed', { message: e?.message || String(e) });
     }));
   },
 } satisfies ExportedHandler<Env, SystemEvent>;

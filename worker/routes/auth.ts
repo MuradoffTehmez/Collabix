@@ -41,8 +41,9 @@ import { kickEverywhere } from '../ws-kick';
 import { markUidDeleted } from '../archive';
 import {
   D, badReq, deleteR2Keys, withSession, checkPasswordStrength,
-  DELETED_UID, DELETED_NAME, SIGNUP_XP, grantDailyLogin,
+  SIGNUP_XP, grantDailyLogin,
 } from './shared';
+import { cascadeStatements } from '../services/cascade';
 import { grantXp } from '../xp';
 import { redeemInvite } from './invite';
 import {
@@ -505,6 +506,19 @@ export async function deleteAccount(c: Ctx) {
     if (m) keys.push(m[1]);
   }
   await deleteR2Keys(c, keys);
+  /* 🔴 BE-001 — KASKAD SİYASƏTİ ARTIQ BURADA DEYİL.
+   *
+   *   Əvvəl bu batch əl ilə yazılmış SQL siyahısı idi və istifadəçi sütunu olan
+   *   63 cədvəldən yalnız 20-sini örtürdü. Qalanları yetim sətir kimi qalırdı —
+   *   FK bəyan olunmadığı üçün heç bir xəta vermədən, yalnız zamanla artan
+   *   məlumat çirkliliyi kimi. Siyasət indi `services/cascade.ts`-dəki
+   *   `USER_REFS` xəritəsindədir; `test/cascade.test.ts` sxemi oxuyub xəritənin
+   *   TAM olmasını tələb edir, yəni siyasətsiz yeni cədvəl testi sındırır.
+   *
+   * ⚠ AŞAĞIDAKI ADDIMLAR XƏRİTƏYƏ KÖÇÜRÜLMÜR, ÇÜNKİ ONLAR SİYASƏT DEYİL,
+   *   ARDICILLIQDIR — sıra pozulsa nəticə səssizcə yanlış olur. Xəritə obyekt
+   *   açarları ilə gəzilir, ona görə sıraya güvənmək mümkün deyil.
+   */
   await D(c).batch([
     // Bu istifadəçinin postlarının re-post/quote-larını soft-mark et (posts silinməzdən ƏVVƏL).
     D(c).prepare('UPDATE posts SET original_deleted = 1 WHERE shared_post_id IN (SELECT id FROM posts WHERE author_id = ?)').bind(u.id),
@@ -521,48 +535,22 @@ export async function deleteAccount(c: Ctx) {
     D(c).prepare(
       `UPDATE users SET following_count = MAX(0, following_count - 1)
         WHERE id IN (SELECT follower_id FROM follows WHERE target_id = ?)`).bind(u.id),
-    D(c).prepare('DELETE FROM follows WHERE follower_id = ? OR target_id = ?').bind(u.id, u.id),
-    D(c).prepare('DELETE FROM likes WHERE user_id = ?').bind(u.id),
-    D(c).prepare('DELETE FROM bookmarks WHERE user_id = ?').bind(u.id),
-    D(c).prepare('DELETE FROM notifications WHERE user_id = ?').bind(u.id),
-    // Susdurma siyahısı (miqrasiya 0049) — `notifications` ilə EYNİ sinif:
-    // FK yoxdur, ona görə əl ilə silinməsə sətirlər yetim qalır və hesab
-    // silindikdən sonra GDPR "unudulmaq hüququ" yarımçıq icra olunardı.
-    D(c).prepare('DELETE FROM notification_mutes WHERE user_id = ?').bind(u.id),
-    D(c).prepare('DELETE FROM presence WHERE user_id = ?').bind(u.id),
-    D(c).prepare('DELETE FROM progress WHERE user_id = ?').bind(u.id),
-    D(c).prepare('DELETE FROM admins WHERE user_id = ?').bind(u.id),
-    D(c).prepare('DELETE FROM sessions WHERE uid = ?').bind(u.id),
-    D(c).prepare('DELETE FROM oauth_accounts WHERE uid = ?').bind(u.id),
-    // AUDIT-TASK-9 / B-4: `xp_logs`-da FK yoxdur → sətirlər YETİM qalardı və
-    // `SUM(xp_logs) == users.xp` invariantı hər hesab silinməsindən sonra
-    // pozulardı (`/api/health` daimi "drift" göstərərdi).
-    D(c).prepare('DELETE FROM xp_logs WHERE uid = ?').bind(u.id),
-    // security_events-də uid boşaldılır, SƏTİR SAXLANILIR: hadisələr təhlükəsizlik
-    // telemetriyasıdır (hansı IP-dən neçə uğursuz giriş oldu) və şəxsi məlumat
-    // çıxarıldıqdan sonra artıq həmin istifadəçiyə aid deyil. Silinsəydi, hesabı
-    // silərək öz izini təmizləyən hücumçu monitorinqi kor edərdi.
-    D(c).prepare('UPDATE security_events SET uid = NULL, username = \'\' WHERE uid = ?').bind(u.id),
-    // 🔴 AUDIT-TASK-9 / D-2 — İSTİ PƏNCƏRƏNİN ANONİMLƏŞDİRİLMƏSİ (variant b).
-    //
-    // PROBLEM (Task 8 §9/1): tombstone filtri yalnız ARXİV oxu yoluna tətbiq
-    // olunmuşdu. Nəticə ziddiyyətli idi — silinmiş hesabın son 90 günlük
-    // mesajları GÖRÜNÜRDÜ, 90 gündən köhnələri isə YOX.
-    //
-    // Variant (a) hər mesaj sorğusuna `LEFT JOIN deleted_uids` əlavə edərdi;
-    // mesaj oxusu ən sıx yoldur, ona görə rədd edildi. Variant (c) ziddiyyəti
-    // sadəcə sənədləşdirərdi. (b) həm GDPR-i, həm söhbət bütövlüyünü qoruyur:
-    // MƏZMUN qalır (qarşı tərəf öz tarixçəsini itirmir), KİMLİK silinir.
-    //
-    // ⚠ `author_id` da dəyişdirilir, təkcə ad yox: uid qalsaydı, o, hələ də
-    //   həmin şəxsə bağlanan identifikator olardı və anonimləşdirmə GDPR
-    //   mənasında natamam qalardı.
-    D(c).prepare(
-      `UPDATE room_messages SET author_id = ?2, author_name = ?3 WHERE author_id = ?1`,
-    ).bind(u.id, DELETED_UID, DELETED_NAME),
-    // `dm_messages`-də ad sütunu yoxdur (UI adı `users`-dan çəkir) — yalnız uid.
-    D(c).prepare('UPDATE dm_messages SET from_id = ?2 WHERE from_id = ?1').bind(u.id, DELETED_UID),
-    D(c).prepare('UPDATE dm_messages SET to_id = ?2 WHERE to_id = ?1').bind(u.id, DELETED_UID),
+    // ⚠ `username` sütunu xəritədə deyil: o, `security_events`-in ÖZ sahəsidir
+    //   (hadisə anındakı ad), uid istinadı deyil. Xəritə yalnız istifadəçi
+    //   İSTİNADLARINI idarə edir; uid `null` siyasəti ilə orada boşalır.
+    D(c).prepare("UPDATE security_events SET username = '' WHERE uid = ?").bind(u.id),
+
+    /* 🔴 QALAN HƏR ŞEY XƏRİTƏDƏN GƏLİR (`services/cascade.ts` → `USER_REFS`).
+     *
+     *   Burada nə silindiyini görmək üçün xəritəyə bax — siyahını iki yerdə
+     *   saxlamaq məhz BE-001-in şikayət etdiyi vəziyyətdir.
+     *
+     * ⚠ AUDIT-TASK-9 / D-2 (anonimləşdirmə variantı b) xəritədə davam edir:
+     *   `room_messages` / `dm_messages` sətirləri SİLİNMİR, kimliyi dəyişir —
+     *   qarşı tərəf öz söhbət tarixçəsini itirmir, GDPR isə ödənir.
+     */
+    ...cascadeStatements(D(c), u.id),
+
     D(c).prepare('DELETE FROM users WHERE id = ?').bind(u.id),
   ]);
   // AUDIT-TASK-8 §8.6 — GDPR Art. 17 (unudulmaq hüququ) arxiv üçün.
