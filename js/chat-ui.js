@@ -249,23 +249,35 @@ export function headerActions({ onSearch, onPin, pinned = false, detailsBtn, men
   if(menuItems.length){
     const mwrap = el('div', { class: 'mx-pop-wrap' });
     const menu = el('div', { class: 'mx-menu', role: 'menu', hidden: true });
+    /* 🔴 O-06 — BAYIRA-KLİK DİNLƏYİCİSİ YALNIZ MENYU AÇIQ İKƏN YAŞAYIR.
+     *
+     *   `headerActions()` hər çat/DM başlığı qurulanda çağırılır (chat.js və
+     *   dm.js). Əvvəl dinləyici məhz orada əlavə olunur, heç vaxt silinmirdi —
+     *   yəni hər söhbət keçidi bir dinləyici artırırdı və hamısı köhnə başlıq
+     *   qovşaqlarını bağlamada saxlayırdı. */
+    const close = () => {
+      if(menu.hidden) return;
+      menu.hidden = true;
+      btn.setAttribute('aria-expanded', 'false');
+      document.removeEventListener('click', close);
+    };
+    const open = () => {
+      menu.hidden = false;
+      btn.setAttribute('aria-expanded', 'true');
+      document.addEventListener('click', close);
+    };
     const btn = el('button', {
       type: 'button', class: 'ch-icon-btn', 'aria-haspopup': 'true', 'aria-expanded': 'false',
       'aria-label': t('a11y.more'), title: t('a11y.more'),
       onclick: e => {
         e.stopPropagation();
-        menu.hidden = !menu.hidden;
-        btn.setAttribute('aria-expanded', String(!menu.hidden));
+        if(menu.hidden) open(); else close();
       },
     }, el('span', { class: 'ic', 'data-icon': 'more', 'data-icon-size': '17' }));
     menuItems.forEach(it => menu.append(el('button', {
       type: 'button', role: 'menuitem', class: 'mx-menu-item' + (it.danger ? ' danger' : ''),
-      onclick: () => { menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); it.onClick(); },
+      onclick: () => { close(); it.onClick(); },
     }, el('span', { class: 'ic', 'data-icon': it.icon, 'data-icon-size': '14' }), el('span', {}, it.label))));
-    // Bayıra klik menyunu bağlayır (mesaj pop-ları ilə eyni model).
-    document.addEventListener('click', () => {
-      if(!menu.hidden){ menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); }
-    });
     mwrap.append(btn, menu);
     wrap.append(mwrap);
   }
@@ -405,6 +417,8 @@ function aiPreview(popHost, outText, onApply, close){
  *   - getContext(): son mesajları mətn kimi qaytarır (xülasə üçün)
  *   - onSummary(text): xülasəni panelə ötürür
  */
+/** Hazırda mount olunmuş kompozitorun sənəd səviyyəli bağlayıcıları (O-06). */
+let activeComposerClosers = null;
 export function enhanceComposer(composer, opts = /** @type {{getContext?:()=>string, onSummary?:(s:string)=>void, onFiles?:(f:File[])=>void}} */ ({})){
   const input = /** @type {HTMLTextAreaElement} */ (composer.querySelector('textarea'));
   const sendBtn = composer.querySelector('button');
@@ -656,14 +670,31 @@ export function enhanceComposer(composer, opts = /** @type {{getContext?:()=>str
 
   /* Bayıra klik / Escape — hər iki pop üçün.
    * ⚠ Escape SƏNƏD səviyyəsindədir: fokus pop-un içində olmaya bilər
-   *   (düymədə qalır), o halda pop-a bağlı dinləyici işləməzdi. */
-  document.addEventListener('click', () => { closeEmoji(); closeAI(); });
-  composer.addEventListener('click', e => e.stopPropagation());
-  document.addEventListener('keydown', e => {
+   *   (düymədə qalır), o halda pop-a bağlı dinləyici işləməzdi.
+   *
+   * 🔴 O-06 — ƏVVƏLKİ KOMPOZİTORUN DİNLƏYİCİLƏRİ SİLİNİR.
+   *   `enhanceComposer()` hər çat/DM açılışında yenidən çağırılır. Əvvəl hər
+   *   çağırış `document`-ə iki dinləyici əlavə edir və heç birini silmirdi;
+   *   nəticədə köhnə kompozitorların bağlamaları (pop qovşaqları, düymələr)
+   *   sessiya boyu yaddaşda qalırdı və hər Escape basışı artıq mövcud olmayan
+   *   panellər üçün də işləyirdi.
+   *
+   * ⚠ Eyni anda YALNIZ BİR kompozitor mount olunur, ona görə əvəzləmə
+   *   (silib-yenidən əlavə etmək) düzgün modeldir — say həmişə 1-dir. */
+  if(activeComposerClosers){
+    document.removeEventListener('click', activeComposerClosers.onClick);
+    document.removeEventListener('keydown', activeComposerClosers.onKey);
+  }
+  const onClick = () => { closeEmoji(); closeAI(); };
+  const onKey = e => {
     if(e.key !== 'Escape') return;
     if(!emojiPop.hidden){ closeEmoji(); emojiBtn.focus(); }
     if(!aiPop.hidden){ closeAI(); aiBtn.focus(); }
-  });
+  };
+  activeComposerClosers = { onClick, onKey };
+  document.addEventListener('click', onClick);
+  document.addEventListener('keydown', onKey);
+  composer.addEventListener('click', e => e.stopPropagation());
 
   paintIcons(composer);
   return { tools, input, sendBtn };

@@ -8,6 +8,7 @@
 //     və sosial kontekstlə zənginləşir (`teamsCount`, `mutualTeams`, `iFollow`).
 //   İkisini qarışdırmaq olmaz: kataloq nüsxəsində `settings` yoxdur.
 import { api } from './api.js';
+import { lsGet, lsSet } from './storage.js';
 import {
   state, createReport, toggleFollow, isMutual,
   fetchFollowingOf, fetchFollowersOf, canMessage, fetchUserDirectory,
@@ -684,7 +685,7 @@ function applyView(v){
   grid.classList.add('view-' + view);
   document.querySelectorAll('#userViewToggle button').forEach(b =>
     b.classList.toggle('active', b.dataset.view === view));
-  try{ localStorage.setItem(VIEW_KEY, view); }catch(e){}
+  lsSet(VIEW_KEY, view);
 }
 
 /* ═══════════════════════ FİLTR PANELİ ═══════════════════════ */
@@ -924,9 +925,7 @@ export function mountUsers(){
   renderQuick();
   updateFilterBadge();
 
-  let saved = 'grid';
-  try{ saved = localStorage.getItem(VIEW_KEY) || 'grid'; }catch(e){}
-  applyView(saved);
+  applyView(lsGet(VIEW_KEY, 'grid'));
 
   reloadDirectory();
 

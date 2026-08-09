@@ -25,10 +25,11 @@
 // ⚠ AÇAR DƏSTİ ÜÇ PAKETDƏ EYNİ OLMALIDIR — `test/i18n-packs.test.ts` bunu
 //   yoxlayır. Uyğunsuzluq SƏSSİZDİR: çatışmayan açar AZ mətnlə görünər.
 import AZ from './i18n.dict.az.js';
+import { lsGet, lsSet } from './storage.js';
 
 export const LANGS = ['az', 'en', 'ru'];
 const KEY = 'collabix_lang';
-let current = localStorage.getItem(KEY) || 'az';
+let current = lsGet(KEY, 'az');
 
 // Yüklənmiş paketlər. AZ həmişə buradadır (statik import).
 const PACKS = { az: AZ };
@@ -242,7 +243,7 @@ export function fmtRelTime(ts){
 export function setLang(lang){
   if(!LANGS.includes(lang)) return Promise.resolve();
   current = lang;
-  localStorage.setItem(KEY, lang);
+  lsSet(KEY, lang);
   document.documentElement.lang = lang;
   const apply = () => {
     if(current !== lang) return;

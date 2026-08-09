@@ -18,6 +18,7 @@ import {
 } from './util.js';
 import { toast, undoToast, showModal, closeModal, notifToast, openPopover, closePopover } from './ui.js';
 import { paintIcons } from './icon-set.js';
+import { lsGet, lsSet } from './storage.js';
 import { t, fmtRelTime, fmtDate } from './i18n.js';
 
 /* ═══════════════════════ TAKSONOMİYA ═══════════════════════
@@ -111,7 +112,7 @@ const MAX_LOADED = 400;
 /* ═══════════════════════ QLOBAL ABUNƏ ═══════════════════════ */
 
 const DESKTOP_KEY = 'collabix_notif_desktop';
-const desktopEnabled = () => localStorage.getItem(DESKTOP_KEY) === '1';
+const desktopEnabled = () => lsGet(DESKTOP_KEY) === '1';
 
 /**
  * Masaüstü bildirişi — YALNIZ tab fonda olanda.
@@ -1030,7 +1031,7 @@ async function openSettings(){
   // cihaza bağlıdır; bir cihazda verilən icazə digərində keçərli deyil).
   const deskHint = el('div', { class: 'nc-set__hint' }, t('notifs.set.ch_desktop_hint'));
   const deskRow = toggleRow(t('notifs.set.ch_desktop'), desktopEnabled(), async v => {
-    if(!v){ localStorage.setItem(DESKTOP_KEY, '0'); return true; }
+    if(!v){ lsSet(DESKTOP_KEY, '0'); return true; }
     if(!('Notification' in window)){ deskHint.textContent = t('notifs.set.ch_desktop_denied'); return false; }
     const perm = Notification.permission === 'granted'
       ? 'granted' : await Notification.requestPermission();
@@ -1038,7 +1039,7 @@ async function openSettings(){
       deskHint.textContent = t('notifs.set.ch_desktop_denied');
       return false;
     }
-    localStorage.setItem(DESKTOP_KEY, '1');
+    lsSet(DESKTOP_KEY, '1');
     return true;
   });
 

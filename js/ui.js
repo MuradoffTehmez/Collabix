@@ -3,6 +3,7 @@ import { el, clear } from './util.js';
 import { t } from './i18n.js';
 // Saf ikon qatı — `icons.js` DEYİL: o, buradan `toast` alır və dövr yaranardı.
 import { paintIcons } from './icon-set.js';
+import { lsGet, lsSet } from './storage.js';
 
 /* ---------- toast ---------- */
 export function toast(msg, type = 'ok'){
@@ -269,11 +270,11 @@ export function onThemeChange(fn){ onThemeChangeCb = fn; }
 export function getTheme(){ return document.documentElement.dataset.theme || 'dark'; }
 
 export function initTheme(){
-  applyTheme(localStorage.getItem(THEME_KEY) || 'dark');
+  applyTheme(lsGet(THEME_KEY, 'dark'));
 }
 export function setTheme(t){
   if(!THEMES.includes(t)) t = 'dark';
-  localStorage.setItem(THEME_KEY, t);
+  lsSet(THEME_KEY, t);
   applyTheme(t);
   if(onThemeChangeCb) onThemeChangeCb(t);
 }
