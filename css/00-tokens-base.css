@@ -98,38 +98,15 @@
 
 /* Breakpoint konvensiyası (RESPONSIVE.md): 360 / 480 / 768 / 1024 / 1280.
    Media query-lərdə bu dəyərlər istifadə olunur; yeni komponentlər 480 və 768-də yoxlanmalıdır. */
-:root[data-theme="matrix"] {
-  --bg: #020a04;
-  --surface: #04140a;
-  --surface-2: #07200f;
-  --border: #0e3a1c;
-  --text: #b6ffd0;
-  --muted: #4e9c68;
-  --coral: #00e676;
-  --coral2: #69f0ae;
-  --coral-dim: #062d14;
-  --teal: #00e5ff;
-  --teal-dim: #03252b;
-  --violet: #76ff03;
-  --danger: #ff5252;
-  --ok: #00e676;
-  /* Parlaq neon-yaşıl fonda tünd mətn — ağ ilə kontrast 2.2:1 idi. */
-  --on-accent: #020a04;
-  --body: 'JetBrains Mono', monospace;
-  --display: 'JetBrains Mono', monospace;
 
-  /* Post Card Design System — Matrix */
-  --card-bg: rgba(4, 20, 10, .78);
-  --card-border: rgba(0, 230, 118, .15);
-  --card-glow: rgba(0, 230, 118, .04);
-  --card-hover-glow: rgba(0, 230, 118, .08);
-  --card-radius: 20px;
-  --code-radius: 16px;
-  /* ⚠ `--code-bg` QƏSDƏN override EDİLMİR — kod səthi bütün temalarda eynidir
-     (bax `:root`-dakı izah). Əvvəlki `rgba(2,10,4,.7)` silindi. */
-  --primary: #00e676;
-  --accent: #00e5ff;
-}
+/* ⚠ `:root[data-theme="matrix"]` nişan bloku BURADAN ÇIXARILDI (2026-08-09).
+   Matrix və cyberpunk artıq LƏNGİDİLMİŞ temalardır: qaydaları
+   `css/theme-extra.css`-dədir və yalnız həmin tema seçiləndə yüklənir
+   (`js/ui.js` → `ensureExtraThemeCss()`).
+
+   ⚠ Spesifiklik sayəsində köçürmə cascade-i pozmur: `:root[data-theme=…]`
+     (0,2,0) sadə `:root` (0,1,0) qaydasını sıradan ASILI OLMADAN basır.
+     Yeni tema nişanı əlavə edəndə onu da ora yaz, bura YOX. */
 
 :root[data-theme="light"] {
   --bg: #f2f5fc;

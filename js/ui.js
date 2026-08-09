@@ -224,11 +224,40 @@ export function emptyState(icon, text){
   return node;
 }
 
-/* ---------- tema (dark → light → matrix) ---------- */
+/* ---------- tema ---------- */
 const THEME_KEY = 'collabix_theme';
+
+/** Parametrlərdəki seçicidə göstərilən BÜTÜN temalar (`js/profile.js`). */
 export const THEMES = ['dark', 'light', 'matrix', 'cyberpunk'];
+
+/**
+ * Tema DÜYMƏSİNİN dövrü — yalnız iki əsas tema.
+ *
+ * 🔴 NİYƏ (2026-08-09): əvvəl düymə dörd temanı ardıcıl gəzirdi, yəni
+ *   dark-dan light-a keçmək üçün istifadəçi matrix və cyberpunk-dan da
+ *   keçməli olurdu. İndi düymə sadəcə "tünd/açıq" açarıdır; niş temalar
+ *   Parametrlərdəki seçicidən götürülür.
+ */
+export const BASE_THEMES = ['dark', 'light'];
+
+/**
+ * CSS-i AYRICA chunk-da olan temalar (`css/theme-extra.css`).
+ * Seçilməyibsə bir bayt da endirilmir.
+ */
+const EXTRA_THEMES = ['matrix', 'cyberpunk'];
+
 // Qliflər deyil, ICONS reyestrindəki (icons.js) SVG adları.
 const THEME_ICONS = { dark: 'moon', light: 'sun', matrix: 'monitor', cyberpunk: 'bot' };
+
+// ⚠ Bir dəfə yüklənir və keşlənir: `import()` özü təkrar çağırışda eyni
+//   promise-i qaytarsa da, `??=` niyyəti açıq edir və xəta halında da
+//   təkrar-təkrar sorğu getməsinin qarşısını alır.
+let extraCssPromise = null;
+function ensureExtraThemeCss(){
+  extraCssPromise ??= import('../css/theme-extra.css')
+    .catch(e => { console.error('[tema] əlavə tema CSS-i yüklənmədi', e); });
+  return extraCssPromise;
+}
 let onThemeChangeCb = null;
 export function onThemeChange(fn){ onThemeChangeCb = fn; }
 export function getTheme(){ return document.documentElement.dataset.theme || 'dark'; }
@@ -242,9 +271,16 @@ export function setTheme(t){
   applyTheme(t);
   if(onThemeChangeCb) onThemeChangeCb(t);
 }
+/**
+ * Tema düyməsi: yalnız `dark` ↔ `light`.
+ *
+ * ⚠ Aktiv tema ƏLAVƏ temadırsa (matrix/cyberpunk) düymə onu dövrəyə salmır və
+ *   `dark`-a qaytarır. Bu qəsdlidir: düymə "tünd/açıq" açarıdır, tema seçicisi
+ *   deyil. Niş temaya qayıtmaq üçün Parametrlərdəki seçici işlədilir.
+ */
 export function toggleTheme(){
-  const cur = getTheme();
-  setTheme(THEMES[(THEMES.indexOf(cur) + 1) % THEMES.length]);
+  const i = BASE_THEMES.indexOf(getTheme());
+  setTheme(i === -1 ? 'dark' : BASE_THEMES[(i + 1) % BASE_THEMES.length]);
 }
 // ⚠ `ensureCyberpunkFont()` SİLİNDİ (2026-08-09, şrift öz-hostinqə keçdi).
 //   O, tema seçiləndə `fonts.googleapis.com`-a runtime `<link>` əlavə edirdi.
@@ -260,6 +296,13 @@ export function toggleTheme(){
 // ⚠ Parametr QƏSDƏN `theme` adlanır, `t` YOX: `t` bu modulda i18n tərcümə
 //   funksiyasıdır və parametr onu kölgələyərdi.
 function applyTheme(theme){
+  // ⚠ CSS SORĞUSU GÖZLƏNİLMİR: `data-theme` dərhal qoyulur ki, `getTheme()`,
+  //   ikon və etiket sinxron doğru olsun (çağıran kod bilavasitə ardınca oxuyur).
+  //   Vərəq gələnə qədər səhifə baza (tünd) görünüşündə qalır, sonra öz-özünə
+  //   əvəzlənir — bir gediş-gəliş, üstəlik `immutable` keşləndiyi üçün yalnız
+  //   ilk dəfə. Gözləsəydik istifadəçi düyməyə basandan sonra "heç nə olmadı"
+  //   hissi alardı.
+  if(EXTRA_THEMES.includes(theme)) ensureExtraThemeCss();
   document.documentElement.dataset.theme = theme;
   for(const id of ['appThemeBtn', 'pubThemeBtn', 'themeToggleBtn']){
     const btn = document.getElementById(id);

@@ -1,3 +1,8 @@
+/* ⚠ Bu fayldakı 5 `:root[data-theme="matrix"]` override-i `css/theme-extra.css`-ə
+   köçürüldü (2026-08-09) — matrix artıq ləngidilmiş temadır. Hər biri öz baza
+   qaydasından YÜKSƏK spesifiklikdədir, ona görə ayrı fayla keçmək qalibi
+   dəyişmir. */
+
 /* 20-feed.css — Post kartı, kod bloku, əməliyyat paneli, şərhlər, paylaş modalı
    ⚠ styles.css-dən MEXANİKİ olaraq ayrıldı (AUDIT-TASK-10 / Faza 3.4).
       Sıra DƏYİŞMƏMƏLİDİR: cascade eyni spesifiklikdə fayl sırasından asılıdır. */
@@ -222,13 +227,6 @@
     0 4px 16px rgba(0,0,0,.1);
 }
 
-:root[data-theme="matrix"] .feed-code:hover {
-  border-color: rgba(0, 230, 118, .25);
-  box-shadow:
-    0 0 0 1px rgba(0, 230, 118, .08),
-    0 0 20px rgba(0, 230, 118, .04),
-    0 4px 16px rgba(0,0,0,.1);
-}
 
 .feed-code pre {
   margin: 0;
@@ -303,11 +301,6 @@
   border: 1px solid color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
-:root[data-theme="matrix"] .code-lang-badge {
-  color: var(--accent);
-  background: rgba(0, 229, 255, .08);
-  border-color: rgba(0, 229, 255, .12);
-}
 
 :root[data-theme="light"] .code-lang-badge {
   color: var(--teal);
@@ -560,10 +553,6 @@
   border: 1px solid rgba(74, 143, 255, .1);
 }
 
-:root[data-theme="matrix"] .md-body code {
-  background: rgba(0, 230, 118, .08);
-  border-color: rgba(0, 230, 118, .12);
-}
 
 :root[data-theme="light"] .md-body code {
   background: rgba(47, 111, 224, .06);
@@ -606,10 +595,6 @@
   font-style: italic;
 }
 
-:root[data-theme="matrix"] .md-body blockquote {
-  border-left-color: var(--primary);
-  background: rgba(0, 230, 118, .04);
-}
 
 .md-body table {
   border-collapse: collapse;
@@ -1326,7 +1311,6 @@
   cursor: pointer;
   transition: filter .15s ease, transform .15s ease;
 }
-:root[data-theme="matrix"] .sc-btn { color: #04140a; }   /* parlaq yaşıl üzərində qara mətn */
 .sc-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
 .sc-btn svg { width: 15px; height: 15px; }
 

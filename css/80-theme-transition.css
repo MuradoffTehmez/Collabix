@@ -1,0 +1,41 @@
+/* 80-theme-transition.css — tema dəyişəndə qlobal keçid animasiyası.
+ *
+ * 🔴 NİYƏ AYRI FAYL (2026-08-09): bu qaydalar əvvəl `80-cyberpunk.css`-in
+ *   SONUNDA idi. Həmin fayl indi ləngidilmiş `theme-extra.css`-ə köçdü, amma
+ *   BU BÖLMƏ BÜTÜN TEMALARA aiddir (`body.theme-transitioning` sinfini
+ *   `js/ui.js` hər tema dəyişikliyində qoyur — dark↔light daxil).
+ *   Birlikdə köçsəydi, dark/light keçidi cyberpunk seçilənə qədər
+ *   SƏSSİZCƏ işləməzdi.
+ *
+ * ⚠ Buraya cyberpunk/matrix-ə xas heç nə YAZMA — onların yeri
+ *   `css/theme-extra.css`-dir. */
+
+body.theme-transitioning {
+  animation: globalThemeIntro 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+/* ⚠ `filter: blur()` QƏSDƏN SİLİNİB — yalnız `opacity` qalır.
+ *
+ *   Blur bütün `<body>`-ə tətbiq olunurdu, yəni tema dəyişəndə 400 ms boyu
+ *   HƏR KADRDA tam səhifə yenidən boyanırdı (PageSpeed: "Filter-related
+ *   property may move pixels"). `opacity` isə kompozit qatda işləyir və
+ *   eyni "yumşaq keçid" hissini zəif cihazda da kəkələmədən verir.
+ *
+ *   ⚠ `transform` ƏLAVƏ ETMƏ: `<body>`-də transform yeni containing-block
+ *     yaradır və içindəki `position: fixed` elementləri (sticky header,
+ *     modallar) sındırar. Ona görə burada yalnız `opacity` işlədilir. */
+@keyframes globalThemeIntro {
+  0% {
+    opacity: 0.6;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.theme-transitioning {
+    animation: none !important;
+  }
+}

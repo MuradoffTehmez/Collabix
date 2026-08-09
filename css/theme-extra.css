@@ -1,3 +1,85 @@
+/* theme-extra.css — ƏLAVƏ temalar: matrix + cyberpunk (2026-08-09).
+ *
+ * 🔴 BU FAYL `css/main.css`-DƏN İMPORT OLUNMUR və olunmamalıdır.
+ *   `js/ui.js` onu `import('../css/theme-extra.css')` ilə YALNIZ istifadəçi
+ *   həmin temalardan birini seçəndə yükləyir. Vite onu ayrıca CSS chunk-ı
+ *   kimi yayımlayır və runtime-da `<link>` əlavə edir.
+ *
+ *   Səbəb: əsas paketdə hər ziyarətçi işlətmədiyi iki temanın CSS-ini
+ *   endirirdi. Default tema `dark`-dır; matrix və cyberpunk yalnız
+ *   Parametrlərdən seçilir (tema düyməsi artıq yalnız dark↔light-ı dəyişir).
+ *
+ * ⚠ CASCADE: bu vərəq əsas paketdən SONRA əlavə olunur, yəni bərabər
+ *   spesifiklikdə o qalib gəlir. Təhlükəsizdir, çünki buradakı seçicilər
+ *   `[data-theme="…"]` daşıyır və baza qaydalarını onsuz da SPESİFİKLİKLƏ
+ *   basırdı — sıra fərqi nəticəni dəyişmir. `90-utilities.css`-in
+ *   `!important` atomları ilə də toqquşma yoxdur: onlar (0,1,0)-dır, buradakı
+ *   `!important` qaydaları isə daha spesifikdir. Yeganə (0,1,0) hal
+ *   `[data-theme="cyberpunk"] *` bloku idi və o, YALNIZ
+ *   `animation`/`transition` təyin edir — utilities-də belə atom yoxdur.
+ *
+ * ⚠ Qlobal tema keçidi BURADA DEYİL — `css/80-theme-transition.css`-dədir,
+ *   çünki o, dark/light üçün də lazımdır.
+ */
+
+/* ══════════════ MATRIX — nişanlar (əvvəl 00-tokens-base.css) ══════════════ */
+:root[data-theme="matrix"] {
+  --bg: #020a04;
+  --surface: #04140a;
+  --surface-2: #07200f;
+  --border: #0e3a1c;
+  --text: #b6ffd0;
+  --muted: #4e9c68;
+  --coral: #00e676;
+  --coral2: #69f0ae;
+  --coral-dim: #062d14;
+  --teal: #00e5ff;
+  --teal-dim: #03252b;
+  --violet: #76ff03;
+  --danger: #ff5252;
+  --ok: #00e676;
+  /* Parlaq neon-yaşıl fonda tünd mətn — ağ ilə kontrast 2.2:1 idi. */
+  --on-accent: #020a04;
+  --body: 'JetBrains Mono', monospace;
+  --display: 'JetBrains Mono', monospace;
+
+  /* Post Card Design System — Matrix */
+  --card-bg: rgba(4, 20, 10, .78);
+  --card-border: rgba(0, 230, 118, .15);
+  --card-glow: rgba(0, 230, 118, .04);
+  --card-hover-glow: rgba(0, 230, 118, .08);
+  --card-radius: 20px;
+  --code-radius: 16px;
+  /* ⚠ `--code-bg` QƏSDƏN override EDİLMİR — kod səthi bütün temalarda eynidir
+     (bax `:root`-dakı izah). Əvvəlki `rgba(2,10,4,.7)` silindi. */
+  --primary: #00e676;
+  --accent: #00e5ff;
+}
+
+/* ═══════════ MATRIX — komponent override-ləri (əvvəl 20-feed.css) ═════════ */
+:root[data-theme="matrix"] .feed-code:hover {
+  border-color: rgba(0, 230, 118, .25);
+  box-shadow:
+    0 0 0 1px rgba(0, 230, 118, .08),
+    0 0 20px rgba(0, 230, 118, .04),
+    0 4px 16px rgba(0,0,0,.1);
+}
+:root[data-theme="matrix"] .code-lang-badge {
+  color: var(--accent);
+  background: rgba(0, 229, 255, .08);
+  border-color: rgba(0, 229, 255, .12);
+}
+:root[data-theme="matrix"] .md-body code {
+  background: rgba(0, 230, 118, .08);
+  border-color: rgba(0, 230, 118, .12);
+}
+:root[data-theme="matrix"] .md-body blockquote {
+  border-left-color: var(--primary);
+  background: rgba(0, 230, 118, .04);
+}
+:root[data-theme="matrix"] .sc-btn { color: #04140a; }   /* parlaq yaşıl üzərində qara mətn */
+
+/* ═════════════════ CYBERPUNK (əvvəl 80-cyberpunk.css) ════════════════════ */
 /* 80-cyberpunk.css — Cyberpunk tema override-ları + qlobal tema keçidi
    ⚠ styles.css-dən MEXANİKİ olaraq ayrıldı (AUDIT-TASK-10 / Faza 3.4).
       Sıra DƏYİŞMƏMƏLİDİR: cascade eyni spesifiklikdə fayl sırasından asılıdır. */
@@ -478,38 +560,5 @@
   [data-theme="cyberpunk"] *::after {
     animation: none !important;
     transition: none !important;
-  }
-}
-
-/* =========================================
-   QLOBAL TEMA KEÇİDİ (BÜTÜN TEMALAR ÜÇÜN)
-   ========================================= */
-body.theme-transitioning {
-  animation: globalThemeIntro 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-}
-
-/* ⚠ `filter: blur()` QƏSDƏN SİLİNİB — yalnız `opacity` qalır.
- *
- *   Blur bütün `<body>`-ə tətbiq olunurdu, yəni tema dəyişəndə 400 ms boyu
- *   HƏR KADRDA tam səhifə yenidən boyanırdı (PageSpeed: "Filter-related
- *   property may move pixels"). `opacity` isə kompozit qatda işləyir və
- *   eyni "yumşaq keçid" hissini zəif cihazda da kəkələmədən verir.
- *
- *   ⚠ `transform` ƏLAVƏ ETMƏ: `<body>`-də transform yeni containing-block
- *     yaradır və içindəki `position: fixed` elementləri (sticky header,
- *     modallar) sındırar. Ona görə burada yalnız `opacity` işlədilir. */
-@keyframes globalThemeIntro {
-  0% {
-    opacity: 0.6;
-  }
-
-  100% {
-    opacity: 1;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  body.theme-transitioning {
-    animation: none !important;
   }
 }

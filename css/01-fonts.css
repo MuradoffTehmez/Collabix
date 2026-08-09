@@ -27,10 +27,13 @@
  * ⚠ `font-display: swap` saxlanılır: mətn dərhal fallback şriftlə görünür,
  *   şrift gələndə əvəzlənir. `block` etsək FCP şriftə girov qalardı.
  *
- * ⚠ Orbitron YALNIZ `[data-theme="cyberpunk"]` altında istinad olunur
- *   (`css/cyberpunk_fonts.css`). Brauzer istifadə olunmayan `@font-face`-i
- *   ENDİRMİR, ona görə burada elan etmək `js/ui.js`-dəki runtime `<link>`
- *   inyeksiyasını lazımsız edir (o kod silindi) və default temada 0 bayt qiyməti var.
+ * ⚠ Orbitron YALNIZ cyberpunk temasında istinad olunur: `css/theme-extra.css`
+ *   onu `--body` nişanı ilə təyin edir. Brauzer istifadə olunmayan
+ *   `@font-face`-i ENDİRMİR, ona görə burada elan etmək `js/ui.js`-dəki runtime
+ *   `<link>` inyeksiyasını lazımsız edir (o kod silindi) və default temada
+ *   0 bayt qiyməti var.
+ *   (Köhnə `css/cyberpunk_fonts.css` silindi — o, HEÇ VAXT import olunmurdu,
+ *    yəni ölü fayl idi; şrift seçimi onsuz da nişanlardan gəlirdi.)
  *
  * ⚠ Fayllar `public/fonts/` → `dist/fonts/` (hash-sız, sabit URL). Uzunmüddətli
  *   keş `public/_headers`-dədir; `wrangler.jsonc` `/fonts/*`-ı Worker-dən

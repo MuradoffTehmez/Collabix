@@ -41,5 +41,6 @@
     // `js/` ES modullarıdır və `.js` uzantısı ilə idxal edir.
     "allowImportingTsExtensions": false
   },
-  "include": ["js/**/*.js", "js/dom-shims.d.ts"]
+  // ⚠ `.d.ts` faylları AÇIQ sadalanır — naxış yalnız `.js` götürür.
+  "include": ["js/**/*.js", "js/dom-shims.d.ts", "js/asset-modules.d.ts"]
 }

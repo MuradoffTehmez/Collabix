@@ -57,8 +57,13 @@
 @import './70-security-panels.css';
 @import './75-touch.css';
 
-/* Tema override-ları */
-@import './80-cyberpunk.css';
+/* Tema keçidi (BÜTÜN temalar üçün — dark/light daxil).
+   ⚠ Əvvəl burada `80-cyberpunk.css` var idi. Cyberpunk və matrix qaydaları
+     `css/theme-extra.css`-ə köçdü və artıq YALNIZ həmin tema seçiləndə
+     yüklənir (`js/ui.js` → `ensureExtraThemeCss()`). Qlobal keçid animasiyası
+     isə burada QALDI, çünki dark↔light dəyişikliyində də işləyir.
+   ⚠ `theme-extra.css`-i buraya İMPORT ETMƏ — bütün qazanc itər. */
+@import './80-theme-transition.css';
 
 /* Sonrakı modullar (AUDIT-TASK-11) */
 @import './85-teams.css';
