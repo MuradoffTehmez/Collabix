@@ -304,14 +304,18 @@ function applyTheme(theme){
   //   hissi alardı.
   if(EXTRA_THEMES.includes(theme)) ensureExtraThemeCss();
   document.documentElement.dataset.theme = theme;
-  for(const id of ['appThemeBtn', 'pubThemeBtn', 'themeToggleBtn']){
+
+  // ⚠ `themeToggleBtn` SİYAHIDAN ÇIXARILDI: Parametrlər səhifəsindəki tək
+  //   düymə dörd düyməli `#themePicker` ilə əvəz olundu (bax index.html).
+  //   Qalan ikisi topbar-dakı sürətli tünd/açıq açarıdır.
+  for(const id of ['appThemeBtn', 'pubThemeBtn']){
     const btn = document.getElementById(id);
     const slot = btn?.querySelector('.ic');
     if(!slot) continue;
     slot.dataset.icon = THEME_ICONS[theme] || 'moon';
     slot.querySelector('svg')?.remove();
 
-    // Parametrlərdəki düymənin MƏTN etiketi də var və əvvəl STATİK idi
+    // Düymənin MƏTN etiketi də var və əvvəl STATİK idi
     // (`data-i18n="set.theme.dark"`) — tema dəyişsə belə HƏMİŞƏ "Tünd" yazırdı.
     // İndi cari temaya görə yenilənir. Açar `data-i18n`-ə də YAZILIR ki, dil
     // dəyişəndə `applyI18n` onu öz mexanizmi ilə təzələsin.
@@ -321,6 +325,21 @@ function applyTheme(theme){
       lbl.textContent = t('set.theme.' + theme);
     }
   }
+
+  // Parametrlərdəki dörd düyməli seçici — seçili tema işarələnir.
+  //
+  // ⚠ MƏHZ BURADA, `initSettings`-də YOX: tema `setTheme()` ilə profil
+  //   modalındakı seçicidən, klaviaturadan və ya boot-dan da dəyişə bilər.
+  //   İşarələməni yalnız kliki tutan yerdə etsək, digər yollarda seçici
+  //   köhnə temanı göstərməkdə davam edərdi.
+  //
+  // ⚠ `?.` MƏCBURİDİR: seçici yalnız `#page-settings` markup-ındadır, publik
+  //   səhifədə ümumiyyətlə mövcud deyil, `applyTheme` isə orada da işləyir.
+  document.getElementById('themePicker')
+    ?.querySelectorAll('[data-theme-pick]').forEach(b => {
+      b.setAttribute('aria-checked', String(b.dataset.themePick === theme));
+    });
+
   paintIcons(document);
 
   // Ümumi animasiya keçidi (bütün temalar üçün)

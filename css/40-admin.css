@@ -134,6 +134,52 @@
   gap: 12px;
 }
 
+/* Tema seçicisi (Parametrlər → Görünüş).
+   ⚠ `.theme-toggle-row`-dan AYRI sinifdir: orada tək düymə sağa yığılırdı
+     (`space-between`), burada isə dörd düymə sətri sətrə sığmayanda aşağı
+     keçməlidir — eyni sinfi genişlətsək köhnə tək düyməli sıra pozulardı. */
+.theme-pick-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.theme-pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.theme-pick-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  /* ⚠ 44px toxunuş hədəfi (`75-touch.css` qaydası) — şaquli padding onu
+     qəsdən təmin edir; azaltma. */
+  padding: 9px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: .8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.theme-pick-btn:hover {
+  border-color: var(--primary);
+}
+
+/* Seçili tema. ⚠ Fərq YALNIZ rənglə verilmir: `aria-checked` ekran oxuyucu
+   üçün, qalın çərçivə isə rəng görməyən istifadəçi üçündür (AUDIT-UI). */
+.theme-pick-btn[aria-checked="true"] {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
+  color: var(--primary);
+}
+
 .btn-danger {
   padding: 10px 16px;
   border-radius: 9px;

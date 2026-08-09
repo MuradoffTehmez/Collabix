@@ -1,13 +1,37 @@
 // Parametrlər: tema, şifrə dəyişmə, data ixracı, hesab silmə.
 import { changePassword, deleteAccount } from './auth.js';
 import { state } from './store.js';
-import { toggleTheme, toast, confirmDialog, showModal, closeModal } from './ui.js';
+// ⚠ `toggleTheme` ARTIQ İMPORT OLUNMUR: Parametrlər səhifəsi indi dörd temalı
+//   seçicidən istifadə edir və birbaşa `setTheme()` çağırır. `toggleTheme`
+//   yalnız topbar-dakı sürətli tünd/açıq düyməsinə qalıb.
+import { setTheme, getTheme, toast, confirmDialog, showModal, closeModal } from './ui.js';
 import { el } from './util.js';
 import { authErrMessage } from './util.js';
 import { t } from './i18n.js';
 
 export function initSettings(){
-  document.getElementById('themeToggleBtn').addEventListener('click', toggleTheme);
+  // Tema seçicisi — DÖRD tema (index.html `#themePicker`).
+  //
+  // ⚠ Əvvəl burada `#themeToggleBtn` var idi və `toggleTheme` dörd temanı
+  //   ardıcıl gəzirdi. Düymə dark↔light açarına çevriləndən sonra matrix və
+  //   cyberpunk bu səhifədən əlçatmaz qalmışdı — indi hər tema öz düyməsindədir.
+  //
+  // ⚠ Hadisə DELEQASİYA ilə tutulur: `applyTheme` düymələrin `aria-checked`
+  //   vəziyyətini yeniləyir, amma düymələrin ÖZLƏRİ dəyişmir, ona görə tək
+  //   dinləyici kifayətdir və hər tema üçün ayrıca bağlama lazım deyil.
+  // ⚠ Seçili temanın İŞARƏLƏNMƏSİ burada DEYİL, `ui.js` → `applyTheme`-dədir:
+  //   tema profil modalından, boot-dan və topbar düyməsindən də dəyişir, ona
+  //   görə işarələmə temanın tətbiq olunduğu TƏK yerdə olmalıdır.
+  const picker = document.getElementById('themePicker');
+  picker.addEventListener('click', e => {
+    const btn = e.target.closest('[data-theme-pick]');
+    if(!btn) return;
+    setTheme(btn.dataset.themePick);
+  });
+  // Boot sırası: `initTheme()` `initSettings()`-dən ƏVVƏL işləyir, yəni ilk
+  // `applyTheme` çağırışı seçicini görsə də hələ heç nə bağlanmayıb. Vəziyyəti
+  // burada bir dəfə bərpa edirik.
+  setTheme(getTheme());
 
   // Data ixracı (TASK-8 / Bənd 10) — SERVERDƏN, tam əhatə ilə.
   //

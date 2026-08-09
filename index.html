@@ -1226,9 +1226,31 @@
       <div class="settings-grid">
       <div class="settings-block">
         <h3><span class="ic" data-icon="sun" data-icon-size="16"></span><span data-i18n="set.appr"></span></h3>
-        <div class="theme-toggle-row">
+        <!-- Tema seçicisi — DÖRD tema da BURADADIR.
+             ⚠ Əvvəl burada tək `#themeToggleBtn` var idi və o, dörd temanı
+               ardıcıl gəzirdi. Tema düyməsi dark↔light açarına çevriləndə
+               (perf: matrix/cyberpunk CSS-i artıq tələb üzrə yüklənir) matrix
+               və cyberpunk BU SƏHİFƏDƏN ƏLÇATMAZ qaldı — yeganə dörd temalı
+               seçici profil redaktə modalının içində idi, yəni praktiki olaraq
+               gizli. Ona görə seçim məhz bura, istifadəçinin baxdığı yerə
+               qoyulur. Topbar-dakı düymələr (appThemeBtn/pubThemeBtn) sürətli
+               tünd/açıq açarı olaraq qalır. -->
+        <div class="theme-pick-row">
           <span class="u-font-size-86rem u-color-muted" data-i18n="set.theme"></span>
-          <button class="btn-mini" id="themeToggleBtn"><span class="ic"></span><span class="lbl"></span></button>
+          <div class="theme-pick" id="themePicker" role="radiogroup" data-i18n-aria="set.theme">
+            <button type="button" class="theme-pick-btn" data-theme-pick="dark" role="radio" aria-checked="false">
+              <span class="ic" data-icon="moon" data-icon-size="15"></span><span data-i18n="set.theme.dark"></span>
+            </button>
+            <button type="button" class="theme-pick-btn" data-theme-pick="light" role="radio" aria-checked="false">
+              <span class="ic" data-icon="sun" data-icon-size="15"></span><span data-i18n="set.theme.light"></span>
+            </button>
+            <button type="button" class="theme-pick-btn" data-theme-pick="matrix" role="radio" aria-checked="false">
+              <span class="ic" data-icon="monitor" data-icon-size="15"></span><span data-i18n="set.theme.matrix"></span>
+            </button>
+            <button type="button" class="theme-pick-btn" data-theme-pick="cyberpunk" role="radio" aria-checked="false">
+              <span class="ic" data-icon="bot" data-icon-size="15"></span><span data-i18n="set.theme.cyberpunk"></span>
+            </button>
+          </div>
         </div>
       </div>
       <div class="settings-block">
