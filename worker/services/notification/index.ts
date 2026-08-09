@@ -15,13 +15,27 @@ export class NotificationService {
    *   • istifadəçinin gözlədiyi semantika budur: susdurduqdan SONRA gələnlər
    *     görünmür, ƏVVƏL gələnlər siyahıda qalır (Slack/GitHub davranışı).
    */
+  /**
+   * @param eventKey İDEMPOTENTLİK açarı (BE-003/BE-004, miqrasiya 0055).
+   *
+   * ⚠ İSTƏYƏ BAĞLIDIR və bu, qəsdlidir: bildirişlərin çoxu təkrarlana BİLƏR
+   *   (eyni adam eyni posta iki şərh yazsa, iki bildiriş gəlməlidir). Açarı
+   *   YALNIZ təkrarı arzuolunmaz olan yollar verir — məsələn "bu istifadəçi bu
+   *   posta reaksiya verdi".
+   *
+   * ⚠ Açar veriləndə `INSERT OR IGNORE` işləyir və unikal indeks
+   *   (`ux_notifications_event`) təkrarı ATOMİK bağlayır. Bu, `if (!prev)`
+   *   yoxlamasından fərqlidir: yoxlama iki paralel sorğuda hər ikisinə "yaz"
+   *   deyirdi, indeks isə ikincisini bazada dayandırır.
+   */
   async notify(
     toUid: string,
     fromId: string,
     fromName: string,
     type: string,
     text: string,
-    postId: string | null = null
+    postId: string | null = null,
+    eventKey: string | null = null,
   ): Promise<boolean> {
     if (toUid === fromId) return false;
 
@@ -37,13 +51,20 @@ export class NotificationService {
     const groupKey = groupKeyFor(type, fromId, postId);
     if (await this.isMuted(toUid, type, fromId, groupKey)) return false;
 
-    await this.env.DB.prepare(
-      `INSERT INTO notifications
-         (id, user_id, type, from_id, from_name, post_id, text, read, created_at, archived, priority, group_key)
-       VALUES (?,?,?,?,?,?,?,0,?,0,?,?)`,
-    ).bind(uuid(), toUid, type, fromId, fromName, postId, text, now(), priorityOf(type), groupKey).run();
+    // ⚠ `OR IGNORE` yalnız `event_key` veriləndə məna daşıyır: indeks şərtidir
+    //   (`WHERE event_key IS NOT NULL`), yəni açarsız sətirlər heç vaxt
+    //   toqquşmur və davranış əvvəlki kimi qalır.
+    const res = await this.env.DB.prepare(
+      `INSERT OR IGNORE INTO notifications
+         (id, user_id, type, from_id, from_name, post_id, text, read, created_at, archived, priority, group_key, event_key)
+       VALUES (?,?,?,?,?,?,?,0,?,0,?,?,?)`,
+    ).bind(uuid(), toUid, type, fromId, fromName, postId, text, now(), priorityOf(type), groupKey, eventKey).run();
 
-    return true;
+    // ⚠ `changes === 0` → təkrar idi. `false` qaytarmaq VACİBDİR: çağıran
+    //   (`shared.ts` → `notify`) bu dəyərə görə realtime "yenilə" siqnalı
+    //   göndərir; təkrarda siqnal göndərsək istifadəçinin siyahısı səbəbsiz
+    //   yenilənərdi.
+    return Number(res.meta?.changes || 0) > 0;
   }
 
   /**

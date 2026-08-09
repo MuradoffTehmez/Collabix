@@ -48,10 +48,17 @@ export const D = (c: Ctx) => c.env.DB;
  *   qaytarırsa (tərcih söndürülüb və ya istifadəçi yoxdur) boş yerə siqnal
  *   getməməlidir.
  */
-export async function notify(c: Ctx, toUid: string, type: string, text: string, postId: string | null = null) {
+/**
+ * @param eventKey İdempotentlik açarı — bax `NotificationService.notify`.
+ *   Verilsə, eyni açarla ikinci bildiriş BAZADA bloklanır (BE-003/BE-004).
+ */
+export async function notify(
+  c: Ctx, toUid: string, type: string, text: string,
+  postId: string | null = null, eventKey: string | null = null,
+) {
   if (!c.user) return;
   const wrote = await new NotificationService(c.env)
-    .notify(toUid, c.user.id, c.user.name, type, text, postId);
+    .notify(toUid, c.user.id, c.user.name, type, text, postId, eventKey);
   if (wrote) await userPush(c, toUid, { t: 'notif' });
 }
 

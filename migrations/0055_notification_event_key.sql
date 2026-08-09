@@ -1,0 +1,39 @@
+-- 0055_notification_event_key.sql
+--
+-- BACKEND AUDIT / BE-003 + BE-004 — bildiriş təkrarının STRUKTUR həlli (1/2).
+--
+-- ════════════════════════════════════════════════════════════════════════════
+-- PROBLEM
+-- ════════════════════════════════════════════════════════════════════════════
+--
+-- `notifications` cədvəlində heç bir unikallıq açarı yox idi: hər yazı yeni
+-- `uuid()` ilə sadə `INSERT` edirdi. İki ayrı qüsur sinfi yaranırdı:
+--
+--   BE-003 (təsdiqlənmiş yarış): `postReactionPut()` əvvəl `SELECT` ilə əvvəlki
+--   reaksiyanı oxuyur, sonra `if (!prev) notify(...)` edir. Eyni anda gələn iki
+--   sorğu hər ikisi `prev = null` görür və İKİ bildiriş yazılır.
+--
+--   BE-004 (struktur boşluq): idempotentlik açarı olmadığı üçün İSTƏNİLƏN yeni
+--   bildiriş yolu eyni tələyə düşür. `group_key` sütunu var idi, lakin o, UI
+--   qruplaşdırması üçündür və üzərində indeks YOX idi.
+--
+-- ════════════════════════════════════════════════════════════════════════════
+-- HƏLL
+-- ════════════════════════════════════════════════════════════════════════════
+--
+-- `event_key` — çağıranın verdiyi idempotentlik açarı. Layihədə bu naxış artıq
+-- var: XP və reputasiya `(uid, source, ref_id)` üzrə şərti unikal indekslə
+-- qorunur (0031). Bildiriş indi EYNİ modeli işlədir, yəni kod bazasında iki
+-- fərqli idempotentlik üsulu yaranmır.
+--
+-- ⚠ BU FAYLDA YALNIZ SÜTUN ƏLAVƏSİ VAR.
+--   `ADD COLUMN` üçün SQLite-da `IF NOT EXISTS` yoxdur, yəni ifadə təkrar
+--   icrada SINIR. Faylda başqa ifadə olsaydı, o, heç vaxt işləməzdi —
+--   `0031_prd_rbac.sql`-də məhz bu baş vermişdi (BE-006): bir qorumasız
+--   `ADD COLUMN` faylı dayandırırdı və ardınca gələn 64 sətirlik rol/icazə
+--   seed-i icra olunmurdu. İndeks ona görə ayrıca `0056`-dadır və
+--   `scripts/check-migrations.mjs` bu qaydanı yeni miqrasiyalarda qoruyur.
+--
+-- ⚠ MÖVCUD SƏTİRLƏR TOXUNULMUR: hamısında `event_key` NULL qalır.
+
+ALTER TABLE notifications ADD COLUMN event_key TEXT;

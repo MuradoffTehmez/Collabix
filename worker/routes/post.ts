@@ -631,7 +631,12 @@ export async function likePut(c: Ctx, id: string) {
   ).bind(id, c.user!.id, now()).run();
   if (r.meta.changes > 0) {
     await D(c).prepare('UPDATE posts SET like_count = like_count + 1 WHERE id = ?').bind(id).run();
-    await notify(c, post.author_id, 'like', 'paylaşımını bəyəndi', id);
+    // ⚠ EYNİ AÇAR `postReactionPut` ilə: iki yazı yolu var və hər ikisi eyni
+    //   hadisəni ifadə edir ("bu istifadəçi bu posta reaksiya verdi"). Fərqli
+    //   açar versək, bəyənməni bir yoldan götürüb digərindən qaytarmaq ikinci
+    //   bildiriş yaradardı.
+    await notify(c, post.author_id, 'like', 'paylaşımını bəyəndi', id,
+      `react:${id}:${c.user!.id}`);
     // FAZA A2 / PRD §8 — "Like" reputasiya mənbəyidir.
     //
     // ⚠ `refId` = `${postId}:${bəyənən}` — idempotentlik açarı. Eyni istifadəçi
@@ -1139,7 +1144,18 @@ export async function postReactionPut(c: Ctx, id: string) {
        ON CONFLICT(post_id, user_id) DO UPDATE SET type = excluded.type`,
   ).bind(id, c.user!.id, b.type, now()).run();
   await syncPostLike(c, id, prev?.type === 'like', b.type === 'like');
-  if (!prev) await notify(c, post.author_id, 'like', 'paylaşımına reaksiya verdi', id);
+  // 🔴 BE-003: `if (!prev)` YARIŞLIDIR — eyni anda gələn iki sorğu hər ikisi
+  //   `prev = null` görür və İKİ bildiriş yazılırdı. Şərt oxunaqlıq üçün qalır
+  //   (adətən bir sorğu qənaət edir), lakin ƏSL qoruma `eventKey`-dədir:
+  //   unikal indeks ikinci yazını bazada dayandırır.
+  //
+  // ⚠ Açar `post:reaksiya verən` — XP və reputasiyanın işlətdiyi açarla EYNİ
+  //   formadadır (`${id}:${c.user!.id}`), yəni "bir istifadəçi, bir post"
+  //   qaydası hər üç sistemdə eyni mənanı verir.
+  if (!prev) {
+    await notify(c, post.author_id, 'like', 'paylaşımına reaksiya verdi', id,
+      `react:${id}:${c.user!.id}`);
+  }
   return json({ ok: true, type: b.type });
 }
 
