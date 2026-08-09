@@ -60,7 +60,7 @@ Pull Request göndərməzdən öncə zəhmət olmasa [Töhfə Təlimatını (Con
 
 Əgər hər hansı bir təhlükəsizlik zəifliyi taparsanız, xahiş edirik bunu ictimai olaraq İssue bölməsində açmayın. Məsuliyyətli bildiriş (responsible disclosure) üçün [Təhlükəsizlik Siyasətimizi (Security Policy)](SECURITY.md) oxuyun.
 
-## 📄 Lisenziya
+## 📄 Lisenziya 
 
 Bu layihə MIT Lisenziyası altında lisenziyalaşdırılıb - detallar üçün [LICENSE](LICENSE) faylına baxa bilərsiniz.
 
