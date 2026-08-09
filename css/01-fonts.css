@@ -1,0 +1,57 @@
+/* 01-fonts.css — ÖZ-HOSTİNQ şrift bəyanları (perf düzəlişi, 2026-08-09).
+ *
+ * 🔴 NİYƏ ÖZ-HOSTİNQ (istehsalda ölçülüb):
+ *   Əvvəl `index.html` render-BLOKLAYAN xarici stylesheet yükləyirdi:
+ *     <link href="https://fonts.googleapis.com/css2?family=...">
+ *   Bu, kritik yola İKİ əlavə üçüncü-tərəf origin-i salırdı:
+ *     1) fonts.googleapis.com  — DNS + TCP + TLS, sonra CSS (render bloklayır)
+ *     2) fonts.gstatic.com     — DNS + TCP + TLS, sonra woff2
+ *   Yəni şriftlər ancaq İKİ ardıcıl bağlantı qurulduqdan sonra başlayırdı.
+ *   `preconnect` bunu yumşaldır, LƏĞV ETMİR.
+ *
+ *   İndi hər şey eyni origin-dədir: HTML-in artıq açıq olan H2 bağlantısı
+ *   işlədilir, əlavə DNS/TLS yoxdur, `@font-face` isə əsas CSS paketinin
+ *   İÇİNDƏDİR — yəni ayrıca CSS sorğusu da yoxdur.
+ *
+ * ⚠ CSP: bu köçürmə `worker/index.ts`-də `style-src`/`font-src` direktivlərini
+ *   `'self'`-ə daraltmağa imkan verdi. Xarici şrift origin-i artıq icazəli
+ *   DEYİL — buraya `https://fonts.g...` URL-i geri qaytarsan, SƏSSİZCƏ bloklanır.
+ *
+ * ⚠ ALT DƏSTLƏR (subset) QƏSDƏN SAXLANILIR: `unicode-range` sayəsində brauzer
+ *   YALNIZ səhifədə həqiqətən işlənən diapazonu endirir.
+ *     • latin      — hər dildə lazımdır
+ *     • latin-ext  — AZ üçün MƏCBURİ (ə U+0259, ğ U+011F, ş U+015F, ı U+0131)
+ *     • cyrillic   — RU interfeysi üçün
+ *   Greek/Vietnamese dəstləri ATILDI (layihədə işlənmir).
+ *
+ * ⚠ `font-display: swap` saxlanılır: mətn dərhal fallback şriftlə görünür,
+ *   şrift gələndə əvəzlənir. `block` etsək FCP şriftə girov qalardı.
+ *
+ * ⚠ Orbitron YALNIZ `[data-theme="cyberpunk"]` altında istinad olunur
+ *   (`css/cyberpunk_fonts.css`). Brauzer istifadə olunmayan `@font-face`-i
+ *   ENDİRMİR, ona görə burada elan etmək `js/ui.js`-dəki runtime `<link>`
+ *   inyeksiyasını lazımsız edir (o kod silindi) və default temada 0 bayt qiyməti var.
+ *
+ * ⚠ Fayllar `public/fonts/` → `dist/fonts/` (hash-sız, sabit URL). Uzunmüddətli
+ *   keş `public/_headers`-dədir; `wrangler.jsonc` `/fonts/*`-ı Worker-dən
+ *   KƏNARLAŞDIRIR ki, şrift sorğusu Worker-i oyatmasın.
+ */
+
+/* ── Inter ── */
+@font-face{font-family:'Inter';font-style:normal;font-weight:400 700;font-display:swap;src:url(/fonts/inter-cyrillic-ext.woff2) format('woff2');unicode-range:U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;}
+@font-face{font-family:'Inter';font-style:normal;font-weight:400 700;font-display:swap;src:url(/fonts/inter-cyrillic.woff2) format('woff2');unicode-range:U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;}
+@font-face{font-family:'Inter';font-style:normal;font-weight:400 700;font-display:swap;src:url(/fonts/inter-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;}
+@font-face{font-family:'Inter';font-style:normal;font-weight:400 700;font-display:swap;src:url(/fonts/inter-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;}
+
+/* ── Space Grotesk ── */
+@font-face{font-family:'Space Grotesk';font-style:normal;font-weight:400 700;font-display:swap;src:url(/fonts/space-grotesk-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;}
+@font-face{font-family:'Space Grotesk';font-style:normal;font-weight:400 700;font-display:swap;src:url(/fonts/space-grotesk-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;}
+
+/* ── JetBrains Mono ── */
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:400 600;font-display:swap;src:url(/fonts/jetbrains-mono-cyrillic-ext.woff2) format('woff2');unicode-range:U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:400 600;font-display:swap;src:url(/fonts/jetbrains-mono-cyrillic.woff2) format('woff2');unicode-range:U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:400 600;font-display:swap;src:url(/fonts/jetbrains-mono-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:400 600;font-display:swap;src:url(/fonts/jetbrains-mono-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;}
+
+/* ── Orbitron ── */
+@font-face{font-family:'Orbitron';font-style:normal;font-weight:400 800;font-display:swap;src:url(/fonts/orbitron-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;}

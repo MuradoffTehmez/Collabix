@@ -9,11 +9,20 @@
   // edge-dən verilir — Worker-i işə salmır (sürət + pulsuz kvota qənaəti).
   // Qalan HƏR ŞEY (HTML sənədi, /api/*, /files/*) Worker-dən keçir ki, security
   // header-lər (CSP daxil) əsl HTML cavabına da tətbiq olunsun.
+  //
+  // 🔴 `/fonts/*` da kənarlaşdırılıb (2026-08-09): öz-hostinq woff2 faylları
+  //   statikdir və Worker-dən HEÇ NƏ almır. Siyahıya salmasaq hər şrift sorğusu
+  //   Worker-i oyadardı — pulsuz kvotaya yazılan, tamamilə lüzumsuz icra.
+  //
+  // ⚠ BURADAN KƏNARLAŞDIRILAN HƏR PREFİKS ÜÇÜN `Cache-Control` MƏSULİYYƏTİ
+  //   `public/_headers`-a KEÇİR. Worker-in `path.startsWith('/assets/')`
+  //   budağı bu konfiq səbəbindən ÖLÜ KODDUR — orada başlıq qoymaq işə yaramır.
+  //   Məhz bu tələ istehsalda `/assets/*`-ı bir müddət `max-age=0`-la verdi.
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/**", "!/assets/*"]
+    "run_worker_first": ["/**", "!/assets/*", "!/fonts/*"]
   },
 
   // D1 — əsas verilənlər bazası

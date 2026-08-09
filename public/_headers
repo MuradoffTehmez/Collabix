@@ -1,0 +1,53 @@
+# Cloudflare Workers Static Assets — `_headers`
+#
+# 🔴 NİYƏ BU FAYL LAZIMDIR (2026-08-09 istehsal ölçməsi):
+#   `wrangler.jsonc` → `assets.run_worker_first: ["/**", "!/assets/*"]`.
+#   Yəni `/assets/*` Worker-ə HEÇ VAXT ÇATMIR — birbaşa Cloudflare-in asset
+#   serveri verir. Nəticədə `worker/index.ts`-dəki
+#     if (path.startsWith('/assets/')) → 'public, max-age=31536000, immutable'
+#   budağı ÖLÜ KODDUR: bir dəfə də icra olunmur.
+#
+#   Faktiki istehsal cavabı belə idi:
+#     GET /assets/index-<hash>.js
+#     Cache-Control: public, max-age=0, must-revalidate
+#
+#   Yəni fayl adı MƏZMUN HASH-i daşısa da brauzer onu keşdən işlətmirdi:
+#   hər açılışda 230 kB JS + 62 kB CSS üçün şəbəkə gediş-gəlişi (ən yaxşı
+#   halda 304) tələb olunurdu. "Sayt hər dəfə yavaş açılır"-ın əsas kökü.
+#
+# ⚠ `immutable` YALNIZ hash-li adlar üçün təhlükəsizdir. `/assets/*` altındakı
+#   hər fayl Vite tərəfindən `[name]-[hash].[ext]` kimi yazılır (vite.config.ts
+#   → rollupOptions.output). Məzmun dəyişəndə ad da dəyişir, ona görə köhnə
+#   keş heç vaxt "yanlış" cavab vermir.
+#
+# ⚠ Kök faylları (favicon*, manifest.webmanifest) hash DAŞIMIR — `publicDir`
+#   onları olduğu kimi köçürür (bax vite.config.ts şərhi). Onlara `immutable`
+#   VERİLMİR; qısa keş + revalidate kifayətdir, əks halda ikon dəyişəndə
+#   istifadəçidə bir il köhnə qalardı.
+#
+# ⚠ `index.html` BURADA YOXDUR: HTML sənədi Worker-dən keçir və orada
+#   `Cache-Control: no-cache` qoyulur (deploy dərhal çatsın deyə).
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Öz-hostinq şriftlər. Ad hash DAŞIMIR, amma məzmun sabitdir: bunlar Google
+# Fonts-un versiyalanmış (v20/v22/v24/v35) statik woff2 fayllarıdır və yerində
+# DƏYİŞDİRİLMİR — şrift yenilənsə fayl adı da dəyişir (bax css/01-fonts.css).
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/favicon.svg
+  Cache-Control: public, max-age=86400
+
+/favicon.png
+  Cache-Control: public, max-age=86400
+
+/favicon-192.png
+  Cache-Control: public, max-age=86400
+
+/favicon-512.png
+  Cache-Control: public, max-age=86400
+
+/manifest.webmanifest
+  Cache-Control: public, max-age=86400

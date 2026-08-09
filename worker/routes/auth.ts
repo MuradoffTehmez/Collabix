@@ -188,9 +188,21 @@ export async function login(c: Ctx) {
   const row = await D(c).prepare('SELECT * FROM users WHERE username = ?').bind(username).first<any>();
   // M-2: iterasiya SƏTİRDƏN gəlir. Köhnə hesab 100 000 ilə yazılıb;
   // sabitlə (600 000) yoxlasaq düzgün parol da uyğunsuz heş verərdi.
-  const ok = row
-    ? await verifyPassword(String(b.pass || ''), row.pass_hash, row.pass_salt, Number(row.pass_iter) || PBKDF2_ITER_LEGACY)
-    : false;
+  //
+  // 🔴 PERF (2026-08-09): `mfaEnabled` sorğusu PBKDF2 ilə PARALEL gedir.
+  //   PBKDF2 100 000 iterasiya SAF CPU-dur (~80 ms) və bu müddətdə Worker
+  //   şəbəkə gözləmir. `mfaEnabled` isə saf şəbəkədir (D1 Buxarestdə, ~60 ms).
+  //   Ardıcıl icra edəndə ikisi toplanırdı; indi böyüyü qədər çəkir.
+  //
+  // ⚠ Sıra vacibdir: `mfaEnabled` YALNIZ `row` varsa çağırılır — əks halda
+  //   mövcud olmayan istifadəçi üçün əlavə sorğu getməklə cavab müddəti
+  //   dəyişər və bu, hesab sadalama (enumeration) siqnalına çevrilərdi.
+  const [ok, mfaOn] = row
+    ? await Promise.all([
+      verifyPassword(String(b.pass || ''), row.pass_hash, row.pass_salt, Number(row.pass_iter) || PBKDF2_ITER_LEGACY),
+      mfaEnabled(c.env, row.id),
+    ])
+    : [false, false];
   if (!row || !ok) {
     // Hadisə HƏM mövcud olmayan istifadəçi, HƏM yanlış parol üçün yazılır —
     // əks halda jurnalın özü "bu ad mövcuddur" siqnalı verərdi (user enumeration).
@@ -203,31 +215,18 @@ export async function login(c: Ctx) {
   }
   if (row.blocked) return err('Hesabınız admin tərəfindən bloklanıb.', 403, 'account_blocked');
 
-  // seriya (streak) yeniləməsi
-  const day = todayStr();
-  if (row.last_active_day !== day) {
-    const diff = row.last_active_day
-      ? Math.round((new Date(day).getTime() - new Date(row.last_active_day).getTime()) / 86400000) : 99;
-    const streak = diff === 1 ? (row.streak || 0) + 1 : 1;
-    const days = fromJSON<Record<string, number>>(row.activity_days, {});
-    days[day] = (days[day] || 0) + 1;
-    await D(c).prepare('UPDATE users SET streak = ?, last_active_day = ?, last_active_at = ?, activity_days = ? WHERE id = ?')
-      .bind(streak, day, now(), JSON.stringify(days), row.id).run();
-  }
-  // Coğrafi anomaliya: əvvəlki ölkə ilə müqayisə (yalnız jurnal, blok deyil).
-  await checkGeoChange(c.env, c.req, row.id, row.last_country || '');
-  const country = reqInfo(c.req).country;
-  if (country && country !== row.last_country) {
-    await D(c).prepare('UPDATE users SET last_country = ? WHERE id = ?').bind(country, row.id).run();
-  }
   // 2FA aktivdirsə parol TƏK BAŞINA kifayət etmir — sessiya HƏLƏ verilmir.
   // Challenge KV-də "parolu bilirəm" faktını daşıyır; ikinci addım
   // `/api/auth/mfa`-dadır. Cavabda istifadəçi məlumatı QAYTARILMIR.
-  if (await mfaEnabled(c.env, row.id)) {
+  //
+  // 🔴 PERF: bu yoxlama YUXARI QALDIRILDI (əvvəl streak/geo yazılarından SONRA
+  //   idi). MFA açıq hesabda həmin yazılar İSTİFADƏSİZ görülürdü — istifadəçi
+  //   hələ giriş etməmişdi, amma `streak`, `activity_days` və `last_country`
+  //   artıq yenilənmişdi. Yəni bu, həm bir neçə RTT qənaətidir, həm də
+  //   davranış düzəlişi: uğursuz 2FA-da statistika daha şişmir.
+  if (mfaOn) {
     return json({ mfaRequired: true, challenge: await issueMfaChallenge(c, row.id) });
   }
-
-  await logSecurityEvent(c.env, c.req, { type: 'login_ok', uid: row.id, username });
 
   // M-2 TƏDRİCİ KÖÇÜRMƏ: açıq parol MƏHZ İNDİ əlimizdədir — başqa heç bir
   // nöqtədə onu yenidən heşləmək mümkün deyil (bazada yalnız heş var).
@@ -238,11 +237,77 @@ export async function login(c: Ctx) {
       .catch(e => console.error('pass_iter köçürməsi alınmadı', e)),
   );
 
-  // PRD §6 "Gündəlik giriş +5" — gün ərzində bir dəfə (bax `grantDailyLogin`).
-  await grantDailyLogin(c, String(row.id));
+  // 🔴 PERF: `login_ok` jurnalı və coğrafi anomaliya `waitUntil`-a keçdi.
+  //   İkisi də TELEMETRİYADIR — cavabın məzmununa təsir etmir, heç bir qərar
+  //   onları GÖZLƏMİR. Əvvəl `await` idilər və istifadəçi hər girişdə iki
+  //   Buxarest gediş-gəlişini gözləyirdi.
+  //
+  // ⚠ `recentFailures` sayğacı `login_ok`-u OXUYUR (uğurlu girişdə CAPTCHA
+  //   sayğacını sıfırlayır). `waitUntil` yazını LƏĞV ETMİR, yalnız cavabdan
+  //   sonraya salır — növbəti giriş ayrıca sorğudur və o vaxta yazı çoxdan
+  //   bitib. Uğursuz girişin jurnalı isə QƏSDƏN `await` qalır (aşağıda):
+  //   o, birbaşa CAPTCHA astanasını qidalandırır.
+  const country = reqInfo(c.req).country;
+  c.ctx.waitUntil(Promise.all([
+    logSecurityEvent(c.env, c.req, { type: 'login_ok', uid: row.id, username }),
+    checkGeoChange(c.env, c.req, row.id, row.last_country || ''),
+  ]).then(() => undefined).catch(e => console.error('login telemetriyası yazılmadı', e)));
 
-  const pair = await createSession(c.env, c.req, row.id);
-  const fresh = await D(c).prepare('SELECT * FROM users WHERE id = ?').bind(row.id).first();
+  // PRD §6 "Gündəlik giriş +5" — gün ərzində bir dəfə (bax `grantDailyLogin`).
+  //
+  // 🔴 PERF: XP verilməsi və sessiya yaradılması bir-birindən ASILI DEYİL,
+  //   ona görə paralel gedir. XP MÜTLƏQ sessiyadan əvvəl bitməlidir ki,
+  //   aşağıdakı `RETURNING *` artıq yenilənmiş `xp` dəyərini qaytarsın —
+  //   `Promise.all` bunu təmin edir (ikisi də bitir, sonra UPDATE gedir).
+  const [, pair] = await Promise.all([
+    grantDailyLogin(c, String(row.id)),
+    createSession(c.env, c.req, row.id),
+  ]);
+
+  // Seriya (streak) + sonuncu ölkə + `fresh` istifadəçi — TƏK sorğuda.
+  //
+  // 🔴 PERF: əvvəl BURADA ÜÇ ayrıca gediş-gəliş var idi:
+  //     1) UPDATE users SET streak, last_active_day, last_active_at, activity_days
+  //     2) UPDATE users SET last_country            (yalnız ölkə dəyişəndə)
+  //     3) SELECT * FROM users WHERE id = ?         (cavab üçün təzə sətir)
+  //   Üçü də EYNİ sətrə toxunur. İndi bir `UPDATE ... RETURNING *`-dır:
+  //   dəyişməyən sütun öz dəyəri ilə geri yazılır (`COALESCE` deyil, JS-də
+  //   hesablanmış dəyər), `RETURNING` isə SELECT-i lazımsız edir.
+  //
+  // ⚠ `RETURNING *` D1/SQLite-da dəstəklənir və `.first()` ilə oxunur.
+  //   `.run()` işlətsən sətir GERİ QAYITMAZ və `mapUser(undefined)` çökər.
+  // ⚠ DAVRANIŞ EYNİ SAXLANILIR: köhnə kod bu dörd sütunu YALNIZ gün dəyişəndə
+  //   yazırdı. Ona görə gün dəyişməyibsə hər sütuna ÖZ mövcud dəyəri geri
+  //   yazılır — sorğu tək olur, amma nəticə fərqlənmir. `last_active_at`-i hər
+  //   girişdə təzələmək cazibədar görünür, lakin bu, tələb olunmayan davranış
+  //   dəyişikliyidir (profil "sonuncu aktivlik" göstəricisi ondan oxuyur).
+  const day = todayStr();
+  const newDay = row.last_active_day !== day;
+  let streak = row.streak || 0;
+  let activityDays = row.activity_days;
+  let lastActiveAt = row.last_active_at;
+  if (newDay) {
+    const diff = row.last_active_day
+      ? Math.round((new Date(day).getTime() - new Date(row.last_active_day).getTime()) / 86400000) : 99;
+    streak = diff === 1 ? (row.streak || 0) + 1 : 1;
+    const days = fromJSON<Record<string, number>>(row.activity_days, {});
+    days[day] = (days[day] || 0) + 1;
+    activityDays = JSON.stringify(days);
+    lastActiveAt = now();
+  }
+  // ⚠ `last_country`: köhnə kod ölkə BOŞDURSA sütuna toxunmurdu (NULL NULL
+  //   qalırdı). `country || row.last_country` eyni nəticəni verir — `''`-ə
+  //   çevirmə YOXDUR, əks halda NULL-ı boş sətirlə əvəz edərdik.
+  const fresh = await D(c).prepare(
+    `UPDATE users
+        SET streak = ?1, last_active_day = ?2, last_active_at = ?3,
+            activity_days = ?4, last_country = ?5
+      WHERE id = ?6
+      RETURNING *`,
+  ).bind(
+    streak, newDay ? day : row.last_active_day, lastActiveAt, activityDays,
+    country || row.last_country, row.id,
+  ).first();
   return withSession({ user: mapUser(fresh, true) }, pair);
 }
 

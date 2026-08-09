@@ -532,8 +532,13 @@ const CSP = [
   //   TABE DEYİL və işləməyə davam edir — `js/util.js`-dəki `el()` builder-i
   //   və `applyPercentWidths()` məhz bu yoldan istifadə edir. Bloklanan şey
   //   ƏSL XSS vektorudur: parse olunan HTML-dəki inline stil.
-  "style-src 'self' https://fonts.googleapis.com",
-  "font-src https://fonts.gstatic.com",
+  // ⚠ 2026-08-09: `https://fonts.googleapis.com` (style-src) və
+  //   `https://fonts.gstatic.com` (font-src) SİLİNDİ — şriftlər öz-hostinqə
+  //   keçdi (`css/01-fonts.css`, `public/fonts/`). Bunlar artıq sadəcə
+  //   lazımsız deyil, hər hansı Google Fonts `<link>`-inin geri qayıtmasını
+  //   SƏSSİZ SINIQ kimi göstərmək üçün QƏSDƏN daraldılıb.
+  "style-src 'self'",
+  "font-src 'self'",
   "img-src 'self' data: blob:",
   "connect-src 'self'",
   `frame-src ${TURNSTILE_ORIGIN}`,
@@ -943,7 +948,14 @@ async function handleRequest(
     const res = await env.ASSETS.fetch(request);
     const isHtml = (res.headers.get('Content-Type') || '').includes('text/html');
     const out = withSecurityHeaders(res, isHtml);
-    // Hashed asset-lər üçün uzun cache
+    // ⚠ ÖLÜ BUDAQ (2026-08-09-da aşkarlandı, QƏSDƏN saxlanılır).
+    //   `wrangler.jsonc` → `run_worker_first: ["/**", "!/assets/*", "!/fonts/*"]`
+    //   olduğu üçün `/assets/*` bura HEÇ VAXT ÇATMIR. Aylarla belə idi və
+    //   nəticədə istehsalda hash-li JS/CSS `max-age=0, must-revalidate` ilə
+    //   gedirdi — yəni keş faktiki olaraq sönülü idi.
+    //   ƏSL MƏNBƏ İNDİ: `public/_headers`.
+    //   Budaq yalnız `run_worker_first` gələcəkdə genişlənsə davranışın
+    //   dəyişməməsi üçün qalır; başlığı DƏYİŞDİRSƏN `_headers`-ı da dəyiş.
     if (path.startsWith('/assets/')) {
       const o = new Response(out.body, out);
       o.headers.set('Cache-Control', 'public, max-age=31536000, immutable');

@@ -18,6 +18,11 @@
  *   qaydasından sonra gəlməlidir (bax həmin faylın başlıq şərhi).
  */
 
+/* Öz-hostinq `@font-face` bəyanları — HƏR ŞEYDƏN ƏVVƏL.
+ * `@font-face` cascade-də iştirak etmir, ona görə yuxarıdakı "sıra bağlayıcıdır"
+ * qaydası pozulmur; ən başda olması yalnız oxunaqlıq üçündür. */
+@import './01-fonts.css';
+
 /* Nişanlar, reset, tipoqrafiya, əsas layout */
 @import './00-tokens-base.css';
 

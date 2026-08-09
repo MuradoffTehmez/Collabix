@@ -20,11 +20,18 @@
 <!-- Performance Resource Hints
      ⚠ `cdnjs.cloudflare.com` dns-prefetch-i SİLİNDİ: kod bazasında cdnjs-ə
        heç bir istinad yoxdur (yoxlanılıb) — ölü hint boş yerə DNS açırdı.
-     ⚠ `crossorigin` yalnız gstatic-də olmalıdır: şrift FAYLLARI CORS ilə
-       gəlir, googleapis-dəki CSS isə yox. Hər ikisinə qoysaq brauzer AYRI
-       bağlantı hovuzu açır və preconnect öz məqsədini itirir. -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+     ⚠ `fonts.googleapis.com` / `fonts.gstatic.com` preconnect-ləri də SİLİNDİ
+       (2026-08-09): şriftlər artıq öz-hostinqdədir (`css/01-fonts.css`), yəni
+       həmin origin-lərə HEÇ BİR sorğu getmir. Qalan preconnect ölü bağlantı
+       açardı — preconnect büdcəsini yeyər, heç nə qazandırmazdı.
+
+     ⚠ Şriftlər ÜÇÜN preload: `@font-face` əsas CSS paketinin içindədir, yəni
+       brauzer onu ancaq CSS yüklənib parse olunandan SONRA kəşf edir. Bu iki
+       fayl LCP mətnini çəkir (gövdə şrifti, AZ hərfləri ilə), ona görə kəşfi
+       qabaqlayırıq. `crossorigin` MƏCBURİDİR: şrift sorğusu anonim CORS
+       rejimindədir və atributsuz preload İKİNCİ, ayrı yükləmə yaradar. -->
+<link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/inter-latin-ext.woff2" as="font" type="font/woff2" crossorigin>
 
 <!-- SEO: Hreflang for multi-language -->
 <link rel="alternate" hreflang="az" href="https://collabix.muradofftehmez01.workers.dev/">
@@ -73,17 +80,12 @@
      onsuz da elan olunub. Təkrar elan yeni bağlantı yaratmır, sadəcə
      PageSpeed-in "no more than 4 preconnect" büdcəsini yeyirdi. -->
 
-<!-- Fonts
-     ⚠ `Orbitron` BU SİYAHIDA DEYİL: o, yalnız cyberpunk temasında işlənir və
-       `js/ui.js`-dəki `ensureCyberpunkFont()` onu tema seçiləndə yükləyir.
-       Default `dark` istifadəçisi 11.5 KiB + bir sorğu qazanır.
-     ⚠ Space Grotesk-də `800` YOXDUR: təkbaşına sorğu HTTP 400 verir, birləşmiş
-       sorğuda isə Google onu SƏSSİZCƏ atırdı (cavabda yalnız 400–700 gəlir).
-       CSS-dəki `font-weight:800` onsuz da brauzer tərəfindən sintez olunur,
-       ona görə keçərsiz çəki sorğudan çıxarıldı.
-     ⚠ `wght@a..b` diapazon sintaksisi bayt qazandırmır (ölçülüb: eyni fayl,
-       eyni ölçü) — yalnız URL-i qısaldır və çəki aralığını dəqiq ifadə edir. -->
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=Inter:wght@400..700&family=JetBrains+Mono:wght@400..600&display=swap" rel="stylesheet">
+<!-- Fonts — XARİCİ `<link>` YOXDUR (2026-08-09 perf düzəlişi).
+     Bütün `@font-face` bəyanları `css/01-fonts.css`-dədir və aşağıdakı
+     `css/main.css` paketinin içində gəlir. Səbəb və subset seçimi həmin faylın
+     başlığında izah olunub. Orbitron da oradadır: brauzer istifadə olunmayan
+     `@font-face`-i endirmədiyi üçün cyberpunk şrifti hələ də yalnız tema
+     seçiləndə yüklənir — amma artıq JS inyeksiyası olmadan. -->
 
 <!-- Styles — AUDIT-TASK-10 / Faza 3.4: monolit `styles.css` (182 KB) 19 modula
      bölündü. `css/main.css` yalnız sıralı `@import` barrel-idir; Vite onları

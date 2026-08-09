@@ -133,25 +133,37 @@ export async function recentFailures(
   const since = now() - windowMs;
   const ip = reqInfo(req).ip;
   try {
-    // 1) Pəncərə daxilində sonuncu uğurlu giriş — ayrıca IP və ad üçün.
-    const ok = await env.DB.prepare(
-      `SELECT
-         COALESCE(MAX(CASE WHEN ip = ?1 THEN created_at END), 0)       AS ip_ok,
-         COALESCE(MAX(CASE WHEN username = ?2 THEN created_at END), 0) AS user_ok
-       FROM security_events
-       WHERE type = 'login_ok' AND created_at > ?3 AND (ip = ?1 OR username = ?2)`,
-    ).bind(ip, username, since).first<any>();
-    const ipSince = Math.max(since, Number(ok?.ip_ok || 0));
-    const userSince = Math.max(since, Number(ok?.user_ok || 0));
-
-    // 2) Yalnız həmin andan sonrakı uğursuzluqlar sayılır.
+    // 🔴 PERF (2026-08-09): əvvəl bu funksiya İKİ ARDICIL D1 sorğusu edirdi —
+    //   ikincisi birincinin nəticəsini (`ipSince`/`userSince`) bind edirdi, ona
+    //   görə paralelləşdirmək və ya `batch()`-a yığmaq mümkün deyildi.
+    //   D1 primary Buxarestdədir (OTP/EEUR), Worker isə istifadəçinin PoP-unda:
+    //   hər gediş-gəliş ~50-70 ms. `login` yolunun HƏR çağırışında (uğurlu və
+    //   uğursuz) bu, boş yerə bir tam RTT idi.
+    //
+    //   İndi CTE ilə TƏK sorğudur: `ok` alt-sorğusu sonuncu uğurlu girişi
+    //   hesablayır, xarici SELECT isə onu cross-join ilə oxuyub uğursuzları
+    //   sayır. Məntiq HƏRFİ HƏRFİNƏ eynidir.
+    //
+    // ⚠ `MAX(?3, ok.ip_ok)` — SQLite-da İKİ arqumentli `max()` SKALYAR
+    //   funksiyadır (aqreqat deyil). Bir arqumentlə yazsan səssizcə aqreqata
+    //   çevrilər və sayğac tamamilə yanlış olar.
+    //
+    // ⚠ D1 bind qaydası: bağlanan dəyərlərin sayı ƏN BÖYÜK `?n` indeksinə
+    //   BƏRABƏR olmalıdır — burada 3 parametr, ən böyük indeks `?3`.
     const row = await env.DB.prepare(
-      `SELECT
-         SUM(CASE WHEN ip = ?1       AND created_at > ?4 THEN 1 ELSE 0 END) AS by_ip,
-         SUM(CASE WHEN username = ?2 AND created_at > ?5 THEN 1 ELSE 0 END) AS by_user
-       FROM security_events
-       WHERE type = 'login_failed' AND created_at > ?3 AND (ip = ?1 OR username = ?2)`,
-    ).bind(ip, username, since, ipSince, userSince).first<any>();
+      `WITH ok AS (
+         SELECT
+           COALESCE(MAX(CASE WHEN ip = ?1 THEN created_at END), 0)       AS ip_ok,
+           COALESCE(MAX(CASE WHEN username = ?2 THEN created_at END), 0) AS user_ok
+         FROM security_events
+         WHERE type = 'login_ok' AND created_at > ?3 AND (ip = ?1 OR username = ?2)
+       )
+       SELECT
+         SUM(CASE WHEN e.ip = ?1       AND e.created_at > MAX(?3, ok.ip_ok)   THEN 1 ELSE 0 END) AS by_ip,
+         SUM(CASE WHEN e.username = ?2 AND e.created_at > MAX(?3, ok.user_ok) THEN 1 ELSE 0 END) AS by_user
+       FROM security_events e, ok
+       WHERE e.type = 'login_failed' AND e.created_at > ?3 AND (e.ip = ?1 OR e.username = ?2)`,
+    ).bind(ip, username, since).first<any>();
     return Math.max(Number(row?.by_ip || 0), Number(row?.by_user || 0));
   } catch { return 0; }
 }
