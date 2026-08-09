@@ -133,7 +133,12 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: true,
     target: 'esnext',
-    minify: 'esbuild',
+    // ⚠ `'esbuild'` DEYİL (Vite 8): Vite artıq esbuild-i daşımır — bundler
+    //   Rolldown, minifier isə OXC-dir. `minify: 'esbuild'` qalsaydı build
+    //   `Cannot find package 'esbuild'` ilə çökərdi. Yan qazanc: esbuild
+    //   ümumiyyətlə asılılıq ağacından çıxdı və onun dev-server məsləhəti
+    //   (GHSA, moderate) da bağlandı.
+    minify: true,
     sourcemap: false,
     cssCodeSplit: true,
     modulePreload: {
@@ -141,12 +146,20 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Vendor libraries
-          vendor: ['marked', 'dompurify'],
-          // Qeyd: köhnə `firebase` manual-chunk-ı silindi — layihə Cloudflare
-          // (Workers + D1 + R2 + KV) üzərindədir, firebase asılılığı yoxdur.
-          // Qalıq konfiq hər build-də boş chunk yaradırdı.
+        // ⚠ FUNKSİYA FORMASI MƏCBURİDİR (Vite 8 / Rolldown).
+        //   Əvvəl obyekt forması idi (`{ vendor: ['marked', 'dompurify'] }`) —
+        //   o, Rollup-a xasdır. Vite 8 bundler kimi Rolldown işlədir və build
+        //   `TypeError: manualChunks is not a function` ilə çökür.
+        //
+        // ⚠ `node_modules/` yoxlaması qəsdəndir: sadəcə ad üzrə uyğunlaşdırsaq
+        //   layihənin öz `marked`/`dompurify` adlı faylı (əgər yaransa) səhvən
+        //   vendor chunk-ına düşərdi.
+        //
+        // Qeyd: köhnə `firebase` manual-chunk-ı silindi — layihə Cloudflare
+        // (Workers + D1 + R2 + KV) üzərindədir, firebase asılılığı yoxdur.
+        manualChunks(id: string) {
+          if (/node_modules[\\/](marked|dompurify)[\\/]/.test(id)) return 'vendor';
+          return undefined;
         },
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',

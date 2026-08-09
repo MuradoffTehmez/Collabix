@@ -159,9 +159,15 @@ export function closeModal(){
   if(onCloseCb){ const cb = onCloseCb; onCloseCb = null; cb(); }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+/* ⚠ `readyState` YOXLAMASI MƏCBURİDİR (`js/app.js`-dəki `onReady` ilə eyni
+   səbəb): modul kodu DOMContentLoaded-dən SONRA icra olunsa sadə dinləyici
+   heç vaxt işə düşmür və modal fonuna klik onu bağlamaz. Vite 8-in chunk
+   bölgüsündən sonra bu, real olaraq baş verdi. */
+const bindModalBackdrop = () => {
   modalBg().addEventListener('click', e => { if(e.target.id === 'modalBg') closeModal(); });
-});
+};
+if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindModalBackdrop, { once: true });
+else bindModalBackdrop();
 
 /* Escape = bağla, Tab = modalın içində dövr et (fokus tələsi).
    Sənəd səviyyəsində, `capture` fazasında: modal açıqkən altdakı səhifənin

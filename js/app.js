@@ -487,7 +487,31 @@ function setBadge(ids, count){
 // qoysaq, məhz boot xətaları (ən kritikləri) tutulmamış qalardı.
 initErrorBoundary();
 initTheme();
-document.addEventListener('DOMContentLoaded', () => {
+/**
+ * Boot-u qeyd edən köməkçi.
+ *
+ * 🔴 NİYƏ SADƏ `addEventListener('DOMContentLoaded')` KİFAYƏT ETMİR
+ *    (2026-08-09-da istehsalda üzə çıxdı): modul skriptləri adətən
+ *    DOMContentLoaded-dən ƏVVƏL icra olunur, ona görə köhnə yazılış illərlə
+ *    işləyirdi. Vite 8 (Rolldown) paketi daha çox chunk-a bölür və giriş
+ *    kodunun bir hissəsi hadisə ARTIQ BAŞ VERDİKDƏN sonra icra olunmağa
+ *    başladı. Dinləyici gec qeyd olunduğu üçün HEÇ VAXT işə düşmədi:
+ *      • `watchAuthState` çağırılmadı, yəni `/api/auth/me` ümumiyyətlə
+ *        sorğulanmadı,
+ *      • sessiya qurulmadı və istifadəçi daxil olsa belə publik səhifədə
+ *        qaldı — onun başlığı isə sənədlə birlikdə sürüşür.
+ *    Qüsur TAMAMİLƏ SƏSSİZ idi: nə xəta, nə rədd edilmiş promise — sadəcə
+ *    icra olunmayan kod.
+ *
+ * ⚠ Yeni boot kodu HƏMİŞƏ bu köməkçidən keçməlidir; birbaşa
+ *   `addEventListener('DOMContentLoaded')` yazmaq eyni tələni geri qaytarır.
+ */
+function onReady(fn){
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn, { once: true });
+  else fn();
+}
+
+onReady(() => {
   // Statik markup-dakı `[data-icon]` yuvalarını SVG ilə doldur (AUDIT-UI).
   // `icons-dirty` — tema dəyişəndə ui.js göndərir (ora import etmək dövr yaradardı).
   paintIcons();
