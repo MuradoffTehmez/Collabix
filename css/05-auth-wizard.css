@@ -351,15 +351,42 @@
   min-height: 100vh;
 }
 
+/* 🔴 TƏTBİQ QABIĞI: SƏNƏD DEYİL, MƏZMUN SCROLL OLUR (2026-08-09).
+ *
+ *   Əvvəl `#app` `min-height: 100vh` idi və SƏNƏDİN ÖZÜ sürüşürdü. Header və
+ *   sidebar `position: sticky` ilə "sabit" görünürdü, amma bu, yalnız
+ *   yaxınlaşdırma idi:
+ *     • mobil-də ünvan sətri gizlənəndə/açılanda başlıq tullanırdı,
+ *     • sidebar yalnız `.app-row` görünən sahədə olduqca yapışırdı,
+ *     • uzun səhifədə footer məzmunla birlikdə sürüşürdü.
+ *
+ *   İndi qabıq viewport hündürlüyünə KİLİDLƏNİR və tək sürüşən element
+ *   `.main`-dır (bax `10-app-shell.css`). Header/sidebar layout-la yerində
+ *   qalır — `sticky` fəndinə ehtiyac yoxdur.
+ *
+ * ⚠ `100dvh` MƏCBURİDİR (`100vh` yalnız geri-dönmədir): mobil brauzerdə `vh`
+ *   ünvan sətrini nəzərə almır və qabıq ekrandan daşırdı.
+ *
+ * ⚠ NƏTİCƏ: `#app` daxilində `window.scrollY` HƏMİŞƏ 0-dır. Sənəd sürüşməsinə
+ *   bağlı kod (məs. `public.js`-dəki "yuxarı qayıt" düyməsi və oxu-tərəqqi
+ *   zolağı) YALNIZ publik səhifədə işləyir — orada sənəd hələ də sürüşür.
+ *   Tətbiq daxilində sürüşməyə qulaq asmaq lazım olsa hədəf `.main` olmalıdır.
+ */
 #app.active {
   display: flex;
   flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
 }
 
 .app-row {
   display: flex;
   flex: 1;
+  /* ⚠ `min-height: 0` flex uşağının məzmuna görə şişməsinin qarşısını alır;
+     `overflow: hidden` isə sürüşməni İÇƏRİDƏKİ `.main`-a həvalə edir. */
   min-height: 0;
+  overflow: hidden;
 }
 
 /* ══════ Turnstile yuvası ══════

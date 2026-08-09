@@ -438,12 +438,60 @@ export function renderMessageList(box, msgs, ctx){
   return shown.length < msgs.length ? msgs.length - shown.length : 0;
 }
 
+/* 🔴 TOXUNUŞDA PANELİ AÇAN JEST (2026-08-09 mobil düzəlişi).
+ *
+ *   Toxunuş cihazında `:hover` yoxdur, ona görə əməliyyat paneli əvvəl CSS ilə
+ *   HƏMİŞƏ görünürdü. Panel balonun üstündə üzdüyü üçün hər mesaj bir
+ *   əvvəlkinin mətnini örtürdü — söhbət oxunmurdu. İndi panel yalnız balona
+ *   toxunanda açılır.
+ *
+ * ⚠ İNTERAKTİV ELEMENTLƏR İSTİSNADIR: link, düymə, giriş sahəsi və kod bloku
+ *   öz işini görməlidir. Onlara toxunuş paneli AÇMIR, əks halda linki açmaq
+ *   istəyən istifadəçi əvvəlcə paneli açardı.
+ *
+ * ⚠ SIRA: `document`-dəki dinləyicilər QEYDİYYAT ardıcıllığı ilə işləyir.
+ *   Ümumi `closeAllPops` BU İŞLƏYİCİDƏN ƏVVƏL qeydə alınmalıdır — əks halda
+ *   biz paneli açırıq, o isə dərhal arxamızca bağlayır (ölçüldü: `open=0`).
+ *   Ona görə `bindMessagePopClosers()`-də əvvəlcə `closeAllPops`, sonra bu.
+ */
+const isTouch = () =>
+  typeof matchMedia === 'function' && matchMedia('(hover: none)').matches;
+
+function onTouchTapMessage(e){
+  if(!isTouch()) return;
+  const msg = e.target.closest?.('.msg');
+  if(!msg) return;
+  // Panelin ÖZÜNƏ toxunuş onu bağlamamalıdır (düymələr öz işini görür).
+  if(e.target.closest('.msg-actions')) return;
+  // ⚠ `pre` VAR, `code` YOXDUR: `pre` öz daxilində yana sürüşən kod blokudur və
+  //   ona toxunuş sürüşdürmə jestidir. Sətir daxilindəki `code` isə adi mətndir
+  //   — onu da istisna etsək kod qeyd olunan mesajda panel heç vaxt açılmazdı.
+  if(e.target.closest('a, button, input, textarea, select, pre, .msg-link-card')) return;
+  // ⚠ `wasOpenOnTap` TUTMA (capture) fazasında yazılır — bura çatanda
+  //   `closeAllPops` artıq bütün panelləri bağlayıb, yəni vəziyyəti buradan
+  //   oxumaq mümkün deyil. Bu dəyər olmadan ikinci toxunuş paneli BAĞLAMAZDI.
+  if(!wasOpenOnTap) msg.classList.add('actions-open');
+}
+
+/** Klikdən ƏVVƏLKİ vəziyyət: hədəf mesajın paneli açıq idimi? */
+let wasOpenOnTap = false;
+function recordTapState(e){
+  wasOpenOnTap = !!e.target.closest?.('.msg')?.classList.contains('actions-open');
+}
+
 /** Bayıra klik / Escape / sürüşmə hər açıq mesaj pop-unu bağlayır. */
 let popCloserBound = false;
 export function bindMessagePopClosers(){
   if(popCloserBound) return;
   popCloserBound = true;
+  // ⚠ ÜÇ MƏRHƏLƏ, SIRASI BAĞLAYICIDIR:
+  //   1) TUTMA fazası — kliki heç kim emal etməmiş vəziyyəti yaz.
+  //   2) ümumi bağlayıcı — hər şeyi bağla (bayıra klik davranışı dəyişmir).
+  //   3) toxunuş işləyicisi — hədəf mesajı aç (1-ci addımdakı vəziyyətə görə).
+  //   Tərsinə qeyd etsək panel açılan kimi bağlanır (ölçülüb).
+  document.addEventListener('click', recordTapState, { capture: true });
   document.addEventListener('click', closeAllPops);
+  document.addEventListener('click', onTouchTapMessage);
   document.addEventListener('keydown', e => { if(e.key === 'Escape') closeAllPops(); });
   /* ⚠ SÜRÜŞMƏDƏ BAĞLANIR: pop `position: fixed`-dir, yəni siyahı ilə birlikdə
    *   sürüşmür və açıq qalsaydı lövbərindən qoparaq "havada" asılardı.

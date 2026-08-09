@@ -19,6 +19,36 @@
  * Əvvəl `display:flex` idi və detallar paneli üçün yer yox idi. Grid seçildi:
  * panel açılıb-bağlananda yalnız sütun şablonu dəyişir, uşaqlara toxunulmur →
  * `transition` yalnız `grid-template-columns` üzərində olur, layout sıçramır. */
+/* 🔴 ÇAT SƏHİFƏLƏRİ QALAN HÜNDÜRLÜYÜ TAM TUTUR (2026-08-09).
+ *
+ *   Əvvəl hündürlük `calc(100dvh - 190px)` / `calc(100dvh - 210px)` idi —
+ *   header, başlıq, doldurma və footer üçün ƏLDƏ HESABLANMIŞ çıxılma. Bu
+ *   rəqəmlər sınaqdan keçmiş təxminlər idi və hər dəyişiklikdə (mobil alt
+ *   naviqasiya, başlıq doldurması) yenidən yanılırdı: kompozitor görünən
+ *   sahədən aşağı düşür, footer isə mesajların üstünə minirdi (mobil şəkillər).
+ *
+ *   İndi `.main` sütun-flex-dir (bax `10-app-shell.css`), çat səhifəsi
+ *   `flex: 1` ilə qalan yeri alır və `.chat-wrap` onu doldurur. Sehrli rəqəm
+ *   YOXDUR — ölçü layout-dan gəlir.
+ *
+ * ⚠ `min-height: 0` hər səviyyədə lazımdır: onsuz flex uşağı məzmununa görə
+ *   şişir və daxili `overflow-y: auto` heç vaxt işə düşmür. */
+.main > #page-chat.active,
+.main > #page-dm.active {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+#page-chat.active > .chat-wrap,
+#page-dm.active > .chat-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  /* Sehrli `calc()` hündürlüklərini ləğv edir (20-feed.css / 60-responsive.css). */
+  height: auto;
+}
+
 .chat-wrap {
   display: grid;
   grid-template-columns: 288px minmax(0, 1fr) 0;
@@ -534,6 +564,27 @@
   background: var(--bg);
   /* Sürüşmə çat qutusunda qalır, səhifəni sürükləmir (`scroll-behavior`). */
   overscroll-behavior: contain;
+
+  /* 🔴 ÜFÜQİ SÜRÜŞMƏ BAĞLANIR (2026-08-09 mobil düzəlişi).
+   *
+   *   `20-feed.css` burada `overflow-y: auto` verir. CSS qaydasına görə bir ox
+   *   `visible` olmayan kimi DİGƏRİ də `auto`-ya çevrilir — yəni `overflow-x`
+   *   səssizcə `auto` olurdu. Nəticədə uzun kod sətri və ya geniş cədvəl
+   *   BÜTÜN söhbət siyahısını yana sürüşdürürdü: mobil ekranda balonlar sola
+   *   qaçıb kəsilirdi və altda ikinci sürüş zolağı yaranırdı (şəkillərdə var).
+   *
+   * ⚠ Məzmun İTMİR: kod bloku öz daxilində `overflow-x: auto`-dur, yəni geniş
+   *   kod hələ də yana sürüşür — sadəcə söhbətin ÖZÜ yerində qalır. */
+  overflow-x: hidden;
+}
+
+/* ⚠ `min-width: 0` — flex/grid uşağının default `min-width: auto` dəyəri onu
+   ƏN GENİŞ məzmununa (məs. sarılmayan kod sətrinə) görə şişirdir və balonun
+   `max-width` qaydasını keçərsiz edir. Daşmanın əsl kökü budur; yuxarıdakı
+   `overflow-x: hidden` yalnız qalan halların qoruyucusudur. */
+.chat-messages .msg,
+.chat-messages .msg-body {
+  min-width: 0;
 }
 
 /* Mesaj baloncuğu — daha yumşaq künclər və aydın sahiblik istiqaməti. */
@@ -924,13 +975,30 @@
 /* `.actions-open` — pop AÇIQ olduqda panel görünən qalır.
    ⚠ Bu olmadan siçan balondan çıxan kimi panel yox olurdu, hətta reaksiya
      seçicisi açıq olsa belə ("tez itir" qüsuru). */
-.msg:hover .msg-actions,
+/* 🔴 TOXUNUŞ CİHAZINDA PANEL DAİMİ GÖRÜNMÜR (2026-08-09 mobil düzəlişi).
+ *
+ *   Əvvəl burada `@media (hover: none) { .msg-actions { opacity: 1 } }` var idi
+ *   — "toxunuşda hover yoxdur, ona görə həmişə göstərək" məntiqi ilə. Nəticə
+ *   mobil ekranda FƏLAKƏT idi: panel `position: absolute; top: -14px`-dir, yəni
+ *   balonun ÜSTÜNDƏ üzür. Hər mesajda bir panel açıq qalırdı və hər biri BİR
+ *   ƏVVƏLKİ mesajın mətnini örtürdü — söhbət hərfi mənada oxunmurdu.
+ *
+ *   İndi toxunuşda panel yalnız istifadəçi balona TOXUNANDA açılır
+ *   (`.actions-open` sinfini `js/chat-message.js` qoyur).
+ *
+ * ⚠ `:hover` MƏHZ `@media (hover: hover)` DAXİLİNDƏDİR. Toxunuş brauzerləri
+ *   toxunuşdan sonra `:hover` vəziyyətini elementdə "İLİŞDİRİR" — qayda
+ *   əhatələnməsəydi bir toxunuş paneli açıq saxlayar və düzəliş yarımçıq
+ *   qalardı (ölçüldü: panel toxunuşdan sonra gizlənmirdi).
+ *
+ * ⚠ `:focus-within` ƏHATƏLƏNMİR: klaviatura ilə gəzən istifadəçi üçün yeganə
+ *   yoldur və cihaz tipindən asılı deyil. */
+@media (hover: hover) {
+  .msg:hover .msg-actions { opacity: 1; pointer-events: auto; }
+}
+
 .msg:focus-within .msg-actions,
 .msg.actions-open .msg-actions { opacity: 1; pointer-events: auto; }
-
-@media (hover: none) {
-  .msg-actions { opacity: 1; pointer-events: auto; }
-}
 
 .mx-btn {
   display: inline-flex;

@@ -3,8 +3,12 @@
       Sıra DƏYİŞMƏMƏLİDİR: cascade eyni spesifiklikdə fayl sırasından asılıdır. */
 /* app topbar */
 .app-topbar {
-  position: sticky;
-  top: 0;
+  /* ⚠ `position: sticky` ARTIQ LAZIM DEYİL: qabıq viewport-a kilidlənib və
+     header flex sütununun sabit birinci elementidir (bax `05-auth-wizard.css`).
+     `relative` yalnız `z-index`-in işləməsi üçün saxlanılır — `static`
+     elementdə `z-index` təsirsizdir və açılan menyular başlığın altında qalardı. */
+  position: relative;
+  flex: 0 0 auto;
   z-index: 85;
   display: flex;
   align-items: center;
@@ -152,10 +156,16 @@
   display: flex;
   flex-direction: column;
   gap: var(--sp-1);
-  position: sticky;
-  top: 57px;
-  height: calc(100vh - 57px);
+  /* ⚠ `position: sticky; top: 57px; height: calc(100vh - 57px)` SİLİNDİ.
+     O, header-in hündürlüyünü (57px) SABİT KOD kimi təkrarlayırdı — başlıq
+     doldurması dəyişən kimi sidebar ya kəsilir, ya da altdan daşırdı.
+     İndi sidebar `.app-row`-un flex uşağıdır və `align-items: stretch`
+     (default) ona sətrin TAM hündürlüyünü verir; sətrin özü isə header-dən
+     sonra qalan yeri tutur. Yəni hündürlük ölçüdən DEYİL, layout-dan gəlir.
+     Öz siyahısı uzun olsa daxilində sürüşür. */
+  min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .brand {
@@ -295,8 +305,47 @@
      daxili `.hm-scroll overflow-x:auto` düzgün işləyir. */
   min-width: 0;
   padding: var(--sp-5) var(--sp-6);
-  max-width: 1140px;
   width: 100%;
+
+  /* 🔴 TƏK SÜRÜŞƏN ELEMENT (2026-08-09). Sənəd artıq sürüşmür — bax
+     `05-auth-wizard.css`-dəki `#app.active`. Header və sidebar layout-la
+     yerində qalır, aşağı-yuxarı hərəkət YALNIZ buradadır.
+     ⚠ `min-height: 0` olmadan flex uşağı məzmununa görə şişər və sürüşmə
+       yenidən sənədə qayıdardı (indi isə `#app`-da `overflow: hidden` olduğu
+       üçün məzmun sadəcə KƏSİLƏRDİ). */
+  min-height: 0;
+  overflow-y: auto;
+  /* Səhifə sonuna çatanda sürüşmə arxadakı qabığa ötürülməsin. */
+  overscroll-behavior-y: contain;
+
+  /* ⚠ Sütun-flex QƏSDƏNDİR: çat kimi "ekranı doldurmalı" səhifələr qalan
+     bütün hündürlüyü ala bilsin deyə (`#page-chat`/`#page-dm` aşağıda).
+     Blok layoutda bunun üçün `calc(100dvh - 190px)` kimi SEHRLİ RƏQƏM
+     lazım gəlirdi və o, header hündürlüyü dəyişən kimi sınırdı. */
+  display: flex;
+  flex-direction: column;
+}
+
+/* ⚠ `flex: 0 0 auto` MƏCBURİDİR. Sütun-flex konteynerdə uşaqlar default olaraq
+   SIXILIR (`flex-shrink: 1`); onsuz uzun lent səhifəsi sürüşmək əvəzinə
+   `.main`-ın hündürlüyünə qədər əzilərdi. */
+.main > .page.active,
+.main > .app-footer {
+  flex: 0 0 auto;
+}
+
+/* Qısa səhifədə footer aşağıya yapışır — məzmunun altında asılı qalmır. */
+.main > .app-footer {
+  margin-top: auto;
+}
+
+/* ⚠ `max-width: 1140px` `.main`-dan BURAYA köçdü: `.main` indi sürüşən
+   konteynerdir və eni məhdudlaşdırsaq sürüş zolağı geniş ekranda məzmunun
+   ortasında, pəncərə kənarından 300px içəridə qalardı. Məzmunun ölçüsü
+   dəyişmir — eyni 1140px, sadəcə məhdudiyyət bir qat içəridədir. */
+.page,
+.app-footer {
+  max-width: 1140px;
 }
 
 .page {

@@ -4,11 +4,44 @@ let rafId = null;
 let initialized = false;
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+/**
+ * FX YALNIZ cyberpunk teması aktiv olanda qurulur.
+ *
+ * 🔴 NİYƏ (2026-08-09-da tapılan REQRESSİYA): bu funksiya əvvəl boot-da
+ *    ŞƏRTSİZ işləyirdi və `<canvas id="cp-canvas">`-ı hər istifadəçi üçün
+ *    `<body>`-yə əlavə edirdi. Onu gizlədən `#cp-canvas { position: fixed;
+ *    display: none }` qaydası tema bölünməsində `css/theme-extra.css`-ə keçdi
+ *    və o fayl yalnız matrix/cyberpunk seçiləndə yüklənir. Nəticədə tünd
+ *    temada canvas STİLSİZ qalır: normal axında, `width×height` atributları
+ *    ilə tam ekran ölçüsündə. Ölçüldü — sənəd 900px yerinə 1804px olurdu,
+ *    yəni səhifənin altında bir ekran boyu BOŞ sahə yaranırdı və qabıq
+ *    "sabit header" düzəlişindən əvvəl də səbəbsiz sürüşürdü.
+ *
+ * ⚠ İkinci qazanc: `loop()` hər kadrda `requestAnimationFrame` planlaşdırırdı
+ *   və yalnız içəridə "tema cyberpunk deyil" deyib qayıdırdı — yəni BÜTÜN
+ *   istifadəçilər üçün əbədi boş kadr döngüsü. İndi döngü ümumiyyətlə
+ *   başlamır.
+ *
+ * ⚠ `MutationObserver` QƏSDƏN seçilib: `ui.js`-dəki `onThemeChange` TƏK
+ *   callback saxlayır (ikinci abunə birincini basardı), `cyberpunk_fx.js` isə
+ *   onsuz da `ui.js`-dən import edir — geri istinad dövr yaradardı.
+ *   `data-theme` atributu isə temanın yeganə həqiqət mənbəyidir.
+ */
 export function initCyberpunkFX() {
+  if (REDUCED) return; // Do not initialize heavy JS if reduced motion is requested.
+  if (getTheme() === 'cyberpunk') { bootCyberpunkFX(); return; }
+
+  const mo = new MutationObserver(() => {
+    if (getTheme() !== 'cyberpunk') return;
+    mo.disconnect();
+    bootCyberpunkFX();
+  });
+  mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+}
+
+function bootCyberpunkFX() {
   if (initialized) return;
   initialized = true;
-
-  if (REDUCED) return; // Do not initialize heavy JS if reduced motion is requested.
 
   document.body.classList.add('cp-fx-active');
 
