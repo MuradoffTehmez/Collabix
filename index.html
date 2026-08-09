@@ -629,8 +629,8 @@
       </div>
 
       <div id="loginForm" class="hidden">
-        <div class="field"><label data-i18n="auth.lbl_user"></label><input id="loginUser" placeholder="istifadeci_adi" autocapitalize="none" autocomplete="username"></div>
-        <div class="field"><label data-i18n="auth.lbl_pass"></label>
+        <div class="field"><label for="loginUser" data-i18n="auth.lbl_user"></label><input id="loginUser" placeholder="istifadeci_adi" autocapitalize="none" autocomplete="username"></div>
+        <div class="field"><label for="loginPass" data-i18n="auth.lbl_pass"></label>
           <div class="pass-wrap">
             <input id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password">
             <button type="button" class="eye-btn" id="loginEyeBtn" data-i18n-aria="auth.btn_show_pass"><span class="ic" data-icon="eye" data-icon-size="16"></span></button>
@@ -1160,7 +1160,7 @@
         <button data-range="custom" data-i18n="stats.rc"></button>
       </div>
       <div class="search-bar hidden u-max-width-420px" id="statCustomRange">
-        <input type="date" id="statFrom"><input type="date" id="statTo">
+        <input type="date" id="statFrom" data-i18n-aria="stats.range_from"><input type="date" id="statTo" data-i18n-aria="stats.range_to">
         <button class="btn-mini dismiss" id="statApplyBtn" data-i18n="stats.apply"></button>
       </div>
       <div class="section-title" id="statBarsTitle" data-i18n="stats.post_count"></div>
@@ -1255,8 +1255,8 @@
       </div>
       <div class="settings-block">
         <h3><span class="ic" data-icon="lock" data-icon-size="16"></span><span data-i18n="set.pass_ch"></span></h3>
-        <div class="field"><label data-i18n="set.pass_cur"></label><input id="curPassInput" type="password"></div>
-        <div class="field"><label data-i18n="set.pass_new"></label><input id="newPassInput" type="password"></div>
+        <div class="field"><label for="curPassInput" data-i18n="set.pass_cur"></label><input id="curPassInput" type="password"></div>
+        <div class="field"><label for="newPassInput" data-i18n="set.pass_new"></label><input id="newPassInput" type="password"></div>
         <button class="btn-small" id="changePassBtn" data-i18n="set.pass_btn"></button>
         <div class="form-err" id="passErr"></div>
       </div>

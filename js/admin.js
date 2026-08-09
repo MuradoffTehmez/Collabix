@@ -9,6 +9,12 @@ import {
   adminUpdateUser, watchAdminLogs,
 } from './store.js';
 import { DEFAULT_FAQS, DEFAULT_TESTIMONIALS } from './legal.js';
+/* 🔴 2026-08-09 auditi: `openRoleEditor` `js/governance.js`-də YAZILIB və
+ *   ixrac olunub, lakin HEÇ BİR YERDƏN çağırılmırdı — yəni platforma rolunu
+ *   dəyişən modalın açarı yox idi. Server yolu (`PUT /api/users/:uid/role` →
+ *   `setUserRole`) tam işlək olsa da, admin paneldə bu bölmə "işləmirdi",
+ *   çünki UI-da giriş nöqtəsi mövcud deyildi. Düymə aşağıda sətrə bağlanır. */
+import { openRoleEditor } from './governance.js';
 import { adminTempPassword } from './store.js';
 import {
   fetchAdminUsers, fetchAdminLogs, bulkSetBlocked, fetchStatsDaily,
@@ -234,6 +240,14 @@ function adminUserRow(u){
     el('button', { class: 'btn-mini', title: t('adm.temp_pass'),
       'aria-label': t('adm.temp_pass') + ' — @' + u.username,
       onclick: () => openTempPassword(u) }, iconLock()),
+    /* Platforma rolu (`roles` cədvəli) — komanda rolundan AYRIDIR.
+       ⚠ Düymə `self` yoxlamasından KƏNARDADIR, çünki serverdəki
+         `assertCanAssignRole` onsuz da özündən yüksək/bərabər rol təyinini və
+         öz rolunu dəyişməyi rədd edir. UI variantları gizlətmir — rədd səbəbi
+         toast-da görünür (bax `openRoleEditor` başlığı). */
+    el('button', { class: 'btn-mini', title: t('gov.role_btn'),
+      'aria-label': t('gov.role_btn') + ' — @' + u.username,
+      onclick: () => openRoleEditor(u) }, u.role || '—'),
   );
 
   if(!self){

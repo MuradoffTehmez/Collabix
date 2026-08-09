@@ -716,20 +716,30 @@ export function initPublic(){
   topBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 
   // SMO: Social share buttons
+  //
+  // ⚠ `noopener` MƏCBURİDİR (2026-08-09 auditi). `window.open(url, '_blank')`
+  //   açılan səhifəyə `window.opener` verir və o, BİZİM tabı istənilən ünvana
+  //   yönləndirə bilər ("reverse tabnabbing"): istifadəçi paylaşımdan qayıdanda
+  //   eyni görünüşlü saxta giriş səhifəsinə düşür. Hədəflər tanınmış
+  //   platformalardır, yəni praktik risk aşağıdır — lakin qiyməti bir arqumentdir.
+  // ⚠ `noreferrer` də əlavə olunur: `Referer` başlığı ilə istifadəçinin hansı
+  //   daxili səhifədən paylaşdığını üçüncü tərəfə vermək lazım deyil.
+  const openShare = url => window.open(url, '_blank', 'noopener,noreferrer');
+
   document.getElementById('shareCopyBtn')?.addEventListener('click', () => {
     navigator.clipboard.writeText(location.href).then(() => toast(t('a11y.copyLink')));
   });
   document.getElementById('shareTwitterBtn')?.addEventListener('click', () => {
-    window.open(`https://x.com/intent/tweet?url=${encodeURIComponent(location.href)}&text=${encodeURIComponent(document.title)}`, '_blank');
+    openShare(`https://x.com/intent/tweet?url=${encodeURIComponent(location.href)}&text=${encodeURIComponent(document.title)}`);
   });
   document.getElementById('shareLinkedInBtn')?.addEventListener('click', () => {
-    window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(location.href)}`, '_blank');
+    openShare(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(location.href)}`);
   });
   document.getElementById('shareTelegramBtn')?.addEventListener('click', () => {
-    window.open(`https://t.me/share/url?url=${encodeURIComponent(location.href)}&text=${encodeURIComponent(document.title)}`, '_blank');
+    openShare(`https://t.me/share/url?url=${encodeURIComponent(location.href)}&text=${encodeURIComponent(document.title)}`);
   });
   document.getElementById('shareFBBtn')?.addEventListener('click', () => {
-    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(location.href)}`, '_blank');
+    openShare(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(location.href)}`);
   });
 }
 

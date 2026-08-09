@@ -1778,4 +1778,30 @@ export default {
   "badge.task_10": "10 заданий",
   "badge.xp_500": "500 XP",
   "badge.xp_2000": "2000 XP",
+
+  /* 🔴 2026-08-09 frontend auditi: bu dörd açar KODDA ÇAĞIRILIRDI, lakin
+     lüğətdə YOX İDİ. `t()` tapılmayan açarı "oxunaqlı mətnə" çevirir, yəni
+     istifadəçi seçdiyi dildən ASILI OLMAYARAQ ingiliscəyə oxşar söz görürdü:
+       dyn.fail     — çat xəta toast-ları (js/chat.js, 3 yer)  → "Fail"
+       feed.like    — bəyənmə düyməsinin aria-label-i          → "Like"
+       dyn.loading  — komanda siyahısı yüklənmə vəziyyəti      → "Loading"
+       app.you      — iş sahəsi şərhində müəllif adı           → "You"
+     Qüsur SƏSSİZ idi: nə xəta, nə xəbərdarlıq — yalnız yanlış dil. */
+  "dyn.fail": "Не удалось",
+  "dyn.loading": "Загрузка…",
+  "feed.like": "Нравится",
+  "app.you": "Вы",
+
+  /* 2026-08-09 auditi: statistika tarix aralığındakı iki `<input type="date">`
+     ETİKETSİZ idi — ekran oxuyucu onları yalnız "tarix sahəsi" kimi oxuyurdu
+     və hansının başlanğıc, hansının bitmə olduğu bilinmirdi. */
+  "stats.range_from": "Дата начала",
+  "stats.range_to": "Дата окончания",
+
+  /* 2026-08-09: admin paneldəki rol düyməsi + modal başlığı/düyməsi.
+     Modal əvvəl sabit azərbaycanca mətn işlədirdi ("Platforma rolu",
+     "Rolu dəyiş") — EN/RU admin onları tərcüməsiz görürdü. */
+  "gov.role_btn": "Изменить роль на платформе",
+  "gov.role_title": "Роль на платформе",
+  "gov.role_save": "Изменить роль",
 };

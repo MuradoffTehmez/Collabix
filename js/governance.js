@@ -95,7 +95,7 @@ export async function openRoleEditor(user) {
   const note = el('p', { class: 'c-field__hint' },
     t('gov.role_note'));
 
-  const save = el('button', { class: 'c-btn c-btn--primary' }, 'Rolu dəyiş');
+  const save = el('button', { class: 'c-btn c-btn--primary' }, t('gov.role_save'));
   save.addEventListener('click', async () => {
     save.disabled = true;
     try {
@@ -111,7 +111,7 @@ export async function openRoleEditor(user) {
 
   showModal([
     el('div', { class: 'c-modal__head' },
-      el('h3', { class: 'c-modal__title' }, 'Platforma rolu')),
+      el('h3', { class: 'c-modal__title' }, t('gov.role_title'))),
     el('div', { class: 'c-modal__body' },
       userCell(user),
       el('div', { class: 'c-field', style: 'margin-top:16px' },
