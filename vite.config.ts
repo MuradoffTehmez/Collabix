@@ -23,20 +23,21 @@ function i18nPrefill(): Plugin {
     // `order: 'pre'` lazım deyil: Vite-ın öz asset yenidən yazması ilə
     // toqquşmuruq, yalnız mətn qovuqlarını doldururuq.
     async transformIndexHtml(html) {
-      // `js/i18n.js` modul səviyyəsində `localStorage` oxuyur (dil yaddaşı).
-      // Node-da belə qlobal yoxdur → import çökür. Minimal stub kifayətdir:
-      // `getItem` null qaytarır, modul da `'az'`-a düşür — bizə məhz o lazımdır.
-      const g = globalThis as Record<string, unknown>;
-      if (!g.localStorage) {
-        g.localStorage = { getItem: () => null, setItem: () => {}, removeItem: () => {} };
-      }
-      const { DICT } = (await import('./js/i18n.js')) as {
-        DICT: Record<string, { az: string; en: string; ru: string }>;
+      // ⚠ 2026-08-09: əvvəl burada `js/i18n.js`-dən `DICT` import olunurdu və
+      //   o modul səviyyəsində `localStorage` oxuduğu üçün Node-da `localStorage`
+      //   stub-u lazım gəlirdi. Lüğət ayrı paketlərə bölünəndən sonra plagin
+      //   birbaşa AZ xəritəsini oxuyur: o, SAF DATADIR — nə import, nə də
+      //   brauzer qlobalı tələb edir, ona görə stub da silindi.
+      //
+      // ⚠ MƏHZ AZ: ön-doldurma `index.html`-in default dilini yazır. EN/RU
+      //   paketləri runtime-da `applyI18n()` ilə tətbiq olunur.
+      const { default: AZ } = (await import('./js/i18n.dict.az.js')) as {
+        default: Record<string, string>;
       };
 
       const az = (key: string): string | null => {
-        const entry = DICT[key];
-        return entry && typeof entry.az === 'string' ? entry.az : null;
+        const value = AZ[key];
+        return typeof value === 'string' ? value : null;
       };
       // Atribut dəyəri kimi də, mətn kimi də təhlükəsiz olmalıdır.
       const esc = (s: string) =>
