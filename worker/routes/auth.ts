@@ -173,7 +173,20 @@ export async function login(c: Ctx) {
   // parol seçən bot isə bir neçə cəhddən sonra onsuz da bura ilişir.
   //
   // A-3: 10 cəhddən sonra qapı FAIL-CLOSED olur (bax `turnstileGate`).
-  const fails = await recentFailures(c.env, c.req, username);
+  //
+  // 🔴 PERF (2026-08-09): uğursuzluq sayğacı və istifadəçi sətri bir-birindən
+  //   ASILI DEYİL — birincisi yalnız `username` sətrini, ikincisi də yalnız
+  //   həmin sətri istəyir. Əvvəl ardıcıl gedirdilər və bu, HƏR girişə (uğurlu
+  //   və uğursuz) bir tam D1 gediş-gəlişi əlavə edirdi.
+  //
+  // ⚠ SƏTİR SPEKULYATİV OXUNUR: CAPTCHA qapısı işə düşsə bu sorğu boşa gedir.
+  //   Mübadilə qəsdlidir — qapı NADİR haldır (ardıcıl 3+ uğursuzluq), sorğunun
+  //   qənaəti isə HƏR girişdədir. Nəticə də istifadə olunmur, yəni qapının
+  //   davranışı dəyişmir.
+  const [fails, row] = await Promise.all([
+    recentFailures(c.env, c.req, username),
+    D(c).prepare('SELECT * FROM users WHERE username = ?').bind(username).first<any>(),
+  ]);
   if (fails >= CAPTCHA_SOFT_AT) {
     const gate = await turnstileGate(c, b.turnstileToken, username, fails >= CAPTCHA_HARD_AT);
     if (gate) {
@@ -185,7 +198,6 @@ export async function login(c: Ctx) {
     }
   }
 
-  const row = await D(c).prepare('SELECT * FROM users WHERE username = ?').bind(username).first<any>();
   // M-2: iterasiya SƏTİRDƏN gəlir. Köhnə hesab 100 000 ilə yazılıb;
   // sabitlə (600 000) yoxlasaq düzgün parol da uyğunsuz heş verərdi.
   //
