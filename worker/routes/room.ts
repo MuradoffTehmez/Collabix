@@ -316,10 +316,42 @@ export async function listThreads(c: Ctx) {
   });
 }
 
+/**
+ * DM-də iştirakçılıq — BÜTÜN DM marşrutlarının TƏK avtorizasiya qapısı.
+ *
+ * 🔴 BE-007: əvvəl bu qayda ÜÇ YERDƏ ayrıca yazılmışdı (`dmMessages`,
+ *   `markThreadRead`, `dmMember`) və hər üçü `pairId.split('_').includes(uid)`
+ *   idi. Üç nüsxə o deməkdir ki, qaydanı bir yerdə bərkidib digərini unutmaq
+ *   mümkündür — audit BE-009-da eyni sinfi (`likes` ↔ `post_reactions`)
+ *   göstərmişdi.
+ *
+ * ⚠ QAPI id FORMATINA BAĞLIDIR, bazadakı üzvlüyə yox. Bu, qəsdən seçilmiş
+ *   mübadilədir: sorğu getmir, yəni D1-ə bir gediş qənaət olunur (baza
+ *   Buxarestdədir, hər ardıcıl `await` ~50-70 ms). Şərt isə budur:
+ *   `uuid()` = `crypto.randomUUID().replace(/-/g,'')` → 32 simvol hex,
+ *   yəni `_` EHTİVA ETMİR. `test/util.test.ts` bu invariantı AÇIQ bağlayır —
+ *   uid formatı dəyişsə (prefiks, ULID, e-poçt əsaslı id) test sınacaq və
+ *   qapı səssizcə yanlış qərar verməyəcək.
+ *
+ * ⚠ ÜÇ ŞƏRT DƏ LAZIMDIR:
+ *   (1) dəqiq iki hissə — uid-də `_` görünsə say dəyişir və qayda mənasızlaşır;
+ *   (2) kanonik sıra (`pairIdFor` ilə eyni) — normallaşdırılmamış `b_a`
+ *       mövcud olmayan söhbətə işarə edir, 403 vermək 200 boş siyahıdan
+ *       dürüstdür;
+ *   (3) çağıran hissələrdən biridir.
+ *   Hər üçü FAIL-CLOSED istiqamətdədir: şübhə varsa qapı bağlanır.
+ */
+export function dmMember(c: Ctx, pairId: string): boolean {
+  const parts = pairId.split('_');
+  if (parts.length !== 2) return false;
+  if (pairIdFor(parts[0], parts[1]) !== pairId) return false;
+  return parts.includes(c.user!.id);
+}
+
 export async function dmMessages(c: Ctx, pairId: string) {
   // ⚠ AVTORİZASİYA ARXİVDƏN ƏVVƏL. `pairId` `pairIdFor()` ilə normallaşdırılmış
   // `min_max` cütlüyüdür; iştirakçı olmayan onu təxmin etsə belə keçə bilməz.
-  if (!pairId.split('_').includes(c.user!.id)) return err('İcazə yoxdur.', 403, 'forbidden');
+  if (!dmMember(c, pairId)) return err('İcazə yoxdur.', 403, 'forbidden');
 
   const limit = pageSize(c, 150);
   const before = beforeCursor(c);
@@ -408,8 +440,8 @@ export async function deleteDMMsg(c: Ctx, _pairId: string, mid: string) {
   return json({ ok: true });
 }
 export async function markThreadRead(c: Ctx, pairId: string) {
+  if (!dmMember(c, pairId)) return err('İcazə yoxdur.', 403, 'forbidden');
   const [a] = pairId.split('_');
-  if (!pairId.split('_').includes(c.user!.id)) return err('İcazə yoxdur.', 403, 'forbidden');
   const col = c.user!.id === a ? 'read_a' : 'read_b';
   await D(c).prepare(`UPDATE dm_threads SET ${col} = ? WHERE pair_id = ?`).bind(now(), pairId).run();
   return json({ ok: true });
@@ -480,9 +512,6 @@ export async function unpinRoomMessage(c: Ctx, roomId: string, mid: string) {
   await roomBroadcast(c, roomId, { t: 'refresh' });
   return json({ ok: true });
 }
-
-/** DM-də iştirakçılıq yoxlaması — `dmMessages` ilə eyni qayda. */
-const dmMember = (c: Ctx, pairId: string) => pairId.split('_').includes(c.user!.id);
 
 export async function listDMPins(c: Ctx, pairId: string) {
   if (!dmMember(c, pairId)) return err('İcazə yoxdur.', 403, 'forbidden');
