@@ -616,12 +616,6 @@
   padding-bottom: 120px;
 }
 
-.testi-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
-  gap: 24px;
-}
-
 .testi-card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -1209,44 +1203,7 @@
   max-width: 420px;
 }
 
-.chat-attach-btn {
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  color: var(--muted);
-  padding: 0 11px;
-  font-size: .9rem;
-  min-width: 40px;
-}
-
-.chat-attach-btn:hover {
-  color: var(--coral);
-  border-color: var(--coral);
-}
-
 /* izləyən siyahıları */
-.follow-counts {
-  display: flex;
-  gap: 14px;
-  margin-top: 8px;
-}
-
-.follow-counts button {
-  background: none;
-  border: none;
-  color: var(--muted);
-  font-size: .8rem;
-  font-family: var(--mono);
-  padding: 0;
-}
-
-.follow-counts button b {
-  color: var(--text);
-}
-
-.follow-counts button:hover {
-  color: var(--coral);
-}
 
 .mutual-tag {
   font-size: .62rem;
@@ -1275,21 +1232,6 @@
 }
 
 /* bildiriş qrupları */
-.notif-group-lbl {
-  font-family: var(--mono);
-  font-size: .7rem;
-  color: var(--muted);
-  margin: 16px 0 8px;
-  text-transform: uppercase;
-  letter-spacing: .06em;
-}
-
-.notif-filters {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-bottom: 14px;
-}
 
 /* mention */
 .mention-link {

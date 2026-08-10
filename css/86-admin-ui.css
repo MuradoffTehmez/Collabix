@@ -96,8 +96,7 @@
   filter: brightness(1.1);
 }
 
-.admin-card .btn-default,
-.admin-card .btn-secondary {
+.admin-card .btn-default {
   height: 40px;
   padding: 0 16px;
   border-radius: 6px;
@@ -143,26 +142,6 @@
 
 [data-theme="dark"] .admin-card .btn-danger:hover {
   background: rgba(239, 68, 68, 0.2);
-}
-
-.admin-card .btn-ghost,
-.admin-card .btn-icon {
-  background: transparent;
-  border: none;
-  color: var(--text-sec);
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s;
-}
-
-.admin-card .btn-ghost:hover {
-  background: var(--bg-hover);
-  color: var(--text);
 }
 
 /* 4. Tables and Data Lists */
@@ -277,51 +256,6 @@
 }
 
 /* Action Menu Dropdown */
-.action-menu-wrap {
-  position: relative;
-  display: inline-block;
-}
-
-.action-menu-dropdown {
-  position: absolute;
-  right: 0;
-  top: 100%;
-  margin-top: 4px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  min-width: 120px;
-  z-index: 10;
-  display: none;
-  flex-direction: column;
-  padding: 4px;
-}
-
-.action-menu-wrap:focus-within .action-menu-dropdown,
-.action-menu-wrap:hover .action-menu-dropdown {
-  display: flex;
-}
-
-.action-menu-dropdown button {
-  width: 100%;
-  text-align: left;
-  padding: 8px 12px;
-  background: transparent;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
-  color: var(--text);
-}
-
-.action-menu-dropdown button:hover {
-  background: var(--bg-hover);
-}
-
-.action-menu-dropdown button.danger {
-  color: #ef4444;
-}
 
 /* 5. Accordion (details/summary) */
 .admin-accordion {

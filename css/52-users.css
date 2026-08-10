@@ -6,21 +6,6 @@
    ============================================================ */
 
 /* ---------- toolbar: sıralama + görünüş keçidi ---------- */
-.users-searchbar {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.users-searchbar input {
-  flex: 1;
-  min-width: 180px;
-}
-
-.user-sort {
-  flex: 0 0 auto;
-}
 
 .view-toggle {
   display: flex;
@@ -63,148 +48,17 @@
   justify-content: flex-start;
 }
 
-.uc-id {
-  flex: 1;
-  min-width: 0;
-}
-
-.uc-id b,
-.uc-id span {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.user-card-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-  flex: 1;
-  align-content: flex-start;
-}
-
-.user-card-actions {
-  margin-top: auto;
-}
-
 /* ---------- "+N" nişanı + popover ---------- */
 .more-wrap {
   position: relative;
   display: inline-flex;
 }
 
-.more-tag {
-  cursor: pointer;
-  border: 1px dashed var(--border);
-  background: var(--surface-2);
-  color: var(--muted);
-  font-weight: 700;
-}
-
-.more-tag:hover,
-.more-wrap.open .more-tag {
-  color: var(--coral);
-  border-color: var(--coral);
-  border-style: solid;
-}
-
-.more-tag:focus-visible {
-  outline: 2px solid var(--coral);
-  outline-offset: 2px;
-}
-
-.skill-pop {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  z-index: 30;
-  width: max-content;
-  /* TASK-9 P0: gizli halda `max-width: 0` + `overflow: hidden` — əvvəl
-     `visibility: hidden` rect-i (250px `max-content`) SAXLAYIRDI və sağ
-     kartlarda popover viewport-dan çıxıb səhifəni daşıdırdı (users mobil).
-     `max-width: 0` gizli popover-in yer tutmasının qarşısını alır; açıq halda
-     viewport-a bağlı max-width sağ kartda da sığmasını təmin edir. */
-  max-width: 0;
-  overflow: hidden;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface-2);
-  box-shadow: 0 14px 34px -10px rgba(0, 0, 0, .6);
-  opacity: 0;
-  visibility: hidden;
-  transform: translate(-50%, 4px);
-  transition: opacity .16s ease, transform .16s ease, visibility .16s, max-width .16s ease;
-}
-
-.more-wrap:hover .skill-pop,
-.more-wrap.open .skill-pop,
-.more-wrap:focus-within .skill-pop {
-  opacity: 1;
-  visibility: visible;
-  transform: translate(-50%, 0);
-  /* Açıq halda tam ölçü, amma viewport-a bağlı — sağ kartda da sığır. */
-  max-width: min(250px, calc(100vw - 32px));
-}
-
-.sp-title {
-  font-size: .7rem;
-  color: var(--muted);
-  margin-bottom: 7px;
-  text-transform: uppercase;
-  letter-spacing: .04em;
-}
-
-.sp-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-}
-
 /* ---------- İstifadəçilər#3: siyahı görünüşü ----------
    Sıx sətir formatı — sürətli tarama üçün. */
-.user-grid.list-view {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.list-view .user-card {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  gap: 10px 14px;
-  padding: 10px 14px;
-  height: auto;
-}
-
-.list-view .user-card-head {
-  grid-column: 1;
-}
-
-.list-view .user-card-tags {
-  grid-column: 1;
-  flex: 0 0 auto;
-}
-
-.list-view .user-card-actions {
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  margin-top: 0;
-}
 
 /* dar ekranda siyahı yenidən sətirlənir */
 @media (max-width: 560px) {
-  .list-view .user-card {
-    grid-template-columns: 1fr;
-  }
-
-  .list-view .user-card-actions {
-    grid-column: 1;
-    grid-row: auto;
-  }
 }
 
 /* ---------- infinite scroll sentineli + status ---------- */

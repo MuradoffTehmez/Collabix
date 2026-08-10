@@ -477,13 +477,6 @@
   margin-top: 8px;
 }
 
-.block-add-row {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
-}
-
 /* markdown tipoqrafiyası — GitHub keyfiyyəti */
 .md-body {
   font-size: .88rem;
@@ -696,12 +689,6 @@
 }
 
 /* istifadəçi filtrləri */
-.user-filters {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 16px;
-}
 
 
 
@@ -925,28 +912,6 @@
   word-break: break-word;
   white-space: pre-wrap;
   margin-top: 2px;
-}
-
-.comment-input-row {
-  display: flex;
-  gap: 8px;
-  margin-top: 14px;
-}
-
-.comment-input-row input {
-  flex: 1;
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: 12px;
-  padding: 10px 14px;
-  color: var(--text);
-  font-size: .84rem;
-  transition: border-color 180ms ease;
-}
-
-.comment-input-row input:focus {
-  outline: none;
-  border-color: var(--primary);
 }
 
 /* --- Comments: LinkedIn üslubu thread (TASK-7 / Bənd 8) --- */
@@ -1516,34 +1481,6 @@
   color: var(--coral);
 }
 
-.msg .msg-tools {
-  position: absolute;
-  top: -10px;
-  right: 6px;
-  display: none;
-  gap: 4px;
-}
-
-.msg:hover .msg-tools {
-  display: flex;
-}
-
-.msg .msg-tools button {
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--muted);
-  font-size: .62rem;
-  line-height: 1;
-}
-
-.msg .msg-tools button:hover {
-  color: var(--coral);
-  border-color: var(--coral);
-}
-
 /* ══════════════════════════════════════════════════════════════════════════
    ŞƏRH SİSTEMİ — yenidən dizayn (AUDIT-UI + miqrasiya 0039)
    ══════════════════════════════════════════════════════════════════════════
@@ -1795,7 +1732,6 @@
 
 /* Sancaqlanmış / gizlədilmiş şərh — RƏNG TƏK SİQNAL DEYİL, sol zolaq da var. */
 .comment-row.pinned { border-left: 3px solid var(--coral); padding-left: var(--sp-2); }
-.comment-row.hidden-cm { opacity: .55; border-left: 3px dashed var(--muted); padding-left: var(--sp-2); }
 
 /* ── Şikayət modalı ─────────────────────────────────────────────────────── */
 .c-report-quote {

@@ -106,58 +106,12 @@
 
 .threat-ip-meta { color: var(--muted); font-size: .72rem; }
 
-.threat-events { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; max-width: 100%; overflow: hidden; box-sizing: border-box; }
-
-.threat-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 8px 11px;
-  border: 1px solid var(--border);
-  border-left-width: 3px;
-  border-radius: 9px;
-  background: var(--surface-2);
-  font-size: .8rem;
-}
-
-.threat-row.tone-info   { border-left-color: var(--coral); }
-.threat-row.tone-ok     { border-left-color: var(--ok); }
-.threat-row.tone-warn   { border-left-color: #f5b301; }
-.threat-row.tone-danger { border-left-color: var(--danger); }
-
 /* Səviyyə etiketi MƏTNDİR, təkcə rəng deyil — rəng korluğu üçün ikinci siqnal. */
-.threat-sev {
-  flex: 0 0 auto;
-  font-size: .62rem;
-  font-weight: 800;
-  letter-spacing: .04em;
-  padding: 2px 6px;
-  border-radius: 5px;
-  background: var(--surface);
-  color: var(--muted);
-}
-.threat-row.tone-danger .threat-sev { color: var(--danger); }
-.threat-row.tone-warn   .threat-sev { color: #f5b301; }
-
-.threat-body { flex: 1 1 auto; min-width: 0; }
-.threat-line { color: var(--text); overflow-wrap: anywhere; word-break: break-word; }
-.threat-who  { color: var(--muted); font-weight: 500; overflow-wrap: anywhere; }
-
-.threat-meta {
-  font-size: .72rem;
-  color: var(--muted);
-  overflow-wrap: anywhere;    /* uzun meta sətri paneli daşırmasın */
-}
-
-.threat-time { flex: 0 0 auto; font-size: .7rem; color: var(--muted); white-space: nowrap; }
 
 .threat-empty { padding: 14px; color: var(--muted); font-size: .82rem; text-align: center; }
 
 @media (max-width: 560px) {
   /* Vaxt aşağı sətrə keçir — dar ekranda hadisə mətni sıxılmasın. */
-  .threat-row { flex-wrap: wrap; }
-  .threat-body { flex: 1 1 100%; }
-  .threat-time { margin-left: auto; }
 }
 
 /* ---------- OAuth (Bənd 5) ---------- */

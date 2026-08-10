@@ -328,24 +328,6 @@
   display: inline-block;
 }
 
-.skill-chip-view {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-1);
-  padding: var(--sp-1) var(--sp-3);
-  border-radius: var(--r-pill);
-  border: 1px solid var(--teal);
-  color: var(--teal);
-  background: var(--teal-dim);
-  font-size: var(--fs-xs);
-  font-family: var(--mono);
-}
-
-.skill-chip-view .lvl {
-  font-size: var(--fs-xs);
-  opacity: .85;
-}
-
 #app {
   display: none;
   min-height: 100vh;

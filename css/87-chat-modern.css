@@ -604,19 +604,9 @@
 /* Mesaj üzərindəki alət sətri — hover/fokusda görünür.
    ⚠ `opacity` ilə gizlədilir, `display:none` ilə YOX: `:focus-within` işləsin
      deyə element fokuslana bilən qalmalıdır (klaviatura ilə çatmaq üçün). */
-.msg-tools {
-  display: flex;
-  gap: 2px;
-  opacity: 0;
-  transition: opacity .15s ease;
-}
-
-.msg:hover .msg-tools,
-.msg:focus-within .msg-tools { opacity: 1; }
 
 /* Toxunuş cihazında hover yoxdur → alətlər HƏMİŞƏ görünür (`hover-vs-tap`). */
 @media (hover: none) {
-  .msg-tools { opacity: 1; }
 }
 
 /* ══ 5b. MESAJ BALONU — YENİDƏN DİZAYN ═════════════════════════════════════
@@ -1929,7 +1919,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .chat-details,
-  .msg-tools,
   .chat-list .ch-item,
   .cmp-shell {
     transition: none;

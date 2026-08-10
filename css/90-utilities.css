@@ -24,7 +24,6 @@
 .u-border-bottom-1px-solid-border{border-bottom: 1px solid var(--border) !important}
 .u-border-none{border: none !important}
 .u-border-radius-12px{border-radius: 12px !important}
-.u-border-radius-18px{border-radius: 18px !important}
 .u-border-radius-4px{border-radius: 4px !important}
 .u-border-radius-50{border-radius: 50% !important}
 .u-border-radius-8px{border-radius: 8px !important}
@@ -40,11 +39,9 @@
 .u-display-flex{display: flex !important}
 .u-display-none{display: none !important}
 .u-flex-0-0-auto{flex: 0 0 auto !important}
-.u-flex-1{flex: 1 !important}
 .u-flex-direction-column{flex-direction: column !important}
 .u-flex-wrap-wrap{flex-wrap: wrap !important}
 .u-font-size-1-2rem{font-size: 1.2rem !important}
-.u-font-size-1-4rem{font-size: 1.4rem !important}
 .u-font-size-11px{font-size: 11px !important}
 .u-font-size-12px{font-size: 12px !important}
 .u-font-size-13px{font-size: 13px !important}
@@ -67,7 +64,6 @@
 .u-grid-template-columns-repeat-auto-fit-minmax-150px-1fr{grid-template-columns: repeat(auto-fit,minmax(150px,1fr)) !important}
 .u-height-120px{height: 120px !important}
 .u-height-30px{height: 30px !important}
-.u-height-74px{height: 74px !important}
 .u-height-80px{height: 80px !important}
 .u-justify-content-space-between{justify-content: space-between !important}
 .u-line-height-30px{line-height: 30px !important}
@@ -103,8 +99,6 @@
 .u-margin-top-8px{margin-top: 8px !important}
 .u-max-height-180px{max-height: 180px !important}
 .u-max-width-420px{max-width: 420px !important}
-.u-min-height-70px{min-height: 70px !important}
-.u-min-width-220px{min-width: 220px !important}
 .u-outline-none{outline: none !important}
 .u-overflow-auto{overflow: auto !important}
 .u-overflow-hidden{overflow: hidden !important}
@@ -121,5 +115,4 @@
 .u-text-transform-uppercase{text-transform: uppercase !important}
 .u-width-100{width: 100% !important}
 .u-width-30px{width: 30px !important}
-.u-width-74px{width: 74px !important}
 .u-width-80px{width: 80px !important}

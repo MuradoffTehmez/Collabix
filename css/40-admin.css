@@ -43,41 +43,6 @@
   font-size: .72rem;
 }
 
-.notif-row {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 12px 16px;
-  margin-bottom: 8px;
-  cursor: pointer;
-}
-
-.notif-row.unread {
-  border-color: var(--coral);
-  background: var(--coral-dim);
-}
-
-.notif-row .n-ic {
-  font-size: 1.1rem;
-  flex-shrink: 0;
-}
-
-.notif-row .n-body {
-  flex: 1;
-  font-size: .83rem;
-  line-height: 1.45;
-}
-
-.notif-row .n-when {
-  font-size: .7rem;
-  color: var(--muted);
-  font-family: var(--mono);
-  flex-shrink: 0;
-}
-
 /* AUDIT-UI: bloklar `max-width:520px` ilə TƏK sütunda yığılırdı — 1440px
    ekranda sağda ~900px ölü sahə qalırdı. İndi responsive grid.
    `auto-fit` + `minmax`: dar ekranda 1, orta ekranda 2, geniş ekranda 3 sütun —
@@ -125,13 +90,6 @@
 .settings-block.danger-zone h3,
 .settings-block.danger-zone h3 .ic {
   color: var(--danger);
-}
-
-.theme-toggle-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
 }
 
 /* Tema seçicisi (Parametrlər → Görünüş).

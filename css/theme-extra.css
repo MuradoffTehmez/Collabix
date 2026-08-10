@@ -274,16 +274,12 @@
 
 /* --- Modals (Z: 100) / Tooltips (Z: 300) overrides handled globally, just ensure modals are above --- */
 /* In base styles .modal usually has 9999, we'll keep base logic for now unless overriding */
-[data-theme="cyberpunk"] .modal-overlay {
-  z-index: 100 !important;
-}
 
 /* --- Core UI Elements (Cards) --- */
 [data-theme="cyberpunk"] .card,
 [data-theme="cyberpunk"] .post-card,
 [data-theme="cyberpunk"] .panel,
-[data-theme="cyberpunk"] .testi-card,
-[data-theme="cyberpunk"] .modal-content {
+[data-theme="cyberpunk"] .testi-card {
   background: rgba(10, 15, 28, 0.72) !important;
   -webkit-backdrop-filter: blur(20px) !important;
   backdrop-filter: blur(20px) !important;
@@ -299,8 +295,7 @@
   [data-theme="cyberpunk"] .card,
   [data-theme="cyberpunk"] .post-card,
   [data-theme="cyberpunk"] .panel,
-  [data-theme="cyberpunk"] .testi-card,
-  [data-theme="cyberpunk"] .modal-content {
+  [data-theme="cyberpunk"] .testi-card {
     background: rgba(10, 15, 28, 0.95) !important;
   }
 }
@@ -311,8 +306,7 @@
   [data-theme="cyberpunk"] .card,
   [data-theme="cyberpunk"] .post-card,
   [data-theme="cyberpunk"] .panel,
-  [data-theme="cyberpunk"] .testi-card,
-  [data-theme="cyberpunk"] .modal-content {
+  [data-theme="cyberpunk"] .testi-card {
     clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
   }
 }
@@ -428,8 +422,7 @@
   overflow: visible;
 }
 
-[data-theme="cyberpunk"] .btn-primary::before,
-[data-theme="cyberpunk"] button.submit-btn::before {
+[data-theme="cyberpunk"] .btn-primary::before {
   content: "";
   position: absolute;
   bottom: -15px;
@@ -443,8 +436,7 @@
   z-index: -1;
 }
 
-[data-theme="cyberpunk"] .btn-primary:hover,
-[data-theme="cyberpunk"] button.submit-btn:hover {
+[data-theme="cyberpunk"] .btn-primary:hover {
   background: #00f5ff !important;
   color: #05070a !important;
   box-shadow: 0 0 20px rgba(0, 245, 255, 0.6) !important;
@@ -453,8 +445,7 @@
   animation: cp-glitch-skew 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both 1;
 }
 
-[data-theme="cyberpunk"] .btn-primary:hover::before,
-[data-theme="cyberpunk"] button.submit-btn:hover::before {
+[data-theme="cyberpunk"] .btn-primary:hover::before {
   opacity: 0.6;
   background: #00f5ff;
 }

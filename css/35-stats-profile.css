@@ -146,48 +146,6 @@
   opacity: 1;
 }
 
-.progress-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-3);
-  margin-bottom: var(--sp-5);
-}
-
-.progress-list .row {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-}
-
-.progress-list .name {
-  width: 100px;
-  font-size: var(--fs-sm);
-  color: var(--muted);
-  flex-shrink: 0;
-  font-family: var(--mono);
-}
-
-.progress-list .track {
-  flex: 1;
-  height: 8px;
-  background: var(--surface-2);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.progress-list .fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--teal), var(--coral));
-}
-
-.progress-list .pct {
-  font-family: var(--mono);
-  font-size: var(--fs-xs);
-  width: 56px;
-  text-align: right;
-  flex-shrink: 0;
-}
-
 .bars {
   display: flex;
   align-items: flex-end;
@@ -364,35 +322,6 @@
   display: block;
 }
 
-.user-card-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-}
-
-.user-card-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: auto;
-}
-
-.user-card-actions button {
-  flex: 1;
-  padding: 7px;
-  font-size: .76rem;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  color: var(--text);
-  font-weight: 600;
-}
-
-.user-card-actions button.primary {
-  background: linear-gradient(100deg, var(--coral), var(--coral2));
-  color: var(--on-accent);   /* AUDIT-UI: bax `--on-accent` ölçmələri. */
-  border: none;
-}
-
 .search-bar {
   display: flex;
   gap: 8px;
@@ -502,72 +431,6 @@
   background: var(--coral-dim);
 }
 
-.task-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px 18px;
-  margin-bottom: 12px;
-}
-
-.task-card .head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 6px;
-  flex-wrap: wrap;
-}
-
-.task-card b {
-  font-size: .92rem;
-}
-
-.task-card p {
-  color: var(--muted);
-  font-size: .84rem;
-  margin-top: 6px;
-  line-height: 1.5;
-  white-space: pre-wrap;
-}
-
-.task-card .meta {
-  margin-top: 10px;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.task-form {
-  background: var(--coral-dim);
-  border: 1px solid var(--coral);
-  border-radius: var(--radius);
-  padding: 16px;
-  margin-bottom: 22px;
-}
-
-.task-form .ttl {
-  font-family: var(--display);
-  font-weight: 700;
-  font-size: .9rem;
-  margin-bottom: 10px;
-  color: var(--coral);
-}
-
-.task-form select,
-.task-form input,
-.task-form textarea {
-  width: 100%;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  color: var(--text);
-  padding: 9px 11px;
-  border-radius: 8px;
-  font-size: .85rem;
-  margin-bottom: 8px;
-  font-family: inherit;
-}
-
 .submission-row {
   display: flex;
   align-items: flex-start;
@@ -612,13 +475,6 @@
 .empty-state .ic {
   font-size: 2rem;
   margin-bottom: 10px;
-}
-
-.loading-note {
-  text-align: center;
-  color: var(--muted);
-  font-size: .8rem;
-  padding: 20px;
 }
 
 .skeleton {

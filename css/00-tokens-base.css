@@ -315,7 +315,6 @@ button {
 .user-card,
 .leader-row,
 .composer,
-.profile-card,
 .chat-list .ch-item {
   animation: cardPop .4s ease both;
 }
@@ -397,7 +396,6 @@ button {
 .user-card,
 .leader-row,
 .nav-item,
-.social-chip,
 .tag {
   transition: transform var(--mo-base) var(--mo-ease), border-color var(--mo-base) var(--mo-ease), background-color var(--mo-base) var(--mo-ease);
 }

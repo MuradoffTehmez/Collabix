@@ -162,93 +162,6 @@
   font-weight: 700;
 }
 
-.profile-card {
-  background: linear-gradient(135deg, var(--surface), var(--surface-2));
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 26px;
-  display: flex;
-  gap: 20px;
-  align-items: center;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-}
-
-.profile-card .avatar {
-  width: 74px;
-  height: 74px;
-  border-radius: 18px;
-  font-size: 1.4rem;
-}
-
-.profile-card h2 {
-  font-family: var(--display);
-  font-size: 1.3rem;
-}
-
-.profile-card .code-tag {
-  margin-top: 6px;
-  display: block;
-}
-
-.profile-bio {
-  color: var(--muted);
-  font-size: .86rem;
-  line-height: 1.55;
-  margin-top: 8px;
-  max-width: 520px;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.streak-track {
-  display: flex;
-  gap: 6px;
-  margin-top: 14px;
-}
-
-.streak-track .d {
-  width: 20px;
-  height: 20px;
-  border-radius: 5px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-}
-
-.streak-track .d.on {
-  background: var(--coral);
-  border-color: var(--coral);
-}
-
-.social-row {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 24px;
-  flex-wrap: wrap;
-}
-
-.social-chip {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  padding: 9px 14px;
-  border-radius: 11px;
-  font-size: .83rem;
-  transition: border-color var(--mo-fast) var(--mo-ease);
-}
-
-.social-chip:hover {
-  border-color: var(--violet);
-}
-
-.social-chip .plat {
-  color: var(--violet);
-  font-family: var(--mono);
-  font-size: .72rem;
-}
-
 .badge-row {
   display: flex;
   gap: 10px;
@@ -278,7 +191,6 @@
 }
 
 .badge-chip.earned .b-ic { color: var(--coral); }
-.badge-chip.earned .b-name { color: var(--text); }
 
 .badge-chip.locked {
   /* opacity YOX: mətn oxunaqlı qalmalıdır. Sönük ton kifayətdir. */
@@ -290,11 +202,4 @@
 .badge-chip .b-ic {
   width: 20px;
   height: 20px;
-}
-
-.badge-chip .b-name {
-  font-size: .68rem;
-  color: var(--muted);
-  font-family: var(--mono);
-  text-align: center;
 }

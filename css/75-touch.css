@@ -146,9 +146,7 @@
    kəsirdi (text-clip). Konteyner (`.task-cat-tabs`, `.notif-filters`) onsuz da
    `overflow-x:auto` scroll edir. */
 @media (max-width: 1024px) {
-  .task-cat-tabs button,
-  .notif-filters button,
-  .notif-filters .pp {
+  .task-cat-tabs button {
     flex-shrink: 0;
     min-width: auto;
     white-space: nowrap;

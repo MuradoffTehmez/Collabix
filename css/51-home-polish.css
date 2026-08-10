@@ -156,11 +156,6 @@
 }
 
 /* ---------- Ana#8: addım ikonları ---------- */
-.hs-num {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
 
 .hs-ic {
   display: inline-flex;

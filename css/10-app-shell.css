@@ -422,21 +422,6 @@
   color: var(--danger);
 }
 
-.code-tag {
-  font-family: var(--mono);
-  font-size: .78rem;
-  color: var(--muted);
-}
-
-.code-tag b {
-  color: var(--coral);
-}
-
-.code-tag i {
-  color: var(--teal);
-  font-style: normal;
-}
-
 .stat-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -505,12 +490,6 @@
   min-height: 60px;
 }
 
-.composer textarea.code-mode {
-  font-family: var(--mono);
-  font-size: var(--fs-sm);
-  min-height: 120px;
-}
-
 .composer textarea:focus {
   outline: none;
   border-color: var(--coral);
@@ -523,36 +502,6 @@
   margin-top: var(--sp-3);
   gap: var(--sp-3);
   flex-wrap: wrap;
-}
-
-.composer-img-preview {
-  position: relative;
-  display: inline-block;
-  margin-top: 10px;
-}
-
-.composer-img-preview img {
-  max-width: 220px;
-  max-height: 160px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  display: block;
-  object-fit: cover;
-}
-
-.composer-img-preview .img-remove-btn {
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: var(--danger);
-  color: var(--on-danger);   /* AUDIT-UI: bax `--on-danger` ölçmələri. */
-  border: none;
-  font-size: .7rem;
-  line-height: 1;
-  cursor: pointer;
 }
 
 .img-pick-btn {
