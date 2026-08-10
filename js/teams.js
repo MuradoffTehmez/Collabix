@@ -853,7 +853,7 @@ function openInviteModal(team, roles = []) {
   const renderUsers = (users, target) => {
     target.innerHTML = '';
     if (!users.length) {
-      target.innerHTML = '<div class="u-padding-10px u-color-muted u-text-align-center">${t('teams.user_not_found')}</div>';
+      target.innerHTML = `<div class="u-padding-10px u-color-muted u-text-align-center">${t('teams.user_not_found')}</div>`;
       return;
     }
     users.forEach(u => {
@@ -891,7 +891,7 @@ function openInviteModal(team, roles = []) {
 
   api(`/users/suggestions?teamId=${encodeURIComponent(team.id)}`).then(res => {
     if (!res.users?.length) return;
-    suggestionsDiv.innerHTML = '<div class="u-font-size-12px u-color-muted u-margin-bottom-5px">${t('teams.suggestions')}</div>';
+    suggestionsDiv.innerHTML = `<div class="u-font-size-12px u-color-muted u-margin-bottom-5px">${t('teams.suggestions')}</div>`;
     const list = el('div', { style: 'border:1px solid var(--border); border-radius:6px;' });
     renderUsers(res.users, list);
     suggestionsDiv.appendChild(list);
@@ -959,7 +959,7 @@ async function renderTeamProjects(container, team) {
       <div class="post-content">${esc(p.description || '')}</div>
       <div class="post-meta">
         ${t('teams.project_stats', { status: esc(p.status), done, total, members: Number(p.members_count || 0) })}
-        ${p.isMember ? ' · <span class="u-color-primary">${t('teams.is_member')}</span>' : ''}
+        ${p.isMember ? ` · <span class="u-color-primary">${t('teams.is_member')}</span>` : ''}
       </div>
     `;
 
@@ -1554,7 +1554,7 @@ async function renderTeamChat(container, team) {
   const renderMessages = (messages) => {
     msgsBox.innerHTML = '';
     if (!messages.length) {
-      msgsBox.innerHTML = '<div class="empty-state">${t('teams.no_messages')}</div>';
+      msgsBox.innerHTML = `<div class="empty-state">${t('teams.no_messages')}</div>`;
       return;
     }
     messages.slice().reverse().forEach(m => {
