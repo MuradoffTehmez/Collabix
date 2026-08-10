@@ -248,7 +248,7 @@ function buildGroups(items){
 /** Qrup başlığı: "Ayşə paylaşımını bəyəndi 8 dəfə" / "Ayşə və daha 7 nəfər ...". */
 function groupHeadline(g){
   const first = g.items[0];
-  const name = first.fromName || 'Kimsə';
+  const name = first.fromName || t('dyn.someone');
   const frag = document.createDocumentFragment();
   if(g.actors.size > 1){
     frag.append(
@@ -677,7 +677,7 @@ function renderCard(n, group, opts = {}){
   const body = el('div', { class: 'nc-card__body' });
   body.append(el('p', { class: 'nc-card__title' }, isGroupHead ? groupHeadline(group) : (() => {
     const f = document.createDocumentFragment();
-    f.append(el('b', {}, n.fromName || 'Kimsə'), ' ' + (n.text || ''));
+    f.append(el('b', {}, n.fromName || t('dyn.someone')), ' ' + (n.text || ''));
     return f;
   })()));
 

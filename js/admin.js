@@ -105,7 +105,7 @@ function renderReports(){
             await setBlocked(r.targetUid, true);
             await resolveReport(r.id, 'blocked');
             toast('İstifadəçi bloklandı');
-          }catch(e){ toast('Alınmadı', 'err'); }
+          }catch(e){ toast(t('adm.fail'), 'err'); }
         } }, 'Blokla'),
       ),
     ));
@@ -150,8 +150,8 @@ function openUserEditor(u){
         await adminUpdateUser(u.uid, fields);
         // Jurnal yazısı SERVERDƏ (adminPatchUser) atılır — burada təkrar
         // logAdmin() çağırışı hər redaktə üçün ikinci, dublikat sətir yaradırdı.
-        closeModal(); toast('Yeniləndi');
-      }catch(ex){ console.error(ex); toast('Alınmadı', 'err'); }
+        closeModal(); toast(t('adm.updated'));
+      }catch(ex){ console.error(ex); toast(t('adm.fail'), 'err'); }
       e.target.disabled = false;
     } }, 'Yadda saxla'),
   ], { wide: true });
@@ -163,9 +163,9 @@ function openTempPassword(u){
   passIn.value = 'Cx' + Math.random().toString(36).slice(2, 8) + '!';
   const errEl = el('div', { class: 'form-err' });
   showModal([
-    el('div', { class: 'section-title' }, '🔑 Müvəqqəti şifrə — @' + u.username),
+    el('div', { class: 'section-title' }, t('adm.temp_pass') + ' — @' + u.username),
     el('p', { style: 'color:var(--muted); font-size:.82rem; margin-bottom:10px; line-height:1.5;' },
-      'İstifadəçi bu şifrə ilə daxil olacaq və dərhal yeni şifrə seçməyə məcbur ediləcək.'),
+      t('adm.temp_pass_desc')),
     passIn, errEl,
     el('button', { class: 'btn-small', onclick: async e => {
       if(passIn.value.length < 6){ errEl.textContent = 'Minimum 6 simvol.'; return; }
@@ -173,13 +173,13 @@ function openTempPassword(u){
       try{
         await adminTempPassword(u.uid, passIn.value);
         closeModal();
-        toast('Müvəqqəti şifrə təyin olundu — istifadəçiyə bildirin');
+        toast(t('adm.temp_pass_set'));
       }catch(ex){
         console.error(ex);
-        errEl.textContent = 'Alınmadı: ' + (ex.message || 'server xətası');
+        errEl.textContent = 'Alınmadı: ' + (ex.message || t('adm.server_err'));
       }
       e.target.disabled = false;
-    } }, 'Təyin et'),
+    } }, t('adm.set')),
   ]);
 }
 
@@ -260,21 +260,21 @@ function adminUserRow(u){
       u.blocked = block;
       reloadAdminUsers();
       undoToast(
-        block ? ('@' + u.username + ' bloklandı') : ('@' + u.username + ' blokdan çıxarıldı'),
+        block ? ('@' + u.username +  ' ' + t('adm.blocked')) : ('@' + u.username +  ' ' + t('adm.unblocked')),
         async () => { await setBlocked(u.uid, block); reloadAdminUsers(); },
         { undoLabel: t('adm.undo'), onUndo: () => { u.blocked = !block; reloadAdminUsers(); } },
       );
     };
     row.append(u.blocked
-      ? el('button', { class: 'btn-mini dismiss', onclick: () => blockAction(false) }, 'Blokdan çıxar')
+      ? el('button', { class: 'btn-mini dismiss', onclick: () => blockAction(false) }, t('adm.unblock'))
       : el('button', { class: 'btn-mini block', onclick: () => blockAction(true) }, 'Blokla'));
     if(isAdminUser){
       row.append(el('button', { class: 'btn-mini block', onclick: async () => {
         if(await confirmDialog('@' + u.username + ' adminlikdən çıxarılsın?')){
-          try{ await removeAdmin(u.uid); toast('Adminlikdən çıxarıldı'); reloadAdminUsers(); }
-          catch(e){ toast('Alınmadı', 'err'); }
+          try{ await removeAdmin(u.uid); toast(t('adm.removed_admin')); reloadAdminUsers(); }
+          catch(e){ toast(t('adm.fail'), 'err'); }
         }
-      } }, 'Admin silmə'));
+      } }, t('adm.remove_admin')));
     }
   }
   return row;
@@ -337,7 +337,7 @@ async function runBulk(blocked){
     toast(t('adm.bulk_done').replace('{0}', n));
     selected.clear();
     reloadAdminUsers();
-  }catch(e){ console.error(e); toast('Alınmadı', 'err'); }
+  }catch(e){ console.error(e); toast(t('adm.fail'), 'err'); }
 }
 
 /* ---------- taksonomiya CRUD ---------- */
@@ -356,7 +356,7 @@ async function persistOrder(){
   try{
     await reorderTaxonomy(taxType, ids);   // serverdə tək D1 batch()
     toast(t('adm.tax_saved'));
-  }catch(e){ console.error(e); toast('Alınmadı', 'err'); }
+  }catch(e){ console.error(e); toast(t('adm.fail'), 'err'); }
 }
 
 // Elementi bir addım yuxarı/aşağı daşıyır (klaviatura alternativi).
@@ -373,7 +373,7 @@ function renderTaxList(){
   const box = document.getElementById('taxList');
   clear(box);
   const items = tax[taxType];
-  if(!items.length){ box.append(el('p', { style: 'color:var(--muted); font-size:.8rem;' }, 'Boşdur — "Standart dəsti bazaya yüklə" düyməsini bas.')); return; }
+  if(!items.length){ box.append(el('p', { style: 'color:var(--muted); font-size:.8rem;' }, t('adm.empty_seed'))); return; }
 
   box.append(el('p', { class: 'tax-hint' }, t('adm.tax_hint')));
 
@@ -419,7 +419,7 @@ function renderTaxList(){
         onclick: () => openTaxEditor(item) }, iconEdit()),
       el('button', { class: 'btn-mini block', onclick: async () => {
         if(await confirmDialog(`"${item.label}" deaktiv ediləcək — yeni seçimlərdə görünməyəcək (mövcud istifadəçilərdə qalır).`)){
-          try{ await deactivateTaxItem(taxType, item.id); toast('Deaktiv edildi'); }catch(e){ toast('Alınmadı', 'err'); }
+          try{ await deactivateTaxItem(taxType, item.id); toast(t('adm.deactivated')); }catch(e){ toast(t('adm.fail'), 'err'); }
         }
       } }, 'Deaktiv'),
     );
@@ -438,7 +438,7 @@ function openTaxEditor(item = null){
   // Sıra sahəsi YOXDUR — sıralama siyahıda sürüşdür-burax ilə edilir (Admin#3).
   // Yeni element siyahının sonuna əlavə olunur.
   showModal([
-    el('div', { class: 'section-title' }, (item ? '✎ Redaktə: ' : '+ Yeni: ') + (isProg ? 'proqramlaşdırma dili' : 'danışıq dili')),
+    el('div', { class: 'section-title' }, (item ? t('adm.edit') + ': ' : '+ Yeni: ') + (isProg ? t('adm.prog_lang') : t('adm.spok_lang'))),
     labelIn, iconIn, colorIn, hlIn,
     el('button', { class: 'btn-small', onclick: async () => {
       const label = labelIn.value.trim();
@@ -452,7 +452,7 @@ function openTaxEditor(item = null){
             : { flag: iconIn.value.trim() }),
         });
         closeModal();
-        toast(item ? 'Yeniləndi' : 'Əlavə olundu');
+        toast(item ? t('adm.updated') : t('adm.added'));
       }catch(e){ console.error(e); toast(t('adm.save_failed'), 'err'); }
     } }, 'Yadda saxla'),
   ]);
@@ -486,11 +486,11 @@ async function renderPubContent(){
     const faqs = await fetchAllFaqs().catch(() => []);
     if(!faqs.length){ box.append(el('p', { style: 'color:var(--muted); font-size:.8rem;' }, 'Boşdur — seed düyməsini bas.')); return; }
     faqs.forEach(f => box.append(el('div', { class: 'admin-user-row' },
-      el('div', { class: 'name' }, (f.q?.az || '—') + ' ', el('span', { class: 'sub' }, (f.category || '') + ' · sıra ' + (f.order ?? '—') + (f.active === false ? ' · qeyri-aktiv' : ''))),
+      el('div', { class: 'name' }, (f.q?.az || '—') + ' ', el('span', { class: 'sub' }, (f.category || '') + ' · sıra ' + (f.order ?? '—') + (f.active === false ?  ' · ' + t('adm.inactive') : ''))),
       el('button', { class: 'btn-mini', 'aria-label': t('a11y.edit') + ' — FAQ',
         onclick: () => openFaqEditor(f) }, iconEdit()),
       el('button', { class: 'btn-mini block', 'aria-label': t('a11y.delete') + ' — FAQ', onclick: async () => {
-        if(await confirmDialog('FAQ silinsin?')){ await deleteFaq(f.id).catch(() => toast('Alınmadı', 'err')); renderPubContent(); }
+        if(await confirmDialog('FAQ silinsin?')){ await deleteFaq(f.id).catch(() => toast(t('adm.fail'), 'err')); renderPubContent(); }
       } }, iconTrash()),
     )));
   } else if(pcTab === 'testi'){
@@ -503,11 +503,11 @@ async function renderPubContent(){
         onclick: () => openTestiEditor(x) }, iconEdit()),
       el('button', { class: 'btn-mini block', 'aria-label': t('a11y.delete') + ' — ' + (x.authorName || ''),
         onclick: async () => {
-          if(await confirmDialog('Rəy silinsin?')){ await deleteTestimonial(x.id).catch(() => toast('Alınmadı', 'err')); renderPubContent(); }
+          if(await confirmDialog('Rəy silinsin?')){ await deleteTestimonial(x.id).catch(() => toast(t('adm.fail'), 'err')); renderPubContent(); }
         } }, iconTrash()),
     )));
   } else {
-    if(!contactCache.length){ box.append(el('p', { style: 'color:var(--muted); font-size:.8rem;' }, 'Əlaqə mesajı yoxdur.')); return; }
+    if(!contactCache.length){ box.append(el('p', { style: 'color:var(--muted); font-size:.8rem;' }, t('adm.no_contact_msgs'))); return; }
     contactCache.forEach(m => box.append(el('div', { class: 'submission-row' + (m.read ? '' : ' '), style: m.read ? 'opacity:.6;' : '' },
       el('div', { class: 'txt' },
         el('b', {}, (m.name || '?') + ' — ' + (m.email || '')),
@@ -528,7 +528,7 @@ function openFaqEditor(f = null){
   const orderIn = el('input', { type: 'number', value: f?.order ?? 99, style: 'width:100%; background:var(--surface-2); border:1px solid var(--border); color:var(--text); padding:8px 10px; border-radius:8px; margin-bottom:8px;' });
   const activeIn = el('input', { type: 'checkbox', checked: f ? f.active !== false : true });
   showModal([
-    el('div', { class: 'section-title' }, f ? '✎ FAQ redaktə' : '+ Yeni FAQ'),
+    el('div', { class: 'section-title' }, f ? t('adm.faq_edit') : '+ Yeni FAQ'),
     qIn, aIn,
     el('div', { class: 'field' }, el('label', {}, 'Kateqoriya'), catIn),
     el('div', { class: 'field' }, el('label', {}, t('adm.order')), orderIn),
@@ -538,8 +538,8 @@ function openFaqEditor(f = null){
       if(!q.az || !a.az){ toast(t('adm.faq_required'), 'err'); return; }
       try{
         await saveFaq(f?.id, { q, a, category: catIn.value.trim(), order: parseInt(orderIn.value, 10) || 99, active: activeIn.checked });
-        closeModal(); toast('Yadda saxlanıldı'); renderPubContent();
-      }catch(e){ toast('Alınmadı', 'err'); }
+        closeModal(); toast(t('adm.saved')); renderPubContent();
+      }catch(e){ toast(t('adm.fail'), 'err'); }
     } }, 'Yadda saxla'),
   ], { wide: true });
 }
@@ -552,23 +552,23 @@ function openTestiEditor(x = null){
   const apprIn = el('input', { type: 'checkbox', checked: x ? !!x.approved : true });
   const featIn = el('input', { type: 'checkbox', checked: x ? !!x.featured : true });
   showModal([
-    el('div', { class: 'section-title' }, x ? '✎ Rəy redaktə' : '+ Yeni rəy'),
-    el('div', { class: 'field' }, el('label', {}, 'Müəllif adı'), nameIn),
+    el('div', { class: 'section-title' }, x ? t('adm.testi_edit') : '+ Yeni rəy'),
+    el('div', { class: 'field' }, el('label', {}, t('adm.author_name')), nameIn),
     titleIn, textIn,
     el('div', { class: 'field' }, el('label', {}, 'Reytinq (1-5)'), ratingIn),
     el('label', { class: 'remember-row' }, apprIn, ' ' + t('adm.approved_cb')),
     el('label', { class: 'remember-row' }, featIn, ' Seçilmiş (homepage-də görünür)'),
     el('button', { class: 'btn-small', onclick: async () => {
       const text = textIn.getValue();
-      if(!nameIn.value.trim() || !text.az){ toast('Ad və AZ mətn məcburidir', 'err'); return; }
+      if(!nameIn.value.trim() || !text.az){ toast(t('adm.name_az_req'), 'err'); return; }
       try{
         await saveTestimonial(x?.id, {
           authorName: nameIn.value.trim(), authorTitle: titleIn.getValue(), text,
           rating: Math.min(5, Math.max(1, parseInt(ratingIn.value, 10) || 5)),
           approved: apprIn.checked, featured: featIn.checked,
         });
-        closeModal(); toast('Yadda saxlanıldı'); renderPubContent();
-      }catch(e){ toast('Alınmadı', 'err'); }
+        closeModal(); toast(t('adm.saved')); renderPubContent();
+      }catch(e){ toast(t('adm.fail'), 'err'); }
     } }, 'Yadda saxla'),
   ], { wide: true });
 }
@@ -730,9 +730,9 @@ export function initAdmin(){
     e.target.disabled = true;
     try{
       const n = await seedPublicContent(DEFAULT_FAQS, DEFAULT_TESTIMONIALS);
-      toast(n ? n + ' element yükləndi' : 'Hər şey artıq bazadadır');
+      toast(n ? n +  ' ' + t('adm.items_loaded') : t('adm.all_in_db'));
       renderPubContent();
-    }catch(ex){ console.error(ex); toast('Yüklənə bilmədi', 'err'); }
+    }catch(ex){ console.error(ex); toast(t('adm.fail_load'), 'err'); }
     e.target.disabled = false;
   });
 
@@ -748,8 +748,8 @@ export function initAdmin(){
     e.target.disabled = true;
     try{
       const n = await seedTaxonomies();
-      toast(n ? n + ' yeni element yükləndi' : 'Hər şey artıq bazadadır');
-    }catch(ex){ console.error(ex); toast('Yüklənə bilmədi', 'err'); }
+      toast(n ? n +  ' ' + t('adm.items_loaded') : t('adm.all_in_db'));
+    }catch(ex){ console.error(ex); toast(t('adm.fail_load'), 'err'); }
     e.target.disabled = false;
   });
   bus.addEventListener('taxonomy-updated', () => {
@@ -841,9 +841,9 @@ export function initAdmin(){
         const found = [...state.users.values()].find(u => u.username === uname);
         if(!found){ toast(t('adm.user_not_found'), 'err'); return; }
         const uid = found.uid;
-        if(!await confirmDialog('@' + uname + ' admin ediləcək — bütün admin səlahiyyətlərini alacaq.', { danger: false, okLabel: 'Admin et' })) return;
-        try{ await addAdminByUid(uid); toast('@' + uname + ' artıq admindir'); closeModal(); }
-        catch(e){ toast('Alınmadı', 'err'); }
+        if(!await confirmDialog('@' + uname +  ' ' + t('adm.make_admin_desc'), { danger: false, okLabel: t('adm.make_admin') })) return;
+        try{ await addAdminByUid(uid); toast('@' + uname +  ' ' + t('adm.now_admin')); closeModal(); }
+        catch(e){ toast(t('adm.fail'), 'err'); }
       };
       showModal([
         el('h2', { class: 'section-title', style: 'margin-top:0; font-size:1.3rem;' }, t('adm.add_adm') || 'Admin Əlavə Et'),
@@ -889,13 +889,13 @@ async function loadAdminTeams() {
     const cb = el('input', { type: 'checkbox' });
     cb.checked = adminTeamsShowDeleted;
     cb.onchange = () => { adminTeamsShowDeleted = cb.checked; loadAdminTeams(); };
-    toggle.append(cb, document.createTextNode('Silinmişləri göstər'));
+    toggle.append(cb, document.createTextNode(t('adm.show_del')));
 
     bar.append(search, toggle);
     container.appendChild(bar);
 
     if (!teams.length) {
-      container.appendChild(el('div', { class: 'empty-state' }, 'Komanda tapılmadı.'));
+      container.appendChild(el('div', { class: 'empty-state' }, t('adm.no_team')));
       return;
     }
 
@@ -934,11 +934,11 @@ async function loadAdminTeams() {
         };
         actions.appendChild(del);
       } else {
-        const restore = el('button', { class: 'btn-text btn-mini' }, 'Bərpa et');
+        const restore = el('button', { class: 'btn-text btn-mini' }, t('adm.restore'));
         restore.onclick = async () => {
           try {
             await api(`/admin/teams/${team.id}/action`, { method: 'POST', body: { action: 'restore' } });
-            toast('Komanda bərpa edildi');
+            toast(t('adm.team_restored'));
             loadAdminTeams();
           } catch (e) { toast(e.message, 'err'); }
         };
@@ -956,7 +956,7 @@ async function loadAdminTeams() {
 async function openAdminTeamDetail(teamId) {
   const box = el('div');
   box.innerHTML = `<div class="empty-state">Yüklənir...</div>`;
-  showModal([el('h2', { style: 'margin:0 0 15px;' }, 'Komanda detalları'), box], { wide: true });
+  showModal([el('h2', { style: 'margin:0 0 15px;' }, t('adm.team_details')), box], { wide: true });
 
   try {
     const res = await api(`/admin/teams/${teamId}`);

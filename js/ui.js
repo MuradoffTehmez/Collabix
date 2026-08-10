@@ -61,10 +61,10 @@ export function undoToast(msg, commit, opts = {}){
     setTimeout(() => node.remove(), 300);
     if(shouldCommit){
       try{ await commit(); }
-      catch(e){ toast((e && e.message) || 'Əməliyyat alınmadı', 'err'); }
+      catch(e){ toast((e && e.message) || t('dyn.op_failed'), 'err'); }
     }else{
       if(opts.onUndo) opts.onUndo();
-      toast(opts.undoneMsg || 'Ləğv edildi');
+      toast(opts.undoneMsg || t('dyn.undone'));
     }
   }
 
@@ -197,12 +197,15 @@ document.addEventListener('keydown', e => {
 }, true);
 
 /* ---------- təsdiq dialoqu ---------- */
-export function confirmDialog(message, { okLabel = 'Bəli, davam et', danger = true } = {}){
+/* ⚠ `okLabel` DEFAULT-U ÇAĞIRIŞ ANINDA hesablanır (`?? t(...)`), parametr
+ *   default-u kimi YOX: modul səviyyəsində hesablansaydı mətn idxal anındakı
+ *   dildə donardı və dil dəyişəndə köhnə qalardı. */
+export function confirmDialog(message, { okLabel, danger = true } = {}){
   return new Promise(resolve => {
-    const ok = el('button', { class: danger ? 'btn-danger' : 'btn-small', onclick: () => { closeModal(); resolve(true); } }, okLabel);
-    const cancel = el('button', { class: 'btn-mini', onclick: () => { closeModal(); resolve(false); } }, 'İmtina');
+    const ok = el('button', { class: danger ? 'btn-danger' : 'btn-small', onclick: () => { closeModal(); resolve(true); } }, okLabel ?? t('dyn.confirm_ok'));
+    const cancel = el('button', { class: 'btn-mini', onclick: () => { closeModal(); resolve(false); } }, t('dyn.cancel'));
     showModal([
-      el('div', { class: 'section-title' }, danger ? '⚠ Təsdiq lazımdır' : 'Təsdiq'),
+      el('div', { class: 'section-title' }, danger ? '⚠ ' + t('dyn.confirm_needed') : t('dyn.confirm')),
       el('p', { style: 'color:var(--muted); font-size:.88rem; margin-bottom:18px; line-height:1.5;' }, message),
       el('div', { style: 'display:flex; gap:10px; justify-content:flex-end;' }, cancel, ok),
     ]);

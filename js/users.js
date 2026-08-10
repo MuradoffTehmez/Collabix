@@ -55,7 +55,7 @@ function followBtn(u, cls = 'c-btn c-btn--ghost c-btn--sm'){
         b.setAttribute('aria-pressed', String(nowFollowing));
         const lbl = b.querySelector('.fb-label');
         if(lbl) lbl.textContent = t(nowFollowing ? 'users.a_unfollow' : 'users.a_follow');
-        toast(nowFollowing ? '@' + u.username + ' izlənilir' : 'İzləmə dayandırıldı');
+        toast(nowFollowing ? '@' + u.username + ' ' + t('usr.now_following') : t('usr.unfollowed'));
       }catch(err){ toast(t('dyn.err_generic'), 'err'); }
       b.disabled = false;
     },
@@ -1171,11 +1171,11 @@ export function openProfileModal(uid){
 }
 
 function openReportForm(u){
-  const ta = el('textarea', { placeholder: 'Şikayət səbəbi...', maxLength: 1000 });
+  const ta = el('textarea', { placeholder: t('usr.report_ph'), maxLength: 1000 });
   showModal([
-    el('div', { class: 'section-title' }, 'İstifadəçini şikayət et'),
+    el('div', { class: 'section-title' }, t('usr.report_title')),
     el('p', { style: 'color:var(--muted); font-size:.85rem; margin-bottom:12px;' },
-      '@' + u.username + ' haqqında şikayətinizi yazın, admin nəzərdən keçirəcək.'),
+      '@' + u.username + ' ' + t('usr.report_hint')),
     ta,
     el('button', {
       class: 'btn-small',
@@ -1188,6 +1188,6 @@ function openReportForm(u){
           toast(t('dyn.reported'));
         }catch(e){ toast(t('dyn.report_fail'), 'err'); }
       },
-    }, 'Göndər'),
+    }, t('usr.send')),
   ]);
 }

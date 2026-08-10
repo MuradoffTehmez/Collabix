@@ -115,10 +115,10 @@ export async function openRoleEditor(user) {
     el('div', { class: 'c-modal__body' },
       userCell(user),
       el('div', { class: 'c-field', style: 'margin-top:16px' },
-        el('label', { class: 'c-field__label', for: 'govRoleSel' }, 'Rol'),
+        el('label', { class: 'c-field__label', for: 'govRoleSel' }, t('gov.col_role')),
         sel, note)),
     el('div', { class: 'c-modal__foot' },
-      el('button', { class: 'c-btn c-btn--ghost', onclick: closeModal }, 'Ləğv et'),
+      el('button', { class: 'c-btn c-btn--ghost', onclick: closeModal }, t('gov.cancel')),
       save),
   ]);
 }
@@ -139,7 +139,7 @@ function appSnapshot(s) {
   return el('div', { class: 'c-checklist' },
     checkRow(t('gov.chk_age'), s.accountDays >= 90, s.accountDays, 90),
     checkRow(t('gov.chk_level'), s.level >= 10, 'Lv' + s.level, 'Lv10'),
-    checkRow('Reputasiya', s.reputation >= 500, s.reputation, 500),
+    checkRow(t('gov.col_reputation'), s.reputation >= 500, s.reputation, 500),
     checkRow(t('gov.chk_warn'), s.warnings30d === 0, s.warnings30d, 0),
     checkRow(t('gov.chk_verified'), s.verified, t(s.verified ? 'gov.yes' : 'gov.no'), t('gov.yes')));
 }
@@ -176,14 +176,14 @@ async function reviewApp(app, approve) {
       userCell(app),
       el('p', { class: 'c-panel__sub' }, app.message),
       el('div', { class: 'c-panel__head', style: 'margin-top:20px' },
-        el('h4', { class: 'c-panel__title' }, 'Müraciət anındakı göstəricilər')),
+        el('h4', { class: 'c-panel__title' }, t('gov.snapshot_title'))),
       // ⚠ SNAPSHOT göstərilir, cari dəyər YOX: admin müraciətə bir həftə
       //   sonra baxa bilər və qərar müraciət anındakı vəziyyətə əsaslanmalıdır.
       appSnapshot(app.snapshot),
       el('div', { class: 'c-field', style: 'margin-top:20px' },
-        el('label', { class: 'c-field__label', for: 'govNote' }, 'Qeyd'), note)),
+        el('label', { class: 'c-field__label', for: 'govNote' }, t('gov.note')), note)),
     el('div', { class: 'c-modal__foot' },
-      el('button', { class: 'c-btn c-btn--ghost', onclick: closeModal }, 'Bağla'),
+      el('button', { class: 'c-btn c-btn--ghost', onclick: closeModal }, t('gov.close')),
       btn),
   ]);
 }
@@ -222,10 +222,10 @@ export async function renderModApps() {
 
   const body = el('tbody');
   for (const a of apps) {
-    const actions = el('td', { 'data-label': 'Əməliyyat' });
+    const actions = el('td', { 'data-label': t('gov.col_action') });
     if (a.status === 'pending') {
-      const ok = el('button', { class: 'c-btn c-btn--sm c-btn--primary' }, 'Təsdiqlə');
-      const no = el('button', { class: 'c-btn c-btn--sm c-btn--ghost' }, 'Rədd et');
+      const ok = el('button', { class: 'c-btn c-btn--sm c-btn--primary' }, t('gov.approve'));
+      const no = el('button', { class: 'c-btn c-btn--sm c-btn--ghost' }, t('gov.reject'));
       ok.addEventListener('click', () => reviewApp(a, true));
       no.addEventListener('click', () => reviewApp(a, false));
       actions.append(el('div', { class: 'c-table__actions' }, ok, no));
@@ -235,11 +235,11 @@ export async function renderModApps() {
     }
 
     body.append(el('tr', {},
-      el('td', { 'data-label': 'İstifadəçi' }, userCell(a)),
-      el('td', { 'data-label': 'Səviyyə', class: 'c-table__num' }, 'Lv' + a.snapshot.level),
+      el('td', { 'data-label': t('gov.col_user') }, userCell(a)),
+      el('td', { 'data-label': t('gov.col_level'), class: 'c-table__num' }, 'Lv' + a.snapshot.level),
       el('td', { 'data-label': 'Reputasiya', class: 'c-table__num' }, String(a.snapshot.reputation)),
-      el('td', { 'data-label': 'Xəbərdarlıq', class: 'c-table__num' }, String(a.snapshot.warnings30d)),
-      el('td', { 'data-label': 'Müraciət' }, fmtDate(a.createdAt)),
+      el('td', { 'data-label': t('gov.col_warnings'), class: 'c-table__num' }, String(a.snapshot.warnings30d)),
+      el('td', { 'data-label': t('gov.col_applied') }, fmtDate(a.createdAt)),
       actions));
   }
 
@@ -248,9 +248,9 @@ export async function renderModApps() {
       // AUDIT-UI: `scope="col"` əlavə olundu — başlıq/xana əlaqəsi ekran
       // oxuyucusu üçün. (Mətnlər hələ sabitdir; bu faylın i18n köçürməsi ayrıca iş.)
       el('thead', {}, el('tr', {},
-        el('th', { scope: 'col' }, 'İstifadəçi'), el('th', { scope: 'col' }, 'Səviyyə'),
-        el('th', { scope: 'col' }, 'Reputasiya'), el('th', { scope: 'col' }, 'Xəbərdarlıq'),
-        el('th', { scope: 'col' }, 'Müraciət'), el('th', { scope: 'col' }, 'Əməliyyat'))),
+        el('th', { scope: 'col' }, t('gov.col_user')), el('th', { scope: 'col' }, t('gov.col_level')),
+        el('th', { scope: 'col' }, t('gov.col_reputation')), el('th', { scope: 'col' }, t('gov.col_warnings')),
+        el('th', { scope: 'col' }, t('gov.col_applied')), el('th', { scope: 'col' }, t('gov.col_action')))),
       body)));
 }
 
@@ -302,12 +302,12 @@ export async function renderModeratorSection() {
         renderModeratorSection();
       } catch (e) { toast(e.message || t('gov.fail'), 'err'); }
     });
-    foot.append(el('span', { class: 'c-badge c-badge--info' }, 'Müraciətiniz baxılır'), ' ', wd);
+    foot.append(el('span', { class: 'c-badge c-badge--info' }, t('gov.app_under_review')), ' ', wd);
   } else if (d.cooldownDays > 0) {
     foot.append(el('p', { class: 'c-field__hint' },
       `Yenidən müraciət üçün ${d.cooldownDays} gün qalıb.`));
   } else if (d.eligible) {
-    const btn = el('button', { class: 'c-btn c-btn--primary' }, 'Moderator olmaq üçün müraciət et');
+    const btn = el('button', { class: 'c-btn c-btn--primary' }, t('gov.apply_btn'));
     btn.addEventListener('click', openApplyModal);
     foot.append(btn);
   } else {
@@ -334,7 +334,7 @@ function openApplyModal() {
     counter.textContent = `${ta.value.length} / 1000 (minimum 30)`;
   });
 
-  const send = el('button', { class: 'c-btn c-btn--primary' }, 'Müraciəti göndər');
+  const send = el('button', { class: 'c-btn c-btn--primary' }, t('gov.apply_send'));
   send.addEventListener('click', async () => {
     if (ta.value.trim().length < 30) {
       toast(t('gov.apply_short'), 'err');
@@ -360,7 +360,7 @@ function openApplyModal() {
         el('label', { class: 'c-field__label', for: 'govApplyMsg' }, 'Motivasiya'),
         ta, counter)),
     el('div', { class: 'c-modal__foot' },
-      el('button', { class: 'c-btn c-btn--ghost', onclick: closeModal }, 'Ləğv et'),
+      el('button', { class: 'c-btn c-btn--ghost', onclick: closeModal }, t('gov.cancel')),
       send),
   ]);
 }
@@ -382,7 +382,7 @@ export async function renderInvites() {
     list.append(el('p', { class: 'c-field__hint' }, t('gov.inv_none')));
   }
   for (const i of active) {
-    const revoke = el('button', { class: 'c-btn c-btn--sm c-btn--quiet' }, 'Ləğv et');
+    const revoke = el('button', { class: 'c-btn c-btn--sm c-btn--quiet' }, t('gov.cancel'));
     revoke.addEventListener('click', async () => {
       if (!await confirmDialog(`${i.code} kodu ləğv edilsin?`)) return;
       try {
@@ -411,7 +411,7 @@ export async function renderInvites() {
       el('div', { class: 'c-table__actions' }, copy, revoke)));
   }
 
-  const create = el('button', { class: 'c-btn c-btn--primary' }, 'Yeni dəvət kodu');
+  const create = el('button', { class: 'c-btn c-btn--primary' }, t('gov.new_invite'));
   create.addEventListener('click', async () => {
     create.disabled = true;
     try {

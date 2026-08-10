@@ -955,7 +955,7 @@ export async function uploadAvatar(blob){
 // da qəbul edir (10 MB) və açarı `teams/{teamId}/{category}/...` kimi qurur.
 export const TEAM_FILE_MAX = 10 * 1024 * 1024;
 export async function uploadTeamFile(file, teamId, category = 'documents'){
-  if(file.size > TEAM_FILE_MAX) throw new Error('Fayl 10 MB-dan böyükdür');
+  if(file.size > TEAM_FILE_MAX) throw new Error(t('dyn.file_too_big_10'));
   const form = new FormData();
   form.append('file', file, file.name || 'file');
   return api(`/upload?kind=team&teamId=${encodeURIComponent(teamId)}&category=${encodeURIComponent(category)}`, {
@@ -964,7 +964,7 @@ export async function uploadTeamFile(file, teamId, category = 'documents'){
 }
 
 export async function uploadMessageFile(file){
-  if(file.size > MSG_FILE_MAX) throw new Error('Fayl 2 MB-dan böyükdür');
+  if(file.size > MSG_FILE_MAX) throw new Error(t('dyn.file_too_big_2'));
   const d = await uploadFile(file, 'msg', file.name);
   return {
     fileUrl: d.url, fileName: d.fileName, fileSize: d.fileSize, mimeType: d.mimeType,

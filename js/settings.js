@@ -73,7 +73,7 @@ export function initSettings(){
   document.getElementById('deleteAccountBtn').addEventListener('click', async () => {
     const sure = await confirmDialog(
       t('set.del_warn'),
-      { okLabel: 'Bəli, hesabı sil' },
+      { okLabel: t('set.delete_ok') },
     );
     if(!sure) return;
     // Silmə üçün şifrə təsdiqi (reauthentication) tələb olunur.
@@ -81,7 +81,7 @@ export function initSettings(){
       style: 'width:100%; background:var(--surface-2); border:1px solid var(--border); color:var(--text); padding:10px 12px; border-radius:9px; margin-bottom:12px;' });
     const errEl = el('div', { class: 'form-err' });
     showModal([
-      el('div', { class: 'section-title' }, '⚠ Son təsdiq'),
+      el('div', { class: 'section-title' }, '⚠ ' + t('set.final_confirm')),
       el('p', { style: 'color:var(--muted); font-size:.85rem; margin-bottom:12px;' }, t('set.del_hint')),
       passIn, errEl,
       el('button', { class: 'btn-danger', onclick: async e => {
@@ -90,12 +90,12 @@ export function initSettings(){
         try{
           await deleteAccount(passIn.value);
           closeModal();
-          toast('Hesab silindi. Sağ ol, Collabix!');
+          toast(t('set.account_deleted'));
         }catch(ex){
           errEl.textContent = authErrMessage(ex);
           e.target.disabled = false;
         }
-      } }, 'Hesabı birdəfəlik sil'),
+      } }, t('set.delete_forever')),
     ]);
   });
 }

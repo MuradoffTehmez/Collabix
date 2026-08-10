@@ -6,6 +6,7 @@ import { bus } from './util.js';
 import { tokenFor, resetWidget } from './turnstile.js';
 import { promptMfaCode } from './mfa.js';
 import { toast } from './ui.js';
+import { t } from './i18n.js';
 
 let onLoginCb = null;
 let onLogoutCb = null;
@@ -41,7 +42,7 @@ export function watchAuthState(onLogin, onLogout){
     if(Date.now() - lastRlToast < 20_000) return;
     lastRlToast = Date.now();
     const sec = (ev.detail && ev.detail.retryAfter) || 60;
-    toast(`Çox sayda sorğu göndərildi. ${sec} saniyə sonra yenidən cəhd edin.`, 'err');
+    toast(t('auth.rate_limit_err').replace('{sec}', sec), 'err');
   });
   return () => {};
 }

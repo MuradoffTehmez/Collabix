@@ -138,20 +138,24 @@ function openEditModal(initialTab = 'general'){
     }catch(err){ toast(t('dyn.err_img'), 'err'); }
   });
   const nameIn = inp(me.name, 'Ad Soyad');
-  const bioIn = el('textarea', { maxLength: 400, placeholder: 'Özün haqqında qısa yaz...' });
+  const bioIn = el('textarea', { maxLength: 400, placeholder: t('pf.bio_ph') });
   bioIn.value = me.bio || '';
   const bdIn = el('input', { type: 'date', value: me.birthDate || '' });
   const genderBox = el('div', { class: 'gender-pick' });
   let gender = me.gender || '';
-  ['Kişi', 'Qadın'].forEach(g => {
+  /* ⚠ SAXLANILAN DƏYƏR TƏRCÜMƏ OLUNMUR. Massivin birinci elementi bazaya
+   *   yazılan dəyərdir (`users.gender`), ikincisi yalnız ETİKETDİR. Etiketi
+   *   dəyərə çevirsəydik, dili dəyişən istifadəçinin profili başqa cins
+   *   dəyəri ilə yazılardı və köhnə sətirlər heç bir düymə ilə uyğunlaşmazdı. */
+  [['Kişi', 'pf.male'], ['Qadın', 'pf.female']].forEach(([g, gKey]) => {
     const b = el('button', { type: 'button', class: 'genBtn' + (gender === g ? ' sel' : ''), onclick: () => {
       gender = g;
       genderBox.querySelectorAll('.genBtn').forEach(x => x.classList.toggle('sel', x === b));
-    } }, g);
+    } }, t(gKey));
     genderBox.append(b);
   });
-  const countryIn = inp(me.country, 'Azərbaycan', 40);
-  const cityIn = inp(me.city, 'Bakı', 40);
+  const countryIn = inp(me.country, t('pf.country_ph'), 40);
+  const cityIn = inp(me.city, t('pf.city_ph'), 40);
 
   // Miqrasiya 0050 — kataloqda göstərilən iş yeri və əl ilə status.
   // ⚠ Sahə OLMADAN sütun ölü olardı: kataloq onu göstərir, amma heç kim
@@ -166,15 +170,15 @@ function openEditModal(initialTab = 'general'){
 
   const tabGeneral = el('div', {},
     el('div', { class: 'photo-pick' }, avPreview,
-      el('label', {}, 'Şəkli dəyiş', fileIn),
+      el('label', {}, t('pf.photo_change'), fileIn),
       el('button', { type: 'button', class: 'btn-mini block', onclick: () => {
         removeAvatar = true; newAvatarBlob = null;
         clear(avPreview); avPreview.textContent = (me.name || '?').charAt(0).toUpperCase();
-      } }, 'Şəkli sil')),
+      } }, t('pf.photo_remove'))),
     fld('Ad', nameIn),
-    fld('Bio / Haqqımda', bioIn),
-    el('div', { class: 'row2' }, fld('Doğum tarixi', bdIn), fld('Cins', genderBox)),
-    el('div', { class: 'row2' }, fld('Ölkə', countryIn), fld('Şəhər', cityIn)),
+    fld(t('pf.bio'), bioIn),
+    el('div', { class: 'row2' }, fld(t('pf.birthdate'), bdIn), fld(t('pf.gender'), genderBox)),
+    el('div', { class: 'row2' }, fld(t('pf.country'), countryIn), fld(t('pf.city'), cityIn)),
     el('div', { class: 'row2' },
       fld(t('set.company'), companyIn),
       fld(t('set.status'), statusIn, t('set.status_hint'))),
@@ -183,12 +187,14 @@ function openEditModal(initialTab = 'general'){
   /* --- Tab: Bacarıqlar --- */
   const progPick = skillLevelPicker(tax.prog, me.progLevels || {});
   const langPick = skillLevelPicker(tax.spoken, me.langLevels || {});
-  const goalsIn = el('textarea', { maxLength: 300, placeholder: 'Öyrənmə hədəflərin...' });
+  const goalsIn = el('textarea', { maxLength: 300, placeholder: t('pf.goals_ph') });
   goalsIn.value = me.goals || '';
   const lfBox = el('div', { class: 'pill-pick' });
-  ['Study partner', 'Mentor', 'Layihə komandası'].forEach(x => {
+  /* ⚠ Cins ilə eyni qayda: birinci element SAXLANILAN dəyər, ikincisi etiket. */
+  [['Study partner', 'pf.lf_partner'], ['Mentor', 'pf.lf_mentor'], ['Layihə komandası', 'pf.lf_team']].forEach(([x, lfKey]) => {
     lfBox.append(el('button', { type: 'button', class: 'pp' + ((me.lookingFor || []).includes(x) ? ' sel' : ''),
-      onclick: e => e.target.classList.toggle('sel') }, x));
+      dataset: { val: x },
+      onclick: e => e.target.classList.toggle('sel') }, t(lfKey)));
   });
   /* Təcrübə ili + sertifikat (miqrasiya 0052 → `users.skill_meta`).
    *
@@ -235,23 +241,23 @@ function openEditModal(initialTab = 'general'){
   rebuildMeta();
 
   const tabSkills = el('div', {},
-    fld('Proqramlaşdırma dilləri', progPick, 'Klik: Başlanğıc → Orta → Qabaqcıl → çıxart'),
-    fld('Öyrəndiyi / bildiyi dillər', langPick),
+    fld(t('pf.prog_langs'), progPick, t('pf.level_hint')),
+    fld(t('pf.spoken_langs'), langPick),
     fld(t('pf.meta_title'), metaBox, t('pf.meta_hint')),
-    fld('Öyrənmə hədəfləri', goalsIn),
-    fld('Nə axtarıram?', lfBox),
+    fld(t('pf.goals'), goalsIn),
+    fld(t('pf.looking_for'), lfBox),
   );
 
   /* --- Tab: Sosial --- */
-  const instaIn = inp(me.instagram, '@istifadəçi', 40);
-  const ghIn = inp(me.github, 'istifadəçi', 40);
-  const liIn = inp(me.linkedin, 'in/istifadəçi', 60);
-  const tgIn = inp(me.telegram, '@istifadəçi', 40);
+  const instaIn = inp(me.instagram, '@' + t('pf.username_ph'), 40);
+  const ghIn = inp(me.github, t('pf.username_ph'), 40);
+  const liIn = inp(me.linkedin, 'in/' + t('pf.username_ph'), 60);
+  const tgIn = inp(me.telegram, '@' + t('pf.username_ph'), 40);
   const webIn = inp(me.website, 'https://...', 100);
   const tabSocial = el('div', {},
     el('div', { class: 'row2' }, fld('Instagram', instaIn), fld('GitHub', ghIn)),
     el('div', { class: 'row2' }, fld('LinkedIn', liIn), fld('Telegram', tgIn)),
-    fld('Şəxsi sayt', webIn),
+    fld(t('pf.website'), webIn),
   );
 
   /* --- Tab: Təhlükəsizlik --- */
@@ -278,7 +284,7 @@ function openEditModal(initialTab = 'general'){
     fld(t('prof.pass_confirm'), curPass2),
     el('button', { class: 'btn-small', onclick: async e => {
       unameErr.textContent = '';
-      if(!newUname.value.trim() || !curPass2.value){ unameErr.textContent = 'Hər iki sahəni doldur.'; return; }
+      if(!newUname.value.trim() || !curPass2.value){ unameErr.textContent = t('pf.both_fields'); return; }
       e.target.disabled = true;
       try{
         await changeUsername(curPass2.value, newUname.value);
@@ -291,10 +297,10 @@ function openEditModal(initialTab = 'general'){
           : ex.code === 'auth/email-already-in-use' ? t('wiz.err_uname_taken') : authErrMessage(ex, t);
       }
       e.target.disabled = false;
-    } }, 'Adı dəyiş'),
+    } }, t('pf.change_username')),
     unameErr,
     el('p', { style: 'font-size:.76rem; color:var(--muted); margin-top:18px;' },
-      'Hesabı silmək üçün ', el('b', {}, 'Parametrlər → Təhlükəli zona'), ' bölməsinə keç.'),
+      t('pf.delete_hint_a'), el('b', {}, t('pf.delete_hint_b')), t('pf.delete_hint_c')),
   );
 
   /* --- Tab: Parametrlər (schema-driven — yeni parametr = sxemə 1 sətir) --- */
@@ -324,7 +330,7 @@ function openEditModal(initialTab = 'general'){
     { key: 'notifications.follows', type: 'toggle', lbl: t('set.notif.follows'),
       get: () => me.settings?.notifications?.follows !== false,
       set: v => updateMySettings({ notifications: { follows: v } }) },
-    { key: 'showProjectOnProfile', type: 'toggle', lbl: 'Aktiv layihəmi profilimdə göstər',
+    { key: 'showProjectOnProfile', type: 'toggle', lbl: t('pf.show_project'),
       get: () => me.showProjectOnProfile !== false,
       set: async v => { await api('/me', { method: 'PATCH', body: { showProjectOnProfile: v } }); me.showProjectOnProfile = v; } },
   ];
@@ -351,11 +357,11 @@ function openEditModal(initialTab = 'general'){
 
   /* --- tab keçidi --- */
   const TABS = [
-    { id: 'general', lbl: 'Ümumi', node: tabGeneral },
-    { id: 'skills', lbl: 'Bacarıqlar', node: tabSkills },
+    { id: 'general', lbl: t('pf.tab_general'), node: tabGeneral },
+    { id: 'skills', lbl: t('pf.tab_skills'), node: tabSkills },
     { id: 'social', lbl: 'Sosial', node: tabSocial },
     { id: 'settings', lbl: t('nav.settings'), node: tabSettings },
-    { id: 'security', lbl: 'Təhlükəsizlik', node: tabSecurity },
+    { id: 'security', lbl: t('pf.tab_security'), node: tabSecurity },
   ];
   const body = el('div', {});
   const tabsBar = el('div', { class: 'task-cat-tabs' });
@@ -391,7 +397,12 @@ function openEditModal(initialTab = 'general'){
           .filter(([k, v]) => (k in progLevels || k in langLevels) && (v.y || v.c))),
         prog: Object.keys(progLevels), langs: Object.keys(langLevels),
         goals: goalsIn.value.trim(),
-        lookingFor: [...lfBox.querySelectorAll('.pp.sel')].map(b => b.textContent),
+        /* ⚠ `dataset.val` OXUNUR, `textContent` YOX: düymənin mətni indi tərcümə
+         *   olunur, saxlanılan dəyər isə dəyişməməlidir. `textContent` işlətsəydik
+         *   EN interfeysdə profil "Project team", AZ-da "Layihə komandası"
+         *   yazardı — eyni istifadəçi dilindən asılı olaraq iki fərqli dəyər
+         *   saxlayardı və heç bir filtr onları uyğunlaşdıra bilməzdi. */
+        lookingFor: [...lfBox.querySelectorAll('.pp.sel')].map(b => b.dataset.val),
         instagram: instaIn.value.trim(), github: ghIn.value.trim(),
         linkedin: liIn.value.trim(), telegram: tgIn.value.trim(), website: webIn.value.trim(),
       };

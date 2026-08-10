@@ -130,7 +130,7 @@ export function nameWithBadge(user, name){
   const frag = document.createDocumentFragment();
   frag.append(document.createTextNode(name ?? ((user && user.name) || '—')));
   if(user && user.verified === true){
-    frag.append(el('span', { class: 'verified-badge', title: 'Təsdiqlənmiş', 'aria-label': 'Təsdiqlənmiş' }, '✓'));
+    frag.append(el('span', { class: 'verified-badge', title: t('dyn.verified'), 'aria-label': t('dyn.verified') }, '✓'));
   }
   return frag;
 }
@@ -182,19 +182,19 @@ export function lastSeenText(user){
 // Client tərəfdə şəkil kiçiltmə → JPEG Blob (Storage-a yüklənmək üçün).
 export function resizeImage(file, maxW, quality = 0.75){
   return new Promise((resolve, reject) => {
-    if(!file || !file.type.startsWith('image/')) return reject(new Error('Şəkil faylı deyil'));
+    if(!file || !file.type.startsWith('image/')) return reject(new Error(t('dyn.not_image')));
     const reader = new FileReader();
-    reader.onerror = () => reject(new Error('Fayl oxuna bilmədi'));
+    reader.onerror = () => reject(new Error(t('dyn.file_read_failed')));
     reader.onload = ev => {
       const img = new Image();
-      img.onerror = () => reject(new Error('Şəkil aça bilmədi'));
+      img.onerror = () => reject(new Error(t('dyn.image_open_failed')));
       img.onload = () => {
         let w = img.width, h = img.height;
         if(w > maxW){ h = Math.round(h * (maxW / w)); w = maxW; }
         const canvas = document.createElement('canvas');
         canvas.width = w; canvas.height = h;
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        canvas.toBlob(b => b ? resolve(b) : reject(new Error('Şəkil emalı alınmadı')), 'image/jpeg', quality);
+        canvas.toBlob(b => b ? resolve(b) : reject(new Error(t('dyn.image_process_failed'))), 'image/jpeg', quality);
       };
       // `readAsDataURL` HƏMİŞƏ string qaytarır; `FileReader.result` tipi isə
       // `string | ArrayBuffer | null`-dır (readAsArrayBuffer üçün).

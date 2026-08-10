@@ -1323,14 +1323,14 @@
       <div class="admin-layout">
         <aside class="admin-sidebar">
           <button class="admin-sidebar-btn active" data-tab="tab-dashboard">📊 Dashboard</button>
-          <button class="admin-sidebar-btn" data-tab="tab-threats">🛡️ Təhlükəsizlik</button>
-          <button class="admin-sidebar-btn" data-tab="tab-content">📁 Məzmun İdarəsi</button>
-          <button class="admin-sidebar-btn" data-tab="tab-teams">🏢 Komandalar</button>
-          <button class="admin-sidebar-btn" data-tab="tab-users">👥 İstifadəçilər</button>
+          <button class="admin-sidebar-btn" data-tab="tab-threats" data-i18n="adm.tab_threats">🛡️ Təhlükəsizlik</button>
+          <button class="admin-sidebar-btn" data-tab="tab-content" data-i18n="adm.tab_content">📁 Məzmun İdarəsi</button>
+          <button class="admin-sidebar-btn" data-tab="tab-teams" data-i18n="adm.tab_teams">🏢 Komandalar</button>
+          <button class="admin-sidebar-btn" data-tab="tab-users" data-i18n="adm.tab_users">👥 İstifadəçilər</button>
           <!-- ⚠ "Platforma" sözü QƏSDƏN yazılıb: komanda rolları ayrı sistemdir
                və komanda səhifəsindən idarə olunur (bax js/governance.js başlığı). -->
-          <button class="admin-sidebar-btn" data-tab="tab-governance">⚖️ Platforma Rolları</button>
-          <button class="admin-sidebar-btn" data-tab="tab-logs">📜 Audit Jurnalı</button>
+          <button class="admin-sidebar-btn" data-tab="tab-governance" data-i18n="adm.tab_roles">⚖️ Platforma Rolları</button>
+          <button class="admin-sidebar-btn" data-tab="tab-logs" data-i18n="adm.tab_logs">📜 Audit Jurnalı</button>
         </aside>
         
         <div class="admin-content">
@@ -1425,7 +1425,7 @@
               <summary>
                 <div>
                   <span data-i18n="adm.pub" class="u-font-size-1-2rem"></span>
-                  <div class="u-color-text-sec u-font-size-8rem u-font-weight-normal">Sayt məzmunu (FAQ, Testimonial)</div>
+                  <div class="u-color-text-sec u-font-size-8rem u-font-weight-normal" data-i18n="adm.site_content">Sayt məzmunu (FAQ, Testimonial)</div>
                 </div>
               </summary>
               <div class="accordion-body">
@@ -1445,7 +1445,7 @@
           <div class="admin-tab-pane" id="tab-teams">
             <div class="admin-card">
               <div class="u-display-flex u-justify-content-space-between u-align-items-center u-margin-bottom-16px">
-                <h2 class="section-title u-margin-0">Admin İdarəetməsi</h2>
+                <h2 class="section-title u-margin-0" data-i18n="adm.admin_mng">Admin İdarəetməsi</h2>
                 <button class="btn-primary" id="btnShowAddAdminModal">+ Admin Əlavə Et</button>
               </div>
               <h3 class="u-margin-top-24px u-font-size-1-2rem">Komandalar İdarəsi</h3>
@@ -1494,7 +1494,7 @@
                   </p>
                 </div>
               </div>
-              <p class="c-field__hint">
+              <p class="c-field__hint" data-i18n-html="adm.role_change_desc">
                 İstifadəçinin rolunu dəyişmək üçün <strong>İstifadəçilər</strong> tabından
                 həmin hesabı açın. Rol dəyişikliyi audit jurnalına yazılır.
               </p>
@@ -1511,10 +1511,10 @@
                 </div>
               </div>
               <div class="c-tabs" id="govAppTabs">
-                <button class="c-tab is-active" data-appst="pending">Gözləyən</button>
-                <button class="c-tab" data-appst="approved">Təsdiqlənmiş</button>
-                <button class="c-tab" data-appst="rejected">Rədd edilmiş</button>
-                <button class="c-tab" data-appst="all">Hamısı</button>
+                <button class="c-tab is-active" data-appst="pending" data-i18n="adm.mod_pending">Gözləyən</button>
+                <button class="c-tab" data-appst="approved" data-i18n="adm.mod_approved">Təsdiqlənmiş</button>
+                <button class="c-tab" data-appst="rejected" data-i18n="adm.mod_rejected">Rədd edilmiş</button>
+                <button class="c-tab" data-appst="all" data-i18n="adm.mod_all">Hamısı</button>
               </div>
               <div id="govModApps"></div>
             </div>

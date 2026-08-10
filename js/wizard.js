@@ -9,7 +9,11 @@ import { tax, SKILL_LEVELS } from './taxonomy.js';
 import { paintIcons } from './icons.js';
 import { t } from './i18n.js';
 
-const LOOKING_FOR = ['Study partner', 'Mentor', 'Layihə komandası'];
+const LOOKING_FOR = [
+  { id: 'Study partner', key: 'wiz.look_study' },
+  { id: 'Mentor', key: 'wiz.look_mentor' },
+  { id: 'Layihə komandası', key: 'wiz.look_team' }
+];
 
 /* ---------- paylaşılan komponent: səviyyəli skill seçici ----------
    Klik dövrü: seçilməyib → Başlanğıc → Orta → Qabaqcıl → seçilməyib. */
@@ -45,7 +49,7 @@ export function passStrength(pass){
   if(/[A-Z]/.test(pass) && /[a-z]/.test(pass)) score++;
   if(/\d/.test(pass)) score++;
   if(/[^A-Za-z0-9]/.test(pass)) score++;
-  const lbls = ['çox zəif', 'zəif', 'orta', 'yaxşı', 'güclü', 'çox güclü'];
+  const lbls = [t('wiz.pw_vweak'), t('wiz.pw_weak'), t('wiz.pw_med'), t('wiz.pw_good'), t('wiz.pw_strong'), t('wiz.pw_vstrong')];
   const colors = ['#ff5470', '#ff5470', '#d9a441', '#d9a441', '#3dd68c', '#3dd68c'];
   return { pct: Math.min(100, score * 20), label: lbls[score], color: colors[score] };
 }
@@ -202,7 +206,7 @@ function step2(){
       const img = document.createElement('img');
       img.src = URL.createObjectURL(data.avatarBlob);
       avPreview.append(img);
-    }catch(err){ toast('Şəkil oxuna bilmədi', 'err'); }
+    }catch(err){ toast(t('wiz.err_img_read'), 'err'); }
   });
 
   const genderBox = el('div', { class: 'gender-pick' });
@@ -210,7 +214,7 @@ function step2(){
     const b = el('button', { type: 'button', class: 'genBtn' + (data.gender === g ? ' sel' : ''), onclick: () => {
       data.gender = g;
       genderBox.querySelectorAll('.genBtn').forEach(x => x.classList.toggle('sel', x === b));
-    } }, g);
+    } }, t(g === 'Kişi' ? 'wiz.gender_m' : 'wiz.gender_f'));
     genderBox.append(b);
   });
 
@@ -253,10 +257,10 @@ function step3(){
 
   const lfBox = el('div', { class: 'pill-pick' });
   LOOKING_FOR.forEach(x => {
-    const b = el('button', { type: 'button', class: 'pp' + (data.lookingFor.includes(x) ? ' sel' : ''), onclick: () => {
+    const b = el('button', { type: 'button', class: 'pp' + (data.lookingFor.includes(x.id) ? ' sel' : ''), dataset: { val: x.id }, onclick: () => {
       b.classList.toggle('sel');
-      data.lookingFor = [...lfBox.querySelectorAll('.pp.sel')].map(p => p.textContent);
-    } }, x);
+      data.lookingFor = [...lfBox.querySelectorAll('.pp.sel')].map(p => p.dataset.val);
+    } }, t(x.key));
     lfBox.append(b);
   });
 
