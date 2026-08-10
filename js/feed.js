@@ -1361,7 +1361,27 @@ function mountComments(box, p){
     const canDelete = mine || state.isAdmin || isPostOwner;
     const wrap = el('div', { class: 'c-menu-wrap' });
     const menu = el('div', { class: 'c-menu', role: 'menu', hidden: true });
-    const close = () => { menu.hidden = true; };
+    /* 🔴 O-06 — DİNLƏYİCİ YALNIZ MENYU AÇIQ İKƏN YAŞAYIR.
+     *
+     *   Əvvəl `document.addEventListener('click', close)` menyu QURULARKƏN
+     *   çağırılırdı və heç vaxt silinmirdi. Hər şərh üçün bir dinləyici, hər
+     *   yenidən qurulmada bir dəst daha: 50 şərhlik post üç dəfə açılanda 150
+     *   dinləyici qalırdı və hər biri öz DOM qovşaqlarını bağlamada saxlayırdı.
+     *   SPA heç vaxt tam yenidən yüklənmədiyi üçün bunlar sessiya boyu yığılır.
+     *
+     * ⚠ SIRA: dinləyici `open()`-dan SONRA, `setTimeout`-suz əlavə olunur və
+     *   açan klik `stopPropagation()` ilə kəsilir — əks halda elə həmin klik
+     *   `document`-ə çatıb menyunu dərhal bağlayardı. */
+    const close = () => {
+      menu.hidden = true;
+      btn.setAttribute('aria-expanded', 'false');
+      document.removeEventListener('click', close);
+    };
+    const open = () => {
+      menu.hidden = false;
+      btn.setAttribute('aria-expanded', 'true');
+      document.addEventListener('click', close);
+    };
 
     const item = (icon, label, fn, cls) => el('button', {
       type: 'button', class: 'c-menu-item' + (cls ? ' ' + cls : ''), role: 'menuitem',
@@ -1389,13 +1409,11 @@ function mountComments(box, p){
       title: t('cm.more'), 'aria-haspopup': 'true', 'aria-expanded': 'false',
       onclick: e => {
         e.stopPropagation();
-        menu.hidden = !menu.hidden;
-        btn.setAttribute('aria-expanded', String(!menu.hidden));
+        if(menu.hidden) open(); else close();
       },
     }, el('span', { class: 'ic', 'data-icon': 'more', 'data-icon-size': '15' }));
 
     // Kənara klik / Escape bağlayır — menyu açıq qalıb yolu kəsməsin.
-    document.addEventListener('click', close);
     wrap.addEventListener('keydown', e => { if(e.key === 'Escape') close(); });
     wrap.append(btn, menu);
     paintIcons(wrap);

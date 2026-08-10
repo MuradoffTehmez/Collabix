@@ -7,16 +7,15 @@
 // əvvəl cookie, ki bu da elə qadağanın özüdür.
 import { el, clear, emit, prefersReducedMotion } from './util.js';
 import { t } from './i18n.js';
+import { lsGetJSON, lsSetJSON } from './storage.js';
 
 const KEY = 'collabix_cookie_consent';
 const VERSION = 1; // siyasət dəyişəndə artır → razılıq təkrar soruşulur
 
 export function getConsent(){
-  try{
-    const raw = JSON.parse(localStorage.getItem(KEY) || 'null');
-    if(!raw || raw.v !== VERSION) return null;
-    return raw;
-  }catch(e){ return null; }
+  const raw = lsGetJSON(KEY, null);
+  if(!raw || raw.v !== VERSION) return null;
+  return raw;
 }
 
 // Analitika yalnız açıq razılıqla. Çağıran tərəf (gələcək analytics kodu) bunu yoxlamalıdır.
@@ -25,9 +24,8 @@ export function analyticsAllowed(){
 }
 
 function save(analytics){
-  try{
-    localStorage.setItem(KEY, JSON.stringify({ v: VERSION, analytics, ts: Date.now() }));
-  }catch(e){ /* private mode — banner hər sessiyada görünəcək, funksionallıq pozulmur */ }
+  // Uğursuzluq gizli rejimdir — banner hər sessiyada görünəcək, funksionallıq pozulmur.
+  lsSetJSON(KEY, { v: VERSION, analytics, ts: Date.now() });
   emit('cookie-consent', { analytics });
 }
 

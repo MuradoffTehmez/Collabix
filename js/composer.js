@@ -7,6 +7,7 @@ import { allCategoryLabels, highlightOptions } from './taxonomy.js';
 import { markdownNode } from './markdown.js';
 import { t } from './i18n.js';
 import { iconX, paintIcons } from './icons.js';
+import { lsRemove, lsGetJSON, lsSetJSON } from './storage.js';
 
 let blocks = []; // { id, type:'text'|'code'|'image', content, language, images:[{blob,previewURL,caption}] }
 let idSeq = 0;
@@ -57,8 +58,8 @@ function writeDraft(){
         at: Date.now(),
       };
       const boş = !payload.blocks.some(b => (b.content || '').trim()) && !payload.poll;
-      if(boş){ localStorage.removeItem(DRAFT_KEY); setSaveStatus(null); return; }
-      localStorage.setItem(DRAFT_KEY, JSON.stringify(payload));
+      if(boş){ lsRemove(DRAFT_KEY); setSaveStatus(null); return; }
+      lsSetJSON(DRAFT_KEY, payload);
       setSaveStatus('cx.saved');
     }catch(e){
       // Kvota dolu və ya private rejim — qaralama İTİR, amma yazı axını
@@ -75,8 +76,7 @@ function saveDraft(){
 }
 
 function restoreDraft(){
-  let d = null;
-  try{ d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null'); }catch(e){ /* zədəli JSON — atılır */ }
+  const d = lsGetJSON(DRAFT_KEY, null);
   if(!d || !Array.isArray(d.blocks) || !d.blocks.length) return false;
   blocks = d.blocks.map(b => ({ ...newBlock(b.type || 'text'), content: b.content || '', language: b.language }));
   if(d.poll) poll = d.poll;
@@ -91,7 +91,7 @@ let pendingDraftTags = [];
 
 function clearDraft(){
   clearTimeout(draftTimer);
-  try{ localStorage.removeItem(DRAFT_KEY); }catch(e){ /* əhəmiyyətsiz */ }
+  lsRemove(DRAFT_KEY);
   setSaveStatus(null);
 }
 

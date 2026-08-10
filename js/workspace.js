@@ -13,6 +13,7 @@
 //   hər görünüş öz nüsxəsini saxlasaydı, filtr dəyişəndə biri köhnə qalardı.
 //   Görünüşlər YALNIZ `S.tasks` / `S.columns` oxuyur, sorğunu ÖZLƏRİ etmir.
 import { api } from './api.js';
+import { lsGet, lsSet } from './storage.js';
 import { el, clear, debounce, emit, bus, countUp, onceInView } from './util.js';
 import { t } from './i18n.js';
 import { toast, emptyState, confirmDialog, openPopover, closePopover } from './ui.js';
@@ -257,7 +258,7 @@ function viewSwitcher(){
 export function setView(id){
   if(!VIEWS.some(v => v.id === id)) return;
   S.view = id;
-  try{ localStorage.setItem(VIEW_KEY, id); }catch(e){ /* private rejim */ }
+  lsSet(VIEW_KEY, id);
   document.querySelectorAll('.ws-view').forEach(b => {
     const on = b.dataset.view === id;
     b.classList.toggle('is-on', on);
@@ -693,7 +694,7 @@ const onRemote = debounce(() => {
 
 export function mountWorkspace(){
   try{
-    const saved = localStorage.getItem(VIEW_KEY);
+    const saved = lsGet(VIEW_KEY);
     if(saved && VIEWS.some(v => v.id === saved)) S.view = saved;
   }catch(e){ /* private rejim */ }
 

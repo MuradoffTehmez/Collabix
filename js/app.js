@@ -1,6 +1,7 @@
 // Tətbiq qabığı: auth formaları, naviqasiya, qlobal listener-lərin idarəsi.
 import 'highlight.js/styles/atom-one-dark.css';
 import { watchAuthState, login, logout } from './auth.js';
+import { lsGet, lsSet } from './storage.js';
 import { ensureWidget } from './turnstile.js';
 import { mountOAuthButtons, handleOAuthReturn, loadLinkedAccounts } from './oauth.js';
 import { openMagicLinkModal, handleMagicReturn } from './magic.js';
@@ -377,7 +378,7 @@ function showForceResetModal(){
 
 /* ---------- onboarding tour (ilk giriş) ---------- */
 function maybeShowOnboarding(){
-  if(localStorage.getItem('collabix_onboarded')) return;
+  if(lsGet('collabix_onboarded')) return;
   const steps = [
     ['👋 Xoş gəldin, ' + (state.me.name || '').split(' ')[0] + '!', 'Collabix — birgə öyrənmə platformasıdır. Qısa turla tanış ol (30 saniyə).'],
     ['✎ Paylaşım', 'Ana səhifədə blok-blok post yaz: mətn (markdown), kod (syntax highlighting) və şəkillər — hamısı bir postda.'],
@@ -401,7 +402,7 @@ function maybeShowOnboarding(){
       ),
     ]);
   };
-  const done = () => { localStorage.setItem('collabix_onboarded', '1'); closeModal(); };
+  const done = () => { lsSet('collabix_onboarded', '1'); closeModal(); };
   setTimeout(show, 600);
 }
 
