@@ -80,7 +80,7 @@ function switchAuthTab(t){
   document.querySelector('.tabs-switch')?.classList.toggle('t-login', t === 'login');
   $('regForm').classList.toggle('hidden', t !== 'reg');
   $('loginForm').classList.toggle('hidden', t !== 'login');
-  const lines = { reg: 'yeni_profil.yarat()', login: 'istifadeci.giris()' };
+  const lines = { reg: t('auth.term_reg'), login: t('auth.term_login') };
   const term = $('termLine');
   clear(term);
   term.append(lines[t], el('span', { class: 'blink' }));
@@ -91,6 +91,9 @@ function initAuthUI(){
   $('tabLoginBtn').addEventListener('click', () => switchAuthTab('login'));
 
   initWizard();
+  document.addEventListener('lang-changed', () => {
+    switchAuthTab($('tabRegBtn').classList.contains('active') ? 'reg' : 'login');
+  });
   initPalette();   // Ctrl/Cmd+K — qlobal qısayol
 
   // Login cilalanması: göz ikonası, spinner, remember me, parol reset məlumatı.

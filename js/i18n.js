@@ -280,5 +280,5 @@ export function initI18n(){
   document.documentElement.lang = current;
   applyI18n();
   if(current === 'az' || PACKS[current]) return Promise.resolve();
-  return bootReady.then(() => { applyI18n(); });
+  return bootReady.then(() => { applyI18n(); document.dispatchEvent(new CustomEvent('lang-changed', { detail: { lang: current } })); });
 }

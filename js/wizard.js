@@ -454,5 +454,6 @@ export function initWizard(){
     }
     btn.disabled = false;
   });
+  document.addEventListener('lang-changed', () => renderStep());
   renderStep();
 }
