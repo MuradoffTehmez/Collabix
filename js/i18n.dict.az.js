@@ -2040,5 +2040,17 @@ export default {
   "adm.mod_pending": "Gözləyən",
   "adm.mod_approved": "Təsdiqlənmiş",
   "adm.mod_rejected": "Rədd edilmiş",
-  "adm.mod_all": "Hamısı"
+  "adm.mod_all": "Hamısı",
+  "adm.add_admin_btn": "+ Admin Əlavə Et",
+  "adm.teams_mng": "Komandalar İdarəsi",
+  "adm.gov_roles_title": "Platforma rolları",
+  "adm.gov_roles_desc": "Bu rollar <strong>bütün sayta</strong> şamil olur (OWNER … GUEST). Komanda daxilindəki rollar ayrı sistemdir — onları hər komandanın sahibi öz komanda səhifəsindən idarə edir.",
+  "adm.mod_cand_title": "Moderator namizədləri",
+  "adm.mod_cand_desc": "Moderatorluq XP ilə avtomatik gəlmir — istifadəçi müraciət edir, admin qərar verir.",
+  "adm.team_info_format": "Qurucu: {owner} · {members} üzv · {projects} layihə · {tasks} tapşırıq · XP: {xp} · {visibility}",
+  "adm.details_btn": "Detallar",
+  "adm.delete_btn": "Sil",
+  "wiz.at_user_ph": "@istifadəçi",
+  "wiz.user_ph": "istifadəçi",
+  "wiz.in_user_ph": "in/istifadəçi",
 };

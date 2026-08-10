@@ -323,11 +323,11 @@ function step4(){
 
   const node = el('div', { class: 'wiz-step' + (goingBack ? ' back' : '') },
     el('div', { class: 'row2' },
-      field('Instagram', textInput('instagram', '@istifadəçi', 40)),
-      field('GitHub', textInput('github', 'istifadəçi', 40))),
+      field('Instagram', textInput('instagram', t('wiz.at_user_ph'), 40)),
+      field('GitHub', textInput('github', t('wiz.user_ph'), 40))),
     el('div', { class: 'row2' },
       field('LinkedIn', textInput('linkedin', 'in/istifadəçi', 60)),
-      field('Telegram', textInput('telegram', '@istifadəçi', 40))),
+      field('Telegram', textInput('telegram', t('wiz.at_user_ph'), 40))),
     field(t('wiz.lbl_site'), textInput('website', 'https://...', 100)),
     el('div', { class: 'wiz-invite' },
       field(

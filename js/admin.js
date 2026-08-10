@@ -880,7 +880,7 @@ async function loadAdminTeams() {
 
     const bar = el('div', { style: 'display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:6px;' });
     const search = el('input', {
-      type: 'search', class: 'auth-input', placeholder: 'Komanda axtar…',
+      type: 'search', class: 'auth-input', placeholder: t('teams.search_ph'),
       value: adminTeamsQuery, style: 'flex:1; min-width:160px;',
     });
     search.oninput = debounce(() => { adminTeamsQuery = search.value.trim(); loadAdminTeams(); }, 300);
@@ -918,12 +918,12 @@ async function loadAdminTeams() {
       `;
 
       const actions = el('div', { style: 'display:flex; gap:6px; flex-wrap:wrap;' });
-      const detail = el('button', { class: 'btn-text btn-mini' }, 'Detallar');
+      const detail = el('button', { class: 'btn-text btn-mini' }, t('adm.details_btn'));
       detail.onclick = () => openAdminTeamDetail(team.id);
       actions.appendChild(detail);
 
       if (team.status === 'active') {
-        const del = el('button', { class: 'btn-text btn-mini', style: 'color:var(--danger);' }, 'Sil');
+        const del = el('button', { class: 'btn-text btn-mini', style: 'color:var(--danger);' }, t('adm.delete_btn'));
         del.onclick = async () => {
           if (!(await confirmDialog(`"${team.name}" komandası silinsin? (soft delete)`))) return;
           try {

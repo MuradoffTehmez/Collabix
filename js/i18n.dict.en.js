@@ -2039,5 +2039,17 @@ export default {
   "adm.mod_pending": "Pending",
   "adm.mod_approved": "Approved",
   "adm.mod_rejected": "Rejected",
-  "adm.mod_all": "All"
+  "adm.mod_all": "All",
+  "adm.add_admin_btn": "+ Add Admin",
+  "adm.teams_mng": "Teams Management",
+  "adm.gov_roles_title": "Platform Roles",
+  "adm.gov_roles_desc": "These roles apply to the <strong>entire site</strong> (OWNER … GUEST). Team roles are a separate system — managed by the team owner on their team page.",
+  "adm.mod_cand_title": "Moderator Candidates",
+  "adm.mod_cand_desc": "Moderatorship doesn't come automatically with XP — the user applies, the admin decides.",
+  "adm.team_info_format": "Founder: {owner} · {members} members · {projects} projects · {tasks} tasks · XP: {xp} · {visibility}",
+  "adm.details_btn": "Details",
+  "adm.delete_btn": "Delete",
+  "wiz.at_user_ph": "@username",
+  "wiz.user_ph": "username",
+  "wiz.in_user_ph": "in/username",
 };

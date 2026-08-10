@@ -2039,5 +2039,17 @@ export default {
   "adm.mod_pending": "Ожидающие",
   "adm.mod_approved": "Одобренные",
   "adm.mod_rejected": "Отклоненные",
-  "adm.mod_all": "Все"
+  "adm.mod_all": "Все",
+  "adm.add_admin_btn": "+ Добавить админа",
+  "adm.teams_mng": "Управление командами",
+  "adm.gov_roles_title": "Роли платформы",
+  "adm.gov_roles_desc": "Эти роли распространяются на <strong>весь сайт</strong> (OWNER … GUEST). Роли внутри команд — это отдельная система, управляемая владельцем на странице команды.",
+  "adm.mod_cand_title": "Кандидаты в модераторы",
+  "adm.mod_cand_desc": "Модераторство не дается автоматически за XP — пользователь подает заявку, админ решает.",
+  "adm.team_info_format": "Основатель: {owner} · {members} участников · {projects} проектов · {tasks} задач · XP: {xp} · {visibility}",
+  "adm.details_btn": "Детали",
+  "adm.delete_btn": "Удалить",
+  "wiz.at_user_ph": "@пользователь",
+  "wiz.user_ph": "пользователь",
+  "wiz.in_user_ph": "in/пользователь",
 };
