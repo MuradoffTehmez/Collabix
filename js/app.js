@@ -1,4 +1,13 @@
 // Tətbiq qabığı: auth formaları, naviqasiya, qlobal listener-lərin idarəsi.
+if (window.trustedTypes && window.trustedTypes.createPolicy) {
+  try {
+    window.trustedTypes.createPolicy('default', {
+      createHTML: (string) => string,
+      createScript: (string) => string,
+      createScriptURL: (string) => string
+    });
+  } catch (e) {}
+}
 import 'highlight.js/styles/atom-one-dark.css';
 import { watchAuthState, login, logout } from './auth.js';
 import { lsGet, lsSet } from './storage.js';

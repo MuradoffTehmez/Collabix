@@ -1,3 +1,5 @@
+import '../css/52-users.css';
+import '../css/89-users.css';
 // İstifadəçi kataloqu — kəşf, süzgəc, üç görünüş rejimi, tövsiyə raili;
 // izləmə, profil modalı, public profil səhifəsi (#u/{username}) və şikayət.
 //

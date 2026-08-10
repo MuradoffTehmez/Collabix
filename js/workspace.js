@@ -1,3 +1,4 @@
+import '../css/92-workspace.css';
 // İş sahəsi (Tapşırıqlar) — başlıq, idarə paneli, axtarış, filtrlər, görünüşlər.
 //
 // ════════════════════════════════════════════════════════════════════════════

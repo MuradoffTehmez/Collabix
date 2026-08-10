@@ -1,3 +1,6 @@
+import '../css/40-admin.css';
+import '../css/53-admin-polish.css';
+import '../css/86-admin-ui.css';
 // Admin panel: şikayətlər, istifadəçi blok/blokdan çıxarma, otaq yaratma, admin idarəsi.
 // Client tərəf yalnız UI-dır — əsl qoruma Worker API-nin admin yoxlamasındadır.
 import {

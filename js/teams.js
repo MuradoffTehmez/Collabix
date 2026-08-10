@@ -1,3 +1,4 @@
+import '../css/85-teams.css';
 // TASK-11 — Komanda İş Sahəsi (Team Workspace).
 //
 // Səhifələr:

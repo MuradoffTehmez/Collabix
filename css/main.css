@@ -40,14 +40,14 @@
 @import './16-data-display.css';
 
 /* Səhifələr */
-@import './20-feed.css';
-@import './30-chat.css';
-@import './35-stats-profile.css';
-@import './40-admin.css';
+/* @import './20-feed.css'; */
+/* @import './30-chat.css'; */
+/* @import './35-stats-profile.css'; */
+/* @import './40-admin.css'; */
 @import './50-public.css';
 @import './51-home-polish.css';
-@import './52-users.css';
-@import './53-admin-polish.css';
+/* @import './52-users.css'; */
+/* @import './53-admin-polish.css'; */
 
 /* Uyğunlaşan görünüş və əlçatanlıq (AUDIT-TASK-9) */
 @import './60-responsive.css';
@@ -66,35 +66,35 @@
 @import './80-theme-transition.css';
 
 /* Sonrakı modullar (AUDIT-TASK-11) */
-@import './85-teams.css';
-@import './86-admin-ui.css';
+/* @import './85-teams.css'; */
+/* @import './86-admin-ui.css'; */
 
 /* Mesaj/çat bölməsinin yenidən dizaynı.
    ⚠ QƏSDƏN `75-touch.css`-dən SONRADIR (öz başlıq şərhinə bax): toxunuş
      hədəfləri həmin faylı basa bildiyi üçün modul onları öz media query-sində
      açıq şəkildə bərpa edir. */
-@import './87-chat-modern.css';
+/* @import './87-chat-modern.css'; */
 
 /* Bildiriş mərkəzi.
    ⚠ `75-touch.css`-dən SONRADIR (87 ilə eyni səbəb): kart sıxlığı qlobal
      toxunuş qaydalarının üstündə qurulur və modul öz media query-sində
      44px hədəflərini açıq şəkildə bərpa edir. */
-@import './88-notifications.css';
+/* @import './88-notifications.css'; */
 
 /* İstifadəçi kataloqu.
    ⚠ `35-stats-profile.css` (`.user-grid`), `52-users.css` (köhnə kart qatı)
      və `60-responsive.css` bu fayldan ƏVVƏLDİR — yeni `.ud-*` qatı eyni
      spesifiklikdə qalib gəlsin deyə sıra belədir (tədrici köçürmə). */
-@import './89-users.css';
+/* @import './89-users.css'; */
 
 /* Profil ekranı (`#page-profil` + `#page-u`).
    ⚠ `89-users.css`-DƏN SONRA: `--ud-*` nişanları orada hər üç səhifə üçün
      elan olunur və profil qatı onlardan qidalanır. Əvvəl gəlsəydi, rank/
      status rəngləri profil səhifəsində boş qalardı. */
-@import './91-profile.css';
+/* @import './91-profile.css'; */
 
 /* İş sahəsi (Tapşırıqlar) — Kanban, siyahı, detal paneli. */
-@import './92-workspace.css';
+/* @import './92-workspace.css'; */
 
 /* Çalışmalar (öyrənmə tapşırıqları) — ayrı səhifə, ayrı fayl.
    ⚠ `92`-dən SONRA: `--ws-*` nişanları oradan gəlir. */

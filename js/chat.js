@@ -1,3 +1,5 @@
+import '../css/30-chat.css';
+import '../css/87-chat-modern.css';
 // Otaqlar (ümumi + mövzu otaqları): real-time mesajlar, redaktə/silmə.
 import {
   state, watchRooms, watchRoomMessages, sendRoomMessage, editRoomMessage, deleteRoomMessage, deleteRoom,

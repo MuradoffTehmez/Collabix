@@ -1,3 +1,5 @@
+import '../css/35-stats-profile.css';
+import '../css/91-profile.css';
 // Öz profil səhifəsi — redaktor, tamlıq nudge-i və idarəetmə blokları.
 //
 // 🔴 EKRANIN ÖZÜ BURADA DEYİL: `js/profile-view.js` (publik profil ilə ORTAQ).

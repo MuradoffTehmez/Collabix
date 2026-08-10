@@ -1,3 +1,4 @@
+import '../css/20-feed.css';
 // Feed: block-based post render (mətn/kod/şəkil), like, şərh, bookmark,
 // "daha çox oxu" + post detal səhifəsi (#post/{id}), Saxlanılanlar, axtarış.
 // Premium Card Redesign — Lucide SVG icons, glassmorphism, ARIA.

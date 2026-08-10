@@ -1,3 +1,4 @@
+import '../css/88-notifications.css';
 // Bildiriş mərkəzi — statistika kartları, pill filtrlər, axtarış,
 // qruplaşdırma, tarix bölmələri, sürətli əməliyyatlar, toplu seçim,
 // sonsuz sürüşmə və parametrlər paneli.
