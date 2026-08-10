@@ -43,10 +43,28 @@ import { initStats, mountStats } from './stats.js';
 import { initProfile, mountProfile } from './profile.js';
 import { initSettings } from './settings.js';
 import { initSessions, loadSessions } from './sessions.js';
-import { initAdmin, mountAdmin } from './admin.js';
-import {
-  initGovernance, mountGovernanceAdmin, mountGovernanceUser,
-} from './governance.js';
+/* 🔴 O-03 — ADMIN PANELİ TƏLƏB ÜZRƏ YÜKLƏNİR.
+ *
+ *   `admin.js` 52 KB, `governance.js` 19 KB-dır və hər ikisi statik idxal
+ *   olunurdu — yəni HƏR istifadəçi, o cümlədən heç vaxt admin panelini
+ *   açmayacaq minlərlə adi hesab, onları giriş paketində yükləyirdi.
+ *   Auditin O-03 tapıntısında `admin.js` "tənbəl yükləmə üçün ən aydın
+ *   namizəd" adlandırılmışdı.
+ *
+ * ⚠ NAXIŞ LAYİHƏDƏ ARTIQ VAR (`js/public.js` → `techMod`): promise BİR DƏFƏ
+ *   qurulur və keşlənir, yəni ikinci ziyarətdə şəbəkə sorğusu getmir.
+ *
+ * ⚠ `governance.js` ADMIN-Ə XAS DEYİL — `mountGovernanceUser` adi istifadəçinin
+ *   profilində də işləyir. Ona görə ayrı tənbəl modul kimi saxlanılır; admin
+ *   panelini açanda onsuz da `admin.js` onu özü idxal edir.
+ */
+let adminModP = null;
+const adminMod = () => (adminModP ??= import('./admin.js'));
+let govModP = null;
+const govMod = () => (govModP ??= import('./governance.js'));
+/** `initAdmin`/`initGovernance` DOM-a bir dəfə bağlanır — təkrar çağırış
+ *  dinləyiciləri ikiqat artırardı (O-06-nın eyni sinfi). */
+let adminInited = false;
 import { initNotifs, mountNotifs, subscribeNotifs } from './notify.js';
 import { initPalette } from './palette.js';
 
@@ -148,9 +166,25 @@ const MOUNTS = {
   // ⚠ Profil mount-u İKİ işi görür: `mountProfile` təmizləyici funksiya
   //   qaytarır, `mountGovernanceUser` isə yalnız çəkir (abunə yaratmır) —
   //   ona görə təmizləyici kimi YALNIZ birincinin nəticəsi qaytarılır.
-  profil: () => { const stop = mountProfile(); mountGovernanceUser(); return stop; },
+  /* ⚠ `mountGovernanceUser` ARTIQ ASENXRONDUR (O-03 tənbəl yükləmə), lakin
+   *   təmizləyici YENƏ sinxron qaytarılır: `nav()` nəticəni dərhal
+   *   `pageCleanup`-a yazır və Promise qaytarsaq təmizləmə heç vaxt işləməzdi. */
+  profil: () => { const stop = mountProfile(); govMod().then(m => m.mountGovernanceUser()); return stop; },
   settings: () => { loadSessions(); loadLinkedAccounts(); loadMfaPanel(); return () => {}; },
-  admin: () => { const stop = mountAdmin(); mountGovernanceAdmin(); return stop; },
+  /* ⚠ ADMIN MOUNT-U İKİ MƏRHƏLƏLİDİR.
+   *   Modul yüklənənə qədər `stop` hələ mövcud deyil, ona görə təmizləyici
+   *   ona GEC bağlanır. Səhifə modul gəlməmişdən əvvəl tərk edilsə `stop`
+   *   `null` qalır və çağırış təhlükəsiz keçir — əks halda tərk edilmiş
+   *   səhifənin abunəsi arxa fonda yaşamağa davam edərdi. */
+  admin: () => {
+    let stop = null;
+    adminMod().then(async m => {
+      if(!adminInited){ m.initAdmin(); (await govMod()).initGovernance(); adminInited = true; }
+      stop = m.mountAdmin();
+      (await govMod()).mountGovernanceAdmin();
+    });
+    return () => { stop?.(); stop = null; };
+  },
   post: mountPost, u: mountPubProfile,
 };
 const VALID_PAGES = Object.keys(MOUNTS);
@@ -571,8 +605,10 @@ onReady(() => {
   initProfile();
   initSettings();
   initSessions();
-  initAdmin();
-  initGovernance();
+  /* ⚠ `initAdmin()` / `initGovernance()` ARTIQ BURADA ÇAĞIRILMIR — O-03.
+   *   İkisi də admin panelinin STATİK markup-una dinləyici bağlayır, yəni
+   *   panel açılana qədər lazım deyil. Modul ilk `#admin` ziyarətində
+   *   yüklənir və init orada, `adminInited` qapısı ilə BİR DƏFƏ işləyir. */
   initNotifs();
 
   document.querySelectorAll('.sidebar .nav-item, .bottom-nav button').forEach(btn => {

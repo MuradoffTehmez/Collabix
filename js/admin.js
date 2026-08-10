@@ -18,7 +18,7 @@ import { openRoleEditor } from './governance.js';
 import { adminTempPassword } from './store.js';
 import {
   fetchAdminUsers, fetchAdminLogs, bulkSetBlocked, fetchStatsDaily,
-  reorderTaxonomy, exportCsvUrl, listRooms,
+  reorderTaxonomy, exportCsvUrl, listRooms, hasPerm,
 } from './store.js';
 import { el, clear, avatarNode, nameWithBadge, fmtTime, levelFromXP, normalizeUsername, bus, emit, debounce, esc as escHtml } from './util.js';
 import { api } from './api.js';
@@ -787,13 +787,20 @@ export function initAdmin(){
   document.getElementById('adminBulkBlock').addEventListener('click', () => runBulk(true));
   document.getElementById('adminBulkUnblock').addEventListener('click', () => runBulk(false));
 
-  // Admin#11 — CSV: Worker stream göndərir, brauzer endirir.
-  document.getElementById('adminExportUsers').addEventListener('click', () => {
-    window.location.href = exportCsvUrl('users');
-  });
-  document.getElementById('adminExportLogs').addEventListener('click', () => {
-    window.location.href = exportCsvUrl('logs');
-  });
+  /* Admin#11 — CSV: Worker stream göndərir, brauzer endirir.
+   *
+   * ⚠ İXRAC `SYSTEM_BACKUP` TƏLƏB EDİR — kütləvi data çıxarışıdır və qapı
+   *   qəsdən adi ADMIN-dən yuxarıdadır. Düymələr indi icazəyə görə gizlənir:
+   *   əvvəl hər admin onları görürdü, klikləyəndə isə brauzer 403 səhifəsinə
+   *   yönləndirilirdi — yəni funksiya "sınıq" görünürdü, halbuki qadağa
+   *   qəsdən idi. Gizlətmək qapını zəiflətmir, sadəcə yalan vəd vermir. */
+  const canExport = hasPerm('SYSTEM_BACKUP');
+  for (const [id, kind] of [['adminExportUsers', 'users'], ['adminExportLogs', 'logs']]) {
+    const btn = document.getElementById(id);
+    if(!btn) continue;
+    if(!canExport){ btn.classList.add('hidden'); continue; }
+    btn.addEventListener('click', () => { window.location.href = exportCsvUrl(kind); });
+  }
 
   /* ---------- Admin#6: terminal jurnalı ---------- */
   document.getElementById('adminLogLevel').addEventListener('change', () => emit('refresh-logs'));
@@ -994,7 +1001,14 @@ export function mountAdmin(){
   skeletons(document.getElementById('reportList'), 2, true);
 
   unsubReports = watchOpenReports(list => { reports = list; renderAll(); });
-  unsubAdmins = watchAdmins(set => { adminSet = set; renderAll(); });
+  /* ⚠ ADMİN SİYAHISI `MANAGE_ROLES` TƏLƏB EDİR (miqrasiya 0035) və o icazə
+   *   ADMIN rolunda QƏSDƏN YOXDUR — SUPER_ADMIN-dən başlayır. Qapısız
+   *   abunə hər 30 saniyədə bir 403 yaradırdı: istifadəçi üçün görünməz,
+   *   konsol üçün daimi qırmızı fon. Statistika kartı `adminSet.size`
+   *   göstərir — icazəsiz hesab üçün sadəcə boş qalır, xəta vermir. */
+  if(hasPerm('MANAGE_ROLES')){
+    unsubAdmins = watchAdmins(set => { adminSet = set; renderAll(); });
+  }
   unsubContacts = watchContactMessages(list => {
     contactCache = list;
     if(pcTab === 'contact') renderPubContent();

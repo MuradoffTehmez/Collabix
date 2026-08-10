@@ -14,6 +14,7 @@ function applySession(d){
   state.authUser = { uid: d.user.uid };
   state.me = d.user;
   state.isAdmin = !!d.isAdmin;
+  state.perms = Array.isArray(d.perms) ? d.perms : [];
 }
 
 // Boot zamanı sessiyanı yoxlayır; register/login/logout eyni callback-ləri çağırır.
@@ -27,7 +28,7 @@ export function watchAuthState(onLogin, onLogout){
   // sessiya bitəndə (401) çıxışa yönləndir
   bus.addEventListener('api-unauthorized', () => {
     if(state.me){
-      state.me = null; state.authUser = null; state.isAdmin = false;
+      state.me = null; state.authUser = null; state.isAdmin = false; state.perms = [];
       onLogoutCb && onLogoutCb();
     }
   });
@@ -117,7 +118,7 @@ export async function login(usernameRaw, pass, _remember = true){
 
 export async function logout(){
   await api('/auth/logout', { method: 'POST' }).catch(() => {});
-  state.me = null; state.authUser = null; state.isAdmin = false;
+  state.me = null; state.authUser = null; state.isAdmin = false; state.perms = [];
   onLogoutCb && onLogoutCb();
 }
 
@@ -133,6 +134,6 @@ export async function changeUsername(currentPass, newUsernameRaw){
 
 export async function deleteAccount(currentPass){
   await api('/auth/account', { method: 'DELETE', body: { pass: currentPass } });
-  state.me = null; state.authUser = null; state.isAdmin = false;
+  state.me = null; state.authUser = null; state.isAdmin = false; state.perms = [];
   onLogoutCb && onLogoutCb();
 }

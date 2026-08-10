@@ -174,11 +174,32 @@ export async function seedTestUsers(base: string) {
     `FROM users WHERE username = '${username}' AND ${xp} <> 0;`,
   ]);
 
-  // BÖLMƏ 3 testləri admin paneli tələb edir → əsas hesaba admin hüququ.
-  // (API-də "özünü admin et" endpoint-i yoxdur və olmamalıdır — birbaşa D1.)
+  /* BÖLMƏ 3 testləri admin paneli tələb edir → əsas hesaba admin hüququ.
+   * (API-də "özünü admin et" endpoint-i yoxdur və olmamalıdır — birbaşa D1.)
+   *
+   * 🔴 İKİ QEYD LAZIMDIR, BİRİ YOX. `admins` cədvəli yalnız `c.isAdmin`
+   *   bayrağını verir; miqrasiya 0035-dən sonra 35 admin marşrutu `perm:`
+   *   qapısındadır və səlahiyyəti `users.role` müəyyən edir.
+   *
+   *   Ölçüldü: yalnız `admins` sətri yazıldığı üçün `e2e_main` `role='USER'`
+   *   qalırdı və admin dəsti 23 testdən 21-ini `403 forbidden` ilə itirirdi.
+   *   Bu, seed qüsuru İDİ, lakin eyni boşluq məhsul kodunda da vardı
+   *   (`adminAddAdmin` rolu yazmırdı) — ikisi də bu commit-də bağlanır. */
   sql.push(
     `INSERT OR IGNORE INTO admins (user_id, added_at, added_by) ` +
-    `SELECT id, ${nowMs}, 'e2e-seed' FROM users WHERE username = '${PRIMARY}';`);
+    `SELECT id, ${nowMs}, 'e2e-seed' FROM users WHERE username = '${PRIMARY}';`,
+    /* ⚠ ROL `OWNER`-dir, `ADMIN` DEYİL — və bu, ölçmə nəticəsidir.
+     *   Admin paneli bütöv sınanmalıdır, panelin iki bölməsi isə ADMIN-dən
+     *   YUXARI icazə tələb edir (miqrasiya 0035): admin siyahısı
+     *   `MANAGE_ROLES`, CSV ixracı `SYSTEM_BACKUP`. ADMIN ilə seed etsək
+     *   həmin bölmələr UI-da gizlənir və panelin üçdə biri heç vaxt
+     *   yoxlanılmazdı.
+     *
+     * ⚠ RƏDD YOLLARININ ƏHATƏSİ İTMİR: "başqasının resursu → 403" matrisi
+     *   `e2e/authz-matrix.spec.ts`-dədir və orada AYRI, icazəsiz hesablar
+     *   işlədilir (`e2e_dilara`). Rol matrisinin özü isə
+     *   `test/route-permissions.test.ts`-də statik yoxlanılır. */
+    `UPDATE users SET role = 'OWNER' WHERE username = '${PRIMARY}';`);
 
   // Terminal jurnalında hər səviyyədən sətir olsun (Admin#6 rəngləmə/filtr testi).
   const logRow = (n: number, action: string, level: string) =>

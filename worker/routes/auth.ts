@@ -37,6 +37,7 @@ import {
   
   mfaEnabled,
 } from '../totp';
+import { permissionsOf } from '../rbac';
 import { kickEverywhere } from '../ws-kick';
 import { markUidDeleted } from '../archive';
 import {
@@ -350,7 +351,21 @@ export async function logout(c: Ctx) {
 
 export async function me(c: Ctx) {
   if (!c.user) return json({ user: null });
-  const body = { user: mapUser(c.user, true), isAdmin: c.isAdmin };
+  /* 🔴 İCAZƏLƏR CAVABDA GEDİR — client bilə-bilə 403 alacaq sorğu GÖNDƏRMƏSİN.
+   *
+   *   Əvvəl client yalnız `isAdmin` binar bayrağını bilirdi. Nəticədə admin
+   *   paneli açılanda `mountGovernanceAdmin()` `MANAGE_ROLES` tələb edən
+   *   endpoint-i HƏMİŞƏ çağırırdı; adi ADMIN üçün o, qəsdən 403-dür (icazə
+   *   SUPER_ADMIN-dən başlayır). UI 403-ü düzgün emal edirdi, LAKİN brauzer
+   *   şəbəkə xətasını konsola onsuz da yazır — yəni hər admin ziyarətində
+   *   "səbəbsiz qırmızı" konsol qalırdı və əsl xətaları gizlədirdi.
+   *
+   * ⚠ SIZMA DEYİL: siyahı YALNIZ çağıranın ÖZ icazələridir və server qapısını
+   *   ƏVƏZ ETMİR — hər endpoint `perm` yoxlamasını yenə də edir. Bu, UI-nin
+   *   nəyi göstərəcəyini bilməsi üçündür, avtorizasiya üçün yox.
+   */
+  const perms = await permissionsOf(c.env, c.user.id);
+  const body = { user: mapUser(c.user, true), isAdmin: c.isAdmin, perms };
   // Keçid dövrü: köhnə `cx_sess` cookie-si ilə gələn istifadəçi burada səssizcə
   // yeni cüt-token modelinə köçürülür. `me()` tətbiqin hər açılışında çağırıldığı
   // üçün miqrasiya istifadəçi heç nə hiss etmədən, tək deploy-da tamamlanır.

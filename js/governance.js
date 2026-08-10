@@ -451,6 +451,30 @@ export function initGovernance() {
 /** Admin panelinin idarəetmə tabı açılanda çağırılır. */
 export function mountGovernanceAdmin() {
   if (!state.isAdmin) return;
+  /* 🔴 İCAZƏ YOXDURSA SORĞU ÜMUMİYYƏTLƏ GETMİR.
+   *
+   *   Namizədləri görmək `MANAGE_ROLES` tələb edir və o, QƏSDƏN yalnız
+   *   SUPER_ADMIN+ səviyyəsindədir. Adi ADMIN paneli açanda `renderModApps()`
+   *   sorğunu yenə göndərirdi, server 403 qaytarırdı, UI isə onu düzgün
+   *   emal edib kilid mesajı göstərirdi — yəni İSTİFADƏÇİ üçün hər şey
+   *   qaydasında idi.
+   *
+   *   Görünməyən zərər konsoldadır: brauzer uğursuz şəbəkə sorğusunu ÖZÜ
+   *   `console.error` kimi yazır və bunu heç bir `try/catch` susdura bilmir.
+   *   Nəticədə hər admin ziyarətində konsol səbəbsiz qırmızı olurdu və əsl
+   *   xətalar həmin fonda itirdi (E2E "sıfır konsol xətası" şərti də məhz
+   *   buna görə sınırdı).
+   *
+   * ⚠ BU AVTORİZASİYA DEYİL. Server qapısı yerindədir və dəyişmir; buradakı
+   *   yoxlama yalnız "hansı sorğunu göndərməyə dəyər" sualına cavab verir.
+   *   `state.perms` boşdursa (köhnə client, hələ yüklənməmiş sessiya) köhnə
+   *   davranış qalır — yəni yoxlama heç vaxt işləyən halı BAĞLAMIR.
+   */
+  if (state.perms?.length && !state.perms.includes('MANAGE_ROLES')) {
+    const host = document.getElementById('govModApps');
+    if (host) { clear(host); host.append(empty('🔒', t('gov.forbidden_t'), t('gov.forbidden_d'))); }
+    return;
+  }
   renderModApps();
 }
 

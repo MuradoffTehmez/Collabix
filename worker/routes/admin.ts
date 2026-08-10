@@ -222,9 +222,38 @@ export async function adminListAdmins(c: Ctx) {
   const rows = await D(c).prepare('SELECT user_id FROM admins').all<any>();
   return json({ admins: rows.results.map(r => r.user_id) });
 }
+/* 🔴 İKİ QEYD SİSTEMİ BİRLİKDƏ YENİLƏNMƏLİDİR — yoxsa admin əlavəsi HEÇ NƏ etmir.
+ *
+ *   `admins` cədvəli `c.isAdmin`-i (binar bayraq) idarə edir, `users.role` isə
+ *   icazə matrisini. Miqrasiya 0035 35 admin marşrutunu `admin: true`-dan
+ *   `perm:` qapısına köçürdü — yəni səlahiyyət ARTIQ `admins`-dən deyil,
+ *   ROLDAN gəlir.
+ *
+ *   Bu funksiya yalnız `admins`-ə yazırdı. Ölçüldü: 0035-dən SONRA əlavə
+ *   edilən hər admin panelə girə bilir (bayraq var), lakin `perm` daşıyan hər
+ *   endpoint ona 403 verir. Qüsur tamamilə səssizdir — istifadəçi "panel
+ *   sınıb" deyir, log isə normal 403 fonu göstərir. E2E hesabında da eyni
+ *   vəziyyət var idi: `e2e_main` `admins`-dədir, rolu isə `USER`.
+ *
+ * ⚠ ESKALASİYA YOXDUR: marşrut `perm: 'MANAGE_ROLES'` ilə qorunur, yəni
+ *   çağıran ən azı SUPER_ADMIN-dir (prioritet 90) və ADMIN (80) ondan
+ *   AŞAĞIDIR.
+ *
+ * ⚠ YALNIZ ADMIN-DƏN AŞAĞI ROLLAR QALDIRILIR. Şərt `roles.priority` üzərindən
+ *   yazılıb, sabit ad siyahısı ilə yox: OWNER və ya SUPER_ADMIN hesabı
+ *   `admins`-ə əlavə edilsə onu ADMIN-ə ENDİRMƏK səlahiyyət İTKİSİ olardı.
+ */
 export async function adminAddAdmin(c: Ctx, uid: string) {
-  await D(c).prepare('INSERT OR IGNORE INTO admins (user_id, added_at, added_by) VALUES (?,?,?)')
-    .bind(uid, now(), c.user!.id).run();
+  await D(c).batch([
+    D(c).prepare('INSERT OR IGNORE INTO admins (user_id, added_at, added_by) VALUES (?,?,?)')
+      .bind(uid, now(), c.user!.id),
+    D(c).prepare(
+      `UPDATE users SET role = 'ADMIN'
+        WHERE id = ?
+          AND COALESCE((SELECT priority FROM roles WHERE name = users.role), 0)
+              < (SELECT priority FROM roles WHERE name = 'ADMIN')`,
+    ).bind(uid),
+  ]);
   await logAdmin(c, 'admin-add', uid);
   return json({ ok: true });
 }
@@ -245,7 +274,19 @@ export async function adminRemoveAdmin(c: Ctx, uid: string) {
     return err('Sonuncu admini silmək olmaz.', 409, 'last_admin');
   }
 
-  await D(c).prepare('DELETE FROM admins WHERE user_id = ?').bind(uid).run();
+  /* ⚠ ROL DA GERİ ALINIR — əks halda "silmək" SİLMİRDİ.
+   *   Səlahiyyət `users.role`-dan gəlir (bax `adminAddAdmin` şərhi). Yalnız
+   *   `admins` sətrini silsəydik, hesab paneldə görünməzdi, lakin `perm`
+   *   daşıyan 35 admin endpoint-i onun üçün AÇIQ qalardı — yəni çıxarılmış
+   *   admin faktiki olaraq admin olaraq qalırdı.
+   *
+   * ⚠ ŞƏRT `role = 'ADMIN'`-dir, şərtsiz sıfırlama DEYİL: SUPER_ADMIN və ya
+   *   OWNER hesabı `admins`-dən çıxarılsa onun rolunu endirmək səlahiyyət
+   *   ITKİSİ olardı və bu funksiyanın işi deyil (bunun üçün rol redaktoru var). */
+  await D(c).batch([
+    D(c).prepare('DELETE FROM admins WHERE user_id = ?').bind(uid),
+    D(c).prepare("UPDATE users SET role = 'USER' WHERE id = ? AND role = 'ADMIN'").bind(uid),
+  ]);
   await logAdmin(c, 'admin-remove', uid);
   return json({ ok: true });
 }

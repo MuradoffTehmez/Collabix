@@ -22,6 +22,11 @@ export const state = {
   authUser: null,     // { uid } — sessiya sahibi
   me: null,           // profil (server formatında)
   isAdmin: false,
+  /* Çağıranın ÖZ icazələri (`/api/auth/me` cavabındakı `perms`).
+   * ⚠ AVTORİZASİYA DEYİL, yalnız UI qərarı üçündür: server hər endpoint-də
+   *   `perm` qapısını yenə də işlədir. Məqsəd bilə-bilə 403 alacaq sorğunu
+   *   ÜMUMİYYƏTLƏ göndərməməkdir (bax `js/governance.js`). */
+  perms: [],
   users: new Map(),   // uid -> user
   myLikes: new Set(),
   myBookmarks: new Set(),
@@ -718,6 +723,21 @@ export async function addAdminByUid(uid){
 export async function removeAdmin(uid){
   await api('/admin/admins/' + uid, { method: 'DELETE' });
   emit('refresh-admins');
+}
+/**
+ * Çağıranın icazəsi varmı? — YALNIZ UI qərarı üçün.
+ *
+ * ⚠ BU AVTORİZASİYA DEYİL. Server hər endpoint-də `perm` qapısını işlədir və
+ *   bu funksiya onu ƏVƏZ ETMİR. Məqsəd nəticəsi əvvəlcədən məlum olan sorğunu
+ *   göndərməmək və istifadəçiyə həmişə 403 verəcək düyməni göstərməməkdir.
+ *
+ * ⚠ `perms` BOŞDURSA `true` QAYTARIR. Siyahı `/api/auth/me`-dən gəlir; hələ
+ *   yüklənməyibsə və ya köhnə server cavab verirsə, davranış ƏVVƏLKİ KİMİ
+ *   qalmalıdır. Əks halda bu yoxlama işləyən funksiyaları səssizcə bağlayardı —
+ *   qapı client-də möhkəmlənməməlidir, yalnız səs-küy azalmalıdır.
+ */
+export function hasPerm(name){
+  return !state.perms?.length || state.perms.includes(name);
 }
 export function watchAdmins(cb){
   return startPoll({
