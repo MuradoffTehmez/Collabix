@@ -176,6 +176,26 @@ function remountCurrentPage(){
 }
 
 // Marşrut: "home", "post/abc123", "u/username" — parametrli deep-link dəstəyi.
+/**
+ * Sənədin yeganə `<h1>`-ini aktiv səhifənin başlığı ilə uzlaşdırır — O-04.
+ *
+ * ⚠ SPA-da `<h1>` mətni NAVİQASİYA İLƏ DƏYİŞMƏLİDİR. Sabit qalsaydı ekran
+ *   oxuyucusu istifadəçi "Parametrlər"ə keçəndən sonra da "Collabix" oxuyardı
+ *   və başlıq siyahısı (rotor) yanlış yol göstərərdi.
+ *
+ * ⚠ Mətn səhifənin ÖZ başlığından oxunur, ayrı sabit siyahıdan yox: ikinci
+ *   siyahı saxlasaydıq, başlıq dəyişəndə biri köhnəlirdi və uyğunsuzluğu heç
+ *   nə tutmurdu. Başlıq tapılmasa dəyər TOXUNULMAZ qalır — boş `<h1>` ən pis
+ *   nəticədir.
+ */
+function syncDocHeading(pageEl){
+  const h1 = $('docH1');
+  if(!h1 || !pageEl) return;
+  const title = pageEl.querySelector('h2.page-title, h2.nc-title, h2.ud-title, h2');
+  const text = (title?.textContent || '').trim();
+  if(text) h1.textContent = text;
+}
+
 function nav(pageRaw, replace = false){
   if(!state.me) return; // sessiyasız naviqasiya yoxdur
   // App qatı artıq görünürdümü — guard bunu dəyişiklikdən ƏVVƏL bilməlidir.
@@ -226,6 +246,7 @@ function nav(pageRaw, replace = false){
   document.querySelectorAll('.nav-item, .bottom-nav button').forEach(n => n.classList.toggle('active', n.dataset.page === base));
   const pg = $('page-' + base);
   if(pg) pg.classList.add('active');
+  syncDocHeading(pg);
   const mount = MOUNTS[base];
   if(mount) pageCleanup = mount(param) || null;
   mountedPage = full;

@@ -217,6 +217,27 @@
 <!-- Accessibility: Skip to Content -->
 <a href="#publicMain" class="skip-to-content" id="skipLink" data-i18n="a11y.skipToContent">Məzmuna keç</a>
 
+<!-- 🔴 SƏNƏDİN YEGANƏ <h1>-i — FRONTEND AUDIT / O-04.
+     Əvvəl sənəddə 21 ədəd <h1> var idi: hər `.page` özününkünü daşıyırdı və
+     yalnız biri görünürdü. Ekran oxuyucu üçün praktik zərər az idi, lakin
+     sənəd konturu texniki cəhətdən yanlışdır və "səhifədə bir h1" qaydasını
+     yoxlayan hər alət (Lighthouse, axe) bunu qeyd edirdi.
+
+     ⚠ NİYƏ SEKSİYALARDAKI BAŞLIQLAR h2-yə ENDİRİLDİ, BİRİ h1 SAXLANILMADI:
+       SPA-da hansı `.page`-in aktiv olduğu ÇALIŞMA VAXTINDA dəyişir — statik
+       markup-da "doğru" h1-i seçmək mümkün deyil. İyerarxiya indi belədir:
+       h1 = sənəd/səhifə adı, h2 = həmin səhifənin başlığı. Bu, tam keçərli
+       konturdur və heç bir çalışma vaxtı düyün dəyişdirməsi tələb etmir.
+
+     ⚠ MƏTN İKİ YERDƏN YENİLƏNİR və hər ikisi lazımdır:
+       • server (`worker/seo.ts` → `rewriteHead`) publik marşrutlar üçün —
+         crawler JS icra etmədən düzgün h1 görsün;
+       • router (`js/app.js`) tətbiq daxili naviqasiyada — istifadəçi səhifə
+         dəyişəndə ekran oxuyucusu köhnə adı oxumasın.
+     ⚠ CSS BAŞLIQLARI ARTIQ TİPƏ GÖRƏ SEÇMİR (`h1.page-title` → `.page-title`).
+       Tipə bağlı qalsaydı bu keçid bütün başlıqların ölçüsünü sıfırlayardı. -->
+<h1 id="docH1" class="sr-only">Collabix</h1>
+
 <!-- SXO: Scroll Progress Bar -->
 <div class="scroll-progress" id="scrollProgress" role="progressbar" data-i18n-aria="a11y.scrollProgress" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
 
@@ -368,7 +389,7 @@
 
         <div class="hero-inner">
           <span class="hero-badge" data-i18n="hero.badge"></span>
-          <h1 data-i18n="hero.h1"></h1>
+          <h2 class="hero-h1" data-i18n="hero.h1"></h2>
           <p class="hero-tagline" data-i18n="hero.tagline"></p>
           <p class="hero-sub" data-i18n="hero.sub"></p>
           <div class="hero-cta">
@@ -456,7 +477,7 @@
            etmiş istifadəçiyə də "Qeydiyyatdan keç" görünərdi. -->
     <section class="pub-page" id="pub-about">
       <div class="pub-section">
-        <h1 class="pub-h1" data-i18n="pg.about"></h1>
+        <h2 class="pub-h1" data-i18n="pg.about"></h2>
         <div id="aboutBody"></div>
         <div class="about-cta">
           <h2 data-i18n="about.ctaTitle"></h2>
@@ -469,7 +490,7 @@
     <!-- FAQ -->
     <section class="pub-page" id="pub-faq">
       <div class="pub-section pub-narrow">
-        <h1 class="pub-h1" data-i18n="faq.title"></h1>
+        <h2 class="pub-h1" data-i18n="faq.title"></h2>
         <div class="search-bar"><input id="faqSearch" data-i18n-ph="faq.search"></div>
         <div id="faqList"></div>
         <div class="faq-cta">
@@ -482,7 +503,7 @@
     <!-- Privacy -->
     <section class="pub-page" id="pub-privacy">
       <div class="pub-section pub-narrow">
-        <h1 class="pub-h1" data-i18n="pg.privacy"></h1>
+        <h2 class="pub-h1" data-i18n="pg.privacy"></h2>
         <p class="legal-note" data-i18n="legal.disclaimer"></p>
         <div class="md-body" id="privacyBody"></div>
       </div>
@@ -491,7 +512,7 @@
     <!-- Terms -->
     <section class="pub-page" id="pub-terms">
       <div class="pub-section pub-narrow">
-        <h1 class="pub-h1" data-i18n="pg.terms"></h1>
+        <h2 class="pub-h1" data-i18n="pg.terms"></h2>
         <p class="legal-note" data-i18n="legal.disclaimer"></p>
         <div class="md-body" id="termsBody"></div>
       </div>
@@ -500,7 +521,7 @@
     <!-- Contact -->
     <section class="pub-page" id="pub-contact">
       <div class="pub-section pub-narrow">
-        <h1 class="pub-h1" data-i18n="contact.title"></h1>
+        <h2 class="pub-h1" data-i18n="contact.title"></h2>
         <p class="page-sub" data-i18n="contact.sub"></p>
         <div class="contact-grid">
           <form class="contact-form" id="contactForm">
@@ -517,7 +538,7 @@
     <!-- Security (E-E-A-T trust signal) -->
     <section class="pub-page" id="pub-security">
       <div class="pub-section pub-narrow">
-        <h1 class="pub-h1" data-i18n="pg.security"></h1>
+        <h2 class="pub-h1" data-i18n="pg.security"></h2>
         <div class="md-body" id="securityBody"></div>
       </div>
     </section>
@@ -525,7 +546,7 @@
     <!-- Cookies -->
     <section class="pub-page" id="pub-cookies">
       <div class="pub-section pub-narrow">
-        <h1 class="pub-h1" data-i18n="pg.cookies"></h1>
+        <h2 class="pub-h1" data-i18n="pg.cookies"></h2>
         <div class="md-body" id="cookiesBody"></div>
       </div>
     </section>
@@ -533,7 +554,7 @@
     <!-- Changelog / Roadmap -->
     <section class="pub-page" id="pub-changelog">
       <div class="pub-section pub-narrow">
-        <h1 class="pub-h1" data-i18n="pg.changelog"></h1>
+        <h2 class="pub-h1" data-i18n="pg.changelog"></h2>
         <div class="md-body" id="changelogBody"></div>
       </div>
     </section>
@@ -588,7 +609,7 @@
     <div class="auth-hero">
       <div>
         <div class="brand"><svg class="brand-mark" viewBox="0 0 28 28" aria-hidden="true" focusable="false"><path d="M19.9 6.9a9.2 9.2 0 1 0 0 14.2" fill="none" stroke="url(#cbxGrad)" stroke-width="3.4" stroke-linecap="round"/><circle cx="20.4" cy="14" r="3.5" fill="url(#cbxGrad)"/></svg>Collabix</div>
-        <h1 data-i18n-html="auth.landing_h1"></h1>
+        <h2 class="auth-h1" data-i18n-html="auth.landing_h1"></h2>
         <p data-i18n="auth.landing_sub"></p>
         <div class="lang-orbit">
           <span>&lt;Python/&gt;</span><span>&lt;JavaScript/&gt;</span><span>&lt;C++/&gt;</span>
@@ -703,7 +724,7 @@
   <div class="main">
 
     <div class="page active" id="page-home">
-      <h1 class="page-title" data-i18n="nav.feed"></h1>
+      <h2 class="page-title" data-i18n="nav.feed"></h2>
       <p class="page-sub" id="homeGreeting" data-i18n="home.welcome"></p>
       <div class="stat-row">
         <div class="stat-card flame"><div class="num" id="homeStreakNum">0</div><div class="lbl"><span class="ic" data-icon="flame" data-icon-size="14"></span><span data-i18n="home.lbl_streak"></span></div></div>
@@ -807,7 +828,7 @@
     </div>
 
     <div class="page" id="page-chat">
-      <h1 class="page-title" data-i18n="nav.rooms"></h1>
+      <h2 class="page-title" data-i18n="nav.rooms"></h2>
       <p class="page-sub" data-i18n="chat.sub"></p>
       <!-- `data-details` panelin vəziyyətini saxlayır; CSS yalnız grid sütun
            şablonunu dəyişir, uşaqlara toxunmur (layout sıçraması olmasın). -->
@@ -852,7 +873,7 @@
     </div>
 
     <div class="page" id="page-dm">
-      <h1 class="page-title" data-i18n="nav.dm"></h1>
+      <h2 class="page-title" data-i18n="nav.dm"></h2>
       <p class="page-sub" data-i18n="dm.sub"></p>
       <div class="chat-wrap" id="dmWrap">
         <div class="chat-list" id="dmList"></div>
@@ -884,7 +905,7 @@
     <div class="page" id="page-notifs">
       <header class="nc-head">
         <div class="nc-head__text">
-          <h1 class="nc-title" data-i18n="nav.notifs"></h1>
+          <h2 class="nc-title" data-i18n="nav.notifs"></h2>
           <p class="nc-sub" data-i18n="notifs.sub"></p>
           <p class="nc-meta">
             <span class="nc-meta__count" id="notifUnreadLine"></span>
@@ -945,7 +966,7 @@
     <div class="page" id="page-users">
       <header class="ud-head">
         <div class="ud-head__text">
-          <h1 class="ud-title" data-i18n="nav.users"></h1>
+          <h2 class="ud-title" data-i18n="nav.users"></h2>
           <p class="ud-sub" data-i18n="users.sub"></p>
         </div>
         <div class="ud-head__actions">
@@ -1095,7 +1116,7 @@
     <div class="page" id="page-teams">
       <div class="u-display-flex u-justify-content-space-between u-align-items-center">
         <div>
-          <h1 class="page-title" data-i18n="nav.teams"></h1>
+          <h2 class="page-title" data-i18n="nav.teams"></h2>
           <p class="page-sub" data-i18n="teams.sub"></p>
         </div>
         <button class="btn-primary hidden" id="btnCreateTeam" data-i18n="teams.create"></button>
@@ -1144,13 +1165,13 @@
     </div>
 
     <div class="page" id="page-saved">
-      <h1 class="page-title" data-i18n="nav.saved"></h1>
+      <h2 class="page-title" data-i18n="nav.saved"></h2>
       <p class="page-sub" data-i18n="saved.sub"></p>
       <div id="savedFeed"></div>
     </div>
 
     <div class="page" id="page-stats">
-      <h1 class="page-title" data-i18n="nav.stats"></h1>
+      <h2 class="page-title" data-i18n="nav.stats"></h2>
       <p class="page-sub" data-i18n="stats.sub"></p>
       <div class="task-cat-tabs" id="statRangeTabs">
         <button data-range="1" data-i18n="stats.r1"></button>
@@ -1199,7 +1220,7 @@
     <div class="page" id="page-profil">
       <!-- 🔴 BAŞLIQ/ALTBAŞLIQ SİLİNDİ: profilin başlığı istifadəçinin ADIDIR.
            "Profil" sözü + izah sətri hero-nun üstündə 96px yer tutub heç nə
-           demirdi (spesifikasiya: "boş sahəni israf etmə"). `<h1>` indi
+           demirdi (spesifikasiya: "boş sahəni israf etmə"). `<h2>` indi
            hero-nun içindədir — sənəd strukturunda yenə tək h1 var.
 
            ⚠ TASK-8 / Bənd 6 — tamlıq nudge-i HERO-DAN ƏVVƏLDİR: o, hərəkət
@@ -1219,7 +1240,7 @@
     </div>
 
     <div class="page" id="page-settings">
-      <h1 class="page-title" data-i18n="nav.settings"></h1>
+      <h2 class="page-title" data-i18n="nav.settings"></h2>
       <p class="page-sub" data-i18n="set.sub"></p>
       <!-- Bloklar responsive grid-dədir: 1440px-də tək 520px sütun
            ~900px boşluq buraxırdı (AUDIT-UI). -->
@@ -1296,7 +1317,7 @@
     </div>
 
     <div class="page" id="page-admin">
-      <h1 class="page-title" data-i18n="nav.admin"></h1>
+      <h2 class="page-title" data-i18n="nav.admin"></h2>
       <p class="page-sub" data-i18n="adm.sub"></p>
       
       <div class="admin-layout">

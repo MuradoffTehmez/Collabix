@@ -270,6 +270,12 @@ export function rewriteHead(res: Response, meta: Meta, route: RouteInfo): Respon
   return new HTMLRewriter()
     .on('html', setAttr('lang', meta.lang))
     .on('title', setText(meta.title))
+    /* 🔴 O-04 — sənədin yeganə `<h1>`-i marşruta görə doldurulur.
+     * Crawler JS icra etmir, yəni `js/app.js`-dəki router yeniləməsi ona
+     * çatmır: bu sətir olmasa hər publik səhifə eyni "Collabix" h1-i ilə
+     * indekslənərdi. `<title>` ilə EYNİ mətn qəsdəndir — ikisi bir-birinə
+     * zidd olsa axtarış sistemi hansına inanacağını bilmir. */
+    .on('#docH1', setText(meta.title))
     .on('meta[name="description"]', setAttr('content', meta.description))
     .on('link[rel="canonical"]', setAttr('href', meta.canonical))
     .on('meta[property="og:title"]', setAttr('content', meta.title))

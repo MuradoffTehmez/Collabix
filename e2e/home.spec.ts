@@ -22,15 +22,15 @@ test.describe('Ana səhifə', () => {
   test('yüklənir, sıfır konsol xətası', async ({ page }) => {
     const errors = collectConsoleErrors(page);
     await gotoHome(page);
-    await expect(page.locator('.hero h1')).toBeVisible();
-    await expect(page.locator('.hero h1')).not.toBeEmpty();
+    await expect(page.locator('.hero .hero-h1')).toBeVisible();
+    await expect(page.locator('.hero .hero-h1')).not.toBeEmpty();
     assertConsoleClean(errors);
   });
 
   // Ana#1 — hero elementləri stagger ilə gəlir, sonda hamısı görünür (opacity 1).
   test('Ana#1 hero fade-in tamamlanır', async ({ page }) => {
     await gotoHome(page);
-    for (const sel of ['.hero h1', '.hero-tagline', '.hero-sub', '.hero-cta']) {
+    for (const sel of ['.hero .hero-h1', '.hero-tagline', '.hero-sub', '.hero-cta']) {
       await expect(page.locator(sel)).toBeVisible();
       await expect
         .poll(() => page.locator(sel).evaluate(n => Number(getComputedStyle(n).opacity)))
@@ -237,7 +237,7 @@ test.describe('Ümumi tələblər', () => {
       const errors = collectConsoleErrors(page);
       await page.addInitScript(l => localStorage.setItem('collabix_lang', l), lang);
       await gotoHome(page);
-      await expect(page.locator('.hero h1')).not.toBeEmpty();
+      await expect(page.locator('.hero .hero-h1')).not.toBeEmpty();
       await expect(page.locator('#sbTrendsHint')).not.toBeEmpty();
 
       // Tərcümə boşluğu: hər [data-i18n] elementi dolu olmalı və mətni
@@ -271,7 +271,7 @@ test.describe('Ümumi tələblər', () => {
     await gotoHome(page);
 
     // hero dərhal tam görünür
-    await expect(page.locator('.hero h1')).toHaveCSS('opacity', '1');
+    await expect(page.locator('.hero .hero-h1')).toHaveCSS('opacity', '1');
     // count-up dərhal son dəyəri göstərir (animasiyasız) — dil/skill sayğacı > 0
     await page.locator('.sb-num').first().scrollIntoViewIfNeeded();
     await expect.poll(() => page.locator('.sb-num').nth(2).textContent()).toMatch(/[1-9]/);
@@ -292,7 +292,7 @@ test.describe('Ümumi tələblər', () => {
       await page.addInitScript(t => localStorage.setItem('collabix_theme', t), theme);
       await gotoHome(page);
       await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
-      await expect(page.locator('.hero h1')).toBeVisible();
+      await expect(page.locator('.hero .hero-h1')).toBeVisible();
       assertConsoleClean(errors);
     });
   }

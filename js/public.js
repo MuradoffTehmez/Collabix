@@ -805,6 +805,13 @@ function updateDynamicMeta(page){
   const lang = getLang();
   // Update page title
   document.title = tf(meta.title);
+  /* 🔴 O-04 — sənədin yeganə `<h1>`-i də marşrutla dəyişir.
+   * Server publik marşrutlar üçün bunu onsuz da doldurur (`worker/seo.ts`),
+   * lakin tətbiq DAXİLİNDƏ səhifə dəyişəndə yeni HTML gəlmir — o halda h1
+   * əvvəlki səhifənin adında ilişib qalardı. `<title>` ilə eyni mənbədən
+   * (`PAGE_META`) oxunur ki, ikisi bir-birinə zidd düşməsin. */
+  const docH1 = document.getElementById('docH1');
+  if(docH1) docH1.textContent = tf(meta.title);
   // Update meta description
   const descEl = document.querySelector('meta[name="description"]');
   if(descEl) descEl.setAttribute('content', tf(meta.desc));

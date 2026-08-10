@@ -369,7 +369,7 @@
   }
 }
 
-h1.page-title {
+.page-title {
   font-family: var(--display);
   font-size: clamp(1.15rem, 0.95rem + 1.1vw, 1.75rem);
   font-weight: 800;
