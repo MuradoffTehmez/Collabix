@@ -71,19 +71,19 @@ import { initPalette } from './palette.js';
 const $ = id => document.getElementById(id);
 
 /* ================= auth ekranı ================= */
-function switchAuthTab(t){
-  $('tabRegBtn').classList.toggle('active', t === 'reg');
-  $('tabLoginBtn').classList.toggle('active', t === 'login');
+function switchAuthTab(tab){
+  $('tabRegBtn').classList.toggle('active', tab === 'reg');
+  $('tabLoginBtn').classList.toggle('active', tab === 'login');
   // ⚠ Konteynerə sinif: sürüşən göstərici (`.tabs-switch::before`) mövqeyini
   //   buradan alır. Əvvəl aktiv fon birbaşa düymənin üzərində idi və keçid
   //   ANİ tullanırdı — hansı tabdan hansına keçildiyi hiss olunmurdu.
-  document.querySelector('.tabs-switch')?.classList.toggle('t-login', t === 'login');
-  $('regForm').classList.toggle('hidden', t !== 'reg');
-  $('loginForm').classList.toggle('hidden', t !== 'login');
+  document.querySelector('.tabs-switch')?.classList.toggle('t-login', tab === 'login');
+  $('regForm').classList.toggle('hidden', tab !== 'reg');
+  $('loginForm').classList.toggle('hidden', tab !== 'login');
   const lines = { reg: t('auth.term_reg'), login: t('auth.term_login') };
   const term = $('termLine');
   clear(term);
-  term.append(lines[t], el('span', { class: 'blink' }));
+  term.append(lines[tab], el('span', { class: 'blink' }));
 }
 
 function initAuthUI(){
