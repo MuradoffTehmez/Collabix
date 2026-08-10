@@ -14,7 +14,7 @@ import { toast, showModal, closeModal, setTheme, getTheme, THEMES } from './ui.j
 import { t, setLang, getLang, LANGS } from './i18n.js';
 // Profil ekranı + örtük seçicisi — publik profillə ORTAQ renderer.
 import { renderProfile, openCoverPicker } from './profile-view.js';
-import { openFollowList } from './users.js';
+
 import { tax } from './taxonomy.js';
 import { skillLevelPicker, ageFromBirthDate } from './wizard.js';
 import { renderCompleteness } from './completeness.js';
@@ -66,7 +66,7 @@ function mountView(){
     sharedTeams: [],
     // İzləyici/izlənilən siyahısı `users.js`-dədir — callback ilə ötürülür,
     // çünki `profile-view.js` ondan asılı OLMAMALIDIR (dövr riski).
-    onFollowList: (uid, tab) => openFollowList(uid, tab),
+    onFollowList: (uid, tab) => import('./users.js').then(m => m.openFollowList(uid, tab)),
     onCover: () => {
       const anchor = host.querySelector('.pf-cover__edit');
       openCoverPicker(anchor, me.cover || '', async key => {

@@ -20,7 +20,7 @@
   }
 }
 
-.hero-inner>.hero-h1,
+/* .hero-h1 (LCP elementi) animasiyadan ÇIXARILDI ki, opacity: 0 ilə başlamasın və LCP gecikməsin. */
 .hero-inner>.hero-tagline,
 .hero-inner>.hero-sub,
 .hero-inner>.hero-cta,
@@ -28,8 +28,7 @@
   animation: heroIn .5s cubic-bezier(.22, .61, .36, 1) both;
 }
 
-/* başlıq → şüar → alt-mətn → düymələr → terminal sətri */
-.hero-inner>.hero-h1 { animation-delay: 0ms; }
+/* başlıq animasiyadan çıxarıldığı üçün yalnız şüar, alt-mətn və s. gecikdirilir */
 .hero-inner>.hero-tagline { animation-delay: 80ms; }
 .hero-inner>.hero-sub { animation-delay: 160ms; }
 .hero-inner>.hero-cta { animation-delay: 240ms; }

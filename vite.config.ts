@@ -158,7 +158,11 @@ export default defineConfig({
         // Qeyd: köhnə `firebase` manual-chunk-ı silindi — layihə Cloudflare
         // (Workers + D1 + R2 + KV) üzərindədir, firebase asılılığı yoxdur.
         manualChunks(id: string) {
-          if (/node_modules[\\/](marked|dompurify)[\\/]/.test(id)) return 'vendor';
+          if (id.includes('node_modules')) {
+            // qrcode-generator and highlight.js are dynamically imported, so they will naturally be split, 
+            // but we group all remaining node_modules into a 'vendor' chunk to prevent too many small chunks.
+            return 'vendor';
+          }
           return undefined;
         },
         entryFileNames: 'assets/[name]-[hash].js',

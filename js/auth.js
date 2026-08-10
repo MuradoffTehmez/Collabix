@@ -1,7 +1,7 @@
 // Autentifikasiya — JWT (HttpOnly cookie) + Cloudflare Worker API.
 // Parollar server tərəfdə PBKDF2 ilə heşlənir; client-də heç nə saxlanılmır.
 import { api } from './api.js';
-import { state } from './store.js';
+import { state, uploadAvatar, updateMyProfile } from './store.js';
 import { bus } from './util.js';
 import { tokenFor, resetWidget } from './turnstile.js';
 import { promptMfaCode } from './mfa.js';
@@ -80,7 +80,7 @@ export async function register(d){
   // avatar qeydiyyatdan sonra yüklənir (sessiya artıq var)
   if(d.avatarBlob){
     try{
-      const { uploadAvatar, updateMyProfile } = await import('./store.js');
+      
       const url = await uploadAvatar(d.avatarBlob);
       await updateMyProfile({ photoURL: url });
     }catch(e){ console.error('avatar upload', e); }

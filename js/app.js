@@ -11,7 +11,7 @@ import { applyOAuthTicket } from './wizard.js';
 import {
   state, watchUsers, watchMyLikes, watchMyBookmarks, watchMyFollowing, watchMyFollowers,
   setFeedSort,
-  watchPendingSubmissions, touchActivity, updateMySettings,
+  watchPendingSubmissions, touchActivity, updateMySettings, updateMyProfile,
 } from './store.js';
 import { changePassword } from './auth.js';
 import { el, clear, avatarNode, authErrMessage, bus, emit } from './util.js';
@@ -25,24 +25,11 @@ import { t, setLang, getLang, applyI18n } from './i18n.js';
 import { SITE } from './legal.js';
 import { attachParticles } from './particles.js';
 import { initCyberpunkFX } from './cyberpunk_fx.js';
+import { initPalette } from './palette.js';
 import { mountHome, mountSaved, mountPost, subscribeFeed, setFeedTab } from './feed.js';
 import { initComposer } from './composer.js';
 import { loadTaxonomies } from './taxonomy.js';
-import { initChat, mountChat } from './chat.js';
-import { initDM, mountDM, subscribeThreads } from './dm.js';
-import { mountUsers, mountPubProfile } from './users.js';
 import { initPublic, showPublicPage, hidePublic, setPublicAuthState, PUBLIC_PAGES, PUB_PATHS } from './public.js';
-// ⚠ İKİ AYRI TAPŞIRIQ SİSTEMİ:
-//   `workspace` → komanda tapşırıqları (Kanban, sprint) — «Tapşırıqlar»
-//   `drills`    → öyrənmə çalışmaları (həll göndər, admin təsdiqi) — «Çalışmalar»
-// Adları qarışdırmaq marşrutu yanlış səhifəyə bağlayar.
-import { initDrills, mountDrills } from './drills.js';
-import { mountWorkspace } from './workspace.js';
-import { initTeams, mountTeams, mountTeam } from './teams.js';
-import { initStats, mountStats } from './stats.js';
-import { initProfile, mountProfile } from './profile.js';
-import { initSettings } from './settings.js';
-import { initSessions, loadSessions } from './sessions.js';
 /* 🔴 O-03 — ADMIN PANELİ TƏLƏB ÜZRƏ YÜKLƏNİR.
  *
  *   `admin.js` 52 KB, `governance.js` 19 KB-dır və hər ikisi statik idxal
@@ -62,11 +49,30 @@ let adminModP = null;
 const adminMod = () => (adminModP ??= import('./admin.js'));
 let govModP = null;
 const govMod = () => (govModP ??= import('./governance.js'));
-/** `initAdmin`/`initGovernance` DOM-a bir dəfə bağlanır — təkrar çağırış
- *  dinləyiciləri ikiqat artırardı (O-06-nın eyni sinfi). */
 let adminInited = false;
-import { initNotifs, mountNotifs, subscribeNotifs } from './notify.js';
-import { initPalette } from './palette.js';
+
+// Lazy modules for routes
+let chatModP = null; const chatMod = () => (chatModP ??= import('./chat.js'));
+let dmModP = null; const dmMod = () => (dmModP ??= import('./dm.js'));
+let notifModP = null; const notifMod = () => (notifModP ??= import('./notify.js'));
+let usersModP = null; const usersMod = () => (usersModP ??= import('./users.js'));
+let workspaceModP = null; const workspaceMod = () => (workspaceModP ??= import('./workspace.js'));
+let drillsModP = null; const drillsMod = () => (drillsModP ??= import('./drills.js'));
+let teamsModP = null; const teamsMod = () => (teamsModP ??= import('./teams.js'));
+let statsModP = null; const statsMod = () => (statsModP ??= import('./stats.js'));
+let profileModP = null; const profileMod = () => (profileModP ??= import('./profile.js'));
+let settingsModP = null; const settingsMod = () => (settingsModP ??= import('./settings.js'));
+let sessionsModP = null; const sessionsMod = () => (sessionsModP ??= import('./sessions.js'));
+
+let chatInited = false;
+let dmInited = false;
+let drillsInited = false;
+let teamsInited = false;
+let statsInited = false;
+let profileInited = false;
+let settingsInited = false;
+let sessionsInited = false;
+let notifInited = false;
 
 const $ = id => document.getElementById(id);
 
@@ -162,23 +168,105 @@ async function doLogin(){
 
 /* ================= naviqasiya ================= */
 const MOUNTS = {
-  home: mountHome, chat: mountChat, dm: mountDM, notifs: mountNotifs,
-  users: mountUsers, tasks: mountWorkspace, drills: mountDrills, teams: mountTeams, team: mountTeam, stats: mountStats, saved: mountSaved,
-  // Sessiya siyahısı hər dəfə Parametrlərə girildikdə YENİDƏN çəkilir — başqa
-  // cihazdan giriş edildikdə köhnə siyahı qalmasın.
-  // ⚠ Profil mount-u İKİ işi görür: `mountProfile` təmizləyici funksiya
-  //   qaytarır, `mountGovernanceUser` isə yalnız çəkir (abunə yaratmır) —
-  //   ona görə təmizləyici kimi YALNIZ birincinin nəticəsi qaytarılır.
-  /* ⚠ `mountGovernanceUser` ARTIQ ASENXRONDUR (O-03 tənbəl yükləmə), lakin
-   *   təmizləyici YENƏ sinxron qaytarılır: `nav()` nəticəni dərhal
-   *   `pageCleanup`-a yazır və Promise qaytarsaq təmizləmə heç vaxt işləməzdi. */
-  profil: () => { const stop = mountProfile(); govMod().then(m => m.mountGovernanceUser()); return stop; },
-  settings: () => { loadSessions(); loadLinkedAccounts(); loadMfaPanel(); return () => {}; },
-  /* ⚠ ADMIN MOUNT-U İKİ MƏRHƏLƏLİDİR.
-   *   Modul yüklənənə qədər `stop` hələ mövcud deyil, ona görə təmizləyici
-   *   ona GEC bağlanır. Səhifə modul gəlməmişdən əvvəl tərk edilsə `stop`
-   *   `null` qalır və çağırış təhlükəsiz keçir — əks halda tərk edilmiş
-   *   səhifənin abunəsi arxa fonda yaşamağa davam edərdi. */
+  home: mountHome, 
+  saved: mountSaved, 
+  post: mountPost, 
+  chat: (p) => {
+    let stop = null;
+    chatMod().then(m => {
+      if(!chatInited) { m.initChat(); chatInited = true; }
+      stop = m.mountChat(p);
+    });
+    return () => { stop?.(); stop = null; };
+  },
+  dm: (p) => {
+    let stop = null;
+    dmMod().then(m => {
+      if(!dmInited) { m.initDM(); dmInited = true; }
+      stop = m.mountDM(p);
+    });
+    return () => { stop?.(); stop = null; };
+  },
+  notifs: (p) => {
+    let stop = null;
+    notifMod().then(m => {
+      if(!notifInited) { m.initNotifs(); notifInited = true; }
+      stop = m.mountNotifs(p);
+    });
+    return () => { stop?.(); stop = null; };
+  },
+  users: (p) => {
+    let stop = null;
+    usersMod().then(m => {
+      stop = m.mountUsers(p);
+    });
+    return () => { stop?.(); stop = null; };
+  },
+  u: (p) => {
+    let stop = null;
+    usersMod().then(m => {
+      stop = m.mountPubProfile(p);
+    });
+    return () => { stop?.(); stop = null; };
+  },
+  tasks: (p) => {
+    let stop = null;
+    workspaceMod().then(m => {
+      stop = m.mountWorkspace(p);
+    });
+    return () => { stop?.(); stop = null; };
+  },
+  drills: (p) => {
+    let stop = null;
+    drillsMod().then(m => {
+      if(!drillsInited) { m.initDrills(); drillsInited = true; }
+      stop = m.mountDrills(p);
+    });
+    return () => { stop?.(); stop = null; };
+  },
+  teams: (p) => {
+    let stop = null;
+    teamsMod().then(m => {
+      if(!teamsInited) { m.initTeams(); teamsInited = true; }
+      stop = m.mountTeams(p);
+    });
+    return () => { stop?.(); stop = null; };
+  },
+  team: (p) => {
+    let stop = null;
+    teamsMod().then(m => {
+      if(!teamsInited) { m.initTeams(); teamsInited = true; }
+      stop = m.mountTeam(p);
+    });
+    return () => { stop?.(); stop = null; };
+  },
+  stats: (p) => {
+    let stop = null;
+    statsMod().then(m => {
+      if(!statsInited) { m.initStats(); statsInited = true; }
+      stop = m.mountStats(p);
+    });
+    return () => { stop?.(); stop = null; };
+  },
+  profil: (p) => {
+    let stop = null;
+    Promise.all([profileMod(), govMod()]).then(([pM, gM]) => {
+      if(!profileInited) { pM.initProfile(); profileInited = true; }
+      stop = pM.mountProfile(p);
+      gM.mountGovernanceUser();
+    });
+    return () => { stop?.(); stop = null; };
+  },
+  settings: (p) => {
+    Promise.all([settingsMod(), sessionsMod()]).then(([setM, sesM]) => {
+      if(!settingsInited) { setM.initSettings(); settingsInited = true; }
+      if(!sessionsInited) { sesM.initSessions(); sessionsInited = true; }
+      sesM.loadSessions();
+      loadLinkedAccounts(); // still static for now
+      loadMfaPanel(); // still static for now
+    });
+    return () => {};
+  },
   admin: () => {
     let stop = null;
     adminMod().then(async m => {
@@ -188,7 +276,6 @@ const MOUNTS = {
     });
     return () => { stop?.(); stop = null; };
   },
-  post: mountPost, u: mountPubProfile,
 };
 const VALID_PAGES = Object.keys(MOUNTS);
 let pageCleanup = null;
@@ -381,8 +468,8 @@ function startSession(){
     watchMyBookmarks(() => emit('bookmarks-updated')),
     watchMyFollowing(() => emit('follows-updated')),
     watchMyFollowers(() => emit('follows-updated')),
-    subscribeThreads(),
-    subscribeNotifs(),
+    dmMod().then(m => m.subscribeThreads()),
+    notifMod().then(m => m.subscribeNotifs()),
     startPresence(),
   ];
   // İstifadəçinin yadda saxlanmış dil/tema tərcihi
@@ -418,7 +505,7 @@ function showForceResetModal(){
       e.target.disabled = true;
       try{
         await changePassword(curIn.value, newIn.value);
-        const { updateMyProfile } = await import('./store.js');
+        
         await updateMyProfile({ mustResetPassword: false });
         state.me.mustResetPassword = false;
         closeModal();
@@ -602,19 +689,13 @@ onReady(() => {
 
   initAuthUI();
   initComposer();
-  initChat();
-  initDM();
-  initDrills();
-  initTeams();
-  initStats();
-  initProfile();
-  initSettings();
-  initSessions();
-  /* ⚠ `initAdmin()` / `initGovernance()` ARTIQ BURADA ÇAĞIRILMIR — O-03.
-   *   İkisi də admin panelinin STATİK markup-una dinləyici bağlayır, yəni
-   *   panel açılana qədər lazım deyil. Modul ilk `#admin` ziyarətində
-   *   yüklənir və init orada, `adminInited` qapısı ilə BİR DƏFƏ işləyir. */
-  initNotifs();
+  
+  // init methods for routes are now called on-demand in MOUNTS
+  // except those that might be needed globally at boot.
+  // Notifs need to run their init because there might be topbar UI bindings.
+  notifMod().then(m => {
+    if(!notifInited) { m.initNotifs(); notifInited = true; }
+  });
 
   document.querySelectorAll('.sidebar .nav-item, .bottom-nav button').forEach(btn => {
     if(btn.dataset.page) btn.addEventListener('click', () => nav(btn.dataset.page));

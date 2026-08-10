@@ -1150,10 +1150,15 @@ function syncStickyOffsets(){
   const topbar = document.querySelector('.app-topbar');
   const bulk = document.getElementById('notifBulkBar');
   const h = node => (node ? Math.round(node.getBoundingClientRect().height) : 0);
-  // Topbar mobil görünüşdə gizlənə bilər → 0 çıxır və düstur özü uyğunlaşır.
-  root.style.setProperty('--nc-topbar', h(topbar) + 'px');
-  root.style.setProperty('--nc-controls-h', h(controls) + 'px');
-  if(bulk && !bulk.hidden) root.style.setProperty('--nc-bulk-h', (h(bulk) + 8) + 'px');
+  // Batch READs
+  const topbarH = h(topbar);
+  const controlsH = h(controls);
+  const bulkH = (bulk && !bulk.hidden) ? h(bulk) + 8 : null;
+  
+  // Batch WRITEs
+  root.style.setProperty('--nc-topbar', topbarH + 'px');
+  root.style.setProperty('--nc-controls-h', controlsH + 'px');
+  if(bulkH !== null) root.style.setProperty('--nc-bulk-h', bulkH + 'px');
 }
 
 function initStickyWatcher(){

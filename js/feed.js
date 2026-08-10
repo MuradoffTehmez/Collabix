@@ -14,7 +14,7 @@ import {
 } from './util.js';
 import { toast, confirmDialog, showModal, closeModal, skeletons, emptyState } from './ui.js';
 import { api } from './api.js';
-import { openProfileModal } from './users.js';
+
 import { markdownNode } from './markdown.js';
 // `highlightOptions` artıq `code-block.js`-dədir (dil nişanı orada qurulur).
 import { mentionify, attachMentionAutocomplete } from './mention.js';
@@ -943,7 +943,10 @@ function postSig(p){
 // container → Map(postId → { node, sig }). Hər siyahı öz indeksini saxlayır.
 const cardIndexes = new WeakMap();
 
-function reconcilePosts(container, list, emptyNode){
+async function reconcilePosts(container, list, emptyNode){
+  // Generate a unique render pass ID to avoid race conditions with overlapping calls
+  container._renderGen = (container._renderGen || 0) + 1;
+  const myGen = container._renderGen;
   let index = cardIndexes.get(container);
   if(!index){ index = new Map(); cardIndexes.set(container, index); }
 
@@ -961,7 +964,12 @@ function reconcilePosts(container, list, emptyNode){
 
   const seen = new Set();
   let prev = null;
-  list.forEach((p, i) => {
+  for (let i = 0; i < list.length; i++) {
+    if (container._renderGen !== myGen) return; // Abort if a newer render started
+    // Yield to main thread every 10 items to prevent Long Tasks
+    if (i > 0 && i % 10 === 0) await new Promise(r => setTimeout(r, 0));
+
+    const p = list[i];
     seen.add(p.id);
     const sig = postSig(p);
     let entry = index.get(p.id);
@@ -982,7 +990,7 @@ function reconcilePosts(container, list, emptyNode){
     const shouldBeAt = prev ? prev.nextSibling : container.firstChild;
     if(entry.node !== shouldBeAt) container.insertBefore(entry.node, shouldBeAt);
     prev = entry.node;
-  });
+  }
 
   index.forEach((entry, id) => {
     if(seen.has(id)) return;
@@ -1003,10 +1011,10 @@ function removePostLocally(postId){
   renderFeed();
 }
 
-function renderFeed(){
+async function renderFeed(){
   const feed = document.getElementById('homeFeed');
   if(!document.getElementById('page-home').classList.contains('active')) return;
-  reconcilePosts(feed, filteredPosts(),
+  await reconcilePosts(feed, filteredPosts(),
     emptyState('message', feedTab === 'following' ? t('feed.empty_following') : t('feed.empty_all')));
 }
 
@@ -1689,7 +1697,7 @@ async function renderSaved(){
   if(!document.getElementById('page-saved').classList.contains('active')) return;
   const run = ++savedRun;
   const ids = [...state.myBookmarks];
-  if(!ids.length){ reconcilePosts(box, [], emptyState('bookmark', t('feed.empty_saved'))); return; }
+  if(!ids.length){ await reconcilePosts(box, [], emptyState('bookmark', t('feed.empty_saved'))); return; }
   const cached = new Map(posts.map(p => [p.id, p]));
   const items = [];
   for(const id of ids){
@@ -1704,7 +1712,7 @@ async function renderSaved(){
   // `createdAt?.toMillis?.()` çağırılırdı — həmişə undefined olduğu üçün
   // müqayisə 0-0 olur və sıralama heç işləmirdi.
   items.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-  reconcilePosts(box, items, emptyState('bookmark', t('feed.empty_del')));
+  await reconcilePosts(box, items, emptyState('bookmark', t('feed.empty_del')));
 }
 
 export function mountSaved(){

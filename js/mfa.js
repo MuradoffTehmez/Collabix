@@ -4,7 +4,7 @@
 //   1. Girişin ikinci addımı (`promptMfaCode`) — parol düz olsa da sessiya
 //      verilmir, əvvəlcə authenticator kodu istənilir.
 //   2. Parametrlərdə qurma/söndürmə + ehtiyat kodlar.
-import qrcode from 'qrcode-generator';
+
 import { api } from './api.js';
 import { el, clear } from './util.js';
 import { showModal, closeModal, toast, confirmDialog } from './ui.js';
@@ -16,7 +16,8 @@ import { ensureWidget, tokenFor, resetWidget } from './turnstile.js';
 // data: icazəlidir, amma SVG element həm daha kəskin görünür, həm də temaya
 // uyğun rənglənə bilir. Kodlaşdırma sınanmış kitabxanadadır — QR-ın Reed-Solomon
 // hissəsini əl ilə yazmaq səhv riski deməkdir və səhv QR = qeydiyyat mümkünsüz.
-function qrSvg(text, size = 190){
+async function qrSvg(text, size = 190){
+  const qrcode = (await import('qrcode-generator')).default;
   const qr = qrcode(0, 'M');       // 0 = avtomatik versiya, 'M' = orta düzəliş səviyyəsi
   qr.addData(text);
   qr.make();
@@ -165,7 +166,7 @@ async function startSetup(){
   showModal([
     el('div', { class: 'section-title' }, t('mfa.setup_title')),
     el('p', { style: 'color:var(--muted); font-size:.84rem; line-height:1.6;' }, t('mfa.setup_1')),
-    el('div', { class: 'mfa-qr' }, qrSvg(d.uri)),
+    el('div', { class: 'mfa-qr' }, await qrSvg(d.uri)),
     el('p', { style: 'color:var(--muted); font-size:.78rem; margin:10px 0 4px;' }, t('mfa.setup_manual')),
     el('code', { class: 'mfa-secret' }, d.secret),
     el('p', { style: 'color:var(--muted); font-size:.84rem; margin:16px 0 8px;' }, t('mfa.setup_2')),

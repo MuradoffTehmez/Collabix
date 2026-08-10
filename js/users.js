@@ -882,8 +882,10 @@ function syncUsersSticky(){
   if(!root || !controls) return;
   const topbar = document.querySelector('.app-topbar');
   const h = node => (node ? Math.round(node.getBoundingClientRect().height) : 0);
-  root.style.setProperty('--ud-topbar', h(topbar) + 'px');
-  root.style.setProperty('--ud-controls-h', h(controls) + 'px');
+  const topbarH = h(topbar);
+  const controlsH = h(controls);
+  root.style.setProperty('--ud-topbar', topbarH + 'px');
+  root.style.setProperty('--ud-controls-h', controlsH + 'px');
 }
 
 function initStickyWatcher(){

@@ -8,7 +8,7 @@ import {
 import { createHistory, historyBar, loadOlder } from './history.js';
 import { el, clear, emit, isOnline, avatarNode } from './util.js';
 import { toast, confirmDialog, showModal, closeModal, emptyState } from './ui.js';
-import { openProfileModal } from './users.js';
+
 import { attachMentionAutocomplete } from './mention.js';
 import { attachRichControls, sendFiles } from './richmsg.js';
 import { renderMessageList, bindMessagePopClosers, previewText } from './chat-message.js';
@@ -343,7 +343,7 @@ function chatCtx(){
     isMine: m => m.authorUid === state.authUser.uid,
     userOf: m => state.users.get(m.authorUid),
     nameOf: m => m.authorName || (state.users.get(m.authorUid) || {}).name || '',
-    onName: uid => openProfileModal(uid),
+    onName: uid => import('./users.js').then(m => m.openProfileModal(uid)),
     isAdmin: state.isAdmin,
     // Otaqda sabitləmə YALNIZ admin üçündür — server də bunu tətbiq edir.
     canPin: state.isAdmin,

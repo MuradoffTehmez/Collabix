@@ -19,7 +19,8 @@ import { t } from './i18n.js';
 import { toast, emptyState, confirmDialog, openPopover, closePopover } from './ui.js';
 import { paintIcons } from './icon-set.js';
 import { renderView, VIEWS } from './workspace-views.js';
-import { openTaskDetail, closeTaskDetail, openCreateModal, setDetailMeta } from './workspace-detail.js';
+let detailModP = null;
+const getDetailMod = () => (detailModP ??= import('./workspace-detail.js'));
 
 /* ═══════════════════════ VƏZİYYƏT ═══════════════════════ */
 
@@ -41,7 +42,7 @@ export const S = {
   /* Görünüş mühərriki `workspace.js`-i import ETMİR (dövr) — lazım olan
      əməliyyatlar buradan geri-çağırış kimi verilir. */
   onSelect: (id, on) => toggleSelect(id, on),
-  onOpen: id => openTaskDetail(id),
+  onOpen: id => getDetailMod().then(m => m.openTaskDetail(id)),
   onCreate: preset => openCreate(preset),
   onMore: () => loadMore(),
   /* Cədvəl sütun başlığı sıralamanı dəyişir → SERVERƏ yeni sorğu.
@@ -588,7 +589,7 @@ async function refreshStats(){
 
 /* ═══════════════════════ YARATMA ═══════════════════════ */
 
-export function openCreate(preset = {}){ openCreateModal(preset); }
+export function openCreate(preset = {}){ getDetailMod().then(m => m.openCreateModal(preset)); }
 
 /* ═══════════════════════ ƏLAVƏ PANELLƏR ═══════════════════════ */
 
@@ -612,9 +613,9 @@ function exportCsv(){
   URL.revokeObjectURL(url);
 }
 
-function openSprints(){ import('./workspace-detail.js').then(m => m.openSprintPanel()); }
-function openAutomation(){ import('./workspace-detail.js').then(m => m.openAutomationPanel()); }
-function openLabels(){ import('./workspace-detail.js').then(m => m.openLabelPanel()); }
+function openSprints(){ getDetailMod().then(m => m.openSprintPanel()); }
+function openAutomation(){ getDetailMod().then(m => m.openAutomationPanel()); }
+function openLabels(){ getDetailMod().then(m => m.openLabelPanel()); }
 
 /* ═══════════════════════ KLAVİATURA ═══════════════════════ */
 
@@ -634,12 +635,12 @@ function onKey(e){
      modalı bağlayanda tamam başqa ekran görürdü. */
   const overlay = document.getElementById('modalBg');
   if((overlay && overlay.classList.contains('active')) || document.querySelector('.ws-panel')){
-    if(e.key === 'Escape'){ clearSelection(); closeTaskDetail(); }
+    if(e.key === 'Escape'){ clearSelection(); getDetailMod().then(m => m.closeTaskDetail()); }
     return;
   }
   // `c` → yeni tapşırıq, `1…6` → görünüş, Esc → seçimi təmizlə.
   if(e.key === 'c'){ e.preventDefault(); openCreate(); }
-  else if(e.key === 'Escape'){ clearSelection(); closeTaskDetail(); }
+  else if(e.key === 'Escape'){ clearSelection(); getDetailMod().then(m => m.closeTaskDetail()); }
   else if(/^[1-6]$/.test(e.key)){
     const v = VIEWS[Number(e.key) - 1];
     if(v) setView(v.id);
@@ -667,8 +668,9 @@ function syncSticky(){
   if(!bar) return;
   // Mobil görünüşdə topbar gizlənə bilər → 0 çıxır və düstur uyğunlaşır.
   const topH = top ? Math.round(top.getBoundingClientRect().height) : 0;
+  const barH = Math.round(bar.getBoundingClientRect().height);
   document.documentElement.style.setProperty('--ws-topbar', topH + 'px');
-  document.documentElement.style.setProperty('--ws-ctrl-h', Math.round(bar.getBoundingClientRect().height) + 'px');
+  document.documentElement.style.setProperty('--ws-ctrl-h', barH + 'px');
 }
 
 let stickyRO = null;
@@ -711,7 +713,7 @@ export function mountWorkspace(){
       // Detal paneli meta-nı ÖZÜ çəkmir — eyni cavabı ikinci dəfə almaq
       // mənasız olardı. Panel `workspace.js`-i import etmir (dövr), ona görə
       // meta ona AÇIQ ötürülür.
-      setDetailMeta(m);
+      getDetailMod().then(mod => mod.setDetailMeta(m));
       buildControls();
       reload();
     })
@@ -737,7 +739,7 @@ export function mountWorkspace(){
     bus.removeEventListener('ws-changed', reload);
     bus.removeEventListener('ws-remote-change', onRemote);
     closePopover();
-    closeTaskDetail();
+    getDetailMod().then(m => m.closeTaskDetail());
     S.sel.clear();
   };
 }

@@ -270,7 +270,8 @@
   "vectorize": [
     {
       "binding": "VECTORIZE",
-      "index_name": "collabix-index"
+      "index_name": "collabix-index",
+      "remote": true
     }
   ],
   

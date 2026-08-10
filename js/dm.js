@@ -7,7 +7,7 @@ import {
 import { createHistory, historyBar, loadOlder } from './history.js';
 import { el, clear, avatarNode, tsToMillis, isOnline, lastSeenText, bus, emit } from './util.js';
 import { toast, confirmDialog, showModal, closeModal, emptyState } from './ui.js';
-import { openProfileModal } from './users.js';
+
 import { attachMentionAutocomplete } from './mention.js';
 import { attachRichControls, sendFiles } from './richmsg.js';
 import { renderMessageList, bindMessagePopClosers, previewText } from './chat-message.js';
@@ -122,7 +122,7 @@ function dmCtx(pairId){
     isMine: m => m.fromUid === state.authUser.uid,
     userOf: m => state.users.get(m.fromUid),
     nameOf: m => (state.users.get(m.fromUid) || {}).name || '',
-    onName: uid => openProfileModal(uid),
+    onName: uid => import('./users.js').then(m => m.openProfileModal(uid)),
     isAdmin: state.isAdmin,
     // ⚠ DM-də sabitləmə HƏR İKİ tərəf üçündür — şəxsi söhbətdə moderasiya
     //   anlayışı yoxdur (server də eyni qaydadadır).
@@ -362,7 +362,7 @@ function selectPeer(uid, openDetail = false){  // openDetail: yalnız klikdən (
       pinned: isPinned,
       detailsBtn: detailsToggleButton(wrap, 'dmDetails', () => paintDetails()),
       menuItems: [
-        { icon: 'profile', label: t('usr.view'), onClick: () => openProfileModal(uid) },
+        { icon: 'profile', label: t('usr.view'), onClick: () => import('./users.js').then(m => m.openProfileModal(uid)) },
         {
           icon: isMuted ? 'bell' : 'bell-off',
           label: isMuted ? t('conv.unmute') : t('conv.mute'),
