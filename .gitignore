@@ -60,3 +60,7 @@ commits_*.txt
 
 # Responsive audit hesabatları (generasiya olunur, mənbə deyil)
 audit-reports/
+git_history_full.txt
+git_history_short.txt
+CLAUDE.md
+AUDİT/COLLABIX BACKEND — FULL-SCALE ENGINEERING AUDIT.md
