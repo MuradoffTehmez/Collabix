@@ -882,13 +882,35 @@ export async function deleteComment(c: Ctx, postId: string, cid: string) {
   const post = await D(c).prepare('SELECT author_id FROM posts WHERE id = ?').bind(postId).first<any>();
   const allowed = row.author_id === c.user!.id || c.isAdmin || post?.author_id === c.user!.id;
   if (!allowed) return err('İcazə yoxdur.', 403, 'forbidden');
-  // Cascade sil: rəy + bütün cavabları (dərinlik 1 olduğu üçün birbaşa uşaqlar tamdır) + reaksiyalar.
-  // `author_id` də oxunur: cascade silinən cavabların müəllifi BAŞQA
-  // istifadəçilər ola bilər və XP kompensasiyası hər sətrin ÖZ müəllifinə
-  // tətbiq edilməlidir (yanlış uid ilə `xp_logs` sətri tapılmazdı və dövrə
-  // sükutla açıq qalardı).
-  const kids = await D(c).prepare('SELECT id, author_id FROM comments WHERE parent_comment_id = ?')
-    .bind(cid).all<any>();
+  /* Cascade sil: rəy + BÜTÜN ALT AĞACI + reaksiyalar.
+   *
+   * 🔴 ƏVVƏL YALNIZ BİRBAŞA UŞAQLAR SİLİNİRDİ. Şərh onunla haqlı idi ki,
+   *   "dərinlik 1 olduğu üçün birbaşa uşaqlar tamdır" — lakin bir səviyyə
+   *   flatten qaydası `addComment`-dən GÖTÜRÜLƏNDƏ bu şərh yanlışa çevrildi
+   *   və heç kim bura qayıtmadı. `listComments` isə köçürüldü
+   *   (`WITH RECURSIVE`), yəni oxu yolu yuvalanmanı bilirdi, SİLMƏ yolu isə yox.
+   *
+   *   Nəticə ölçüldü (E2E): A → cavab → cavaba cavab qurub A silinəndə nəvə
+   *   sətir BAZADA QALIRDI. Görünmürdü (valideyni yoxdur, `replies[...]` heç
+   *   vaxt açılmır), lakin `posts.comment_count`-a daxil idi — yəni post
+   *   "2 şərh" göstərir, siyahıda isə bir dənə var. Səssiz uyğunsuzluq.
+   *
+   * ⚠ `LIMIT 2000` `listComments`-dəki eyni qoruyucudur: zədələnmiş sətir
+   *   (özünə istinad edən valideyn) sorğunu əbədi işlədərdi.
+   *
+   * ⚠ `author_id` də oxunur: alt ağacdakı cavabların müəllifi BAŞQA
+   *   istifadəçilər ola bilər və XP kompensasiyası hər sətrin ÖZ müəllifinə
+   *   tətbiq edilməlidir (yanlış uid ilə `xp_logs` sətri tapılmazdı və dövrə
+   *   sükutla açıq qalardı).
+   */
+  const kids = await D(c).prepare(
+    `WITH RECURSIVE tree(id) AS (
+       SELECT id FROM comments WHERE parent_comment_id = ?
+       UNION
+       SELECT c2.id FROM comments c2 JOIN tree t ON c2.parent_comment_id = t.id
+     )
+     SELECT cm.id, cm.author_id FROM comments cm JOIN tree ON tree.id = cm.id LIMIT 2000`,
+  ).bind(cid).all<any>();
   const owners: Array<{ id: string; uid: string }> = [
     { id: cid, uid: String(row.author_id) },
     ...kids.results.map(r => ({ id: String(r.id), uid: String(r.author_id) })),

@@ -52,10 +52,20 @@ test.describe('Rəylər (Bənd 8)', () => {
     expect(R.ok).toBeTruthy();
     expect(R.data.parentId, 'cavab üst rəyə bağlanmalıdır').toBe(aId);
 
-    // Cavaba cavab → server bir səviyyəyə flatten edir (kök üst rəy = A).
+    /* 🔴 TEST KÖHNƏLMİŞDİ, KOD YOX.
+     *   Burada əvvəl `parentId === aId` gözlənilirdi — yəni "cavaba cavab kökə
+     *   flatten olunur". O qayda QƏSDƏN GÖTÜRÜLÜB (`worker/routes/post.ts` →
+     *   `addComment` şərhi): flatten "A-ya cavab" ilə "A-nın cavabına cavab"
+     *   arasındakı fərqi itirirdi və söhbət yastılaşırdı. İndi valideyn olduğu
+     *   kimi saxlanılır, dərinlik isə sərbəstdir.
+     *
+     * ⚠ SAXLAMA və GÖSTƏRMƏ AYRIDIR: `parent_comment_id` ƏSL valideyni saxlayır,
+     *   `listComments` isə bütün alt ağacı kökün altında YASTI siyahı kimi
+     *   qaytarır (aşağıdakı `replies[aId]` yoxlaması buna baxır). Test hər iki
+     *   qatı ayrıca yoxlayır — biri dəyişsə digəri onu örtməsin. */
     const deep = await apiSend(page, `/api/posts/${postId}/comments`, 'POST', { text: 'cavaba cavab', parentId: R.data.id });
     expect(deep.ok).toBeTruthy();
-    expect(deep.data.parentId, 'dərin cavab köke flatten olunmalıdır').toBe(aId);
+    expect(deep.data.parentId, 'dərin cavab ƏSL valideynini saxlamalıdır').toBe(R.data.id);
 
     // Reaksiya: A-nı bəyən.
     const likeRes = await apiSend(page, `/api/posts/${postId}/comments/${aId}/like`, 'PUT');
@@ -67,7 +77,12 @@ test.describe('Rəylər (Bənd 8)', () => {
     expect(dNew.total).toBe(2);
     expect(dNew.hasMore).toBe(false);
     expect(dNew.comments.map((c: any) => c.id)).toEqual([bId, aId]);
-    expect(dNew.replies[aId].map((r: any) => r.text)).toEqual(['A-ya cavab', 'cavaba cavab']);
+    /* ⚠ `replies` ƏSL valideyn üzrə qruplaşır, kök üzrə yox — flatten qaydası
+     *   götürüldükdən sonra yuvalanma cavabda da görünür. Əvvəl bu sətir hər
+     *   iki cavabı `replies[aId]` altında gözləyirdi; o, məhz silinmiş
+     *   davranışın izi idi. */
+    expect(dNew.replies[aId].map((r: any) => r.text)).toEqual(['A-ya cavab']);
+    expect(dNew.replies[R.data.id].map((r: any) => r.text)).toEqual(['cavaba cavab']);
     const aNew = dNew.comments.find((c: any) => c.id === aId);
     expect(aNew.likedByMe).toBe(true);
     expect(aNew.likeCount).toBe(1);
@@ -108,8 +123,15 @@ test.describe('Rəylər (Bənd 8)', () => {
     const postId = created.data.post.id as string;
 
     await page.goto('/post/' + postId, { waitUntil: 'domcontentloaded' });
-    await expect(page.locator('#postDetail .comment-input-row')).toBeVisible();
-    await expect(page.locator('#postDetail .comment-sortbar .csort')).toHaveCount(2);
+    /* ⚠ SEÇİCİLƏR KÖHNƏLMİŞDİ, UI YOX.
+     *   `.comment-input-row` artıq qurulmur — rəy kompozitoru tək sətirlik
+     *   `input`-dan çoxsətirli `textarea`-ya keçdi (`.c-composer-row`), çünki
+     *   şərhlər Markdown dəstəkləyir. Sıralama düymələri isə ikidən dördə
+     *   çıxdı: new · old · top · replies.
+     *   CSS-də `.comment-input-row` qaydası hələ qalır — o, O-05-in "ölü sinif"
+     *   siyahısına aiddir, bu testin işi deyil. */
+    await expect(page.locator('#postDetail .c-composer-row')).toBeVisible();
+    await expect(page.locator('#postDetail .comment-sortbar .csort')).toHaveCount(4);
     assertConsoleClean(errors);
   });
 });
