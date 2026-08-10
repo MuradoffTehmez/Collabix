@@ -269,16 +269,18 @@ function openEditModal(initialTab = 'general'){
   const unameErr = el('div', { class: 'form-err' });
   const tabSecurity = el('div', {},
     el('div', { class: 'section-title', style: 'font-size:.9rem;' }, t('prof.ch_pass')),
-    fld(t('prof.cur_pass'), curPass1), fld(t('prof.new_pass'), newPass),
-    el('button', { class: 'btn-small', onclick: async e => {
-      passErr.textContent = '';
-      if(!curPass1.value || newPass.value.length < 6){ passErr.textContent = t('prof.err_pass_fld'); return; }
-      e.target.disabled = true;
-      try{ await changePassword(curPass1.value, newPass.value); curPass1.value = newPass.value = ''; toast(t('dyn.pass_upd')); }
-      catch(ex){ passErr.textContent = authErrMessage(ex, t); }
-      e.target.disabled = false;
-    } }, t('prof.btn_pass')),
-    passErr,
+    el('form', { onsubmit: 'return false;' },
+      fld(t('prof.cur_pass'), curPass1), fld(t('prof.new_pass'), newPass),
+      el('button', { class: 'btn-small', type: 'submit', onclick: async e => {
+        passErr.textContent = '';
+        if(!curPass1.value || newPass.value.length < 6){ passErr.textContent = t('prof.err_pass_fld'); return; }
+        e.target.disabled = true;
+        try{ await changePassword(curPass1.value, newPass.value); curPass1.value = newPass.value = ''; toast(t('dyn.pass_upd'), 'success'); }
+        catch(ex){ passErr.textContent = authErrMessage(ex, t); }
+        e.target.disabled = false;
+      } }, t('prof.btn_pass')),
+      passErr
+    ),
     el('div', { class: 'section-title', style: 'font-size:.9rem; margin-top:20px;' }, t('prof.new_uname')),
     fld(t('prof.new_uname'), newUname, t('prof.new_uname_hint')),
     fld(t('prof.pass_confirm'), curPass2),

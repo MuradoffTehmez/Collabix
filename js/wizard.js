@@ -160,7 +160,7 @@ function step1(){
   // brauzerin parol menecerini yanlış işə salmasın.
   const viaOAuth = !!data.oauthTicket;
 
-  const node = el('div', { class: 'wiz-step' + (goingBack ? ' back' : '') },
+  const node = el('form', { class: 'wiz-step' + (goingBack ? ' back' : ''), onsubmit: 'return false;' },
     viaOAuth ? el('div', { class: 'oauth-note' },
       t('oauth.wiz_note').replace('{p}', data.oauthProvider)) : null,
     field(t('wiz.lbl_uname'), el('div', {}, unameIn, unameStatusEl), t('wiz.lbl_uname_hint')),

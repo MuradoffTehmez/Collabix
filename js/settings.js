@@ -80,11 +80,8 @@ export function initSettings(){
     const passIn = el('input', { type: 'password', placeholder: t('set.ph_pass'),
       style: 'width:100%; background:var(--surface-2); border:1px solid var(--border); color:var(--text); padding:10px 12px; border-radius:9px; margin-bottom:12px;' });
     const errEl = el('div', { class: 'form-err' });
-    showModal([
-      el('div', { class: 'section-title' }, '⚠ ' + t('set.final_confirm')),
-      el('p', { style: 'color:var(--muted); font-size:.85rem; margin-bottom:12px;' }, t('set.del_hint')),
-      passIn, errEl,
-      el('button', { class: 'btn-danger', onclick: async e => {
+    const form = el('form', { onsubmit: 'return false;' }, passIn, errEl,
+      el('button', { class: 'btn-danger', type: 'submit', onclick: async e => {
         if(!passIn.value) return;
         e.target.disabled = true;
         try{
@@ -95,7 +92,12 @@ export function initSettings(){
           errEl.textContent = authErrMessage(ex);
           e.target.disabled = false;
         }
-      } }, t('set.delete_forever')),
+      } }, t('set.delete_forever'))
+    );
+    showModal([
+      el('div', { class: 'section-title' }, '⚠ ' + t('set.final_confirm')),
+      el('p', { style: 'color:var(--muted); font-size:.85rem; margin-bottom:12px;' }, t('set.del_hint')),
+      form
     ]);
   });
 }

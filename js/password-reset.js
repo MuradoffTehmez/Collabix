@@ -65,21 +65,23 @@ function showCodeStep(email) {
     }
   };
 
-  showModal([
-    el('div', { class: 'section-title' }, t('reset.code_title')),
-    el('p', { style: 'color:var(--muted); font-size:.84rem; line-height:1.6; margin-bottom:14px;' },
-      t('reset.code_sub')),
+  const form = el('form', { onsubmit: 'return false;' },
     labelled(t('reset.code_lbl'), code),
     el('p', { style: 'color:var(--warn, #f7bf06); font-size:.8rem; line-height:1.5; margin:2px 0 12px;' },
       t('reset.revoke_warn')),
     labelled(t('reset.new_pass'), pass),
     labelled(t('reset.new_pass2'), again),
     status,
-    el('button', { class: 'btn-primary', style: 'width:100%;', onclick: submit }, t('reset.save')),
-    // Kod gəlməyibsə axını yenidən başlat (yeni kod köhnəni əvəz edir və
-    // cəhd sayğacını sıfırlayır — bax serverdəki `pwtry:` açarı).
+    el('button', { class: 'btn-primary', style: 'width:100%;', type: 'submit', onclick: submit }, t('reset.save')),
     el('button', { class: 'link-btn', type: 'button', onclick: () => openPasswordResetModal() },
-      t('reset.resend')),
+      t('reset.resend'))
+  );
+
+  showModal([
+    el('div', { class: 'section-title' }, t('reset.code_title')),
+    el('p', { style: 'color:var(--muted); font-size:.84rem; line-height:1.6; margin-bottom:14px;' },
+      t('reset.code_sub')),
+    form
   ]);
   code.focus();
 }

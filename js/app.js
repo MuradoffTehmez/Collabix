@@ -412,22 +412,26 @@ function showForceResetModal(){
   const newIn = el('input', { type: 'password', placeholder: t('app.new_pass_ph'),
     style: 'width:100%; background:var(--surface-2); border:1px solid var(--border); color:var(--text); padding:10px 12px; border-radius:9px; margin-bottom:10px;' });
   const errEl = el('div', { class: 'form-err' });
-  showModal([
-    el('div', { class: 'section-title' }, t('app.change_pass_title')),
-    el('p', { style: 'color:var(--muted); font-size:.85rem; margin-bottom:12px; line-height:1.5;' },
-      t('app.change_pass_desc')),
-    curIn, newIn, errEl,
-    el('button', { class: 'btn-primary', onclick: async e => {
+  const form = el('form', { onsubmit: 'return false;' }, curIn, newIn, errEl,
+    el('button', { type: 'submit', class: 'btn-primary', onclick: async e => {
       if(newIn.value.length < 6){ errEl.textContent = t('dyn.pass_err'); return; }
       e.target.disabled = true;
       try{
         await changePassword(curIn.value, newIn.value);
         const { updateMyProfile } = await import('./store.js');
         await updateMyProfile({ mustResetPassword: false });
+        state.me.mustResetPassword = false;
         closeModal();
-        toast(t('dyn.pass_upd'));
+        toast(t('dyn.pass_upd'), 'success');
+        maybeShowOnboarding();
       }catch(ex){ errEl.textContent = t('dyn.err_try'); e.target.disabled = false; console.error(ex); }
-    } }, t('set.pass_ch')),
+    } }, t('set.pass_ch'))
+  );
+  showModal([
+    el('div', { class: 'section-title' }, t('app.change_pass_title')),
+    el('p', { style: 'color:var(--muted); font-size:.85rem; margin-bottom:12px; line-height:1.5;' },
+      t('app.change_pass_desc')),
+    form
   ]);
   // bağlama düyməsini gizlət — məcburidir
   const closeBtn = document.querySelector('#modalCard .modal-close');
