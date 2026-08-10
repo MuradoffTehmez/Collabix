@@ -304,8 +304,7 @@ export async function renderModeratorSection() {
     });
     foot.append(el('span', { class: 'c-badge c-badge--info' }, t('gov.app_under_review')), ' ', wd);
   } else if (d.cooldownDays > 0) {
-    foot.append(el('p', { class: 'c-field__hint' },
-      `Yenidən müraciət üçün ${d.cooldownDays} gün qalıb.`));
+    foot.append(el('p', { class: 'c-field__hint' }, t('gov.cooldown_days', { days: d.cooldownDays })));
   } else if (d.eligible) {
     const btn = el('button', { class: 'c-btn c-btn--primary' }, t('gov.apply_btn'));
     btn.addEventListener('click', openApplyModal);
@@ -384,7 +383,7 @@ export async function renderInvites() {
   for (const i of active) {
     const revoke = el('button', { class: 'c-btn c-btn--sm c-btn--quiet' }, t('gov.cancel'));
     revoke.addEventListener('click', async () => {
-      if (!await confirmDialog(`${i.code} kodu ləğv edilsin?`)) return;
+      if (!await confirmDialog(t('gov.revoke_confirm', { code: i.code }))) return;
       try {
         await api(`/me/invites/${i.code}`, { method: 'DELETE' });
         toast(t('gov.inv_revoked'));
@@ -407,7 +406,7 @@ export async function renderInvites() {
     list.append(el('div', { class: 'c-check' },
       el('span', { class: 'c-code' }, i.code),
       el('span', { class: 'c-check__label' },
-        `${i.uses}${i.maxUses ? ' / ' + i.maxUses : ''} istifadə`),
+        t('gov.usage_count', { uses: i.uses, max: i.maxUses ? ' / ' + i.maxUses : '' })),
       el('div', { class: 'c-table__actions' }, copy, revoke)));
   }
 

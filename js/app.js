@@ -404,15 +404,15 @@ function startSession(){
 
 // Admin müvəqqəti şifrə veribsə — girişdə məcburi dəyişmə (bağlanmayan modal).
 function showForceResetModal(){
-  const curIn = el('input', { type: 'password', placeholder: 'Müvəqqəti şifrə (indiki)',
+  const curIn = el('input', { type: 'password', placeholder: t('app.temp_pass_ph'),
     style: 'width:100%; background:var(--surface-2); border:1px solid var(--border); color:var(--text); padding:10px 12px; border-radius:9px; margin-bottom:10px;' });
-  const newIn = el('input', { type: 'password', placeholder: 'Yeni şifrə (min 6 simvol)',
+  const newIn = el('input', { type: 'password', placeholder: t('app.new_pass_ph'),
     style: 'width:100%; background:var(--surface-2); border:1px solid var(--border); color:var(--text); padding:10px 12px; border-radius:9px; margin-bottom:10px;' });
   const errEl = el('div', { class: 'form-err' });
   showModal([
-    el('div', { class: 'section-title' }, '🔑 Şifrəni dəyişməlisiniz'),
+    el('div', { class: 'section-title' }, t('app.change_pass_title')),
     el('p', { style: 'color:var(--muted); font-size:.85rem; margin-bottom:12px; line-height:1.5;' },
-      'Hesabınıza admin tərəfindən müvəqqəti şifrə təyin olunub. Davam etmək üçün yeni şifrə seçin.'),
+      t('app.change_pass_desc')),
     curIn, newIn, errEl,
     el('button', { class: 'btn-primary', onclick: async e => {
       if(newIn.value.length < 6){ errEl.textContent = t('dyn.pass_err'); return; }
@@ -435,11 +435,11 @@ function showForceResetModal(){
 function maybeShowOnboarding(){
   if(lsGet('collabix_onboarded')) return;
   const steps = [
-    ['👋 Xoş gəldin, ' + (state.me.name || '').split(' ')[0] + '!', 'Collabix — birgə öyrənmə platformasıdır. Qısa turla tanış ol (30 saniyə).'],
-    ['✎ Paylaşım', 'Ana səhifədə blok-blok post yaz: mətn (markdown), kod (syntax highlighting) və şəkillər — hamısı bir postda.'],
-    ['# Otaqlar və ✉ Mesajlar', 'Mövzu otaqlarında icma ilə söhbət et, istənilən üzvə şəxsi mesaj yaz.'],
-    ['☑ Tapşırıqlar və ⚡ XP', 'Tapşırıqlara həll göndər, admin təsdiqləsin — XP, level və nişanlar qazan. Seriyanı (🔥) qırma!'],
-    ['◎ İcma', 'İstifadəçilər bölməsində skill/səviyyəyə görə yoldaş tap, izlə (+ İzlə) və "İzlədiklərim" feed-inə bax. Uğurlar! 🚀'],
+    [t('app.ob_t1'), t('app.ob_d1', { name: (state.me.name || '').split(' ')[0] })],
+    [t('app.ob_t2'), t('app.ob_d2')],
+    [t('app.ob_t3'), t('app.ob_d3')],
+    [t('app.ob_t4'), t('app.ob_d4')],
+    [t('app.ob_t5'), t('app.ob_d5')],
   ];
   let i = 0;
   const show = () => {
@@ -451,8 +451,8 @@ function maybeShowOnboarding(){
       el('div', { style: 'display:flex; justify-content:space-between; align-items:center;' },
         el('span', { style: 'font-size:.72rem; color:var(--muted); font-family:var(--mono);' }, (i + 1) + '/' + steps.length),
         el('div', { style: 'display:flex; gap:8px;' },
-          el('button', { class: 'btn-mini', onclick: done }, 'Keç'),
-          el('button', { class: 'btn-small', onclick: () => { if(isLast){ done(); } else { i++; show(); } } }, isLast ? '✓ Başla!' : 'İrəli →'),
+          el('button', { class: 'btn-mini', onclick: done }, t('app.ob_skip')),
+          el('button', { class: 'btn-small', onclick: () => { if(isLast){ done(); } else { i++; show(); } } }, isLast ? t('app.ob_start') : t('app.ob_next')),
         ),
       ),
     ]);
@@ -516,16 +516,14 @@ function renderSidebar(){
   
   const pDisp = $('activeProjectDisplay');
   if (pDisp) {
-    // ⚠ `style.display` DEYİL, `hidden` sinfi: Faza 3.4-də inline stillər
-    //   utility siniflərinə çevrildi və onlar `!important` daşıyır — CSSOM
-    //   təyinatı onları basa bilməzdi (element heç vaxt görünməzdi).
-    if (state.me.activeProjectId) {
-      pDisp.classList.remove('hidden');
-      pDisp.textContent = 'Aktiv Layihə (ID: ' + state.me.activeProjectId.substring(0,6) + ')';
-    } else {
-      pDisp.classList.add('hidden');
+      if(state.me.activeProjectId) {
+        const pDisp = el('div', { style: 'font-size:.7rem; color:var(--muted); margin-top:2px;' });
+        pDisp.textContent = t('app.active_project', { id: state.me.activeProjectId.substring(0,6) });
+        badgeEl.append(pDisp);
+      } else {
+        pDisp.classList.add('hidden');
+      }
     }
-  }
 }
 
 function setBadge(ids, count){
@@ -689,18 +687,18 @@ onReady(() => {
       class: cls,
       onclick: () => { closeModal(); nav(page); },
     }, el('span', { class: 'ic' }, ic), label);
-    const menu = el('div', { class: 'more-menu' },
-      item('◎', 'İstifadəçilər', 'users'),
-      item('☑', 'Tapşırıqlar', 'tasks'),
-      item('✎', 'Çalışmalar', 'drills'),
-      item('▤', 'Statistika', 'stats'),
-      item('★', 'Saxlanılanlar', 'saved'),
-      item('⚙', 'Parametrlər', 'settings'),
+    const menu = el('div', { class: 'context-menu' },
+      item('◎', t('nav.users'), 'users'),
+      item('☑', t('nav.tasks'), 'tasks'),
+      item('✎', t('nav.drills'), 'drills'),
+      item('★', t('nav.saved'), 'saved'),
+      item('⚙', t('nav.settings'), 'settings'),
+      el('div', { class: 'cm-sep' }),
       state.isAdmin ? item('⚑', 'Admin panel', 'admin', 'admin') : null,
-      el('button', { class: 'danger', onclick: async () => { closeModal(); await logout(); toast(t('dyn.logout')); } },
-        el('span', { class: 'ic' }, '⏻'), 'Çıxış et'),
+      el('button', { class: 'cm-item', style: 'color:var(--danger);', onclick: () => { closeModal(); logout(); } },
+      el('span', { class: 'ic' }, '⏻'), t('nav.logout')),
     );
-    showModal([el('div', { class: 'section-title' }, 'Daha çox'), menu]);
+    showModal([el('div', { class: 'section-title' }, t('nav.more')), menu]);
   });
 
   // OAuth qayıdışı (Bənd 5) — `watchAuthState`-dən ƏVVƏL emal olunur.

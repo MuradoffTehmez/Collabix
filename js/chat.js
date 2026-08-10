@@ -469,7 +469,7 @@ function paintDetails(){
       box.append(el('div', { class: 'cd-empty' }, t('ai.working')));
       try{
         const ctx = lastMsgs.slice(-40).map(m => `${m.authorName}: ${m.text || ''}`).join('\n');
-        aiSummary = await askAI(`Aşağıdakı söhbəti 3-5 cümlə ilə xülasə et. Kim nə dedi — qısa və konkret:\n\n${ctx}`);
+        aiSummary = await askAI(t('chat.ai_summary_prompt', { ctx }));
         paintDetails();
       }catch(e){
         clear(box);

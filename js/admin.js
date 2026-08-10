@@ -100,7 +100,7 @@ function renderReports(){
             { undoLabel: t('adm.undo'), onUndo: () => { if(card) card.style.display = ''; } });
         } }, t('adm.rep_reject')),
         el('button', { class: 'btn-mini block', onclick: async () => {
-          if(!await confirmDialog('@' + r.targetUsername + ' bloklanacaq və şikayət bağlanacaq.')) return;
+          if(!await confirmDialog(t('adm.block_confirm', { user: r.targetUsername }))) return;
           try{
             await setBlocked(r.targetUid, true);
             await resolveReport(r.id, 'blocked');
@@ -126,16 +126,16 @@ function openUserEditor(u){
   const lvlPreview = el('span', { class: 'role-badge', style: 'margin-left:8px;' }, 'Lv ' + levelFromXP(u.xp));
   xpIn.addEventListener('input', () => { lvlPreview.textContent = 'Lv ' + levelFromXP(parseInt(xpIn.value, 10) || 0); });
   showModal([
-    el('div', { class: 'section-title' }, '✎ İstifadəçini redaktə et — @' + u.username),
+    el('div', { class: 'section-title' }, t('adm.edit_user_title', { user: u.username })),
     el('div', { class: 'field' }, el('label', {}, 'Ad'), nameIn),
     el('div', { class: 'field' }, el('label', {}, 'Bio'), bioIn),
     el('div', { class: 'row2' },
       el('div', { class: 'field' }, el('label', {}, 'Instagram'), instaIn),
       el('div', { class: 'field' }, el('label', {}, 'GitHub'), ghIn)),
     el('div', { class: 'field' },
-      el('label', {}, 'XP', lvlPreview, el('span', { style: 'color:var(--muted); font-size:.7rem; margin-left:6px;' }, '(Level XP-dən hesablanır)')),
+      el('label', {}, 'XP', lvlPreview, el('span', { style: 'color:var(--muted); font-size:.7rem; margin-left:6px;' }, t('adm.xp_from_level'))),
       xpIn),
-    el('label', { class: 'remember-row' }, verIn, ' ✓ Verified (təsdiqlənmiş hesab)'),
+    el('label', { class: 'remember-row' }, verIn, ' ' + t('adm.verified_account')),
     el('button', { class: 'btn-small', onclick: async e => {
       e.target.disabled = true;
       try{
@@ -153,12 +153,12 @@ function openUserEditor(u){
         closeModal(); toast(t('adm.updated'));
       }catch(ex){ console.error(ex); toast(t('adm.fail'), 'err'); }
       e.target.disabled = false;
-    } }, 'Yadda saxla'),
+    } }, t('adm.save')),
   ], { wide: true });
 }
 
 function openTempPassword(u){
-  const passIn = el('input', { type: 'text', placeholder: 'Müvəqqəti şifrə (min 6)', maxLength: 40,
+  const passIn = el('input', { type: 'text', placeholder: t('adm.temp_pass_ph'), maxLength: 40,
     style: 'width:100%; background:var(--surface-2); border:1px solid var(--border); color:var(--text); padding:10px 12px; border-radius:9px; margin-bottom:10px;' });
   passIn.value = 'Cx' + Math.random().toString(36).slice(2, 8) + '!';
   const errEl = el('div', { class: 'form-err' });

@@ -369,15 +369,15 @@ function emojiPanel(input, close){
 const AI_ACTIONS = [
   {
     key: 'improve', icon: 'zap', label: 'ai.improve', needsText: true,
-    prompt: (txt) => `Aşağıdakı mesajı daha aydın, səlis və peşəkar et. Dili DƏYİŞMƏ, mənanı SAXLA. Yalnız düzəldilmiş mətni qaytar, izah yazma:\n\n${txt}`,
+    prompt: (txt) => t('chat.ai_improve_prompt', { txt }),
   },
   {
     key: 'translate', icon: 'globe', label: 'ai.translate', needsText: true, pickLang: true,
-    prompt: (txt, lang) => `Aşağıdakı mesajı ${lang} dilinə tərcümə et. Yalnız tərcüməni qaytar, izah yazma:\n\n${txt}`,
+    prompt: (txt, lang) => t('chat.ai_translate_prompt', { lang, txt }),
   },
   {
     key: 'code', icon: 'code', label: 'ai.code', needsText: true,
-    prompt: (txt) => `Aşağıdakı kodu nəzərdən keçir: qısa izah ver və varsa təkmilləşdirmə təklif et. Cavabı markdown ilə formatla:\n\n${txt}`,
+    prompt: (txt) => t('chat.ai_review_prompt', { txt }),
   },
   {
     key: 'summary', icon: 'chart', label: 'ai.summary', needsText: false, toPanel: true,

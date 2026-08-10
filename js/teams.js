@@ -714,7 +714,7 @@ async function renderTeamMembers(container, team) {
 
   container.innerHTML = `
     <div class="u-display-flex u-justify-content-space-between u-align-items-center u-margin-top-20px u-gap-10px u-flex-wrap-wrap">
-      <h3 class="u-margin-0">Üzvlər (${members.length})</h3>
+      <h3 class="u-margin-0">${t('teams.members', { count: members.length })}</h3>
       ${canInvite ? '<button class="btn-primary btn-mini" id="btnInviteMember">Dəvət Et</button>' : ''}
     </div>
     <div id="pendingInvites"></div>
@@ -727,16 +727,16 @@ async function renderTeamMembers(container, team) {
     const box = document.getElementById('pendingInvites');
     box.className = 'card';
     box.style.marginTop = '15px';
-    box.innerHTML = `<h4 class="u-margin-0-0-10px u-color-text-sec">Gözləyən Dəvətlər</h4>`;
+    box.innerHTML = `<h4 class="u-margin-0-0-10px u-color-text-sec">${t('teams.pending_invites')}</h4>`;
     invites.forEach(i => {
       const row = el('div', {
         style: 'display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:6px; font-size:14px;',
       });
       row.innerHTML = `<span>${esc(i.email || 'Link')} · ${esc(i.role_name || 'Developer')}
         <span class="u-color-text-sec">(${esc(i.invited_by_name || '—')})</span></span>`;
-      const cancel = el('button', { class: 'btn-text btn-mini', style: 'color:var(--danger);' }, 'Ləğv et');
+      const cancel = el('button', { class: 'btn-text btn-mini', style: 'color:var(--danger);' }, t('teams.cancel_btn'));
       cancel.onclick = async () => {
-        if (!(await confirmDialog('Dəvəti ləğv etmək istəyirsiniz?'))) return;
+        if (!(await confirmDialog(t('teams.confirm_cancel_invite')))) return;
         try {
           await api(`/teams/${team.slug}/invites/${i.id}`, { method: 'DELETE' });
           renderTeamMembers(container, team);
@@ -791,9 +791,9 @@ async function renderTeamMembers(container, team) {
 
     const actSlot = card.querySelector('.act-slot');
     if (canManageMembers && !isOwner) {
-      const kick = el('button', { class: 'btn-text btn-mini', style: 'color:var(--danger);' }, 'Çıxar');
+      const kick = el('button', { class: 'btn-text btn-mini', style: 'color:var(--danger);' }, t('teams.kick_btn'));
       kick.onclick = async () => {
-        if (!(await confirmDialog(`${displayName(m)} komandadan çıxarılsın?`))) return;
+        if (!(await confirmDialog(t('teams.confirm_kick', { name: displayName(m) })))) return;
         try {
           await api(`/teams/${team.slug}/members/${m.user_id}`, { method: 'DELETE' });
           toast(t('tm.member_removed'));
@@ -809,9 +809,9 @@ async function renderTeamMembers(container, team) {
        * SVG ikon qatı + açıq `aria-label`. */
       const transfer = el('button', { class: 'btn-text btn-mini u-color-text-sec' }, iconAward());
       transfer.title = t('tm.transfer_owner');
-      transfer.setAttribute('aria-label', `Sahibliyi köçür — ${displayName(m)}`);
+      transfer.setAttribute('aria-label', t('teams.transfer_aria', { name: displayName(m) }));
       transfer.onclick = async () => {
-        if (!(await confirmDialog(`Komandanın sahibliyi ${displayName(m)} şəxsinə keçsin? Siz Admin olacaqsınız.`))) return;
+        if (!(await confirmDialog(t('teams.confirm_transfer', { name: displayName(m) })))) return;
         try {
           await api(`/teams/${team.slug}/transfer`, { method: 'POST', body: { userId: m.user_id } });
           toast(t('tm.owner_moved'));
@@ -829,14 +829,14 @@ function openInviteModal(team, roles = []) {
   const wrap = el('div', { style: 'display:flex; flex-direction:column; gap:10px;' });
 
   const searchInput = el('input', {
-    type: 'text', placeholder: 'İstifadəçi axtar (ad, username)', class: 'auth-input', style: 'width:100%;',
+    type: 'text', placeholder: t('teams.search_user_ph'), class: 'auth-input', style: 'width:100%;',
   });
   const resultsDiv = el('div', {
     style: 'max-height:200px; overflow-y:auto; border:1px solid var(--border); border-radius:6px; display:none;',
   });
   const suggestionsDiv = el('div', {});
   const emailInput = el('input', {
-    type: 'email', placeholder: 'Və ya email daxil edin', class: 'auth-input', style: 'width:100%;',
+    type: 'email', placeholder: t('teams.or_email_ph'), class: 'auth-input', style: 'width:100%;',
   });
 
   const roleSelect = el('select', { class: 'auth-input', style: 'width:100%;' });
@@ -853,7 +853,7 @@ function openInviteModal(team, roles = []) {
   const renderUsers = (users, target) => {
     target.innerHTML = '';
     if (!users.length) {
-      target.innerHTML = '<div class="u-padding-10px u-color-muted u-text-align-center">İstifadəçi tapılmadı</div>';
+      target.innerHTML = '<div class="u-padding-10px u-color-muted u-text-align-center">${t('teams.user_not_found')}</div>';
       return;
     }
     users.forEach(u => {
@@ -891,7 +891,7 @@ function openInviteModal(team, roles = []) {
 
   api(`/users/suggestions?teamId=${encodeURIComponent(team.id)}`).then(res => {
     if (!res.users?.length) return;
-    suggestionsDiv.innerHTML = '<div class="u-font-size-12px u-color-muted u-margin-bottom-5px">Tövsiyə olunanlar:</div>';
+    suggestionsDiv.innerHTML = '<div class="u-font-size-12px u-color-muted u-margin-bottom-5px">${t('teams.suggestions')}</div>';
     const list = el('div', { style: 'border:1px solid var(--border); border-radius:6px;' });
     renderUsers(res.users, list);
     suggestionsDiv.appendChild(list);
@@ -902,7 +902,7 @@ function openInviteModal(team, roles = []) {
     if (!selectedUserId && !email) return toast('İstifadəçi seçin və ya email daxil edin', 'err');
 
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Göndərilir…';
+    submitBtn.textContent = t('teams.sending');
     try {
       await api(`/teams/${team.slug}/invites`, {
         method: 'POST',
@@ -914,14 +914,14 @@ function openInviteModal(team, roles = []) {
     } catch (err) {
       toast(err.message, 'err');
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Göndər';
+      submitBtn.textContent = t('teams.send');
     }
   };
 
   wrap.append(searchInput, resultsDiv, suggestionsDiv, emailInput,
     el('label', { style: 'font-size:13px; color:var(--text-sec);' }, 'Rol'), roleSelect, submitBtn);
 
-  showModal([el('h2', { style: 'margin:0 0 15px 0;' }, 'İstifadəçi Dəvət Et'), wrap]);
+  showModal([el('h2', { style: 'margin:0 0 15px 0;' }, t('teams.invite_user_title')), wrap]);
 }
 
 /* ---------- Projects ---------- */
@@ -933,7 +933,7 @@ async function renderTeamProjects(container, team) {
 
   container.innerHTML = `
     <div class="u-display-flex u-justify-content-space-between u-align-items-center u-margin-top-20px u-gap-10px u-flex-wrap-wrap">
-      <h3 class="u-margin-0">Layihələr</h3>
+      <h3 class="u-margin-0">${t('teams.projects')}</h3>
       ${canManage ? '<button class="btn-primary btn-mini" id="btnCreateProject">Yeni Layihə</button>' : ''}
     </div>
     <div id="projectsList" class="u-margin-top-15px"></div>
@@ -943,7 +943,7 @@ async function renderTeamProjects(container, team) {
   const list = document.getElementById('projectsList');
   const projects = res.projects || [];
   if (!projects.length) {
-    list.innerHTML = `<div class="empty-state">Layihə yoxdur.</div>`;
+    list.innerHTML = `<div class="empty-state">${t('teams.no_projects')}</div>`;
     return;
   }
 
@@ -958,8 +958,8 @@ async function renderTeamProjects(container, team) {
       </div>
       <div class="post-content">${esc(p.description || '')}</div>
       <div class="post-meta">
-        Status: ${esc(p.status)} · ${done}/${total} tapşırıq · ${Number(p.members_count || 0)} üzv
-        ${p.isMember ? ' · <span class="u-color-primary">Üzvsünüz</span>' : ''}
+        ${t('teams.project_stats', { status: esc(p.status), done, total, members: Number(p.members_count || 0) })}
+        ${p.isMember ? ' · <span class="u-color-primary">${t('teams.is_member')}</span>' : ''}
       </div>
     `;
 
@@ -974,11 +974,11 @@ async function renderTeamProjects(container, team) {
 
     if (p.isAdmin) {
       addBtn(t('tm.edit'), '', () => openProjectModal(team, p));
-      const reqBtn = addBtn(`Sorğular${p.pending_requests ? ` (${p.pending_requests})` : ''}`, '',
+      const reqBtn = addBtn(t('teams.requests_btn') + (p.pending_requests ? ` (${p.pending_requests})` : ''), '',
         () => openProjectRequestsModal(team, p));
       reqBtn.style.color = 'var(--primary)';
       const del = addBtn('Sil', '', async () => {
-        if (!(await confirmDialog(`"${p.name}" layihəsi silinsin?`))) return;
+        if (!(await confirmDialog(t('teams.confirm_delete_project', { name: p.name })))) return;
         try {
           await api(`/teams/${team.slug}/projects/${p.id}`, { method: 'DELETE' });
           toast('Layihə silindi');
@@ -1008,7 +1008,7 @@ async function renderTeamProjects(container, team) {
           if (state.me) state.me.activeProjectId = p.id;
           emit('me_updated');
         } catch (e) { toast(e.message, 'err'); }
-      }, 'Profildə göstərilən aktiv layihə');
+      }, t('teams.active_project_tooltip'));
       active.style.color = 'var(--success, var(--primary))';
     }
 
@@ -1028,14 +1028,14 @@ function openProjectModal(team, project = null) {
   descInput.value = project?.description || '';
 
   const visSelect = el('select', { class: 'auth-input', style: 'width:100%; margin-bottom:10px;' });
-  [['Private', '🔒 Məxfi'], ['Public', '🌍 Açıq']].forEach(([v, label]) => {
+  [['Private', '🔒 ' + t('teams.vis_private')], ['Public', '🌍 ' + t('teams.vis_public')]].forEach(([v, label]) => {
     const o = el('option', { value: v }, label);
     if (v === (project?.visibility || 'Private')) o.selected = true;
     visSelect.appendChild(o);
   });
 
   const statusSelect = el('select', { class: 'auth-input', style: 'width:100%; margin-bottom:10px;' });
-  [['active', 'Aktiv'], ['paused', 'Dayandırılıb'], ['completed', 'Tamamlanıb (+100 komanda XP)']].forEach(([v, label]) => {
+  [['active', t('teams.stat_active')], ['paused', t('teams.stat_paused')], ['completed', t('teams.stat_completed')]].forEach(([v, label]) => {
     const o = el('option', { value: v }, label);
     if (v === (project?.status || 'active')) o.selected = true;
     statusSelect.appendChild(o);
@@ -1069,7 +1069,7 @@ function openProjectModal(team, project = null) {
   };
 
   const nodes = [
-    el('h2', { style: 'margin:0 0 15px 0;' }, project ? 'Layihəni Redaktə Et' : 'Yeni Layihə'),
+    el('h2', { style: 'margin:0 0 15px 0;' }, project ? 'Layihəni Redaktə Et' : t('teams.new_project')),
     nameInput, descInput, visSelect,
   ];
   if (project) nodes.push(statusSelect);
@@ -1079,14 +1079,14 @@ function openProjectModal(team, project = null) {
 
 async function openProjectRequestsModal(team, project) {
   const box = el('div');
-  box.innerHTML = `<div class="empty-state"><div class="ic">⌛</div><span>Yüklənir…</span></div>`;
-  showModal([el('h2', { style: 'margin:0 0 15px 0;' }, `Sorğular: ${project.name}`), box]);
+  box.innerHTML = `<div class="empty-state"><div class="ic">⌛</div><span>${t('teams.loading')}</span></div>`;
+  showModal([el('h2', { style: 'margin:0 0 15px 0;' }, t('teams.requests_title', { name: project.name })), box]);
 
   try {
     const res = await api(`/teams/${team.slug}/projects/${project.id}/requests`);
     const requests = res.requests || [];
     if (!requests.length) {
-      box.innerHTML = `<div class="empty-state">Heç bir sorğu yoxdur.</div>`;
+      box.innerHTML = `<div class="empty-state">${t('teams.no_requests')}</div>`;
       return;
     }
     box.innerHTML = '';
@@ -1099,8 +1099,8 @@ async function openProjectRequestsModal(team, project) {
         <div class="u-font-size-12px u-color-text-sec">@${esc(req.username || '')}</div></div>`;
 
       const actions = el('div', { style: 'display:flex; gap:6px;' });
-      const acc = el('button', { class: 'btn-primary btn-mini' }, 'Qəbul');
-      const rej = el('button', { class: 'btn-text btn-mini', style: 'color:var(--danger);' }, 'Rədd');
+      const acc = el('button', { class: 'btn-primary btn-mini' }, t('teams.accept'));
+      const rej = el('button', { class: 'btn-text btn-mini', style: 'color:var(--danger);' }, t('teams.reject'));
       acc.onclick = async () => {
         try {
           await api(`/teams/${team.slug}/projects/${project.id}/requests/${req.id}/approve`, { method: 'POST' });
@@ -1137,11 +1137,11 @@ async function renderTeamTasks(container, team) {
 
   container.innerHTML = `
     <div class="u-display-flex u-justify-content-space-between u-align-items-center u-margin-top-20px u-gap-10px u-flex-wrap-wrap">
-      <h3 class="u-margin-0">Tapşırıqlar</h3>
+      <h3 class="u-margin-0">${t('teams.tasks')}</h3>
       ${canManage ? '<button class="btn-primary btn-mini" id="btnCreateTask">Yeni Tapşırıq</button>' : ''}
     </div>
     <div class="team-chips" id="taskFilters">
-      <button class="team-chip active" data-status="">Hamısı</button>
+      <button class="team-chip active" data-status="">${t('teams.all')}</button>
       <button class="team-chip" data-status="To Do">To Do</button>
       <button class="team-chip" data-status="In Progress">In Progress</button>
       <button class="team-chip" data-status="Review">Review</button>
@@ -1158,7 +1158,7 @@ async function renderTeamTasks(container, team) {
     const tasks = filter ? allTasks.filter(t => t.status === filter) : allTasks;
     list.innerHTML = '';
     if (!tasks.length) {
-      list.innerHTML = `<div class="empty-state">Tapşırıq yoxdur.</div>`;
+      list.innerHTML = `<div class="empty-state">${t('teams.no_tasks')}</div>`;
       return;
     }
     tasks.forEach(task => list.appendChild(taskCard(task, team, members, canManage, container)));
@@ -1222,7 +1222,7 @@ function taskCard(task, team, members, canManage, container) {
 
   if (canManage) {
     const act = card.querySelector('.act');
-    const edit = el('button', { class: 'btn-text btn-mini' }, 'Redaktə');
+    const edit = el('button', { class: 'btn-text btn-mini' }, t('teams.edit'));
     edit.onclick = () => openTaskModal(team, task, members);
     const del = el('button', { class: 'btn-text btn-mini', style: 'color:var(--danger);' }, 'Sil');
     del.onclick = async () => {
@@ -1256,7 +1256,7 @@ async function openTaskModal(team, task, members) {
   });
 
   const titleInput = el('input', {
-    type: 'text', value: task?.title || '', placeholder: 'Tapşırıq başlığı',
+    type: 'text', value: task?.title || '', placeholder: t('teams.task_title_ph'),
     class: 'auth-input', style: 'width:100%; margin-bottom:10px;',
   });
   const descInput = el('textarea', {
@@ -1273,7 +1273,7 @@ async function openTaskModal(team, task, members) {
   });
 
   const assigneeSelect = el('select', { class: 'auth-input', style: 'width:100%; margin-bottom:10px;' });
-  assigneeSelect.appendChild(el('option', { value: '' }, '— Təyin edilməyib —'));
+  assigneeSelect.appendChild(el('option', { value: '' }, t('teams.unassigned')));
   members.forEach(m => {
     const o = el('option', { value: m.user_id }, displayName(m));
     if (task && String(task.assignee_id) === String(m.user_id)) o.selected = true;
@@ -1310,7 +1310,7 @@ async function openTaskModal(team, task, members) {
     }
   };
 
-  const nodes = [el('h2', { style: 'margin:0 0 15px 0;' }, task ? 'Tapşırığı Redaktə Et' : 'Yeni Tapşırıq')];
+  const nodes = [el('h2', { style: 'margin:0 0 15px 0;' }, task ? 'Tapşırığı Redaktə Et' : t('teams.new_task'))];
   if (!task) nodes.push(projectSelect);
   nodes.push(titleInput, descInput, prioSelect, assigneeSelect, submitBtn);
   showModal(nodes);
@@ -1329,10 +1329,10 @@ async function renderTeamFeed(container, team) {
         placeholder="Komanda ilə nəsə paylaşın… (Markdown dəstəklənir)"></textarea>
       <div class="u-display-flex u-gap-10px u-margin-top-10px u-align-items-center u-flex-wrap-wrap">
         <select id="feedKind" class="auth-input u-flex-0-0-auto">
-          <option value="post">💬 Paylaşım</option>
+          <option value="post">💬 ${t('teams.feed_type_post')}</option>
           <option value="update">🔄 Yenilik</option>
-          <option value="progress">📈 İrəliləyiş</option>
-          <option value="release">🚀 Buraxılış</option>
+          <option value="progress">📈 ${t('teams.feed_type_progress')}</option>
+          <option value="release">🚀 ${t('teams.feed_type_release')}</option>
           ${canAnnounce ? '<option value="announcement">📢 Elan</option>' : ''}
         </select>
         <button class="btn-primary btn-mini u-margin-left-auto" id="btnPostFeed">Paylaş</button>
@@ -1358,7 +1358,7 @@ async function renderTeamFeed(container, team) {
   const list = document.getElementById('feedList');
   const feed = res.feed || [];
   if (!feed.length) {
-    list.innerHTML = `<div class="empty-state">Heç nə paylaşılmayıb.</div>`;
+    list.innerHTML = `<div class="empty-state">${t('teams.feed_empty')}</div>`;
     return;
   }
 
@@ -1378,7 +1378,7 @@ async function renderTeamFeed(container, team) {
     if (p.canDelete) {
       const del = el('button', { class: 'btn-text btn-mini', style: 'color:var(--danger);' }, 'Sil');
       del.onclick = async () => {
-        if (!(await confirmDialog('Paylaşımı silmək istəyirsiniz?'))) return;
+        if (!(await confirmDialog(t('teams.confirm_delete_post')))) return;
         try {
           await api(`/teams/${team.slug}/feed/${p.id}`, { method: 'DELETE' });
           card.remove();
@@ -1415,12 +1415,12 @@ async function renderTeamFiles(container, team) {
           <span class="u-font-size-12px u-color-text-sec">
             ${Number(res.usage?.files || 0)} fayl · ${esc(fmtBytes(res.usage?.bytes))}
           </span>
-          ${canUpload ? `<label class="btn-primary btn-mini u-cursor-pointer">Fayl Yüklə
+          ${canUpload ? `<label class="btn-primary btn-mini u-cursor-pointer">${t('teams.upload_file')}
             <input type="file" id="teamFileInput" class="u-display-none"></label>` : ''}
         </div>
       </div>
       <div class="team-chips" id="fileCats">
-        <button class="team-chip ${category === 'all' ? 'active' : ''}" data-cat="all">Hamısı</button>
+        <button class="team-chip ${category === 'all' ? 'active' : ''}" data-cat="all">${t('teams.all')}</button>
         ${cats.map(cKey => `<button class="team-chip ${category === cKey ? 'active' : ''}" data-cat="${esc(cKey)}">${
           esc(labelFileCategory(cKey))
         }</button>`).join('')}
@@ -1454,7 +1454,7 @@ async function renderTeamFiles(container, team) {
     const list = document.getElementById('teamFileList');
     const files = res.files || [];
     if (!files.length) {
-      list.innerHTML = `<div class="empty-state u-grid-column-1-1">Bu bölmədə fayl yoxdur.</div>`;
+      list.innerHTML = `<div class="empty-state u-grid-column-1-1">${t('teams.no_files')}</div>`;
       return;
     }
 
@@ -1472,7 +1472,7 @@ async function renderTeamFiles(container, team) {
       if (f.canDelete) {
         const del = el('button', { class: 'btn-text btn-mini', style: 'color:var(--danger);' }, 'Sil');
         del.onclick = async () => {
-          if (!(await confirmDialog('Faylı silmək istəyirsiniz?'))) return;
+          if (!(await confirmDialog(t('teams.confirm_delete_file')))) return;
           try {
             await api(`/teams/${team.slug}/files/${f.id}`, { method: 'DELETE' });
             toast('Fayl silindi');
@@ -1498,7 +1498,7 @@ async function renderTeamChat(container, team) {
   const res = await api(`/teams/${team.slug}/rooms`);
   const rooms = res.rooms || [];
   if (!rooms.length) {
-    container.innerHTML = `<div class="empty-state">Söhbət otağı tapılmadı.</div>`;
+    container.innerHTML = `<div class="empty-state">${t('teams.no_room')}</div>`;
     return;
   }
 
@@ -1519,12 +1519,12 @@ async function renderTeamChat(container, team) {
     <div class="team-chat-box">
       <div class="u-padding-12px-16px u-border-bottom-1px-solid-border u-font-weight-bold u-background-surface-1 u-display-flex u-justify-content-space-between u-align-items-center u-gap-10px">
         <span id="teamRoomTitle">💬 #${esc(currentRoom.name)}</span>
-        <span id="teamChatStatus" class="u-font-size-11px u-color-text-sec">bağlanır…</span>
+        <span id="teamChatStatus" class="u-font-size-11px u-color-text-sec">${t('teams.closing')}</span>
       </div>
       <div id="teamChatMessages" class="team-chat-msgs"></div>
       <div class="u-padding-12px u-border-top-1px-solid-border u-background-surface-1">
         <div class="u-display-flex u-flex-direction-column u-background-bg-input u-border-1px-solid-border u-border-radius-8px u-padding-10px">
-          <input type="text" id="teamChatInput" class="u-border-none u-background-transparent u-color-text u-padding-5px u-outline-none" placeholder="Mesaj yazın…">
+          <input type="text" id="teamChatInput" class="u-border-none u-background-transparent u-color-text u-padding-5px u-outline-none" placeholder="${t('teams.write_msg_ph')}">
           <div class="u-display-flex u-justify-content-space-between u-align-items-center u-margin-top-10px">
             <div>
               <input type="file" id="teamChatFile" class="u-display-none">
@@ -1554,7 +1554,7 @@ async function renderTeamChat(container, team) {
   const renderMessages = (messages) => {
     msgsBox.innerHTML = '';
     if (!messages.length) {
-      msgsBox.innerHTML = '<div class="empty-state">Mesaj yoxdur. İlk mesajı siz yazın!</div>';
+      msgsBox.innerHTML = '<div class="empty-state">${t('teams.no_messages')}</div>';
       return;
     }
     messages.slice().reverse().forEach(m => {
@@ -1573,7 +1573,7 @@ async function renderTeamChat(container, team) {
           }));
         } else {
           const a = el('a', { href: m.fileUrl, target: '_blank', rel: 'noopener', style: 'color:inherit;' },
-            '📎 ' + (m.fileName || 'Faylı yüklə'));
+            '📎 ' + (m.fileName || t('teams.download_file')));
           const box = el('div', { style: 'margin-top:5px; padding:8px; background:rgba(0,0,0,.1); border-radius:6px; font-size:.85rem;' });
           box.appendChild(a);
           bubble.appendChild(box);
@@ -1596,7 +1596,7 @@ async function renderTeamChat(container, team) {
     ws = sock;
 
     sock.addEventListener('open', () => {
-      if (wsRoomId === roomId) statusEl.textContent = '🟢 canlı';
+      if (wsRoomId === roomId) statusEl.textContent = '🟢 ' + t('teams.live');
     });
     sock.addEventListener('message', (ev) => {
       if (wsRoomId !== roomId) return;
@@ -1612,10 +1612,10 @@ async function renderTeamChat(container, team) {
       // əsas ssenaridir (H-6), ona görə mətn açıq olmalıdır.
       if (ev.code === 4403) {
         wsRoomId = null;
-        statusEl.textContent = '⛔ çıxışınız ləğv edildi';
+        statusEl.textContent = '⛔ ' + t('teams.kick_banned');
         return;
       }
-      statusEl.textContent = 'yenidən qoşulur…';
+      statusEl.textContent = t('teams.reconnecting');
       setTimeout(() => { if (!disposed && wsRoomId === roomId && !ws) connectWs(roomId); }, 3000);
     });
     sock.addEventListener('error', () => { try { sock.close(); } catch (e) {} });
@@ -1641,7 +1641,7 @@ async function renderTeamChat(container, team) {
   });
 
   document.getElementById('btnNewRoom')?.addEventListener('click', () => {
-    const nameInput = el('input', { type: 'text', class: 'auth-input', style: 'width:100%;', placeholder: 'Otaq adı' });
+    const nameInput = el('input', { type: 'text', class: 'auth-input', style: 'width:100%;', placeholder: t('teams.room_name_ph') });
     const ok = el('button', { class: 'btn-primary', style: 'width:100%; margin-top:10px;' }, 'Yarat');
     ok.onclick = async () => {
       const v = nameInput.value.trim();
@@ -1718,13 +1718,13 @@ function openEditTeamModal(team) {
     }
   };
 
-  showModal([el('h2', { style: 'margin:0 0 15px 0;' }, 'Komandanı Redaktə Et'),
+  showModal([el('h2', { style: 'margin:0 0 15px 0;' }, t('teams.edit_team')),
     nameInput, descInput, visSelect, submitBtn]);
 }
 
 async function renderTeamSettings(container, team) {
   if (!team.isAdmin) {
-    container.innerHTML = `<div class="empty-state">Bu bölmə üçün icazəniz yoxdur.</div>`;
+    container.innerHTML = `<div class="empty-state">${t('teams.no_permission')}</div>`;
     return;
   }
   loading(container);
@@ -1736,9 +1736,9 @@ async function renderTeamSettings(container, team) {
 
   container.innerHTML = `
     <div class="card u-margin-top-20px">
-      <h3 class="u-margin-bottom-15px">Komanda Parametrləri</h3>
+      <h3 class="u-margin-bottom-15px">${t('teams.team_settings')}</h3>
       <div class="form-group">
-        <label for="teamNameInput">Komanda Adı</label>
+        <label for="teamNameInput">${t('teams.team_name')}</label>
         <input type="text" id="teamNameInput" class="auth-input u-width-100" />
       </div>
       <div class="form-group u-margin-top-15px">
@@ -1746,7 +1746,7 @@ async function renderTeamSettings(container, team) {
         <textarea id="teamDescInput" class="auth-input u-width-100" rows="3"></textarea>
       </div>
       <div class="form-group u-margin-top-15px">
-        <label for="teamVisInput">Görünürlük</label>
+        <label for="teamVisInput">${t('teams.visibility')}</label>
         <select id="teamVisInput" class="auth-input u-width-100">
           <option value="Public">🌍 Public</option>
           <option value="Private">🔒 Private</option>
@@ -1758,17 +1758,17 @@ async function renderTeamSettings(container, team) {
 
     <div class="card u-margin-top-20px">
       <div class="u-display-flex u-justify-content-space-between u-align-items-center u-gap-10px u-flex-wrap-wrap">
-        <h3 class="u-margin-0">Rollar və icazələr</h3>
+        <h3 class="u-margin-0">${t('teams.roles_perms')}</h3>
         ${canRoles ? '<button class="btn-primary btn-mini" id="btnNewRole">Yeni rol</button>' : ''}
       </div>
       <div id="rolesList" class="u-margin-top-12px"></div>
     </div>
 
     ${canDelete ? `<div class="card u-margin-top-20px u-border-1px-solid-danger">
-      <h3 class="u-color-danger u-margin-bottom-15px">Təhlükəli Zona</h3>
+      <h3 class="u-color-danger u-margin-bottom-15px">${t('teams.danger_zone')}</h3>
       <p class="u-color-muted u-font-size-14px u-margin-bottom-15px">
         Komandanı silsəniz bütün layihələr və tapşırıqlar arxivə düşəcək.</p>
-      <button id="deleteTeamBtn" class="btn u-background-danger u-color-fff u-width-100">Komandanı Sil</button>
+      <button id="deleteTeamBtn" class="btn u-background-danger u-color-fff u-width-100">${t('teams.delete_team')}</button>
     </div>` : ''}
   `;
 
@@ -1794,7 +1794,7 @@ async function renderTeamSettings(container, team) {
   };
 
   document.getElementById('deleteTeamBtn')?.addEventListener('click', async () => {
-    if (!(await confirmDialog('Komandanı silməyə əminsiniz?'))) return;
+    if (!(await confirmDialog(t('teams.confirm_delete_team')))) return;
     try {
       await api(`/teams/${team.slug}`, { method: 'DELETE' });
       toast('Komanda silindi');
@@ -1814,11 +1814,11 @@ async function renderTeamSettings(container, team) {
         <div class="u-font-size-12px u-color-text-sec">${esc(perms)}</div></div>`;
       if (canRoles && r.name !== 'Owner') {
         const act = el('div', { style: 'display:flex; gap:6px;' });
-        const edit = el('button', { class: 'btn-text btn-mini' }, 'Redaktə');
+        const edit = el('button', { class: 'btn-text btn-mini' }, t('teams.edit'));
         edit.onclick = () => openRoleModal(team, r, available, container);
         const del = el('button', { class: 'btn-text btn-mini', style: 'color:var(--danger);' }, 'Sil');
         del.onclick = async () => {
-          if (!(await confirmDialog(`"${r.name}" rolu silinsin? Üzvlər Developer roluna keçəcək.`))) return;
+          if (!(await confirmDialog(t('teams.confirm_delete_role', { name: r.name })))) return;
           try {
             await api(`/teams/${team.slug}/roles/${r.id}`, { method: 'DELETE' });
             toast('Rol silindi');
@@ -1887,11 +1887,11 @@ function openRoleModal(team, role, available, container) {
   };
 
   showModal([
-    el('h2', { style: 'margin:0 0 15px 0;' }, role ? 'Rolu Redaktə Et' : 'Yeni Rol'),
+    el('h2', { style: 'margin:0 0 15px 0;' }, role ? t('teams.edit_role') : t('teams.new_role')),
     nameInput,
-    el('label', { style: 'font-size:13px; color:var(--text-sec);' }, 'Prioritet (böyük = yüksək)'),
+    el('label', { style: 'font-size:13px; color:var(--text-sec);' }, t('teams.priority')),
     prioInput,
-    el('label', { style: 'font-size:13px; color:var(--text-sec);' }, 'İcazələr'),
+    el('label', { style: 'font-size:13px; color:var(--text-sec);' }, t('teams.permissions')),
     permsBox,
     submitBtn,
   ]);
