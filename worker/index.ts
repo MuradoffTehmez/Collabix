@@ -1042,7 +1042,7 @@ async function handleRequest(
      *   brauzer onu skript kimi icra etməyə çalışıb MIME xətası verərdi.
      */
     const isDoc = request.method === 'GET' || request.method === 'HEAD';
-    const hasExt = /\.[a-z0-9]{2,5}$/i.test(path);
+    const hasExt = /\.[a-z0-9]{2,12}$/i.test(path);
 
     if (isDoc && !hasExt) {
       // Qabıq yenə verilir (istifadəçi boş ekran görməsin), STATUS isə 404-dür.
