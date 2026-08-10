@@ -21,37 +21,54 @@ let initialized = false;
 let scope = 'mine';
 let searchTimer = null;
 
+/* 🔴 ETİKETLƏR AÇAR SAXLAYIR, MƏTN YOX — FRONTEND AUDIT / O-02.
+ *
+ *   Əvvəl bu üç xəritə sabit azərbaycanca mətn idi və EN/RU istifadəçisi onları
+ *   tərcüməsiz görürdü.
+ *
+ * ⚠ MODUL SƏVİYYƏSİNDƏ `t()` ÇAĞIRMAQ OLMAZ: xəritə idxal anında BİR DƏFƏ
+ *   qiymətləndirilir, yəni mətn həmin andakı dildə DONUR və istifadəçi dili
+ *   dəyişəndə köhnə qalır. Ona görə xəritələr yalnız AÇAR saxlayır, `t()` isə
+ *   render vaxtı — aşağıdakı `label*` köməkçilərində — çağırılır. */
 const FILE_CATEGORY_LABELS = {
-  documents: '📄 Sənədlər',
-  design: '🎨 Dizayn',
-  assets: '🖼 Asset-lər',
-  source: '💻 Mənbə',
-  exports: '📦 Export',
+  documents: ['📄', 'tm.cat_documents'],
+  design: ['🎨', 'tm.cat_design'],
+  assets: ['🖼', 'tm.cat_assets'],
+  source: ['💻', 'tm.cat_source'],
+  exports: ['📦', 'tm.cat_exports'],
+};
+const labelFileCategory = (k) => {
+  const e = FILE_CATEGORY_LABELS[k];
+  return e ? e[0] + ' ' + t(e[1]) : String(k || '');
 };
 
 const EVENT_LABELS = {
-  TeamCreated: 'komanda yaratdı',
-  TeamUpdated: 'komandanı yenilədi',
-  TeamDeleted: 'komandanı sildi',
-  MemberJoined: 'komandaya qoşuldu',
-  MemberLeft: 'komandadan ayrıldı',
-  RoleChanged: 'rol dəyişdirdi',
-  ProjectCreated: 'yeni layihə yaratdı',
-  ProjectCompleted: 'layihəni tamamladı',
-  ProjectDeleted: 'layihəni sildi',
-  TaskAssigned: 'tapşırıq təyin etdi',
-  TeamTaskCompleted: 'tapşırığı tamamladı',
-  TeamPostCreated: 'lentə paylaşım etdi',
-  FileUploaded: 'fayl yüklədi',
-  InvitationSent: 'dəvət göndərdi',
+  TeamCreated: 'tm.ev_created',
+  TeamUpdated: 'tm.ev_updated',
+  TeamDeleted: 'tm.ev_deleted',
+  MemberJoined: 'tm.ev_joined',
+  MemberLeft: 'tm.ev_left',
+  RoleChanged: 'tm.role_changed',
+  ProjectCreated: 'tm.ev_proj_new',
+  ProjectCompleted: 'tm.ev_proj_done',
+  ProjectDeleted: 'tm.ev_proj_del',
+  TaskAssigned: 'tm.ev_task_assign',
+  TeamTaskCompleted: 'tm.ev_task_done',
+  TeamPostCreated: 'tm.ev_post',
+  FileUploaded: 'tm.ev_file',
+  InvitationSent: 'tm.ev_invite',
 };
 
 const POST_KIND_LABELS = {
-  post: '💬 Paylaşım',
-  announcement: '📢 Elan',
-  update: '🔄 Yenilik',
-  release: '🚀 Buraxılış',
-  progress: '📈 İrəliləyiş',
+  post: ['💬', 'tm.post'],
+  announcement: ['📢', 'tm.kind_announcement'],
+  update: ['🔄', 'tm.kind_update'],
+  release: ['🚀', 'tm.kind_release'],
+  progress: ['📈', 'tm.kind_progress'],
+};
+const labelPostKind = (k) => {
+  const e = POST_KIND_LABELS[k] || POST_KIND_LABELS.post;
+  return e[0] + ' ' + t(e[1]);
 };
 
 const fmtBytes = (n) => {
@@ -68,7 +85,7 @@ const fmtDate = (ms) => {
   return new Date(t).toLocaleString();
 };
 
-const displayName = (u) => u?.name || u?.username || 'İstifadəçi';
+const displayName = (u) => u?.name || u?.username || t('tm.someone');
 
 /* ================= giriş nöqtələri ================= */
 
@@ -283,7 +300,7 @@ function teamForm({ name = '', description = '', visibility = 'Private' } = {}) 
     style: 'width:100%; margin-bottom:10px;',
   });
   const descInput = el('textarea', {
-    placeholder: 'Qısa açıqlama', class: 'auth-input', rows: 3,
+    placeholder: t('tm.short_desc'), class: 'auth-input', rows: 3,
     style: 'width:100%; margin-bottom:10px; resize:vertical;',
   });
   descInput.value = description;
@@ -309,7 +326,7 @@ function openCreateTeamModal() {
     if (name.length < 2) return toast('Ad ən azı 2 simvol olmalıdır', 'err');
 
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Yaradılır…';
+    submitBtn.textContent = t('tm.creating');
     try {
       await api('/teams', {
         method: 'POST',
@@ -479,10 +496,10 @@ async function renderTeamOverview(container, team) {
   container.innerHTML = `
     <div class="card u-margin-top-20px">
       <div class="u-display-flex u-justify-content-space-between u-align-items-flex-start u-gap-10px u-flex-wrap-wrap">
-        <h3 class="u-margin-0">${esc(t('teams.overview') || 'İcmal')}</h3>
+        <h3 class="u-margin-0">${esc(t('teams.overview') || t('tm.overview'))}</h3>
         ${team.isAdmin ? '<div><button class="btn-text btn-mini edit-team-btn">Redaktə</button></div>' : ''}
       </div>
-      <p class="u-color-text-sec u-font-size-14px u-margin-10px-0-0">${esc(team.description || 'Məlumat yoxdur.')}</p>
+      <p class="u-color-text-sec u-font-size-14px u-margin-10px-0-0">${esc(team.description || t('tm.no_info'))}</p>
       <p class="u-margin-8px-0-0 u-font-size-13px"><strong>Görünürlük:</strong> ${esc(team.visibility || '')}</p>
       <div class="team-rep">
         <div class="u-font-size-13px u-color-text-sec">
@@ -494,9 +511,9 @@ async function renderTeamOverview(container, team) {
     </div>
 
     <div class="team-stat-grid">
-      ${statCard(s.membersCount, 'Üzv')}
-      ${statCard(s.projectsCount, 'Layihə')}
-      ${statCard(s.tasksCount, 'Tapşırıq')}
+      ${statCard(s.membersCount, t('tm.member'))}
+      ${statCard(s.projectsCount, t('tm.project'))}
+      ${statCard(s.tasksCount, t('tm.task'))}
       ${statCard(s.completedTasksCount, 'Tamamlanan')}
       ${statCard(s.xp, 'Komanda XP')}
     </div>
@@ -508,7 +525,7 @@ async function renderTeamOverview(container, team) {
         <div id="teamWsResults" class="u-margin-top-10px"></div>
       </div>
       <div class="card u-margin-top-20px" id="teamAiCard" hidden>
-        <h4 class="u-margin-0-0-8px">🤖 AI xülasəsi</h4>
+        <h4 class="u-margin-0-0-8px">🤖 ${esc(t('tm.ai_summary'))}</h4>
         <div id="teamAiSummary" class="u-font-size-14px u-color-text-sec"></div>
       </div>` : ''}
 
@@ -542,14 +559,14 @@ function attachWorkspaceSearch(team) {
       try {
         const res = await api(`/teams/${team.slug}/search?q=${encodeURIComponent(q)}`);
         const groups = [
-          ['Üzvlər', (res.members || []).map(m => `${displayName(m)} · ${m.role_name || ''}`)],
-          ['Layihələr', (res.projects || []).map(p => p.name)],
-          ['Tapşırıqlar', (res.tasks || []).map(t => `${t.title} · ${t.status}`)],
+          [t('tm.members_h'), (res.members || []).map(m => `${displayName(m)} · ${m.role_name || ''}`)],
+          [t('tm.projects_h'), (res.projects || []).map(p => p.name)],
+          [t('tm.tasks_h'), (res.tasks || []).map(t => `${t.title} · ${t.status}`)],
           ['Fayllar', (res.files || []).map(f => String(f.path).split('/').pop())],
-          ['Paylaşımlar', (res.posts || []).map(p => String(p.content).slice(0, 60))],
+          [t('tm.posts_h'), (res.posts || []).map(p => String(p.content).slice(0, 60))],
         ].filter(([, items]) => items.length);
 
-        if (!groups.length) { out.innerHTML = '<div class="empty-state">Nəticə tapılmadı.</div>'; return; }
+        if (!groups.length) { out.innerHTML = `<div class="empty-state">${esc(t('tm.no_results'))}</div>`; return; }
 
         out.innerHTML = groups.map(([label, items]) => `
           <div class="u-margin-bottom-10px">
@@ -591,7 +608,8 @@ function fillActivity(node, activities) {
   node.innerHTML = '';
   activities.forEach(a => {
     const row = el('div', { class: 'team-activity-row' });
-    const label = EVENT_LABELS[a.event_type] || String(a.event_type || '').replace(/([A-Z])/g, ' $1').trim();
+    const key = EVENT_LABELS[a.event_type];
+    const label = key ? t(key) : String(a.event_type || '').replace(/([A-Z])/g, ' $1').trim();
     row.innerHTML = `
       <span><strong>${esc(displayName(a))}</strong> — ${esc(label)}</span>
       <span class="when">${esc(fmtDate(a.created_at))}</span>
@@ -606,7 +624,7 @@ async function renderTeamActivity(container, team) {
   loading(container);
   const res = await api(`/teams/${team.slug}/activity?limit=100`);
   container.innerHTML = `
-    <h3 class="u-margin-20px-0-12px">Fəaliyyət tarixçəsi</h3>
+    <h3 class="u-margin-20px-0-12px">${esc(t('tm.activity_log'))}</h3>
     <div id="teamActivityFull" class="u-display-flex u-flex-direction-column u-gap-10px"></div>
   `;
   fillActivity(document.getElementById('teamActivityFull'), res.activities || []);
@@ -622,16 +640,16 @@ async function renderTeamStats(container, team) {
   container.innerHTML = `
     <h3 class="u-margin-20px-0-4px">Statistika</h3>
     <div class="team-stat-grid">
-      ${statCard(s.membersCount, 'Üzv')}
+      ${statCard(s.membersCount, t('tm.member'))}
       ${statCard(s.newMembers30d, 'Yeni üzv (30g)')}
-      ${statCard(s.projectsCount, 'Layihə')}
-      ${statCard(s.completedProjectsCount, 'Bitmiş layihə')}
-      ${statCard(s.tasksCount, 'Tapşırıq')}
+      ${statCard(s.projectsCount, t('tm.project'))}
+      ${statCard(s.completedProjectsCount, t('tm.done_projects'))}
+      ${statCard(s.tasksCount, t('tm.task'))}
       ${statCard(s.completedTasksCount, 'Tamamlanan')}
-      ${statCard(s.openTasksCount, 'Açıq tapşırıq')}
+      ${statCard(s.openTasksCount, t('tm.open_tasks'))}
       ${statCard(s.completionRate, 'Tamamlanma %')}
       ${statCard(s.xp, 'Komanda XP')}
-      ${statCard(s.postsCount, 'Paylaşım')}
+      ${statCard(s.postsCount, t('tm.post'))}
       ${statCard(s.filesCount, 'Fayl')}
       ${statCard(s.growth30d, 'Aktivlik (30g)')}
     </div>
@@ -778,7 +796,7 @@ async function renderTeamMembers(container, team) {
         if (!(await confirmDialog(`${displayName(m)} komandadan çıxarılsın?`))) return;
         try {
           await api(`/teams/${team.slug}/members/${m.user_id}`, { method: 'DELETE' });
-          toast('İstifadəçi çıxarıldı');
+          toast(t('tm.member_removed'));
           renderTeamMembers(container, team);
         } catch (err) { toast(err.message, 'err'); }
       };
@@ -790,13 +808,13 @@ async function renderTeamMembers(container, team) {
        * (`title` nəzərə alınmır) → oxucu "kral tacı" deyirdi, əməliyyatı yox.
        * SVG ikon qatı + açıq `aria-label`. */
       const transfer = el('button', { class: 'btn-text btn-mini u-color-text-sec' }, iconAward());
-      transfer.title = 'Sahibliyi köçür';
+      transfer.title = t('tm.transfer_owner');
       transfer.setAttribute('aria-label', `Sahibliyi köçür — ${displayName(m)}`);
       transfer.onclick = async () => {
         if (!(await confirmDialog(`Komandanın sahibliyi ${displayName(m)} şəxsinə keçsin? Siz Admin olacaqsınız.`))) return;
         try {
           await api(`/teams/${team.slug}/transfer`, { method: 'POST', body: { userId: m.user_id } });
-          toast('Sahiblik köçürüldü');
+          toast(t('tm.owner_moved'));
           location.reload();
         } catch (err) { toast(err.message, 'err'); }
       };
@@ -829,7 +847,7 @@ function openInviteModal(team, roles = []) {
     roleSelect.appendChild(o);
   });
 
-  const submitBtn = el('button', { class: 'btn-primary', style: 'width:100%; margin-top:6px;' }, 'Göndər');
+  const submitBtn = el('button', { class: 'btn-primary', style: 'width:100%; margin-top:6px;' }, t('tm.send'));
   let selectedUserId = '';
 
   const renderUsers = (users, target) => {
@@ -955,7 +973,7 @@ async function renderTeamProjects(container, team) {
     };
 
     if (p.isAdmin) {
-      addBtn('Redaktə', '', () => openProjectModal(team, p));
+      addBtn(t('tm.edit'), '', () => openProjectModal(team, p));
       const reqBtn = addBtn(`Sorğular${p.pending_requests ? ` (${p.pending_requests})` : ''}`, '',
         () => openProjectRequestsModal(team, p));
       reqBtn.style.color = 'var(--primary)';
@@ -969,14 +987,14 @@ async function renderTeamProjects(container, team) {
       });
       del.style.color = 'var(--danger)';
     } else if (!p.isMember && p.visibility === 'Public') {
-      const join = el('button', { class: 'btn-primary btn-mini' }, p.hasPendingRequest ? 'Gözləyir' : 'Qoşul');
+      const join = el('button', { class: 'btn-primary btn-mini' }, p.hasPendingRequest ? t('tm.pending') : t('tm.join'));
       join.disabled = !!p.hasPendingRequest;
       join.onclick = async () => {
         join.disabled = true;
         try {
           await api(`/teams/${team.slug}/projects/${p.id}/join`, { method: 'POST' });
           toast('Sorğu göndərildi!');
-          join.textContent = 'Gözləyir';
+          join.textContent = t('tm.pending');
         } catch (e) { toast(e.message, 'err'); join.disabled = false; }
       };
       act.appendChild(join);
@@ -1000,11 +1018,11 @@ async function renderTeamProjects(container, team) {
 
 function openProjectModal(team, project = null) {
   const nameInput = el('input', {
-    type: 'text', value: project?.name || '', placeholder: 'Layihə adı',
+    type: 'text', value: project?.name || '', placeholder: t('tm.project_name'),
     class: 'auth-input', style: 'width:100%; margin-bottom:10px;',
   });
   const descInput = el('textarea', {
-    placeholder: 'Qısa açıqlama', class: 'auth-input', rows: 3,
+    placeholder: t('tm.short_desc'), class: 'auth-input', rows: 3,
     style: 'width:100%; margin-bottom:10px; resize:vertical;',
   });
   descInput.value = project?.description || '';
@@ -1086,14 +1104,14 @@ async function openProjectRequestsModal(team, project) {
       acc.onclick = async () => {
         try {
           await api(`/teams/${team.slug}/projects/${project.id}/requests/${req.id}/approve`, { method: 'POST' });
-          toast('Sorğu qəbul edildi');
+          toast(t('tm.req_accepted'));
           item.remove();
         } catch (e) { toast(e.message, 'err'); }
       };
       rej.onclick = async () => {
         try {
           await api(`/teams/${team.slug}/projects/${project.id}/requests/${req.id}/reject`, { method: 'POST' });
-          toast('Sorğu rədd edildi');
+          toast(t('tm.req_rejected'));
           item.remove();
         } catch (e) { toast(e.message, 'err'); }
       };
@@ -1242,7 +1260,7 @@ async function openTaskModal(team, task, members) {
     class: 'auth-input', style: 'width:100%; margin-bottom:10px;',
   });
   const descInput = el('textarea', {
-    placeholder: 'Açıqlama', class: 'auth-input', rows: 3,
+    placeholder: t('tm.description'), class: 'auth-input', rows: 3,
     style: 'width:100%; margin-bottom:10px; resize:vertical;',
   });
   descInput.value = task?.description || '';
@@ -1354,7 +1372,7 @@ async function renderTeamFeed(container, team) {
         </div>
         <strong>${esc(displayName(p))}</strong>
         <span class="u-color-text-sec u-font-size-12px">${esc(fmtDate(p.created_at))}</span>
-        <span class="u-font-size-12px">${esc(POST_KIND_LABELS[p.kind] || POST_KIND_LABELS.post)}</span>
+        <span class="u-font-size-12px">${esc(labelPostKind(p.kind))}</span>
       </div>
     `;
     if (p.canDelete) {
@@ -1404,7 +1422,7 @@ async function renderTeamFiles(container, team) {
       <div class="team-chips" id="fileCats">
         <button class="team-chip ${category === 'all' ? 'active' : ''}" data-cat="all">Hamısı</button>
         ${cats.map(cKey => `<button class="team-chip ${category === cKey ? 'active' : ''}" data-cat="${esc(cKey)}">${
-          esc(FILE_CATEGORY_LABELS[cKey] || cKey)
+          esc(labelFileCategory(cKey))
         }</button>`).join('')}
       </div>
       <div id="teamFileList" class="user-grid"></div>
@@ -1447,7 +1465,7 @@ async function renderTeamFiles(container, team) {
       row.innerHTML = `
         <div class="u-overflow-hidden">
           <a href="${esc(f.url || '/files/' + f.path)}" target="_blank" rel="noopener">${esc(name)}</a>
-          <div class="team-file-meta">${esc(fmtBytes(f.size))} · ${esc(FILE_CATEGORY_LABELS[f.category] || f.category || '')}
+          <div class="team-file-meta">${esc(fmtBytes(f.size))} · ${esc(labelFileCategory(f.category))}
             · ${esc(displayName(f))}</div>
         </div>
       `;
@@ -1724,7 +1742,7 @@ async function renderTeamSettings(container, team) {
         <input type="text" id="teamNameInput" class="auth-input u-width-100" />
       </div>
       <div class="form-group u-margin-top-15px">
-        <label for="teamDescInput">Açıqlama</label>
+        <label for="teamDescInput">${esc(t('tm.description'))}</label>
         <textarea id="teamDescInput" class="auth-input u-width-100" rows="3"></textarea>
       </div>
       <div class="form-group u-margin-top-15px">
@@ -1791,7 +1809,7 @@ async function renderTeamSettings(container, team) {
       const row = el('div', {
         style: 'display:flex; justify-content:space-between; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--border); flex-wrap:wrap;',
       });
-      const perms = r.permissions?.includes('*') ? 'bütün icazələr' : (r.permissions || []).join(', ') || 'icazə yoxdur';
+      const perms = r.permissions?.includes('*') ? t('tm.all_perms') : (r.permissions || []).join(', ') || t('tm.no_perms');
       row.innerHTML = `<div><strong>${esc(r.name)}</strong>
         <div class="u-font-size-12px u-color-text-sec">${esc(perms)}</div></div>`;
       if (canRoles && r.name !== 'Owner') {
@@ -1821,7 +1839,7 @@ async function renderTeamSettings(container, team) {
 
 function openRoleModal(team, role, available, container) {
   const nameInput = el('input', {
-    type: 'text', value: role?.name || '', placeholder: 'Rol adı',
+    type: 'text', value: role?.name || '', placeholder: t('tm.role_name'),
     class: 'auth-input', style: 'width:100%; margin-bottom:10px;',
   });
   const prioInput = el('input', {

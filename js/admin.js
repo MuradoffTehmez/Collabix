@@ -81,13 +81,13 @@ async function loadStatsSummary(){
 function renderReports(){
   const box = document.getElementById('reportList');
   clear(box);
-  if(!reports.length){ box.append(emptyState('shield', 'Açıq şikayət yoxdur')); return; }
+  if(!reports.length){ box.append(emptyState('shield', t('adm.rep_empty'))); return; }
   reports.forEach(r => {
     box.append(el('div', { class: 'report-row' },
       avatarNode(state.users.get(r.targetUid) || { name: r.targetUsername }, 'avatar'),
       el('div', { class: 'txt' },
         el('b', {}, '@' + (r.targetUsername || '?')),
-        el('p', {}, (r.reason || '') + ' — şikayətçi: @' + (r.reporterName || '?') + ' · ' + fmtTime(r.createdAt)),
+        el('p', {}, (r.reason || '') + ' — ' + t('adm.rep_by') + ': @' + (r.reporterName || '?') + ' · ' + fmtTime(r.createdAt)),
       ),
       el('div', { class: 'actions' },
         el('button', { class: 'btn-mini dismiss', onclick: (e) => {
@@ -95,10 +95,10 @@ function renderReports(){
           // commit toast bitəndə işə düşür.
           const card = e.target.closest('.report-card, .admin-card, li, div');
           if(card) card.style.display = 'none';
-          undoToast('Şikayət rədd edildi',
+          undoToast(t('adm.rep_rejected'),
             async () => { await resolveReport(r.id, 'dismissed'); },
             { undoLabel: t('adm.undo'), onUndo: () => { if(card) card.style.display = ''; } });
-        } }, 'Rədd et'),
+        } }, t('adm.rep_reject')),
         el('button', { class: 'btn-mini block', onclick: async () => {
           if(!await confirmDialog('@' + r.targetUsername + ' bloklanacaq və şikayət bağlanacaq.')) return;
           try{
@@ -442,7 +442,7 @@ function openTaxEditor(item = null){
     labelIn, iconIn, colorIn, hlIn,
     el('button', { class: 'btn-small', onclick: async () => {
       const label = labelIn.value.trim();
-      if(!label){ toast('Ad boş ola bilməz', 'err'); return; }
+      if(!label){ toast(t('adm.name_required'), 'err'); return; }
       try{
         await saveTaxItem(taxType, {
           id: item?.id, label,
@@ -453,7 +453,7 @@ function openTaxEditor(item = null){
         });
         closeModal();
         toast(item ? 'Yeniləndi' : 'Əlavə olundu');
-      }catch(e){ console.error(e); toast('Yazıla bilmədi', 'err'); }
+      }catch(e){ console.error(e); toast(t('adm.save_failed'), 'err'); }
     } }, 'Yadda saxla'),
   ]);
 }
@@ -498,7 +498,7 @@ async function renderPubContent(){
     if(!items.length){ box.append(el('p', { style: 'color:var(--muted); font-size:.8rem;' }, 'Boşdur — seed düyməsini bas.')); return; }
     items.forEach(x => box.append(el('div', { class: 'admin-user-row' },
       el('div', { class: 'name' }, (x.authorName || '—') + ' ',
-        el('span', { class: 'sub' }, '★' + (x.rating || 5) + (x.approved ? ' · təsdiqli' : ' · gözləyir') + (x.featured ? ' · seçilmiş' : ''))),
+        el('span', { class: 'sub' }, '★' + (x.rating || 5) + ' · ' + t(x.approved ? 'adm.rev_approved' : 'adm.rev_pending') + (x.featured ? ' · ' + t('adm.rev_featured') : ''))),
       el('button', { class: 'btn-mini', 'aria-label': t('a11y.edit') + ' — ' + (x.authorName || ''),
         onclick: () => openTestiEditor(x) }, iconEdit()),
       el('button', { class: 'btn-mini block', 'aria-label': t('a11y.delete') + ' — ' + (x.authorName || ''),
@@ -531,11 +531,11 @@ function openFaqEditor(f = null){
     el('div', { class: 'section-title' }, f ? '✎ FAQ redaktə' : '+ Yeni FAQ'),
     qIn, aIn,
     el('div', { class: 'field' }, el('label', {}, 'Kateqoriya'), catIn),
-    el('div', { class: 'field' }, el('label', {}, 'Sıra'), orderIn),
+    el('div', { class: 'field' }, el('label', {}, t('adm.order')), orderIn),
     el('label', { class: 'remember-row' }, activeIn, ' Aktiv (public görünür)'),
     el('button', { class: 'btn-small', onclick: async () => {
       const q = qIn.getValue(), a = aIn.getValue();
-      if(!q.az || !a.az){ toast('AZ sual və cavab məcburidir', 'err'); return; }
+      if(!q.az || !a.az){ toast(t('adm.faq_required'), 'err'); return; }
       try{
         await saveFaq(f?.id, { q, a, category: catIn.value.trim(), order: parseInt(orderIn.value, 10) || 99, active: activeIn.checked });
         closeModal(); toast('Yadda saxlanıldı'); renderPubContent();
@@ -546,7 +546,7 @@ function openFaqEditor(f = null){
 
 function openTestiEditor(x = null){
   const nameIn = el('input', { value: x?.authorName || '', maxLength: 60, placeholder: 'Ad', style: 'width:100%; background:var(--surface-2); border:1px solid var(--border); color:var(--text); padding:8px 10px; border-radius:8px; margin-bottom:8px;' });
-  const titleIn = mlInput('Rol/başlıq (AZ/EN/RU)', x?.authorTitle);
+  const titleIn = mlInput(t('adm.author_title'), x?.authorTitle);
   const textIn = mlInput('Rəy mətni (AZ/EN/RU)', x?.text, 'textarea');
   const ratingIn = el('input', { type: 'number', min: 1, max: 5, value: x?.rating || 5, style: 'width:100%; background:var(--surface-2); border:1px solid var(--border); color:var(--text); padding:8px 10px; border-radius:8px; margin-bottom:8px;' });
   const apprIn = el('input', { type: 'checkbox', checked: x ? !!x.approved : true });
@@ -556,7 +556,7 @@ function openTestiEditor(x = null){
     el('div', { class: 'field' }, el('label', {}, 'Müəllif adı'), nameIn),
     titleIn, textIn,
     el('div', { class: 'field' }, el('label', {}, 'Reytinq (1-5)'), ratingIn),
-    el('label', { class: 'remember-row' }, apprIn, ' Təsdiqli (approved)'),
+    el('label', { class: 'remember-row' }, apprIn, ' ' + t('adm.approved_cb')),
     el('label', { class: 'remember-row' }, featIn, ' Seçilmiş (homepage-də görünür)'),
     el('button', { class: 'btn-small', onclick: async () => {
       const text = textIn.getValue();
@@ -820,8 +820,8 @@ export function initAdmin(){
       btn.onclick = async () => {
         const name = input.value.trim();
         if(!name) return;
-        try{ await createRoom(name); toast('Otaq yaradıldı'); closeModal(); }
-        catch(e){ toast('Otaq yaradıla bilmədi', 'err'); }
+        try{ await createRoom(name); toast(t('adm.room_created')); closeModal(); }
+        catch(e){ toast(t('adm.room_create_failed'), 'err'); }
       };
       showModal([
         el('h2', { class: 'section-title', style: 'margin-top:0; font-size:1.3rem;' }, t('adm.room_new') || 'Yeni Otaq'),
@@ -839,7 +839,7 @@ export function initAdmin(){
         const uname = normalizeUsername(input.value);
         if(!uname) return;
         const found = [...state.users.values()].find(u => u.username === uname);
-        if(!found){ toast('İstifadəçi tapılmadı', 'err'); return; }
+        if(!found){ toast(t('adm.user_not_found'), 'err'); return; }
         const uid = found.uid;
         if(!await confirmDialog('@' + uname + ' admin ediləcək — bütün admin səlahiyyətlərini alacaq.', { danger: false, okLabel: 'Admin et' })) return;
         try{ await addAdminByUid(uid); toast('@' + uname + ' artıq admindir'); closeModal(); }
@@ -969,24 +969,24 @@ async function openAdminTeamDetail(teamId) {
         <div class="u-font-size-13px u-margin-top-6px">${escHtml(team.description || '')}</div>
       </div>
       <div class="u-display-flex u-gap-14px u-flex-wrap-wrap u-font-size-13px u-margin-bottom-14px">
-        <span><strong>${Number(stats.membersCount || 0)}</strong> üzv</span>
-        <span><strong>${Number(stats.projectsCount || 0)}</strong> layihə</span>
-        <span><strong>${Number(stats.tasksCount || 0)}</strong> tapşırıq</span>
-        <span><strong>${Number(stats.completedTasksCount || 0)}</strong> bitmiş</span>
+        <span><strong>${Number(stats.membersCount || 0)}</strong> ${escHtml(t('adm.tm_members'))}</span>
+        <span><strong>${Number(stats.projectsCount || 0)}</strong> ${escHtml(t('adm.tm_projects'))}</span>
+        <span><strong>${Number(stats.tasksCount || 0)}</strong> ${escHtml(t('adm.tm_tasks'))}</span>
+        <span><strong>${Number(stats.completedTasksCount || 0)}</strong> ${escHtml(t('adm.tm_done'))}</span>
         <span><strong>${Number(stats.xp || 0)}</strong> XP (${escHtml(stats.reputation || '')})</span>
-        <span><strong>${Number(stats.filesCount || 0)}</strong> fayl</span>
+        <span><strong>${Number(stats.filesCount || 0)}</strong> ${escHtml(t('adm.tm_files'))}</span>
       </div>
-      <h4 class="u-margin-0-0-8px">Üzvlər</h4>
+      <h4 class="u-margin-0-0-8px">${escHtml(t('adm.tm_members_h'))}</h4>
       <div class="u-max-height-180px u-overflow-auto u-font-size-13px">
         ${members.map(m => `<div class="u-display-flex u-justify-content-space-between u-padding-4px-0 u-border-bottom-1px-solid-border">
           <span>${escHtml(m.name || m.username)}</span><span class="u-color-text-sec">${escHtml(m.role_name || '')}</span>
-        </div>`).join('') || '<div class="empty-state">Üzv yoxdur.</div>'}
+        </div>`).join('') || `<div class="empty-state">${escHtml(t('adm.tm_no_members'))}</div>`}
       </div>
-      <h4 class="u-margin-14px-0-8px">Layihələr</h4>
+      <h4 class="u-margin-14px-0-8px">${escHtml(t('adm.tm_projects_h'))}</h4>
       <div class="u-max-height-180px u-overflow-auto u-font-size-13px">
         ${projects.map(p => `<div class="u-display-flex u-justify-content-space-between u-padding-4px-0 u-border-bottom-1px-solid-border">
           <span>${escHtml(p.name)}</span><span class="u-color-text-sec">${escHtml(p.status)}</span>
-        </div>`).join('') || '<div class="empty-state">Layihə yoxdur.</div>'}
+        </div>`).join('') || `<div class="empty-state">${escHtml(t('adm.tm_no_projects'))}</div>`}
       </div>
     `;
   } catch (e) {
