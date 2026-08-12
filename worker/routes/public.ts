@@ -39,6 +39,41 @@ export async function publicStats(c: Ctx) {
   return json({ users: (u.results[0] as any).n, posts: (p.results[0] as any).n });
 }
 
+/**
+ * Gündəlik aktivlik seriyası — statistika ekranındakı sütun qrafiki üçün.
+ *
+ * 🔴 NİYƏ SERVER TƏRƏFDƏ: `js/stats.js` bu qrafiki YÜKLƏNMİŞ lent keşindən
+ *    (`getPosts()`) qururdu. Keşdə isə yalnız son səhifə var, ona görə baza
+ *    dolu olsa belə qrafik "bugün 60, qalan günlər 0" göstərirdi — səhv rəqəm,
+ *    boş ekran təəssüratı. Say mənbədən (COUNT + GROUP BY) gəlməlidir.
+ *
+ * ⚠ `idx_posts_created` (created_at DESC) sorğunu aralıqla məhdudlaşdırır;
+ *   `days` 1…90 arasına kəsilir ki, tam skan mümkün olmasın.
+ */
+export async function activitySeries(c: Ctx) {
+  const days = Math.min(Math.max(parseInt(new URL(c.req.url).searchParams.get('days') || '', 10) || 7, 1), 90);
+  const from = Date.now() - days * 86_400_000;
+  const [posts, comments] = await D(c).batch([
+    D(c).prepare(
+      `SELECT date(created_at/1000, 'unixepoch') AS d, COUNT(*) AS n
+         FROM posts WHERE created_at >= ? GROUP BY d ORDER BY d`,
+    ).bind(from),
+    D(c).prepare(
+      `SELECT date(created_at/1000, 'unixepoch') AS d, COUNT(*) AS n
+         FROM comments WHERE created_at >= ? GROUP BY d ORDER BY d`,
+    ).bind(from),
+  ]);
+  const map = new Map<string, { date: string; posts: number; comments: number }>();
+  const row = (d: string) => {
+    let r = map.get(d);
+    if (!r) { r = { date: d, posts: 0, comments: 0 }; map.set(d, r); }
+    return r;
+  };
+  for (const r of posts.results as any[]) row(String(r.d)).posts = Number(r.n);
+  for (const r of comments.results as any[]) row(String(r.d)).comments = Number(r.n);
+  return json({ days, series: [...map.values()].sort((a, b) => a.date.localeCompare(b.date)) });
+}
+
 // Auth-suz tək-post oxuması — SSR meta + OG şəkil üçün. Yalnız public-safe sahələr;
 // müəllif bloklanıbsa 404. (Feed-dəki eyni JOIN forması.)
 export async function publicGetPost(c: Ctx, id: string) {

@@ -131,7 +131,7 @@ export { exportMyData } from './routes/export';
 export { globalSearch } from './routes/search';
 export {
   publicFaqs, publicTestimonials, publicStats, publicGetPost, publicGetUser,
-  newsletterSubscribe, contactSubmit, publicConfig, health,
+  newsletterSubscribe, contactSubmit, publicConfig, health, activitySeries,
 } from './routes/public';
 export {
   warnUser, listWarnings, banUser, muteUser, restoreUser, moderationStatus,

@@ -400,6 +400,9 @@ const ROUTES: Route[] = [
   { method: 'GET', pattern: /^\/api\/public\/faqs$/, handler: R.publicFaqs, rl: 'read' },
   { method: 'GET', pattern: /^\/api\/public\/testimonials$/, handler: R.publicTestimonials, rl: 'read' },
   { method: 'GET', pattern: /^\/api\/public\/stats$/, handler: R.publicStats, rl: 'read' },
+  /* Statistika ekranının gündəlik sütun qrafiki. `auth: true` — say publik
+     deyil, lakin admin də deyil: adi istifadəçi öz icmasının aktivliyini görür. */
+  { method: 'GET', pattern: /^\/api\/stats\/activity$/, handler: R.activitySeries, auth: true, rl: 'read' },
   { method: 'GET', pattern: /^\/api\/public\/posts\/([\w-]+)$/, handler: R.publicGetPost, rl: 'read' },
   { method: 'GET', pattern: /^\/api\/public\/users\/([\w.]+)$/, handler: R.publicGetUser, rl: 'read' },
   { method: 'POST', pattern: /^\/api\/public\/newsletter$/, handler: R.newsletterSubscribe, own: 'public', rl: 'form' },

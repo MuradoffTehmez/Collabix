@@ -4,6 +4,7 @@ import { state } from './store.js';
 import { el, clear, tsToMillis, todayStr, bus } from './util.js';
 import { getPosts } from './feed.js';
 import { emptyState } from './ui.js';
+import { api } from './api.js';
 
 let leaderMode = 'xp';
 /**
@@ -24,6 +25,32 @@ function rangeBounds(){
   return { from: Date.now() - days * 86400000, to: Date.now() + 1 };
 }
 
+/*
+ * Gündəlik post sayı — SERVERDƏN.
+ *
+ * 🔴 Əvvəl bu qrafik `getPosts()` keşindən sayılırdı. Keşdə isə yalnız lentin
+ *    YÜKLƏNMİŞ səhifəsi var (~20-60 post, hamısı son saatlardan), ona görə
+ *    minlərlə postu olan bazada belə qrafik "bugün 60, qalan günlər 0"
+ *    göstərirdi. Say indi `/api/stats/activity`-dən (COUNT + GROUP BY) gəlir;
+ *    keş yalnız server cavabı gələnə qədər ehtiyat kimi qalır.
+ */
+let seriesCache = null;   // { key, map: Map<'YYYY-MM-DD', number> }
+
+async function loadSeries(){
+  const { from, to } = rangeBounds();
+  const days = Math.min(90, Math.max(1, Math.ceil((to - from) / 86400000)));
+  const key = 'd' + days;
+  if(seriesCache?.key === key) return;
+  try{
+    const d = await api('/stats/activity?days=' + days);
+    seriesCache = { key, map: new Map((d.series || []).map(r => [r.date, r.posts])) };
+    renderBars();
+  }catch(e){ /* server cavab vermədi — keşdən sayma qalır */ }
+}
+
+/** Yerli tarixi `YYYY-MM-DD` formatına salır (server UTC gün açarı işlədir). */
+const dayKey = ms => new Date(ms).toISOString().slice(0, 10);
+
 function renderBars(){
   const { from, to } = rangeBounds();
   const dayCount = Math.min(31, Math.max(1, Math.ceil((to - from) / 86400000)));
@@ -36,13 +63,17 @@ function renderBars(){
       ? ['B', 'B.e', 'Ç.a', 'Ç', 'C.a', 'C', 'Ş'][d.getDay()]
       : String(d.getDate());
   }
-  getPosts().forEach(p => {
-    const ms = tsToMillis(p.createdAt);
-    if(ms >= start && ms < to){
-      const idx = Math.floor((ms - start) / 86400000);
-      if(idx >= 0 && idx < dayCount) counts[idx]++;
-    }
-  });
+  if(seriesCache?.map){
+    for(let i = 0; i < dayCount; i++) counts[i] = seriesCache.map.get(dayKey(start + i * 86400000)) || 0;
+  } else {
+    getPosts().forEach(p => {
+      const ms = tsToMillis(p.createdAt);
+      if(ms >= start && ms < to){
+        const idx = Math.floor((ms - start) / 86400000);
+        if(idx >= 0 && idx < dayCount) counts[idx]++;
+      }
+    });
+  }
   const max = Math.max(1, ...counts);
   const barsEl = document.getElementById('statBars');
   clear(barsEl);
@@ -152,9 +183,23 @@ function renderAdminStats(){
   });
 }
 
+/* ---------- COLLABIX_Seed.md §18 — demo etiketi ---------- */
+// Bayraq YÜKLƏNMİŞ istifadəçi keşindən çıxarılır, ayrıca sorğu ilə YOX:
+// `/api/config` hər səhifə açılışında çağırılır və D1 primary Buxarestdədir —
+// oraya bir sorğu da əlavə etsək BÜTÜN səhifələr ~50-70 ms yavaşlayardı,
+// halbuki bu etiket yalnız bir ekranda lazımdır. Admin panelində eyni bayraq
+// serverdən gəlir (`/api/admin/stats-daily` → `demo`).
+function renderDemoFlag(){
+  const box = document.getElementById('statsDemoFlag');
+  if(!box) return;
+  const synthetic = [...state.users.values()].some(u => (u.username || '').startsWith('demo_'));
+  box.classList.toggle('hidden', !synthetic);
+}
+
 function renderAll(){
   if(!document.getElementById('page-stats').classList.contains('active')) return;
-  renderBars(); renderLeaders(); renderDist(); renderAdminStats();
+  renderBars(); renderLeaders(); renderDist(); renderAdminStats(); renderDemoFlag();
+  loadSeries();   // server sayı gələndə `renderBars` təkrar çağırılır
 }
 
 export function initStats(){
@@ -171,7 +216,7 @@ export function initStats(){
     document.querySelectorAll('#statRangeTabs button').forEach(b => b.classList.toggle('active', b === btn));
     const v = btn.dataset.range;
     document.getElementById('statCustomRange').classList.toggle('hidden', v !== 'custom');
-    if(v !== 'custom'){ range = { days: parseInt(v, 10), from: null, to: null }; renderBars(); }
+    if(v !== 'custom'){ range = { days: parseInt(v, 10), from: null, to: null }; renderBars(); loadSeries(); }
     else range.days = 'custom';
   });
   document.getElementById('statApplyBtn').addEventListener('click', () => {
@@ -179,7 +224,7 @@ export function initStats(){
     const to = document.getElementById('statTo').value;
     if(!from || !to) return;
     range = { days: 'custom', from, to };
-    renderBars();
+    renderBars(); loadSeries();
   });
 }
 
