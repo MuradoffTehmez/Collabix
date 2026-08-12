@@ -23,7 +23,13 @@
     "e2e": "playwright test --grep-invert \"responsive audit hesabatı\"",
     "e2e:seed": "node e2e/seed-cli.ts",
     "e2e:ui": "playwright test --ui",
-    "audit:responsive": "playwright test responsive-report --project=desktop"
+    "audit:responsive": "playwright test responsive-report --project=desktop",
+    "seed:demo": "node seed/generate.mjs",
+    "seed:reset": "node seed/reset.mjs",
+    "seed:audit": "node seed/audit.mjs",
+    "seed:report": "node seed/report.mjs --md",
+    "seed:remote": "node seed/generate.mjs --remote",
+    "seed:remote:reset": "node seed/reset.mjs --remote"
   },
   "dependencies": {
     "dompurify": "^3.1.6",

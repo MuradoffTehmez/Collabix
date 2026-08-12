@@ -64,3 +64,7 @@ git_history_full.txt
 git_history_short.txt
 CLAUDE.md
 AUDİT/COLLABIX BACKEND — FULL-SCALE ENGINEERING AUDIT.md
+
+# Demo hesabların parolları — repo publikdir, seed datası isə canlı mühitdədir.
+# Faylı repoya salsaq hər kəs demo hesablara girə bilərdi (COLLABIX_Seed.md §40).
+seed/DEMO-ACCOUNTS.md
