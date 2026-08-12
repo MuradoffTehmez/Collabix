@@ -74,6 +74,10 @@ async function loadStatsSummary(){
     const d = await fetchStatsDaily(30);
     statsSeries = d.series || [];
     statsToday = d.today || null;
+    // COLLABIX_Seed.md §18 — demo etiketi. Bayraq SERVERDƏN gəlir (bazada
+    // `demo_` hesabı varmı), çünki panel rəqəmləri kimin gözü ilə baxılırsa
+    // baxılsın eyni mənbədən gəlməlidir.
+    document.getElementById('adminDemoFlag')?.classList.toggle('hidden', !d.demo);
     renderStats();
   }catch(e){ /* sparkline+dəqiq say bəzəkdir — alınmasa keş rəqəmləri qalır */ }
 }

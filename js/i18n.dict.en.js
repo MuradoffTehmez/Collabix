@@ -593,6 +593,11 @@ export default {
   /* ---------- Page: Saved ---------- */
   "saved.sub": "Posts saved with ★",
 
+  /* ---------- Demo environment label (COLLABIX_Seed.md §18) ---------- */
+  "demo.tag": "SYNTHETIC DEMO DATA",
+  "demo.admin_note": "This database contains demo seed accounts. The figures below are simulation results produced from synthetic data in a demo environment — they must not be presented as real user statistics.",
+  "demo.stats_note": "The numbers on this screen are computed from synthetic demo data.",
+
   /* ---------- Page: Stats ---------- */
   "stats.sub": "Real community activity",
   "stats.r1": "1 day",

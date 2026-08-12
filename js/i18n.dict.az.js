@@ -594,6 +594,11 @@ export default {
   /* ---------- Page: Saved ---------- */
   "saved.sub": "★ ilə yadda saxladığın paylaşımlar",
 
+  /* ---------- Demo mühiti etiketi (COLLABIX_Seed.md §18) ---------- */
+  "demo.tag": "SİNTETİK DEMO DATASI",
+  "demo.admin_note": "Bazada demo seed hesabları var. Aşağıdakı göstəricilər demo mühitində sintetik məlumatlar əsasında hazırlanmış simulyasiya nəticələridir — real istifadəçi statistikası kimi təqdim edilə bilməz.",
+  "demo.stats_note": "Bu ekrandakı rəqəmlər sintetik demo məlumatlarından hesablanır.",
+
   /* ---------- Page: Stats ---------- */
   "stats.sub": "İcmanın real fəaliyyəti",
   "stats.r1": "1 gün",

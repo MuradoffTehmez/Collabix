@@ -448,21 +448,31 @@ export async function adminStatsDaily(c: Ctx) {
   const uc = cached.users_total, pc = cached.posts_total;
   const rc = cached.reports_open, bc = cached.users_blocked;
   const g = (n: number) => n;
-  await D(c).prepare(
-    `INSERT INTO stats_daily (date, users, posts, complaints, blocked, updated_at)
-     VALUES (?,?,?,?,?,?)
-     ON CONFLICT(date) DO UPDATE SET users=?, posts=?, complaints=?, blocked=?, updated_at=?`,
-  ).bind(day, g(uc), g(pc), g(rc), g(bc), now(),
-    g(uc), g(pc), g(rc), g(bc), now()).run();
-
   const days = Math.min(Math.max(parseInt(new URL(c.req.url).searchParams.get('days') || '', 10) || 30, 2), 90);
-  const rows = await D(c).prepare(
-    'SELECT * FROM stats_daily ORDER BY date DESC LIMIT ?',
-  ).bind(days).all<any>();
+
+  // ⚠ ÜÇ ifadə BİR batch-dədir: D1 primary Buxarestdədir və hər ardıcıl
+  //   `await` ~50-70 ms əlavə edir. Əvvəl upsert və seçim ayrı-ayrı gedirdi.
+  //
+  // Sonuncu sorğu — DEMO ETİKETİ (COLLABIX_Seed.md §18): sintetik demo datası
+  // varsa panel bunu AÇIQ şəkildə bildirməlidir ki, göstəricilər real
+  // istifadəçi statistikası kimi oxunmasın. `LIMIT 1` qəsdəndir: bizə yalnız
+  // MÖVCUDLUQ lazımdır, `COUNT(*)` isə istifadəçi cədvəlini tam skan edərdi.
+  const [, seriesRes, demoRes] = await D(c).batch([
+    D(c).prepare(
+      `INSERT INTO stats_daily (date, users, posts, complaints, blocked, updated_at)
+       VALUES (?,?,?,?,?,?)
+       ON CONFLICT(date) DO UPDATE SET users=?, posts=?, complaints=?, blocked=?, updated_at=?`,
+    ).bind(day, g(uc), g(pc), g(rc), g(bc), now(),
+      g(uc), g(pc), g(rc), g(bc), now()),
+    D(c).prepare('SELECT * FROM stats_daily ORDER BY date DESC LIMIT ?').bind(days),
+    D(c).prepare(`SELECT 1 AS d FROM users WHERE username LIKE 'demo\\_%' ESCAPE '\\' LIMIT 1`),
+  ]);
+
   return json({
     // köhnədən yeniyə — qrafik soldan sağa oxunur
-    series: rows.results.reverse(),
+    series: (seriesRes.results as any[]).reverse(),
     today: { users: g(uc), posts: g(pc), complaints: g(rc), blocked: g(bc) },
+    demo: (demoRes.results as any[]).length > 0,
   });
 }
 

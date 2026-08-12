@@ -1173,6 +1173,11 @@
     <div class="page" id="page-stats">
       <h2 class="page-title" data-i18n="nav.stats"></h2>
       <p class="page-sub" data-i18n="stats.sub"></p>
+      <!-- COLLABIX_Seed.md §18/§24 — analitika ekranında da demo etiketi. -->
+      <div class="demo-flag hidden" id="statsDemoFlag" role="status">
+        <span class="c-badge c-badge--warn" data-i18n="demo.tag"></span>
+        <span data-i18n="demo.stats_note"></span>
+      </div>
       <div class="task-cat-tabs" id="statRangeTabs">
         <button data-range="1" data-i18n="stats.r1"></button>
         <button class="active" data-range="7" data-i18n="stats.r7"></button>
@@ -1337,6 +1342,13 @@
           <!-- TAB 1: Dashboard -->
           <div class="admin-tab-pane active" id="tab-dashboard">
             <div class="admin-card">
+              <!-- COLLABIX_Seed.md §18 — DEMO ETİKETİ. Sintetik seed datası
+                   bazada olduqda görünür (server `demo` bayrağı ilə deyir);
+                   real bazada element gizli qalır. -->
+              <div class="demo-flag hidden" id="adminDemoFlag" role="status">
+                <span class="c-badge c-badge--warn" data-i18n="demo.tag"></span>
+                <span data-i18n="demo.admin_note"></span>
+              </div>
               <div class="admin-stat" id="adminStatRow"></div>
               <div class="admin-quick" id="adminQuickRow">
                 <button class="btn-primary" id="quickPendingBtn" data-i18n="adm.q_pend"></button>

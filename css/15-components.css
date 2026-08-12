@@ -332,6 +332,26 @@
 .c-badge--info    { color: var(--teal);   border-color: var(--teal);   background: color-mix(in srgb, var(--teal) 12%, transparent); }
 .c-badge--accent  { color: var(--coral);  border-color: var(--coral);  background: color-mix(in srgb, var(--coral) 12%, transparent); }
 
+/* ══════════════════════ DEMO MÜHİTİ ETİKETİ ══════════════════════ */
+/* COLLABIX_Seed.md §18: sintetik seed datası olan bazada göstəricilər real
+   statistika kimi oxunmamalıdır. Etiket admin panelində və statistika
+   ekranında görünür; data silinəndə element `hidden` sinfi ilə gizlənir.
+   ⚠ Rəng TƏK siqnal deyil — mətn nişanı ("SİNTETİK DEMO DATASI") də var. */
+.demo-flag {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-4);
+  padding: var(--sp-3);
+  border: 1px solid var(--coral2);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--coral2) 8%, transparent);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+}
+
 /* ══════════════════════════ PANEL / KART ══════════════════════════ */
 
 .c-panel {
